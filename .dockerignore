@@ -1,0 +1,9 @@
+bin/
+obj/
+out/
+.env
+.git
+.vs/
+.idea/
+*.user
+TestResults/

@@ -1,0 +1,49 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/RideHailing.Contracts/RideHailing.Contracts.csproj" />
+    <Project Path="src/BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
+    <Project Path="src/BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+  </Folder>
+  <Folder Name="/src/Gateway/">
+    <Project Path="src/Gateway/RideHailing.Gateway/RideHailing.Gateway.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/Driver/">
+    <Project Path="src/Services/Driver/RideHailing.DriverService/RideHailing.DriverService.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Identity/">
+    <Project Path="src/Services/Identity/RideHailing.IdentityService/RideHailing.IdentityService.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Matching/">
+    <Project Path="src/Services/Matching/RideHailing.MatchingService/RideHailing.MatchingService.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Payment/">
+    <Project Path="src/Services/Payment/RideHailing.PaymentService/RideHailing.PaymentService.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/Trip/">
+    <Project Path="src/Services/Trip/RideHailing.TripService/RideHailing.TripService.csproj" />
+  </Folder>
+  <Folder Name="/src/Workers/" />
+  <Folder Name="/src/Workers/Notification/">
+    <Project Path="src/Workers/Notification/RideHailing.NotificationWorker/RideHailing.NotificationWorker.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Integration/">
+    <Project Path="tests/Integration/RideHailing.DriverService.IntegrationTests/RideHailing.DriverService.IntegrationTests.csproj" />
+    <Project Path="tests/Integration/RideHailing.IdentityService.IntegrationTests/RideHailing.IdentityService.IntegrationTests.csproj" />
+    <Project Path="tests/Integration/RideHailing.MatchingService.IntegrationTests/RideHailing.MatchingService.IntegrationTests.csproj" />
+    <Project Path="tests/Integration/RideHailing.PaymentService.IntegrationTests/RideHailing.PaymentService.IntegrationTests.csproj" />
+    <Project Path="tests/Integration/RideHailing.Platform.IntegrationTests/RideHailing.Platform.IntegrationTests.csproj" />
+    <Project Path="tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/System/">
+    <Project Path="tests/System/RideHailing.SystemTests/RideHailing.SystemTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Unit/">
+    <Project Path="tests/Unit/RideHailing.DriverService.UnitTests/RideHailing.DriverService.UnitTests.csproj" />
+    <Project Path="tests/Unit/RideHailing.MatchingService.UnitTests/RideHailing.MatchingService.UnitTests.csproj" />
+    <Project Path="tests/Unit/RideHailing.PaymentService.UnitTests/RideHailing.PaymentService.UnitTests.csproj" />
+    <Project Path="tests/Unit/RideHailing.TripService.UnitTests/RideHailing.TripService.UnitTests.csproj" />
+  </Folder>
+</Solution>

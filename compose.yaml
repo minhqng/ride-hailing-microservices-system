@@ -1,0 +1,161 @@
+# Core local topology. Compose ordering is not runtime resilience.
+# Service DNS names are used; no static IPs.
+name: ride-hailing
+
+services:
+  postgres:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:-identity_dev_pw}
+      DRIVER_DB_PASSWORD: ${DRIVER_DB_PASSWORD:-driver_dev_pw}
+      TRIP_DB_PASSWORD: ${TRIP_DB_PASSWORD:-trip_dev_pw}
+      MATCHING_DB_PASSWORD: ${MATCHING_DB_PASSWORD:-matching_dev_pw}
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:-payment_dev_pw}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:-notification_dev_pw}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [ride-net]
+
+  redis:
+    image: redis:8.10.2
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [ride-net]
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes: [rabbitdata:/var/lib/rabbitmq]
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [ride-net]
+
+  gateway:
+    build:
+      context: .
+      dockerfile: src/Gateway/RideHailing.Gateway/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      Services__IdentityBaseUrl: http://identity:8080
+      Services__DriverBaseUrl: http://driver:8080
+      Services__TripBaseUrl: http://trip:8080
+      Services__MatchingBaseUrl: http://matching:8080
+      Services__PaymentBaseUrl: http://payment:8080
+    ports: ["8080:8080"]
+    # No depends_on: gateway has no DB/broker readiness requirement at bootstrap.
+    networks: [ride-net]
+
+  identity:
+    build:
+      context: .
+      dockerfile: src/Services/Identity/RideHailing.IdentityService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:-identity_dev_pw}
+    ports: ["8101:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [ride-net]
+
+  driver:
+    build:
+      context: .
+      dockerfile: src/Services/Driver/RideHailing.DriverService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:-driver_dev_pw}
+      RabbitMq__Host: rabbitmq
+    ports: ["8102:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ride-net]
+
+  trip:
+    build:
+      context: .
+      dockerfile: src/Services/Trip/RideHailing.TripService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw}
+      RabbitMq__Host: rabbitmq
+    ports: ["8103:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ride-net]
+
+  matching:
+    build:
+      context: .
+      dockerfile: src/Services/Matching/RideHailing.MatchingService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:-matching_dev_pw}
+      Redis__ConnectionString: redis:6379
+      RabbitMq__Host: rabbitmq
+      Services__DriverBaseUrl: http://driver:8080
+    ports: ["8104:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ride-net]
+
+  payment:
+    build:
+      context: .
+      dockerfile: src/Services/Payment/RideHailing.PaymentService/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:-payment_dev_pw}
+      RabbitMq__Host: rabbitmq
+    ports: ["8105:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ride-net]
+
+  notification:
+    build:
+      context: .
+      dockerfile: src/Workers/Notification/RideHailing.NotificationWorker/Dockerfile
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Database=notification_db;Username=notification_app;Password=${NOTIFICATION_DB_PASSWORD:-notification_dev_pw}
+      RabbitMq__Host: rabbitmq
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ride-net]
+
+volumes:
+  pgdata:
+  redisdata:
+  rabbitdata:
+
+networks:
+  ride-net:
+    driver: bridge

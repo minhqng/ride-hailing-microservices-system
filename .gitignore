@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+out/
+TestResults/
+*.user
+*.suo
+.vs/
+.idea/
+*.DotSettings.user
+
+# Env / secrets
+.env
+*.pfx
+appsettings.*.local.json
+secrets/
+
+# Logs / local evidence raw outputs (manifests may be committed, raw dumps should not)
+logs/
+*.log
+evidence/**/raw/
+evidence/**/*.dump
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/

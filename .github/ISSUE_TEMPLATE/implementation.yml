@@ -1,0 +1,27 @@
+name: Implementation task
+description: Proof-bearing vertical increment
+body:
+  - type: input
+    id: week
+    attributes: {label: Week, placeholder: W06}
+  - type: input
+    id: owner
+    attributes: {label: Owner, placeholder: A / B / C}
+  - type: textarea
+    id: docs
+    attributes: {label: Docs, placeholder: "00 §.., 01 DSI-.., 02 §.., 03 scenario.."}
+  - type: input
+    id: invariant
+    attributes: {label: Invariant}
+  - type: textarea
+    id: scenario
+    attributes: {label: Scenario}
+  - type: input
+    id: estimate
+    attributes: {label: Estimate}
+  - type: input
+    id: blocked
+    attributes: {label: Blocked by}
+  - type: textarea
+    id: dod
+    attributes: {label: Definition of Done}
