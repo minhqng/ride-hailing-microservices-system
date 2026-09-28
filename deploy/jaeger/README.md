@@ -1,3 +1,3 @@
-# jaeger — planned use (bootstrap placeholder)
+# Jaeger — local trace UI
 
-Core must be healthy first. No fake config committed. Owner: C (OTel/platform), B (perf methodology). See Docs 02-03.
+Start the optional `obs` profile with `docker compose --profile obs up -d`. UI: http://localhost:16686. Jaeger accepts OTLP on ports 4317 (gRPC) and 4318 (HTTP); application instrumentation is a later increment.

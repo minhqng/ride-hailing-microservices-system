@@ -1,3 +1,3 @@
-# otel — planned use (bootstrap placeholder)
+# OpenTelemetry Collector — deferred
 
-Core must be healthy first. No fake config committed. Owner: C (OTel/platform), B (perf methodology). See Docs 02-03.
+The W2 observability profile starts Jaeger for OTLP trace ingestion and Prometheus for metrics. A Collector pipeline is intentionally deferred until service instrumentation is added, so this directory remains a placeholder. See Docs 02–03 and Member C W2.

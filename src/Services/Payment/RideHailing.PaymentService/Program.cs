@@ -10,6 +10,11 @@ var app = builder.Build();
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "payment-service" }));
 app.MapGet("/health/ready", () => Results.Ok(new { status = "Ready", service = "payment-service" }));
 app.MapGet("/info", (IHostEnvironment env) =>
-    Results.Ok(new { serviceName = "payment-service", environment = env.EnvironmentName }));
+    Results.Ok(new
+    {
+        serviceName = "payment-service",
+        instanceId = builder.Configuration["ServiceInstanceId"] ?? Environment.MachineName,
+        environment = env.EnvironmentName
+    }));
 
 app.Run();
