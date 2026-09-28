@@ -45,4 +45,11 @@ compose("exec", "-T", "redis", "redis-cli", "ping")
 compose("exec", "-T", "rabbitmq", "rabbitmq-diagnostics", "ping")
 wait_json("http://localhost:8105/info")
 wait_json("http://localhost:16686/api/traces?service=payment-service&limit=1", lambda data: bool(data.get("data")))
-print("PASS: six HTTP processes, six own DB connections, 30 forbidden cross-DB connections, Redis, RabbitMQ, and Payment trace via Collector/Jaeger")
+for service in ["gateway", "identity", "driver", "trip", "matching", "payment", "notification",
+                "postgres", "redis", "rabbitmq", "otel-collector", "jaeger", "prometheus", "grafana"]:
+    container_id = compose("ps", "-a", "-q", service).stdout.strip()
+    assert container_id, f"Missing service container: {service}"
+    state = json.loads(subprocess.run(["docker", "inspect", container_id], check=True,
+        text=True, capture_output=True).stdout)[0]["State"]
+    assert state["Running"] and not state["Restarting"], (service, state["Status"])
+print("PASS: all 14 containers running, six HTTP processes, six own DB connections, 30 forbidden cross-DB connections, Redis, RabbitMQ, and Payment trace via Collector/Jaeger")
