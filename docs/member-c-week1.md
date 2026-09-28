@@ -82,4 +82,4 @@ Payment owns authorization/capture/void outcomes; Trip owns Trip transitions and
 | W3: 01–09 | Payment FSM/six simulator modes; unit and real PostgreSQL proofs | A Payment review required |
 | W4: 01–10 | Envelope/topology/security baseline; redeclare and DB isolation proofs | A/B contract review required |
 
-Later evidence: CON-03 (Payment concurrency), REL-04/05 (Outbox), REL-06 (commit-before-ACK), REL-07..11 (retry/recovery), REL-15/16/18 (reconnect/quorum/uncertainty). Test outcomes and actual hours must be recorded from real runs; this map is not evidence that they passed. W1 acceptance requires actual A/B agreement per Doc 05C §20.4.
+Later evidence: CON-03 (Payment concurrency), REL-04/05 (Outbox), REL-06 (commit-before-ACK), REL-07..11 (retry/recovery), REL-15/16/18 (reconnect/quorum/Outbox restart). Test outcomes and actual hours must be recorded from real runs; this map is not evidence that they passed. W1 acceptance requires actual A/B agreement per Doc 05C §20.4.
