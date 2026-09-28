@@ -7,12 +7,8 @@ USER app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/Services/Payment/RideHailing.PaymentService/RideHailing.PaymentService.csproj", "src/Services/Payment/RideHailing.PaymentService/"]
-COPY ["Directory.Build.props", "./"]
-COPY ["Directory.Packages.props", "./"]
-COPY ["global.json", "./"]
-RUN dotnet restore "src/Services/Payment/RideHailing.PaymentService/RideHailing.PaymentService.csproj"
 COPY . .
+RUN dotnet restore "src/Services/Payment/RideHailing.PaymentService/RideHailing.PaymentService.csproj"
 WORKDIR "/src/src/Services/Payment/RideHailing.PaymentService"
 RUN dotnet build "RideHailing.PaymentService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

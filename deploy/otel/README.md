@@ -1,3 +1,7 @@
-# OpenTelemetry Collector — deferred
+# W2 OpenTelemetry baseline
 
-The W2 observability profile starts Jaeger for OTLP trace ingestion and Prometheus for metrics. A Collector pipeline is intentionally deferred until service instrumentation is added, so this directory remains a placeholder. See Docs 02–03 and Member C W2.
+The optional `obs` profile runs an OTLP Collector, Jaeger, Prometheus and provisioned Grafana data sources. Services export ASP.NET request traces and built-in server metrics with service.name, service.instance.id and deployment.environment. Collector failure does not gate readiness or business processing.
+
+Run `docker compose --profile obs up -d --build`, call `/info`, then inspect Jaeger on localhost:16686. CI runs `scripts/test/platform-smoke.py` and queries Jaeger to prove one trace. Fine-grained domain spans and worker messaging spans belong to later weeks.
+
+Reference: https://opentelemetry.io/docs/collector/configuration/

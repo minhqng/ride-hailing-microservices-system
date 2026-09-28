@@ -7,12 +7,8 @@ USER app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/Workers/Notification/RideHailing.NotificationWorker/RideHailing.NotificationWorker.csproj", "src/Workers/Notification/RideHailing.NotificationWorker/"]
-COPY ["Directory.Build.props", "./"]
-COPY ["Directory.Packages.props", "./"]
-COPY ["global.json", "./"]
-RUN dotnet restore "src/Workers/Notification/RideHailing.NotificationWorker/RideHailing.NotificationWorker.csproj"
 COPY . .
+RUN dotnet restore "src/Workers/Notification/RideHailing.NotificationWorker/RideHailing.NotificationWorker.csproj"
 WORKDIR "/src/src/Workers/Notification/RideHailing.NotificationWorker"
 RUN dotnet build "RideHailing.NotificationWorker.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

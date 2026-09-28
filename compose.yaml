@@ -42,8 +42,8 @@ services:
   rabbitmq:
     image: rabbitmq:4.3.6-management
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
     volumes: [rabbitdata:/var/lib/rabbitmq]
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
@@ -57,7 +57,18 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:1.76.0
     profiles: [obs]
-    ports: ["16686:16686", "4317:4317", "4318:4318"]
+    ports: ["127.0.0.1:16686:16686"]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks: [ride-net]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    profiles: [obs]
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ./deploy/otel/collector.yml:/etc/otelcol/config.yml:ro
+    ports: ["127.0.0.1:4317:4317", "127.0.0.1:4318:4318"]
     networks: [ride-net]
 
   prometheus:
@@ -72,7 +83,9 @@ services:
   grafana:
     image: grafana/grafana:12.4.0
     profiles: [obs]
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
     networks: [ride-net]
 
   gateway:
@@ -80,6 +93,7 @@ services:
       context: .
       dockerfile: src/Gateway/RideHailing.Gateway/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       Services__IdentityBaseUrl: http://identity:8080
       Services__DriverBaseUrl: http://driver:8080
@@ -95,6 +109,7 @@ services:
       context: .
       dockerfile: src/Services/Identity/RideHailing.IdentityService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:-identity_dev_pw}
     ports: ["8101:8080"]
@@ -107,6 +122,7 @@ services:
       context: .
       dockerfile: src/Services/Driver/RideHailing.DriverService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:-driver_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -121,6 +137,7 @@ services:
       context: .
       dockerfile: src/Services/Trip/RideHailing.TripService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -135,6 +152,7 @@ services:
       context: .
       dockerfile: src/Services/Matching/RideHailing.MatchingService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:-matching_dev_pw}
       Redis__ConnectionString: redis:6379
@@ -152,6 +170,7 @@ services:
       context: .
       dockerfile: src/Services/Payment/RideHailing.PaymentService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:-payment_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -167,6 +186,7 @@ services:
       context: .
       dockerfile: src/Workers/Notification/RideHailing.NotificationWorker/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ConnectionStrings__Postgres: Host=postgres;Database=notification_db;Username=notification_app;Password=${NOTIFICATION_DB_PASSWORD:-notification_dev_pw}
       RabbitMq__Host: rabbitmq
       ServiceInstanceId: ${NOTIFICATION_INSTANCE_ID:-notification-local}
