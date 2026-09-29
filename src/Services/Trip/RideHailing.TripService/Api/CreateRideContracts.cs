@@ -1,4 +1,4 @@
-// CreateRide HTTP transport shape freeze (P2).
+// CreateRide HTTP transport shape freeze.
 //
 // SCOPE: transport SHAPES ONLY. No handler, persistence, idempotency-record,
 // fingerprint, active-trip guard, or FareSnapshot calculation (W3/W4).
@@ -22,7 +22,7 @@
 //   - Response: tripId only. Status/assignment/fare are GetTrip concerns.
 //   - JSON camelCase via explicit JsonPropertyName; CLR Guid for tripId.
 //   - Intended route/method: POST /trips (see TripRoutes). Routes are
-//     documented constants in P2 and are NOT registered in Program.cs, so no
+//     documented constants and are NOT registered in Program.cs, so no
 //     placeholder behavior can be mistaken for success.
 
 using System.Text.Json.Serialization;

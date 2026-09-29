@@ -1,4 +1,4 @@
-// Shared disposable real-PostgreSQL fixture (P3, A-W02-05).
+// Shared disposable real-PostgreSQL fixture (A-W02-05).
 //
 // Uses Testcontainers.PostgreSql with the repository-pinned PostgreSQL family
 // (postgres:18.6, same as compose.yaml). One container per test run, started
@@ -6,7 +6,7 @@
 // No fixed host port, no persistent database pollution, no sleep-based
 // readiness (Testcontainers waits for actual PostgreSQL readiness).
 //
-// CREDENTIAL SCOPE (see §17): the container bootstrap credential below is an
+// CREDENTIAL SCOPE: the container bootstrap credential below is an
 // ephemeral Testcontainers-generated value for disposable component setup. It
 // MUST NOT be reported as least-privilege (trip_app) or cross-database
 // isolation proof. Those claims belong to the C-owned role/database bootstrap

@@ -1,4 +1,4 @@
-// Trip-side HTTP transport coordinate shape (P2 freeze).
+// Trip-side HTTP transport coordinate shape freeze.
 //
 // CANONICAL SEMANTIC (Docs 00-01):
 //   - A ride request identifies pickup/dropoff (Doc 01 §6.1 Trip authority).

@@ -2,8 +2,8 @@ using RideHailing.TripService.Api;
 
 namespace RideHailing.TripService.UnitTests;
 
-// P2 mechanical freeze: intended routes/methods + header locations.
-// Routes are documented constants only in P2 (not registered in Program.cs),
+// Intended routes/methods + header locations.
+// Routes are documented constants only (not registered in Program.cs),
 // so these tests freeze the team-parallelism convention without implying
 // any implemented behavior.
 public sealed class TripRouteFreezeTests

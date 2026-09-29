@@ -1,4 +1,4 @@
-// Trip integration-test host (P3, A-W02-04).
+// Trip integration-test host (A-W02-04).
 //
 // Uses the ACTUAL Trip ASP.NET Core application via the standard
 // WebApplicationFactory<Program> pattern. No fake application entry path.
@@ -29,9 +29,9 @@ public sealed class TripApplicationFactory : WebApplicationFactory<Program>
         // UseSetting flows into the SUT's WebApplicationBuilder configuration
         // with precedence over appsettings, so Program.cs reads the disposable
         // test connection through the unchanged production config path.
-        // (An IWebHostBuilder.ConfigureAppConfiguration in-memory override was
-        // tried first and does NOT reach minimal-host CreateBuilder config at
-        // Program startup; UseSetting does.)
+        // An IWebHostBuilder.ConfigureAppConfiguration in-memory override does
+        // NOT reach minimal-host CreateBuilder config at Program startup;
+        // UseSetting does.
         builder.UseSetting("ConnectionStrings:Postgres", _postgresConnectionString);
     }
 }

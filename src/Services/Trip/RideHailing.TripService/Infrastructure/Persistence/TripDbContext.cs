@@ -1,4 +1,4 @@
-// Trip-owned EF Core persistence foundation (P3, A-W02-02).
+// Trip-owned EF Core persistence foundation (A-W02-02).
 //
 // SCOPE (W2): DbContext shell ONLY — DI registration + Npgsql provider wiring
 // against the Trip-owned connection string. There are deliberately NO DbSet

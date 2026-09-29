@@ -1,4 +1,4 @@
-// Stable identity representation freeze — Trip-side contribution (P2, A-W02-08).
+// Stable identity representation freeze — Trip-side contribution (A-W02-08).
 //
 // Semantic meanings below are CANONICAL (Docs 00 §2.4/§6.3, 01 §3.3, 02 §5.3-5.4).
 // CLR/wire choices are W2 MECHANICAL FREEZE: smallest representation consistent
@@ -36,7 +36,7 @@
 //   messageId:
 //     Meaning: one logical integration message; stable on republish (dedup).
 //     CLR Guid / wire string in the FUTURE C-owned envelope (Doc 02 §5.2).
-//     NOT an HTTP DTO field in P2. A freezes only the CLR choice for future
+//     NOT an HTTP DTO field. A freezes only the CLR choice for future
 //     Outbox use; envelope shape itself is TEAM_DECISION_REQUIRED (C owns
 //     MessageEnvelope per Doc 04). Classification: semantic CANONICAL,
 //     representation MECHANICAL.
@@ -54,7 +54,7 @@
 //       NOT a custom header. CLR: ActivityTraceId/string at the edge.
 //     Classification: semantic CANONICAL (Doc 02 §5.4).
 //
-// CROSS-TEAM OWNERSHIP (P2): A freezes Trip-side DTO/identity representation
+// CROSS-TEAM OWNERSHIP: A freezes Trip-side DTO/identity representation
 // only. A does NOT redefine Driver reserve/reconcile API (B), Payment command
 // envelope (C), RabbitMQ MessageEnvelope (C), or auth internals (shared).
 // CreateRide idempotency-key transport below is the one additive header A
@@ -63,13 +63,13 @@
 namespace RideHailing.TripService.Api;
 
 /// <summary>
-/// Transport header names for stable-identity propagation (P2 mechanical freeze).
+/// Transport header names for stable-identity propagation.
 /// </summary>
 public static class TripIdentityHeaders
 {
     /// <summary>
     /// Optional client-supplied idempotency key for POST /trips.
-    /// Transport location/name/representation ONLY in P2; same-key semantics
+    /// Transport location/name/representation ONLY; same-key semantics
     /// (same request → same Trip; conflicting request → conflict) belong to W4
     /// and are not claimed here. Standard header name keeps gateway/client
     /// interop future-compatible without inventing a body field.

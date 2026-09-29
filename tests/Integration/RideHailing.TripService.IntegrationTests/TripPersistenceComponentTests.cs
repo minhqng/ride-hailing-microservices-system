@@ -1,4 +1,4 @@
-// Trip W2 component proofs against disposable real PostgreSQL (P3).
+// Trip W2 component proofs against disposable real PostgreSQL.
 //
 // Required properties (A-W02-02/04/05/06):
 //   A. TripApplication_Boots_WithRealPostgres
@@ -8,10 +8,10 @@
 //   E. LatestMigration_IsRecorded (via __EFMigrationsHistory)
 //   F. TripDbContext_CanConnect_ToConfiguredRealPostgres
 //
-// SCOPE: component-level Trip database connectivity ONLY. A pass here is
-// reported as COMPONENT POSTGRES CONNECTION PASS — never as least-privilege
-// trip_app or cross-database isolation proof (those need the C-owned
-// role/database bootstrap and are evaluated separately).
+// SCOPE: component-level Trip database connectivity ONLY. A pass here proves
+// component connectivity — never least-privilege trip_app or cross-database
+// isolation (those need the C-owned role/database bootstrap and are evaluated
+// separately).
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -71,7 +71,7 @@ public sealed class TripPersistenceComponentTests
     [Fact]
     public async Task Migration_Applies_FromEmptyDatabase()
     {
-        // Genuine from-empty proof: a brand-new database on the disposable
+        // From-empty proof: a brand-new database on the disposable
         // server, then apply the W2 migration set into it.
         var probeDb = "trip_probe_" + Guid.NewGuid().ToString("N");
         var maintenanceCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
@@ -105,7 +105,7 @@ public sealed class TripPersistenceComponentTests
             Assert.Empty(await db.Database.GetPendingMigrationsAsync());
             Assert.True(await db.Database.CanConnectAsync());
 
-            // W2 honesty: no business tables may exist yet. Only the EF
+            // W2 scope: no business tables may exist yet. Only the EF
             // migration-history relation is allowed.
             var connection = db.Database.GetDbConnection();
             await connection.OpenAsync();

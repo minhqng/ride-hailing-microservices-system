@@ -3,7 +3,7 @@ using RideHailing.TripService.Api;
 
 namespace RideHailing.TripService.UnitTests;
 
-// P2 service-boundary audit as executable tests:
+// Service-boundary audit as executable tests:
 //   HTTP DTO != Domain aggregate != Persistence entity != Integration message.
 // Trip Api DTOs must not expose EF/DbContext, Saga state, Outbox rows,
 // MatchingAttempt, Payment internals, or Driver aggregate internals.

@@ -1,8 +1,8 @@
-// Trip HTTP route/method mechanical freeze (P2).
+// Trip HTTP route/method mechanical freeze.
 //
 // These are DOCUMENTED CONSTANTS ONLY. Program.cs does NOT MapPost/MapGet
-// business routes in P2, so no unimplemented endpoint can pretend success
-// (per §14 endpoint registration policy). P3 will register real handlers.
+// business routes, so no unimplemented endpoint can pretend success.
+// Real handlers arrive with later domain implementation.
 //
 // W2 MECHANICAL FREEZE — reasons:
 //   - Resource noun "/trips" (not "/rides"): aligns with the canonical
@@ -18,7 +18,7 @@
 //   - POST /trips/{id}/cancel (not DELETE): cancel is a guarded domain
 //     transition with compensation/cleanup side effects, not a resource
 //     deletion. Explicit sub-resource action keeps the terminal intent visible.
-//   - No /v1 prefix in P2: no versioned HTTP surface exists yet in the repo
+//   - No /v1 prefix: no versioned HTTP surface exists yet in the repo
 //     (only /health/*, /info). Versioning stays future-additive; integration
 //     message versioning (V1) is a separate C-owned concern (Doc 02 §6).
 //   - Route constraint "{tripId:guid}" documents that tripId is a Guid on the
@@ -27,16 +27,16 @@
 namespace RideHailing.TripService.Api;
 
 /// <summary>
-/// Intended Trip HTTP routes and methods (P2 documented freeze, not registered).
+/// Intended Trip HTTP routes and methods (documented freeze, not registered).
 /// </summary>
 public static class TripRoutes
 {
-    /// <summary>POST /trips — CreateRide (transport shape only in P2).</summary>
+    /// <summary>POST /trips — CreateRide (transport shape only).</summary>
     public const string CreateRide = "/trips";
 
-    /// <summary>GET /trips/{tripId:guid} — GetTrip (transport shape only in P2).</summary>
+    /// <summary>GET /trips/{tripId:guid} — GetTrip (transport shape only).</summary>
     public const string GetTrip = "/trips/{tripId:guid}";
 
-    /// <summary>POST /trips/{tripId:guid}/cancel — CancelRide (transport shape only in P2).</summary>
+    /// <summary>POST /trips/{tripId:guid}/cancel — CancelRide (transport shape only).</summary>
     public const string CancelRide = "/trips/{tripId:guid}/cancel";
 }

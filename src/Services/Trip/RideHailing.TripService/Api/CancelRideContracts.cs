@@ -1,4 +1,4 @@
-// CancelRide HTTP transport shape freeze (P2).
+// CancelRide HTTP transport shape freeze.
 //
 // SCOPE: transport shape ONLY. No state transition, terminal logic, Matching
 // cancellation, Driver release, compensation, Outbox, or cleanup workflow
@@ -19,14 +19,14 @@
 //   - Intended route/method: POST /trips/{tripId:guid}/cancel (see TripRoutes).
 //     POST (not DELETE) because cancel is a domain transition with
 //     compensation side effects, not a resource deletion. Not registered in
-//     Program.cs in P2, so no fake success can be observed.
+//     Program.cs, so no fake success can be observed.
 
 using System.Text.Json.Serialization;
 
 namespace RideHailing.TripService.Api;
 
 /// <summary>
-/// POST /trips/{tripId}/cancel request body. Intentionally empty in P2.
+/// POST /trips/{tripId}/cancel request body. Intentionally empty.
 /// tripId travels in the route; idempotency (if used) travels in headers.
 /// </summary>
 public sealed record CancelRideRequest

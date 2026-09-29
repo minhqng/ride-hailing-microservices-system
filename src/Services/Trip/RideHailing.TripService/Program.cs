@@ -7,7 +7,7 @@ using RideHailing.TripService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// P3 (A-W02-02): Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
+// (A-W02-02) Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
 // connection string (key "Postgres", supplied as ConnectionStrings__Postgres
 // by compose / C-owned bootstrap). Fail-fast on missing configuration: no
 // hard-coded password, no fallback credential, no foreign database.

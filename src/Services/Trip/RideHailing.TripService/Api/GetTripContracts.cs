@@ -1,4 +1,4 @@
-// GetTrip HTTP transport shape freeze (P2).
+// GetTrip HTTP transport shape freeze.
 //
 // SCOPE: external/read DTO surface ONLY. No PostgreSQL query, no EF model,
 // no Saga/Outbox exposure, no invented product fields.
@@ -26,7 +26,7 @@
 //     intentionally absent. Fare belongs to W4 (A-W04-05); the rest are never
 //     part of the external read surface.
 //   - Intended route/method: GET /trips/{tripId:guid} (see TripRoutes).
-//     Not registered in Program.cs in P2.
+//     Not registered in Program.cs.
 
 using System.Text.Json.Serialization;
 
