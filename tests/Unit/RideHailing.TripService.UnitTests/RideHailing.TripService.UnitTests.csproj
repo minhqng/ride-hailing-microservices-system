@@ -18,4 +18,16 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Services\Trip\RideHailing.TripService\RideHailing.TripService.csproj" />
+  </ItemGroup>
+
+  <!-- Pin the EF Relational family to the central version: the Design package's
+       PrivateAssets block version flow through the TripService project
+       reference, otherwise this project resolves the provider's minimum
+       (10.0.4) and warns MSB3277 against TripService (built at 10.0.12). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
 </Project>
