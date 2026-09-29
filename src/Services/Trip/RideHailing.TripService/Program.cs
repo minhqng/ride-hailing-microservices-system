@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using RideHailing.TripService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddHealthChecks();
 
 // P3 (A-W02-02): Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
 // connection string (key "Postgres", supplied as ConnectionStrings__Postgres
