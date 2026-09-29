@@ -6,6 +6,18 @@
 - Deps: `ConnectionStrings__Postgres`, `RabbitMq__Host`
 - Read: Docs 00 §3-4, 01 §6-7, 02 §14, 05A
 - Bootstrap: skeleton only. NOT implemented: FSM, FareSnapshot, Outbox, Saga, compensation.
+- A-W03-01/02/03/04/05/06: `Domain/Trips/` implements the pure Trip aggregate
+  (`Trip`, `TripState`, `FareSnapshot`, `TripAssignment`, `TripLocation`,
+  outcome/error model) with legal/illegal/terminal unit tests. No CreateRide
+  handler, no idempotency, no messaging. NOT
+  implemented: Outbox, Saga, compensation.
+- A-W03-07: `Infrastructure/Persistence/Configurations/TripConfiguration.cs`
+  maps the Trip aggregate into the `trips` table (ComplexProperty columns,
+  canonical state text, application-managed `Version` concurrency token) via
+  migration `W03_TripAggregate`. `TripDbContext` translates Trip concurrency
+  failures to `TripConcurrencyConflictException`. The database enforces
+  assignment atomicity (`CK_trips_assignment_coherence`), state/assignment
+  coherence (`CK_trips_state_assignment_coherence`) and non-negative fare.
 - A-W02-01/07/08: `Api/` freezes Trip HTTP transport shapes
   (`CreateRide`, `GetTrip`, `CancelRide`, `TripLocationDto`, `TripRoutes`,
   `TripIdentityHeaders`) + stable-identity representation. No business routes

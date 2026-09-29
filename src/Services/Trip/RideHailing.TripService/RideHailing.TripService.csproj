@@ -15,4 +15,15 @@
     </PackageReference>
   </ItemGroup>
 
+  <!-- Persistence reconstitution path is internal; tests arrange
+       historical aggregate states through it without public setters. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>RideHailing.TripService.UnitTests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>RideHailing.TripService.IntegrationTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>
