@@ -13,7 +13,36 @@ public static class DriverEndpoints
     {
         app.MapPost("/drivers", async (CreateDriverRequest req, DriverRepository repo) =>
         {
-            var driver = Driver.Create(req.DriverId ?? Guid.NewGuid(), req.UserId, req.VehicleId);
+            if (req.UserId == Guid.Empty)
+            {
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "userId must not be empty.",
+                });
+            }
+
+            var id = req.DriverId ?? Guid.NewGuid();
+            if (await repo.LoadAsync(id) is not null)
+            {
+                // Never silently reset existing state (could wipe a RESERVED driver).
+                return Results.Conflict(new
+                {
+                    code = DriverErrors.AlreadyExists,
+                    message = "Driver already exists.",
+                });
+            }
+
+            Driver driver;
+            try
+            {
+                driver = Driver.Create(id, req.UserId, req.VehicleId);
+            }
+            catch (DriverDomainException ex)
+            {
+                return MapDomainError(ex);
+            }
+
             await repo.SaveAsync(driver);
             return Results.Created($"/drivers/{driver.DriverId}", ToDto(driver));
         });
@@ -94,7 +123,7 @@ public static class DriverEndpoints
 
     private static IResult MapDomainError(DriverDomainException ex) => ex.Code switch
     {
-        DriverErrors.InvalidCoordinate or DriverErrors.InvalidLocation =>
+        DriverErrors.InvalidCoordinate or DriverErrors.InvalidLocation or DriverErrors.InvalidRequest =>
             Results.BadRequest(new { code = ex.Code, message = ex.Message }),
         _ => Results.Conflict(new { code = ex.Code, message = ex.Message }),
     };
