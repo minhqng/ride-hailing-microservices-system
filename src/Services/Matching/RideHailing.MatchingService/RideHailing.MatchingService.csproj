@@ -8,5 +8,12 @@
 
   <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+    <PackageReference Include="StackExchange.Redis" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship the Lua function source with the service; loader reads it at startup. -->
+    <Content Include="Infrastructure\RedisProjection\*.lua" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

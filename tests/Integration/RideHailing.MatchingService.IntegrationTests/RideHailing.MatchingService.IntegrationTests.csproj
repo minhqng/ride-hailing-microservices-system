@@ -22,4 +22,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Services\Matching\RideHailing.MatchingService\RideHailing.MatchingService.csproj" />
+  </ItemGroup>
+
 </Project>
