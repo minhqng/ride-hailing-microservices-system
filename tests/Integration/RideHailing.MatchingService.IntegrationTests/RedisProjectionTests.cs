@@ -194,6 +194,32 @@ public class RedisProjectionTests : IAsyncLifetime
         }
     }
 
+    // Same session + same seq + newer capturedAt -> applied (tie-break branch).
+    [Fact]
+    public async Task Location_Same_Sequence_Newer_Timestamp_Wins()
+    {
+        if (!Ready())
+        {
+            return;
+        }
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var t0 = new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.Zero);
+            var r1 = await _updater!.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 5, t0));
+            Assert.Equal(SectionOutcome.Applied, r1.Location);
+
+            var r2 = await _updater.ApplyLocationAsync(new(id, 106.7, 10.9, "s", 5, t0.AddSeconds(10)));
+            Assert.Equal(SectionOutcome.Applied, r2.Location);
+            Assert.Equal("10.9", await HGetAsync(id, "latitude"));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
+    }
+
     // FUN-03: AVAILABLE + fresh location -> discoverable via GEOSEARCH.
     [Fact]
     public async Task Available_Driver_Is_Discoverable_In_Geo()

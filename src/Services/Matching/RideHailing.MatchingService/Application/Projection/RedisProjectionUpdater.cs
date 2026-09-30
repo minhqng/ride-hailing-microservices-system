@@ -39,19 +39,38 @@ public sealed class RedisProjectionUpdater
         await db.ExecuteAsync("FUNCTION", "LOAD", "REPLACE", lua);
     }
 
-    public Task<ProjectionResult> ApplyStateAsync(DriverStateProjectionUpdate update) =>
-        CallAsync(update.DriverId,
+    public Task<ProjectionResult> ApplyStateAsync(DriverStateProjectionUpdate update)
+    {
+        if (string.IsNullOrWhiteSpace(update.DerivedStatus))
+        {
+            throw new ArgumentException("DerivedStatus must not be empty.", nameof(update));
+        }
+
+        return CallAsync(update.DriverId,
             update.DerivedStatus, update.AggregateVersion.ToString(),
             "", "", "", "", "");
+    }
 
-    public Task<ProjectionResult> ApplyLocationAsync(LocationProjectionUpdate update) =>
-        CallAsync(update.DriverId,
+    public Task<ProjectionResult> ApplyLocationAsync(LocationProjectionUpdate update)
+    {
+        if (string.IsNullOrWhiteSpace(update.SessionId))
+        {
+            throw new ArgumentException("SessionId must not be empty.", nameof(update));
+        }
+
+        if (update.SequenceNo < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(update), "SequenceNo must be >= 0.");
+        }
+
+        return CallAsync(update.DriverId,
             "", "",
             update.Longitude.ToString("R", CultureInfo.InvariantCulture),
             update.Latitude.ToString("R", CultureInfo.InvariantCulture),
             update.SessionId,
             update.SequenceNo.ToString(CultureInfo.InvariantCulture),
             update.CapturedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture));
+    }
 
     private async Task<ProjectionResult> CallAsync(
         Guid driverId,
