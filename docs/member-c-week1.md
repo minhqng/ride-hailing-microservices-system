@@ -23,6 +23,74 @@ This note records the W1 artifacts from `docs/05C-member-c-payment-messaging-pla
 
 ## Payment operation state model (W3 target)
 
+### Crash window 1: commit before publish
+
+```mermaid
+sequenceDiagram
+    participant S as Service
+    participant D as Owned DB
+    participant R as Relay
+    participant B as Broker
+    S->>D: Commit state and Outbox(messageId) atomically
+    Note over S: Crash before publish
+    R->>D: Read pending Outbox after restart
+    R->>B: Publish same messageId
+```
+
+### Crash window 2: publish before confirmation is recorded
+
+```mermaid
+sequenceDiagram
+    participant R as Relay
+    participant B as Broker
+    participant D as Outbox DB
+    R->>B: Publish messageId
+    Note over R,B: Broker may accept; connection lost before confirm
+    R->>D: Pending row remains durable
+    R->>B: Republish same messageId after restart
+    Note over B: Duplicate delivery possible; consumer dedup required
+```
+
+### Crash window 3: consumer commit before ACK
+
+```mermaid
+sequenceDiagram
+    participant B as Broker
+    participant C as Consumer
+    participant D as Owned DB
+    B->>C: Deliver messageId
+    C->>D: Commit effect and processed marker atomically
+    Note over C: Crash before ACK
+    B->>C: Redeliver same messageId
+    C->>D: Read existing processed marker; no second effect
+    C->>B: ACK
+```
+
+### Crash window 4: provider effect before response
+
+```mermaid
+sequenceDiagram
+    participant C as Payment caller
+    participant P as Provider simulator
+    participant D as Provider state
+    C->>P: Execute operationKey
+    P->>D: Persist logical effect
+    Note over P,C: Response lost; caller outcome UNKNOWN
+    C->>P: Reconcile using same operationKey
+    P->>D: Query existing effect
+    P-->>C: Existing result; do not execute a new logical operation
+```
+
+These diagrams describe the target failure semantics, not a claim that W1 implements recovery.
+
+### Peer walkthrough checklist
+
+- A/B identify the durable fact and repeatable action in each diagram.
+- A/B explain why messageId and operationKey are different identities.
+- Record reviewer, date, commit, questions and decisions in the weekly PR.
+- For W2 peer rerun, record OS, clean-clone commit, command, result and evidence link.
+- Keep acceptance pending until the named reviewer supplies actual evidence.
+
 The provider simulator records whether a provider-side effect happened separately from the caller-visible operation resolution. `TIMEOUT_AFTER_EFFECT` is deliberately ambiguous to the caller; it must not erase the effect or imply that another operation key is safe.
 
 ```text
