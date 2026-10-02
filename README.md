@@ -67,4 +67,4 @@ docker compose down
 
 ## Current implementation status
 
-W2 foundation: Compose core/optional obs, isolated DB roles, bounded owned-DB readiness, OTel traces/metrics and CI smoke. See `docs/member-c-week2.md` for issue coverage and pending peer review. Business behavior and broker bindings belong to later weeks.
+W2 foundation: Compose core/optional obs, isolated DB roles, bounded owned-DB readiness, OTel traces/metrics and CI smoke. See `docs/member-c-week2.md` for issue coverage and pending peer review. W3 adds the Development-only Payment simulator, migration and state/persistence verification; see `docs/member-c-week3.md`. Broker bindings belong to W4.

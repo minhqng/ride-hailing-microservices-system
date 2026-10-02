@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <ProjectReference Include="../../../src/Services/Payment/RideHailing.PaymentService/RideHailing.PaymentService.csproj" />
   </ItemGroup>
 
 </Project>

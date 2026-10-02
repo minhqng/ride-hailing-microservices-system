@@ -8,6 +8,11 @@
 
   <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
+    <PackageReference Include="Npgsql" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
   </ItemGroup>
 </Project>
