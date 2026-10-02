@@ -6,7 +6,7 @@ Doc 05C §21 and Doc 04 §13 govern this week. Core services are deliberately un
 |---|---|
 | C-W02-01 | Compose, service DNS, Dockerfiles; platform-smoke CI builds a clean checkout |
 | C-W02-02 | Six owned DBs; PUBLIC CONNECT revoked; smoke tests all 30 cross-role combinations with successful own-DB controls |
-| C-W02-03 | Versioned broker service/bootstrap directory; executable business topology belongs to W4 |
+| C-W02-03 | BrokerBootstrapV1 declares durable topic exchanges on Payment startup; W4 adds queues/bindings. Smoke checks declaration and restart |
 | C-W02-04/05 | Collector pipelines, ASP.NET traces/metrics, Jaeger, Prometheus, Grafana sources; smoke queries a Payment trace |
 | C-W02-06 | `/health/live` is process liveness; `/health/ready` verifies configured owned PostgreSQL with a bounded timeout. It does not assert Redis/Rabbit business readiness; no consumers exist yet. Notification is a worker skeleton, with no HTTP probe |
 | C-W02-07 | OTel service.name, service.instance.id (container hostname unless overridden), deployment.environment |

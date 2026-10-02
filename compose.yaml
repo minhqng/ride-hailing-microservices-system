@@ -174,6 +174,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:-payment_dev_pw}
       RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
       ServiceInstanceId: ${PAYMENT_INSTANCE_ID:-payment-local}
     ports: ["8105:8080"]
     depends_on:
