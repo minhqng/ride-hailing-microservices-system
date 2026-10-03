@@ -33,6 +33,16 @@
   - Fixture: explicit REDIS_TEST_CONNECTION fails loud; otherwise disposable
     Testcontainers Redis (8.10.2, one shared container per run, AutoRemove);
     skip only when Docker provably absent (loud SKIP log, no fake-green).
+
+## Driver HTTP seam (B-W02-02) + freeze note (B-W02-08, PROPOSED)
+
+- `Infrastructure/DriverClient/`: `IDriverClient`, `HttpDriverClient` (typed
+  client, no retry handlers by design), request/response/outcome contracts,
+  `README.md` freeze note with open questions for A/C.
+- Mapping proven by stub-transport unit tests (no server needed): request
+  shape, 200/409/404 mapping, 5xx/timeout propagate (caller classifies
+  UNKNOWN in W6/W7), all 7 reconcile outcomes, unknown-outcome throws.
+- Driver-side `/internal/*` endpoints land in W6/W7; timeout budgets frozen there.
   - Convention: tests return early (vacuous pass) when Redis is unreachable
     but always log INFRA/SKIP via test output, so a vacuous run is visible.
 
