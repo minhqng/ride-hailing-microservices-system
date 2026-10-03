@@ -1,38 +1,51 @@
-// B-W03-07: loads the single-source W2 SQL baseline (chốt ③: Npgsql raw, no EF in W3).
+// B-W03-07: loads ALL W2+ migration scripts in filename order (001, 002, ...).
+// Single source shared by the service startup path (chốt ③: Npgsql raw, no EF in W3).
 namespace RideHailing.DriverService.Infrastructure.Persistence;
 
 public static class DriverSqlBaseline
 {
     public static string Load()
     {
-        foreach (var p in CandidatePaths())
+        var dir = FindMigrationsDir();
+        var files = Directory.GetFiles(dir, "*.sql")
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ToArray();
+        if (files.Length == 0)
         {
-            if (File.Exists(p))
+            throw new FileNotFoundException("No migration *.sql found in " + dir);
+        }
+
+        return string.Join("\n", files.Select(File.ReadAllText));
+    }
+
+    private static string FindMigrationsDir()
+    {
+        var candidates = new[]
+        {
+            // Published service output (csproj copies *.sql to output).
+            Path.Combine(AppContext.BaseDirectory, "Infrastructure", "Persistence", "Migrations"),
+            // Dev/test source-tree fallbacks (service + test working dirs).
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
+                "..", "..", "..", "..", "..", "..",
+                "src", "Services", "Driver", "RideHailing.DriverService",
+                "Infrastructure", "Persistence", "Migrations")),
+            Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(),
+                "src", "Services", "Driver", "RideHailing.DriverService",
+                "Infrastructure", "Persistence", "Migrations")),
+            Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(),
+                "..", "..", "..", "..",
+                "src", "Services", "Driver", "RideHailing.DriverService",
+                "Infrastructure", "Persistence", "Migrations")),
+        };
+        foreach (var p in candidates)
+        {
+            if (Directory.Exists(p))
             {
-                return File.ReadAllText(p);
+                return p;
             }
         }
 
-        throw new FileNotFoundException(
-            "001_driver_baseline.sql not found. Tried: " + string.Join("; ", CandidatePaths()));
-    }
-
-    private static IEnumerable<string> CandidatePaths()
-    {
-        // Published service output (csproj copies *.sql to output).
-        yield return Path.Combine(AppContext.BaseDirectory,
-            "Infrastructure", "Persistence", "Migrations", "001_driver_baseline.sql");
-        // Dev/test source-tree fallbacks (service + test working dirs).
-        yield return Path.Combine(AppContext.BaseDirectory,
-            "..", "..", "..", "..", "..", "..",
-            "src", "Services", "Driver", "RideHailing.DriverService",
-            "Infrastructure", "Persistence", "Migrations", "001_driver_baseline.sql");
-        yield return Path.Combine(Directory.GetCurrentDirectory(),
-            "src", "Services", "Driver", "RideHailing.DriverService",
-            "Infrastructure", "Persistence", "Migrations", "001_driver_baseline.sql");
-        yield return Path.Combine(Directory.GetCurrentDirectory(),
-            "..", "..", "..", "..",
-            "src", "Services", "Driver", "RideHailing.DriverService",
-            "Infrastructure", "Persistence", "Migrations", "001_driver_baseline.sql");
+        throw new DirectoryNotFoundException(
+            "Driver Migrations dir not found. Tried: " + string.Join("; ", candidates));
     }
 }

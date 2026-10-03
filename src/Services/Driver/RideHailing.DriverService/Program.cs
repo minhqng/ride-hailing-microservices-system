@@ -5,6 +5,7 @@ using RideHailing.DriverService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHealthChecks();
+builder.Services.Configure<LocationIngressOptions>(builder.Configuration.GetSection("Location"));
 builder.Services.AddSingleton(_ =>
 {
     var cs = builder.Configuration.GetConnectionString("Postgres")

@@ -6,7 +6,7 @@ public class MatchingDbOwnershipTests
     [Fact]
     public void Matching_Fixture_Targets_Owned_Database_Only()
     {
-        var cs = MatchingPostgresFixture.ResolveConnectionString();
+        var cs = MatchingPostgresDatabase.ConfiguredConnectionString();
         Assert.Contains("matching_db", cs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("driver_db", cs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("trip_db", cs, StringComparison.OrdinalIgnoreCase);

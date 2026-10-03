@@ -1,5 +1,6 @@
 // B-W03-08: FUN-02 minimal API. Maps DomainException codes to HTTP (chốt ②).
 // Domain never knows HTTP. Invalid* -> 400, conflicts/stale -> 409.
+using Microsoft.Extensions.Options;
 using RideHailing.DriverService.Application.Drivers;
 using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Domain.Drivers;
@@ -95,14 +96,18 @@ public static class DriverEndpoints
             return Results.Ok(ToDto(driver));
         });
 
-        app.MapPost("/drivers/{id:guid}/location", (Guid id, LocationRequest req, LocationAcceptor acceptor) =>
+        app.MapPost("/drivers/{id:guid}/location", (
+            Guid id,
+            LocationRequest req,
+            LocationAcceptor acceptor,
+            IOptions<LocationIngressOptions> ingressOptions) =>
         {
             LocationSample sample;
             try
             {
                 sample = new LocationSample(id, req.DeviceSessionId, req.SequenceNo,
                     req.CapturedAt, req.Latitude, req.Longitude);
-                var result = acceptor.Accept(sample);
+                var result = acceptor.Accept(sample, null, ingressOptions.Value);
                 if (result.Outcome == LocationAcceptOutcome.Stale)
                 {
                     return Results.Conflict(new

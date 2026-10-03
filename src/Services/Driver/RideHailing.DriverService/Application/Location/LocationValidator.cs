@@ -5,12 +5,12 @@ namespace RideHailing.DriverService.Application.Location;
 
 public static class LocationValidator
 {
-    // Bounds for future clocks / history window. Config-like constants, not universal truth.
-    private static readonly TimeSpan MaxFutureSkew = TimeSpan.FromMinutes(5);
-    private static readonly TimeSpan MaxPastAge = TimeSpan.FromHours(24);
-
-    public static void Validate(LocationSample sample, DateTimeOffset? now = null)
+    public static void Validate(
+        LocationSample sample,
+        DateTimeOffset? now = null,
+        LocationIngressOptions? options = null)
     {
+        var policy = options ?? LocationIngressOptions.FrozenW3Baseline();
         if (sample.DriverId == Guid.Empty)
         {
             throw new DriverDomainException(DriverErrors.InvalidLocation, "driverId must not be empty.");
@@ -47,12 +47,12 @@ public static class LocationValidator
         }
 
         var reference = now ?? DateTimeOffset.UtcNow;
-        if (sample.CapturedAt > reference + MaxFutureSkew)
+        if (sample.CapturedAt > reference + policy.MaxFutureSkew)
         {
             throw new DriverDomainException(DriverErrors.InvalidLocation, "capturedAt is too far in the future.");
         }
 
-        if (sample.CapturedAt < reference - MaxPastAge)
+        if (sample.CapturedAt < reference - policy.MaxPastAge)
         {
             throw new DriverDomainException(DriverErrors.InvalidLocation, "capturedAt is too old.");
         }

@@ -18,6 +18,29 @@ public class LocationValidationTests
     }
 
     [Fact]
+    public void Frozen_Baseline_Matches_W3_Values()
+    {
+        var baseline = LocationIngressOptions.FrozenW3Baseline();
+        Assert.Equal(TimeSpan.FromMinutes(5), baseline.MaxFutureSkew);
+        Assert.Equal(TimeSpan.FromHours(24), baseline.MaxPastAge);
+    }
+
+    [Fact]
+    public void Custom_Policy_Overrides_Defaults()
+    {
+        // Same sample, stricter policy: 30-day-old sample rejected by default
+        // but accepted when policy allows; proves windows are config, not code.
+        var old = Base() with { CapturedAt = Now.AddDays(-2) };
+        Assert.Throws<DriverDomainException>(
+            () => LocationValidator.Validate(old, Now));
+        LocationValidator.Validate(old, Now, new LocationIngressOptions
+        {
+            MaxFutureSkew = TimeSpan.FromMinutes(5),
+            MaxPastAge = TimeSpan.FromDays(30),
+        });
+    }
+
+    [Fact]
     public void Polar_Latitude_Accepted_At_Ingress()
     {
         // Chốt ①: 86° accepted by authority; W4 projection marks non-indexable.

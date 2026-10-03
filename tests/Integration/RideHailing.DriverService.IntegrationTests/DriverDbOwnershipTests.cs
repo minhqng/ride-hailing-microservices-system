@@ -6,7 +6,7 @@ public class DriverDbOwnershipTests
     [Fact]
     public void Driver_Fixture_Targets_Owned_Database_Only()
     {
-        var cs = DriverPostgresFixture.ResolveConnectionString();
+        var cs = DriverPostgresDatabase.ConfiguredConnectionString();
         Assert.Contains("driver_db", cs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("matching_db", cs, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("trip_db", cs, StringComparison.OrdinalIgnoreCase);

@@ -1,28 +1,36 @@
-// B-W03-07: persistence round-trip on real PG (Npgsql raw, chốt ③).
-// Returns early when PG unavailable (same convention as W2 fixtures).
+// B-W03-07: persistence round-trip on REAL PostgreSQL (Npgsql raw, chốt ③).
+// Infra semantics live in the shared DriverPostgresDatabase: fail loud,
+// skip only without Docker.
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
+using Xunit.Abstractions;
 
 namespace RideHailing.DriverService.IntegrationTests;
 
+[Collection(DriverPostgresCollection.Name)]
 public class DriverPersistenceTests
 {
-    private static string ConnectionString() => DriverPostgresFixture.ResolveConnectionString();
+    private readonly ITestOutputHelper _out;
+    private readonly DriverPostgresDatabase _db;
+
+    public DriverPersistenceTests(ITestOutputHelper output, DriverPostgresDatabase db)
+    {
+        _out = output;
+        _db = db;
+    }
+
+    private DriverRepository Repo() => new(_db.ConnectionString);
 
     [Fact]
     public async Task Save_Load_RoundTrip_Preserves_Coherence()
     {
-        DriverRepository repo;
-        try
+        if (!_db.Ready())
         {
-            repo = new DriverRepository(ConnectionString());
-            await repo.EnsureTablesAsync();
-        }
-        catch
-        {
-            return; // PG unavailable
+            _out.WriteLine("SKIP: " + _db.SkipReason);
+            return;
         }
 
+        var repo = Repo();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
         driver.GoOnline();
         await repo.SaveAsync(driver);
@@ -37,17 +45,13 @@ public class DriverPersistenceTests
     [Fact]
     public async Task Save_Load_Reserved_State()
     {
-        DriverRepository repo;
-        try
+        if (!_db.Ready())
         {
-            repo = new DriverRepository(ConnectionString());
-            await repo.EnsureTablesAsync();
-        }
-        catch
-        {
+            _out.WriteLine("SKIP: " + _db.SkipReason);
             return;
         }
 
+        var repo = Repo();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
         driver.GoOnline();
         var t = Guid.NewGuid();

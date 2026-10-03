@@ -17,9 +17,12 @@ public sealed class LocationAcceptor
 {
     private readonly ConcurrentDictionary<(Guid DriverId, string Session), (long Seq, DateTimeOffset CapturedAt, LocationSample Sample)> _latest = new();
 
-    public LocationAcceptResult Accept(LocationSample sample, DateTimeOffset? now = null)
+    public LocationAcceptResult Accept(
+        LocationSample sample,
+        DateTimeOffset? now = null,
+        LocationIngressOptions? options = null)
     {
-        LocationValidator.Validate(sample, now);
+        LocationValidator.Validate(sample, now, options);
         var key = (sample.DriverId, sample.DeviceSessionId);
 
         while (true)
