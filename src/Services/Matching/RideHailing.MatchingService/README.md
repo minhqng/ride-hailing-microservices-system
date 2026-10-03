@@ -30,6 +30,9 @@
   - Tests: DSI-007/DSI-006 projection-level, cross-session reject,
     state-only-no-clobber, FUN-03 GEOSEARCH discoverable, polar-lat
     applied-but-not-indexed, RESERVED eviction, REL-14 Degraded faultpoint.
+  - Fixture: explicit REDIS_TEST_CONNECTION fails loud; otherwise disposable
+    Testcontainers Redis (8.10.2, one shared container per run, AutoRemove);
+    skip only when Docker provably absent (loud SKIP log, no fake-green).
   - Convention: tests return early (vacuous pass) when Redis is unreachable
     but always log INFRA/SKIP via test output, so a vacuous run is visible.
 

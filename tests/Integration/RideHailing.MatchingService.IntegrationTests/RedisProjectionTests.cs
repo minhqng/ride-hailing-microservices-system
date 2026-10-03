@@ -1,51 +1,42 @@
-// B-W04-05/06/07: projection correctness on real Redis (DSI-006/007, FUN-03, REL-12/13 early).
-// Returns early when Redis unavailable (same convention as W2 fixtures).
-using System.Net.Sockets;
+// B-W04-05/06/07: projection correctness on REAL Redis (DSI-006/007, FUN-03, REL-12/13 early).
+// Shares the collection RedisDatabase (one disposable container per run).
+// Function is ensured once per test (idempotent FUNCTION LOAD REPLACE).
 using RideHailing.MatchingService.Application.Projection;
 using StackExchange.Redis;
 using Xunit.Abstractions;
 
 namespace RideHailing.MatchingService.IntegrationTests;
 
-public class RedisProjectionTests : IAsyncLifetime
+[Collection(RedisCollection.Name)]
+public class RedisProjectionTests
 {
     private readonly ITestOutputHelper _out;
-    private ConnectionMultiplexer? _mux;
-    private RedisProjectionUpdater? _updater;
+    private readonly RedisDatabase _db;
 
-    public RedisProjectionTests(ITestOutputHelper output)
+    public RedisProjectionTests(ITestOutputHelper output, RedisDatabase db)
     {
         _out = output;
+        _db = db;
     }
 
-    public async Task InitializeAsync()
+    private bool Ready() => _db.Ready();
+
+    private void LogReady() =>
+        _out.WriteLine($"INFRA: redis via {_db.Source} — real assertions will run.");
+
+    private void LogSkip() =>
+        _out.WriteLine("SKIP: " + _db.SkipReason);
+
+    private RedisProjectionUpdater Updater() => new(_db.Multiplexer());
+
+    private async Task<RedisProjectionUpdater> ReadyUpdaterAsync()
     {
-        try
-        {
-            _mux = (ConnectionMultiplexer)await RedisProjectionUpdater.ConnectAsync(RedisFixture.ResolveConnectionString());
-            _updater = new RedisProjectionUpdater(_mux);
-            await _updater.EnsureFunctionAsync();
-            _out.WriteLine("INFRA: redis reachable, function ensured — real assertions will run.");
-        }
-        catch (Exception ex) when (ex is RedisConnectionException or TimeoutException or IOException or SocketException)
-        {
-            _mux = null;
-            _updater = null;
-            _out.WriteLine("SKIP: redis unavailable, test returns early (vacuous pass).");
-        }
+        var updater = Updater();
+        await updater.EnsureFunctionAsync();
+        return updater;
     }
 
-    public async Task DisposeAsync()
-    {
-        if (_mux is not null)
-        {
-            await _mux.DisposeAsync();
-        }
-    }
-
-    private bool Ready() => _updater is not null && _mux is not null;
-
-    private IDatabase Db() => _mux!.GetDatabase();
+    private IDatabase Db() => _db.Multiplexer().GetDatabase();
 
     private async Task CleanupAsync(Guid driverId)
     {
@@ -83,16 +74,20 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
-            var r1 = await _updater!.ApplyStateAsync(new(id, "RESERVED", 10));
+            var r1 = await updater.ApplyStateAsync(new(id, "RESERVED", 10));
             Assert.Equal(SectionOutcome.Applied, r1.State);
 
-            var r2 = await _updater.ApplyStateAsync(new(id, "AVAILABLE", 9));
+            var r2 = await updater.ApplyStateAsync(new(id, "AVAILABLE", 9));
             Assert.Equal(SectionOutcome.Stale, r2.State);
 
             Assert.Equal("10", await HGetAsync(id, "driverAggregateVersion"));
@@ -112,18 +107,22 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
-            var loc = await _updater!.ApplyLocationAsync(
+            var loc = await updater.ApplyLocationAsync(
                 new(id, 106.6, 10.8, "s1", 100, t0));
             Assert.Equal(SectionOutcome.Applied, loc.Location);
 
-            var st = await _updater.ApplyStateAsync(new(id, "AVAILABLE", 11));
+            var st = await updater.ApplyStateAsync(new(id, "AVAILABLE", 11));
             Assert.Equal(SectionOutcome.Applied, st.State);
             Assert.Equal(SectionOutcome.Skipped, st.Location);
 
@@ -143,17 +142,21 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
-            var r1 = await _updater!.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 20, t0));
+            var r1 = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 20, t0));
             Assert.Equal(SectionOutcome.Applied, r1.Location);
 
-            var r2 = await _updater.ApplyLocationAsync(new(id, 106.7, 10.9, "s", 19, t0.AddSeconds(1)));
+            var r2 = await updater.ApplyLocationAsync(new(id, 106.7, 10.9, "s", 19, t0.AddSeconds(1)));
             Assert.Equal(SectionOutcome.Stale, r2.Location);
 
             Assert.Equal("20", await HGetAsync(id, "sequenceNo"));
@@ -172,17 +175,21 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
-            var r1 = await _updater!.ApplyLocationAsync(new(id, 106.6, 10.8, "S1", 100, t0));
+            var r1 = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "S1", 100, t0));
             Assert.Equal(SectionOutcome.Applied, r1.Location);
 
-            var r2 = await _updater.ApplyLocationAsync(new(id, 106.0, 10.0, "S2", 1, t0.AddMinutes(1)));
+            var r2 = await updater.ApplyLocationAsync(new(id, 106.0, 10.0, "S2", 1, t0.AddMinutes(1)));
             Assert.Equal(SectionOutcome.StaleSession, r2.Location);
 
             Assert.Equal("S1", await HGetAsync(id, "locationSessionId"));
@@ -200,17 +207,21 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 30, 10, 0, 0, TimeSpan.Zero);
-            var r1 = await _updater!.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 5, t0));
+            var r1 = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 5, t0));
             Assert.Equal(SectionOutcome.Applied, r1.Location);
 
-            var r2 = await _updater.ApplyLocationAsync(new(id, 106.7, 10.9, "s", 5, t0.AddSeconds(10)));
+            var r2 = await updater.ApplyLocationAsync(new(id, 106.7, 10.9, "s", 5, t0.AddSeconds(10)));
             Assert.Equal(SectionOutcome.Applied, r2.Location);
             Assert.Equal("10.9", await HGetAsync(id, "latitude"));
         }
@@ -226,15 +237,19 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
-            await _updater!.ApplyStateAsync(new(id, "AVAILABLE", 1));
-            var loc = await _updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 1, t0));
+            await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            var loc = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 1, t0));
             Assert.True(loc.GeoMember);
             Assert.True(await IsGeoMemberAsync(id));
         }
@@ -250,15 +265,19 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
-            await _updater!.ApplyStateAsync(new(id, "AVAILABLE", 1));
-            var loc = await _updater.ApplyLocationAsync(new(id, 106.6, 86.0, "s1", 1, t0));
+            await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            var loc = await updater.ApplyLocationAsync(new(id, 106.6, 86.0, "s1", 1, t0));
             Assert.Equal(SectionOutcome.Applied, loc.Location);
             Assert.False(loc.GeoMember);
             Assert.Equal("86", await HGetAsync(id, "latitude"));
@@ -275,18 +294,22 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
         try
         {
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
-            await _updater!.ApplyStateAsync(new(id, "AVAILABLE", 1));
-            await _updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 1, t0));
+            await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 1, t0));
             Assert.True(await IsGeoMemberAsync(id));
 
-            var r = await _updater.ApplyStateAsync(new(id, "RESERVED", 2));
+            var r = await updater.ApplyStateAsync(new(id, "RESERVED", 2));
             Assert.Equal(SectionOutcome.Applied, r.State);
             Assert.False(r.GeoMember);
             Assert.False(await IsGeoMemberAsync(id));
@@ -306,10 +329,13 @@ public class RedisProjectionTests : IAsyncLifetime
     {
         if (!Ready())
         {
+            LogSkip();
             return;
         }
 
-        var updater = new RedisProjectionUpdater(_mux!, "definitely_not_a_loaded_function");
+        LogReady();
+
+        var updater = new RedisProjectionUpdater(_db.Multiplexer(), "definitely_not_a_loaded_function");
         var r = await updater.ApplyStateAsync(new(Guid.NewGuid(), "AVAILABLE", 1));
         Assert.True(r.Degraded);
         Assert.Equal(SectionOutcome.Degraded, r.State);
