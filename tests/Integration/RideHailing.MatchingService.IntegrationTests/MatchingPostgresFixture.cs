@@ -87,22 +87,6 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
         return tables;
     }
 
-    public async Task<HashSet<string>> GetRoundStatusesAsync()
-    {
-        await using var conn = new NpgsqlConnection(ConnectionString);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand(
-            "SELECT DISTINCT status FROM matching_rounds", conn);
-        await using var reader = await cmd.ExecuteReaderAsync();
-        var statuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        while (await reader.ReadAsync())
-        {
-            statuses.Add(reader.GetString(0));
-        }
-
-        return statuses;
-    }
-
     private static async Task ApplyScriptsAsync(string connectionString)
     {
         await using var conn = new NpgsqlConnection(connectionString);
