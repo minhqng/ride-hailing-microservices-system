@@ -95,6 +95,22 @@ public class DriverClientMappingTests
     }
 
     [Fact]
+    public async Task Reserve_409_Preserves_NonDefault_Code()
+    {
+        // A code other than the fallback proves real parsing (not the default kicking in).
+        var stub = new StubHandler
+        {
+            Responder = _ => JsonResponse(HttpStatusCode.Conflict, new { code = "RATE_LIMITED_TRY_LATER" }),
+        };
+        var client = Client(stub, out _);
+
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+
+        Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
+        Assert.Equal("RATE_LIMITED_TRY_LATER", result.Code);
+    }
+
+    [Fact]
     public async Task Reserve_404_Maps_NotFound()
     {
         var stub = new StubHandler

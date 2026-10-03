@@ -31,6 +31,9 @@ infrastructure failure (`02 §19.4`), never assume success on unavailability
 
 ## Open questions for A/C
 
+- [ ] A: confirm the Reserve route + body above, or supply the canonical one.
+  (Canonical docs freeze only the reconcile GET, `02 §12.6` — the Reserve
+  route here is B's proposal and must not be treated as frozen until signed.)
 - [ ] A: exact 409 code set Driver guarantees (minimum: `DRIVER_NOT_AVAILABLE`).
 - [ ] A: auth story for `/internal/*` (02 §3066: not unprotected public).
 - [ ] C: attempt-timeout/total-deadline budgets vs `02 §20` (W6 freezes numbers).
