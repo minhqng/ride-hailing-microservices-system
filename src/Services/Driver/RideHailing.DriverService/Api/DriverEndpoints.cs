@@ -24,15 +24,6 @@ public static class DriverEndpoints
             }
 
             var id = req.DriverId ?? Guid.NewGuid();
-            if (await repo.LoadAsync(id) is not null)
-            {
-                // Never silently reset existing state (could wipe a RESERVED driver).
-                return Results.Conflict(new
-                {
-                    code = DriverErrors.AlreadyExists,
-                    message = "Driver already exists.",
-                });
-            }
 
             Driver driver;
             try
@@ -44,7 +35,18 @@ public static class DriverEndpoints
                 return MapDomainError(ex);
             }
 
-            await repo.SaveAsync(driver);
+            // Insert-only: concurrent duplicate creates linearize on the
+            // primary key instead of check-then-upsert losing the conflict.
+            if (!await repo.TryInsertAsync(driver))
+            {
+                // Never silently reset existing state (could wipe a RESERVED driver).
+                return Results.Conflict(new
+                {
+                    code = DriverErrors.AlreadyExists,
+                    message = "Driver already exists.",
+                });
+            }
+
             return Results.Created($"/drivers/{driver.DriverId}", ToDto(driver));
         });
 

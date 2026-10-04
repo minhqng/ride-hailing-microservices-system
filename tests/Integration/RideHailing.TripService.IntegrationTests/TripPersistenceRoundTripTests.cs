@@ -27,6 +27,46 @@ public sealed class TripPersistenceRoundTripTests
         new DbContextOptionsBuilder<TripDbContext>()
             .UseNpgsql(_fixture.ConnectionString).Options;
 
+    [Fact]
+    public async Task Duplicate_ReservationId_Across_Trips_Is_Rejected()
+    {
+        // DSI-001 Trip-side defense (ux_trips_reservation_id): one logical
+        // Driver reservation effect is current for at most one Trip. A second
+        // trips row claiming the same reservation must fail unique violation
+        // (23505), never commit a double claim.
+        var options = Options();
+        await using (var setup = new TripDbContext(options))
+        {
+            await setup.Database.MigrateAsync();
+        }
+
+        var sharedReservation = Guid.NewGuid();
+        Trip ReservedTrip(Guid tripId) => Trip.Reconstitute(
+            tripId, Guid.NewGuid(),
+            new TripLocation(10.762622, 106.660172),
+            new TripLocation(10.776889, 106.700806),
+            new FareSnapshot(
+                "VND", 75000m, "p0-test",
+                new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero)),
+            TripState.DriverReserved,
+            new TripAssignment(Guid.NewGuid(), sharedReservation, 1),
+            new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
+            3);
+
+        await using (var db = new TripDbContext(options))
+        {
+            db.Trips.Add(ReservedTrip(Guid.NewGuid()));
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = new TripDbContext(options))
+        {
+            db.Trips.Add(ReservedTrip(Guid.NewGuid()));
+            var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+            Assert.Equal("23505", (ex.InnerException as PostgresException)?.SqlState);
+        }
+    }
+
     private static Trip NewCreatedTrip(Guid tripId)
     {
         var pickup = new TripLocation(10.762622, 106.660172);

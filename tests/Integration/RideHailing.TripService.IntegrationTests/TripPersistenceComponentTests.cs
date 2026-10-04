@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using RideHailing.TripService.Infrastructure.Persistence;
+using System.Net;
 
 namespace RideHailing.TripService.IntegrationTests;
 
@@ -154,5 +155,19 @@ public sealed class TripPersistenceComponentTests
         var configured = db.Database.GetConnectionString();
         Assert.NotNull(configured);
         Assert.DoesNotContain("Host=postgres", configured, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task HealthReady_MalformedDatabaseConfig_Returns503_Not500()
+    {
+        // Readiness is a traffic gate, not a crash reporter: an unparsable
+        // owned-database configuration must report NotReady (503) so the
+        // orchestrator routes around the pod instead of observing a 500.
+        using var factory = new TripApplicationFactory("not-a-valid-connection-string;;");
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("NotReady", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 }

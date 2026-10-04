@@ -27,7 +27,6 @@ public sealed class DriverRepository
             INSERT INTO drivers (driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, updated_at)
             VALUES (@id, @user, @status, @version, @reservedTrip, @reservation, @activeTrip, @vehicle, @updated)
             ON CONFLICT (driver_id) DO UPDATE SET
-                user_id = EXCLUDED.user_id,
                 status = EXCLUDED.status,
                 version = EXCLUDED.version,
                 reserved_trip_id = EXCLUDED.reserved_trip_id,
@@ -49,6 +48,42 @@ public sealed class DriverRepository
         cmd.Parameters.AddWithValue("vehicle", (object?)driver.VehicleId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("updated", driver.UpdatedAt.UtcDateTime);
         await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>
+    /// Insert-only create path for POST /drivers. Concurrent duplicate
+    /// creates linearize on the drivers primary key: exactly one insert
+    /// wins, losers observe the unique violation instead of silently
+    /// resetting existing state (DSR-002 duplicate-delivery safety).
+    /// Returns false when a driver with the same id already exists.
+    /// </summary>
+    public async Task<bool> TryInsertAsync(Driver driver, CancellationToken ct = default)
+    {
+        const string Sql = """
+            INSERT INTO drivers (driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, updated_at)
+            VALUES (@id, @user, @status, @version, @reservedTrip, @reservation, @activeTrip, @vehicle, @updated);
+            """;
+        try
+        {
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync(ct);
+            await using var cmd = new NpgsqlCommand(Sql, conn);
+            cmd.Parameters.AddWithValue("id", driver.DriverId);
+            cmd.Parameters.AddWithValue("user", driver.UserId);
+            cmd.Parameters.AddWithValue("status", ToDb(driver.Status));
+            cmd.Parameters.AddWithValue("version", driver.Version);
+            cmd.Parameters.AddWithValue("reservedTrip", (object?)driver.ReservedTripId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("reservation", (object?)driver.ReservationId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("activeTrip", (object?)driver.ActiveTripId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("vehicle", (object?)driver.VehicleId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("updated", driver.UpdatedAt.UtcDateTime);
+            await cmd.ExecuteNonQueryAsync(ct);
+            return true;
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return false;
+        }
     }
 
     public async Task<Driver?> LoadAsync(Guid driverId, CancellationToken ct = default)
