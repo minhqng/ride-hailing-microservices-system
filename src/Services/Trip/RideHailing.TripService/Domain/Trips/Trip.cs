@@ -85,16 +85,18 @@ public sealed class Trip
 
     /// <summary>
     /// Constructs a valid new Trip-domain object in CREATED state with no
-    /// assignment. Takes an already-created <see cref="FareSnapshot"/>;
-    /// creation performs no idempotency, active-trip or fare-calculation
-    /// logic, which belong to later application work.
+    /// assignment. Takes an already-created <see cref="FareSnapshot"/> and the
+    /// single application-supplied creation timestamp; creation performs no
+    /// idempotency, active-trip or fare-calculation logic, which belong to
+    /// later application work. The domain performs no clock access.
     /// </summary>
     public static Trip Create(
         Guid tripId,
         Guid riderId,
         TripLocation pickup,
         TripLocation dropoff,
-        FareSnapshot fare)
+        FareSnapshot fare,
+        DateTimeOffset createdAt)
     {
         if (tripId == Guid.Empty)
         {
@@ -110,7 +112,12 @@ public sealed class Trip
         ArgumentNullException.ThrowIfNull(dropoff);
         ArgumentNullException.ThrowIfNull(fare);
 
-        return new Trip(tripId, riderId, pickup, dropoff, fare, TripState.Created, null, DateTimeOffset.UtcNow, 0);
+        if (createdAt == default)
+        {
+            throw new ArgumentException("Trip requires a concrete creation timestamp.", nameof(createdAt));
+        }
+
+        return new Trip(tripId, riderId, pickup, dropoff, fare, TripState.Created, null, createdAt, 0);
     }
 
     /// <summary>

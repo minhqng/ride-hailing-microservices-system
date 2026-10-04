@@ -1,12 +1,14 @@
-// Trip-owned EF Core persistence (A-W02-02 foundation, A-W03-07 aggregate).
+// Trip-owned EF Core persistence (A-W02-02 foundation, A-W03-07 aggregate,
+// A-W04-02 request idempotency, A-W04-04 active-Rider defense).
 //
-// SCOPE (W3): Trip aggregate ONLY. Transport DTOs in Api/ are NOT entities
-// and MUST NOT be mapped here. Driver/Matching/Payment/request-idempotency/
-// Saga/Outbox/Inbox tables belong to later work. Version is the
-// application-managed optimistic-concurrency token: the domain advances it,
-// persistence only compares the original value. Concurrency failures are
-// translated to TripConcurrencyConflictException at this Trip-specific
-// boundary; no generic repository, no blind retry.
+// SCOPE (W4): Trip aggregate plus Trip-local request-idempotency
+// bookkeeping. Transport DTOs in Api/ are NOT entities and MUST NOT be
+// mapped here. Driver/Matching/Payment/Saga/Outbox/Inbox tables belong to
+// later work. Version is the application-managed optimistic-concurrency
+// token: the domain advances it, persistence only compares the original
+// value. Concurrency failures are translated to
+// TripConcurrencyConflictException at this Trip-specific boundary; no generic
+// repository, no blind retry.
 
 using Microsoft.EntityFrameworkCore;
 using RideHailing.TripService.Domain.Trips;
@@ -28,9 +30,13 @@ public sealed class TripDbContext : DbContext
     /// <summary>Authoritative W3 Trip aggregate set.</summary>
     public DbSet<Trip> Trips => Set<Trip>();
 
+    /// <summary>W4 request-idempotency bookkeeping set (not a domain aggregate).</summary>
+    public DbSet<RequestIdempotencyRecord> RequestIdempotency => Set<RequestIdempotencyRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new TripConfiguration());
+        modelBuilder.ApplyConfiguration(new RequestIdempotencyConfiguration());
     }
 
     public override int SaveChanges()

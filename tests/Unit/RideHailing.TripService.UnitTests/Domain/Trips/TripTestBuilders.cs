@@ -30,8 +30,14 @@ internal static class TripTestBuilders
         int matchingRound = 1) =>
         new(driverId ?? DriverId, reservationId ?? ReservationId, matchingRound);
 
-    internal static Trip NewTrip() =>
-        Trip.Create(TripId, RiderId, Location(), Location(10.776889, 106.700806), Fare());
+    internal static Trip NewTrip(DateTimeOffset? createdAt = null) =>
+        Trip.Create(
+            TripId,
+            RiderId,
+            Location(),
+            Location(10.776889, 106.700806),
+            Fare(),
+            createdAt ?? new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero));
 
     internal static Trip AtState(TripState state, bool withAssignment = true, int version = 7)
     {

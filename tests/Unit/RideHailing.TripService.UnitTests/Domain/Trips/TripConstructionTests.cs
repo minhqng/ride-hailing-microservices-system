@@ -17,13 +17,15 @@ public sealed class TripConstructionTests
             TripTestBuilders.RiderId,
             TripTestBuilders.Location(),
             TripTestBuilders.Location(10.776889, 106.700806),
-            TripTestBuilders.Fare());
+            TripTestBuilders.Fare(),
+            new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero));
 
         Assert.Equal(TripTestBuilders.TripId, trip.TripId);
         Assert.Equal(TripTestBuilders.RiderId, trip.RiderId);
         Assert.Equal(TripState.Created, trip.State);
         Assert.Null(trip.Assignment);
         Assert.Equal(TripTestBuilders.Fare(), trip.Fare);
+        Assert.Equal(new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero), trip.CreatedAt);
     }
 
     [Fact]
@@ -34,7 +36,20 @@ public sealed class TripConstructionTests
             TripTestBuilders.RiderId,
             TripTestBuilders.Location(),
             TripTestBuilders.Location(),
-            TripTestBuilders.Fare()));
+            TripTestBuilders.Fare(),
+            new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero)));
+    }
+
+    [Fact]
+    public void Create_WithDefaultTimestamp_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Trip.Create(
+            TripTestBuilders.TripId,
+            TripTestBuilders.RiderId,
+            TripTestBuilders.Location(),
+            TripTestBuilders.Location(),
+            TripTestBuilders.Fare(),
+            default));
     }
 
     [Theory]

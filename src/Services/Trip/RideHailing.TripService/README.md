@@ -18,6 +18,21 @@
   failures to `TripConcurrencyConflictException`. The database enforces
   assignment atomicity (`CK_trips_assignment_coherence`), state/assignment
   coherence (`CK_trips_state_assignment_coherence`) and non-negative fare.
+- A-W04 (deterministic CreateRide core + thin POST /trips adapter): `Application/Trips/CreateRide/`
+  (`CreateRideCommand/Handler/Result/Error`, request fingerprint, deterministic
+  P0 fare `p0-w4-v1`/VND via Haversine, FareSnapshot creation) with Rider-scoped
+  idempotency (`trip:create:<rider-D>`, opaque exact key, replay-before-active
+  rule) and `TripStatePolicy.ActiveForRiderBooking` (DSI-013). `Trip.Create`
+  takes the single application-supplied creation timestamp (no domain clock).
+  `Infrastructure/Persistence/` adds `RequestIdempotencyRecord` (composite PK
+  `PK_request_idempotency`, FK `FK_request_idempotency_trips_resource_id`
+  RESTRICT) plus partial unique index `UX_trips_one_active_per_rider`, via
+  migration `W04_CreateRideIdempotency`. `Api/CreateRideEndpoint.cs`
+  (`MapTripEndpoints`) is a thin POST /trips adapter: Rider identity consumed
+  from the authenticated ClaimsPrincipal (`Api/RiderIdentity.cs`), opaque
+  Idempotency-Key handling, transport mapping, with local concurrent correctness
+  proofs. Trip does NOT implement JWT issuance/validation or Gateway
+  authentication.
 - A-W02-01/07/08: `Api/` freezes Trip HTTP transport shapes
   (`CreateRide`, `GetTrip`, `CancelRide`, `TripLocationDto`, `TripRoutes`,
   `TripIdentityHeaders`) + stable-identity representation. No business routes
