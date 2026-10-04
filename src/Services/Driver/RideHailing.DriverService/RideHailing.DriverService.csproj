@@ -8,5 +8,12 @@
 
   <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship the W2 SQL baseline with the service so EnsureTables reuses one source. -->
+    <Content Include="Infrastructure\Persistence\Migrations\*.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
