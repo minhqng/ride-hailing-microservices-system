@@ -10,12 +10,10 @@ namespace RideHailing.DriverService.IntegrationTests;
 [Collection(DriverPostgresCollection.Name)]
 public class DriverPersistenceTests
 {
-    private readonly ITestOutputHelper _out;
     private readonly DriverPostgresDatabase _db;
 
     public DriverPersistenceTests(ITestOutputHelper output, DriverPostgresDatabase db)
     {
-        _out = output;
         _db = db;
     }
 
@@ -26,8 +24,7 @@ public class DriverPersistenceTests
     {
         if (!_db.Ready())
         {
-            _out.WriteLine("SKIP: " + _db.SkipReason);
-            return;
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
         }
 
         var repo = Repo();
@@ -47,8 +44,7 @@ public class DriverPersistenceTests
     {
         if (!_db.Ready())
         {
-            _out.WriteLine("SKIP: " + _db.SkipReason);
-            return;
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
         }
 
         var repo = Repo();
@@ -64,5 +60,28 @@ public class DriverPersistenceTests
         Assert.Equal(DriverStatus.Reserved, loaded!.Status);
         Assert.Equal(t, loaded.ReservedTripId);
         Assert.Equal(r, loaded.ReservationId);
+    }
+
+    [Fact]
+    public async Task TryInsert_ConcurrentDuplicates_ExactlyOneWins()
+    {
+        if (!_db.Ready())
+        {
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
+        }
+
+        // Eight concurrent creates with the same driver id must linearize on
+        // the primary key: exactly one insert wins, losers observe the
+        // conflict instead of resetting state (DSR-002 duplicate delivery).
+        var repo = Repo();
+        var id = Guid.NewGuid();
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
+            repo.TryInsertAsync(Driver.Create(id, Guid.NewGuid()))));
+
+        Assert.Equal(1, results.Count(r => r));
+
+        var loaded = await repo.LoadAsync(id);
+        Assert.NotNull(loaded);
+        Assert.Equal(DriverStatus.Offline, loaded!.Status);
     }
 }

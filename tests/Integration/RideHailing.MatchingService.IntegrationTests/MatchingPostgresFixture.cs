@@ -66,6 +66,13 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
 
     public Task ReapplyScriptsAsync() => ApplyScriptsAsync(ConnectionString);
 
+    /// <summary>
+    /// Loads one migration script by filename for tests that must apply
+    /// migrations out of order (e.g. legacy-dataset repair proofs).
+    /// </summary>
+    public static string LoadMigrationScript(string fileName) =>
+        File.ReadAllText(Path.Combine(FindMigrationsDir(), fileName));
+
     // Configured (not yet connected) connection string for ownership assertions.
     public static string ConfiguredConnectionString() =>
         Environment.GetEnvironmentVariable("MATCHING_TEST_POSTGRES")

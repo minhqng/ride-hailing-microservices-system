@@ -43,4 +43,34 @@ public class MonotonicLocationTests
         var r = acc.Accept(new LocationSample(driver, "s2", 1, T0, 11.0, 107.0), T0);
         Assert.Equal(LocationAcceptOutcome.Accepted, r.Outcome);
     }
+
+    [Fact]
+    public void Exact_Replay_Of_Current_Sample_Is_Idempotent_Accept()
+    {
+        var acc = new LocationAcceptor();
+        var driver = Guid.NewGuid();
+        var first = new LocationSample(driver, "s", 7, T0, 10.0, 106.0);
+
+        Assert.Equal(LocationAcceptOutcome.Accepted, acc.Accept(first, T0).Outcome);
+
+        // Same logical effect replayed (at-least-once device retry) must be
+        // canonical success, not a 409 conflict (DSR-002).
+        var replay = acc.Accept(first with { }, T0);
+        Assert.Equal(LocationAcceptOutcome.Accepted, replay.Outcome);
+        Assert.Equal(first, replay.Current);
+    }
+
+    [Fact]
+    public void Same_Seq_And_Timestamp_With_Different_Payload_Is_Stale()
+    {
+        var acc = new LocationAcceptor();
+        var driver = Guid.NewGuid();
+        acc.Accept(new LocationSample(driver, "s", 7, T0, 10.0, 106.0), T0);
+
+        // Same seq/timestamp but conflicting coordinates is not a replay of
+        // the same logical effect: it must not overwrite the current sample.
+        var conflict = acc.Accept(new LocationSample(driver, "s", 7, T0, 11.0, 107.0), T0);
+        Assert.Equal(LocationAcceptOutcome.Stale, conflict.Outcome);
+        Assert.Equal(10.0, conflict.Current.Latitude);
+    }
 }

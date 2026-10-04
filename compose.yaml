@@ -94,6 +94,7 @@ services:
       dockerfile: src/Gateway/RideHailing.Gateway/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ServiceInstanceId: ${GATEWAY_INSTANCE_ID:-gateway-local}
       ASPNETCORE_URLS: http://+:8080
       Services__IdentityBaseUrl: http://identity:8080
       Services__DriverBaseUrl: http://driver:8080
@@ -110,6 +111,7 @@ services:
       dockerfile: src/Services/Identity/RideHailing.IdentityService/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ServiceInstanceId: ${IDENTITY_INSTANCE_ID:-identity-local}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:-identity_dev_pw}
     ports: ["8101:8080"]
@@ -123,6 +125,7 @@ services:
       dockerfile: src/Services/Driver/RideHailing.DriverService/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ServiceInstanceId: ${DRIVER_INSTANCE_ID:-driver-local}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:-driver_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -138,6 +141,7 @@ services:
       dockerfile: src/Services/Trip/RideHailing.TripService/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ServiceInstanceId: ${TRIP_INSTANCE_ID:-trip-local}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -153,6 +157,7 @@ services:
       dockerfile: src/Services/Matching/RideHailing.MatchingService/Dockerfile
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      ServiceInstanceId: ${MATCHING_INSTANCE_ID:-matching-local}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:-matching_dev_pw}
       Redis__ConnectionString: redis:6379

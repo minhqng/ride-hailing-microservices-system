@@ -52,8 +52,11 @@ public static class PlatformBootstrap
                 await command.ExecuteScalarAsync(timeout.Token);
                 return Results.Ok(new { status = "Ready", scope = "process-and-owned-database" });
             }
-            catch (Exception exception) when (exception is NpgsqlException or OperationCanceledException)
+            catch (Exception exception) when (exception is NpgsqlException or OperationCanceledException or ArgumentException or InvalidOperationException)
             {
+                // Any owned-database failure (unreachable, refused, timed out
+                // or unparsable configuration) is NotReady, never a 500: the
+                // process is alive but must not receive traffic.
                 return Results.Json(new { status = "NotReady", dependency = "owned-database" }, statusCode: 503);
             }
         });
