@@ -13,6 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
   </ItemGroup>
 </Project>

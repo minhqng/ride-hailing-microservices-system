@@ -1,6 +1,6 @@
 # Distributed Ride-Hailing System
 
-**Status: repository bootstrap / foundation**
+**Status: Member C W1-W4 implementation; team acceptance pending**
 
 Thesis: ride-hailing is the vehicle to study a deeper distributed-systems question — how independent services preserve safety invariants and eventually recover when requests race, reads are stale, messages duplicate, responses disappear, and processes crash. See `docs/00-project-scope-architecture.md`.
 
@@ -67,4 +67,4 @@ docker compose down
 
 ## Current implementation status
 
-W2 foundation: Compose core/optional obs, isolated DB roles, bounded owned-DB readiness, OTel traces/metrics and CI smoke. See `docs/member-c-week2.md` for issue coverage and pending peer review. W3 adds the Development-only Payment simulator, migration and state/persistence verification; see `docs/member-c-week3.md`. Broker bindings belong to W4.
+W2 foundation: Compose core/optional obs, isolated DB roles, bounded owned-DB readiness, OTel traces/metrics and CI smoke. See `docs/member-c-week2.md` for issue coverage and pending peer review. W3 adds the Development-only Payment simulator, migration and state/persistence verification; see `docs/member-c-week3.md`. W4 adds canonical envelopes, persistent message properties and executable RabbitMQ bindings with real-broker smoke; see `docs/member-c-week4.md`.

@@ -7,3 +7,10 @@ out/
 .idea/
 *.user
 TestResults/
+**/bin/
+**/obj/
+**/appsettings.*.local.json
+**/*.pfx
+secrets/
+logs/
+evidence/**/raw/
