@@ -3,8 +3,10 @@ using RideHailing.Observability;
 
 using Npgsql;
 using System.Text.Json.Serialization;
+using RabbitMQ.Client;
 using RideHailing.PaymentService.Domain;
 using RideHailing.PaymentService.Infrastructure;
+using RideHailing.Messaging.Topology;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddRideTelemetry("payment-service");
@@ -20,17 +22,23 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddSingleton<PaymentSimulator>();
 }
 
-var app = builder.Build();
-
-if (builder.Configuration["RabbitMq:Host"] is { Length: > 0 } rabbitHost)
+var rabbitHost = builder.Configuration["RabbitMq:Host"];
+if (!string.IsNullOrWhiteSpace(rabbitHost))
 {
+    var connectionFactory = new ConnectionFactory
+    {
+        HostName = rabbitHost,
+        UserName = builder.Configuration["RabbitMq:Username"] ?? "ride_app",
+        Password = builder.Configuration["RabbitMq:Password"] ?? "ride_dev_pw",
+        ClientProvidedName = "payment-service-topology-bootstrap",
+        AutomaticRecoveryEnabled = true
+    };
     using var bootstrapTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-    await RideHailing.Messaging.Topology.BrokerBootstrapV1.DeclareAsync(rabbitHost,
-        builder.Configuration["RabbitMq:Username"] ?? "ride_app",
-        builder.Configuration["RabbitMq:Password"] ?? "ride_dev_pw", bootstrapTimeout.Token);
+    await using var connection = await connectionFactory.CreateConnectionAsync(bootstrapTimeout.Token);
+    await RideTopology.DeclareAsync(connection, bootstrapTimeout.Token);
 }
 
-
+var app = builder.Build();
 
 if (!string.IsNullOrWhiteSpace(connectionString))
 {

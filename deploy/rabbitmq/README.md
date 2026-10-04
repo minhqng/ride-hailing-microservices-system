@@ -1,5 +1,9 @@
-# RabbitMQ W2 baseline
+# RabbitMQ — local broker and declared topology
 
-Payment startup invokes BrokerBootstrapV1 with a bounded timeout and configured credentials. It declares durable topic exchanges ride.commands and ride.events without auto-delete. Repeating startup preserves declarations. W4 adds consumer queues and catalog bindings; confirms/manual ACK belong to W8.
+The broker runs in the core Compose stack. Member C's W4 topology is declared by Payment Service on startup, so no Management UI setup is needed. Declarations are idempotent and create durable topic exchanges `ride.commands` and `ride.events`, plus consumer-specific durable quorum queues/bindings from `RideTopology`.
 
-Use a disposable Compose project for smoke tests. Management UI: http://localhost:15672. Credentials come from local configuration; defaults are development placeholders.
+Management UI: http://localhost:15672. Local credentials are `ride_app` / `ride_dev_pw` unless overridden in the ignored `.env` file. Development defaults are placeholders only; set local-only values before exposing the broker beyond the machine.
+
+The one-node local profile uses quorum queue declarations to keep queue type consistent with the reliability design. It does not demonstrate replication or broker HA; that belongs to the later three-node validation profile.
+
+W2 provides BrokerBootstrapV1 for the two exchanges. W4 RideTopology extends the same declarations with queues and bindings; platform-smoke verifies exchange semantics across restart.
