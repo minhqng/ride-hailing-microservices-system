@@ -129,6 +129,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:-driver_dev_pw}
       RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
     ports: ["8102:8080"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -145,6 +147,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw}
       RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
     ports: ["8103:8080"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -162,6 +166,8 @@ services:
       ConnectionStrings__Postgres: Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:-matching_dev_pw}
       Redis__ConnectionString: redis:6379
       RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
       Services__DriverBaseUrl: http://driver:8080
     ports: ["8104:8080"]
     depends_on:
@@ -175,9 +181,9 @@ services:
       context: .
       dockerfile: src/Services/Payment/RideHailing.PaymentService/Dockerfile
     environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ConnectionStrings__Postgres: Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:-payment_dev_pw}
       RabbitMq__Host: rabbitmq
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
@@ -197,6 +203,8 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ConnectionStrings__Postgres: Host=postgres;Database=notification_db;Username=notification_app;Password=${NOTIFICATION_DB_PASSWORD:-notification_dev_pw}
       RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
       ServiceInstanceId: ${NOTIFICATION_INSTANCE_ID:-notification-local}
     depends_on:
       postgres: { condition: service_healthy }

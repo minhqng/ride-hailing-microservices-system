@@ -32,6 +32,7 @@ jobs:
       - run: docker compose --profile obs up -d --build
       - run: python3 scripts/test/platform-smoke.py
       - run: python3 scripts/test/payment-smoke.py
+      - run: python3 scripts/test/topology-smoke.py
       - if: always()
         run: docker compose --profile obs logs --no-color > platform-smoke.log
       - if: always()
