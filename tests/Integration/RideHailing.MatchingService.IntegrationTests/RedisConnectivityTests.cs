@@ -20,8 +20,7 @@ public class RedisConnectivityTests
     {
         if (!_db.Ready())
         {
-            _out.WriteLine("SKIP: " + _db.SkipReason);
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         _out.WriteLine($"INFRA: redis via {_db.Source} — real assertions will run.");

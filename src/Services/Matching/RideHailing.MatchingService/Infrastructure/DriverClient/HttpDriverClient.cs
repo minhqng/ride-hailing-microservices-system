@@ -63,6 +63,17 @@ public sealed class HttpDriverClient : IDriverClient
         using var response = await _http.GetAsync(
             $"internal/drivers/{driverId:N}/reservations/{reservationId:N}",
             cancellationToken);
+
+        // HTTP 404 is the natural wire form of "reservation not found": map it
+        // to the domain NotFound outcome (mirroring ReserveAsync mapping HTTP
+        // 404 to DRIVER_NOT_FOUND) so the caller terminates reconciliation
+        // instead of classifying it as UNKNOWN transport failure. Unknown
+        // outcome STRINGS in a 200 body still throw (contract drift is loud).
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return ReservationReconcileOutcome.NotFound;
+        }
+
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content

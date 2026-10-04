@@ -15,6 +15,19 @@
 --             AVAILABLE + indexable coords -> GEOADD, else ZREM.
 -- capturedAt must be ISO-8601 UTC so lexicographic compare == time order.
 -- Returns: {state, location, geo} e.g. {'applied','skipped','added'}.
+--
+-- Corrupt-hash rule: the script itself never writes partial hashes, but a hash
+-- touched by a foreign writer may hold missing/non-numeric ordering fields.
+-- A function error after a state write would leave a partial mutation while
+-- the caller reports Degraded, so every comparison input is guarded: an
+-- unparseable STORED ordering value heals (the valid new sample overwrites
+-- garbage, which carries no ordering information), while an unparseable
+-- CALLER value fails closed as 'stale'. The geo section never errors on
+-- missing/non-numeric coordinates: unknown coords mean ZREM, not a crash.
+-- Residual (out of threat model): if the GEO KEY itself holds a non-zset
+-- (a foreign writer violating Matching key ownership), GEOADD/ZREM throws
+-- after the hash writes. Key-type ownership, not value garbage, is the
+-- boundary: writers must never repurpose Matching-owned keys.
 
 redis.register_function('driver_projection_update', function(keys, args)
   local hash = keys[1]
@@ -32,33 +45,38 @@ redis.register_function('driver_projection_update', function(keys, args)
 
   local state = 'skipped'
   if version and version ~= '' then
-    local cur = redis.call('HGET', hash, 'driverAggregateVersion')
-    if (not cur) or (tonumber(version) > tonumber(cur)) then
-      redis.call('HSET', hash,
-        'derivedStatus', status,
-        'driverAggregateVersion', version)
-      state = 'applied'
-    else
+    local newV = tonumber(version)
+    if not newV then
       state = 'stale'
+    else
+      local cur = redis.call('HGET', hash, 'driverAggregateVersion')
+      if cur == false then
+        redis.call('HSET', hash,
+          'derivedStatus', status,
+          'driverAggregateVersion', version)
+        state = 'applied'
+      else
+        local curV = tonumber(cur)
+        if (not curV) or (newV > curV) then
+          redis.call('HSET', hash,
+            'derivedStatus', status,
+            'driverAggregateVersion', version)
+          state = 'applied'
+        else
+          state = 'stale'
+        end
+      end
     end
   end
 
   local loc = 'skipped'
   if seq and seq ~= '' then
-    local curSession = redis.call('HGET', hash, 'locationSessionId')
-    if not curSession then
-      redis.call('HSET', hash,
-        'longitude', lon,
-        'latitude', lat,
-        'locationSessionId', session,
-        'sequenceNo', seq,
-        'capturedAt', capturedAt)
-      loc = 'applied'
-    elseif session == curSession then
-      local curSeq = tonumber(redis.call('HGET', hash, 'sequenceNo'))
-      local curTs = redis.call('HGET', hash, 'capturedAt')
-      local s = tonumber(seq)
-      if (s > curSeq) or (s == curSeq and capturedAt > curTs) then
+    local s = tonumber(seq)
+    if not s then
+      loc = 'stale'
+    else
+      local curSession = redis.call('HGET', hash, 'locationSessionId')
+      if curSession == false then
         redis.call('HSET', hash,
           'longitude', lon,
           'latitude', lat,
@@ -66,19 +84,40 @@ redis.register_function('driver_projection_update', function(keys, args)
           'sequenceNo', seq,
           'capturedAt', capturedAt)
         loc = 'applied'
+      elseif session == curSession then
+        local curSeq = tonumber(redis.call('HGET', hash, 'sequenceNo'))
+        local curTs = redis.call('HGET', hash, 'capturedAt')
+        if (not curSeq) or (curTs == false) then
+          redis.call('HSET', hash,
+            'longitude', lon,
+            'latitude', lat,
+            'locationSessionId', session,
+            'sequenceNo', seq,
+            'capturedAt', capturedAt)
+          loc = 'applied'
+        elseif (s > curSeq) or (s == curSeq and type(curTs) == 'string' and capturedAt > curTs) then
+          redis.call('HSET', hash,
+            'longitude', lon,
+            'latitude', lat,
+            'locationSessionId', session,
+            'sequenceNo', seq,
+            'capturedAt', capturedAt)
+          loc = 'applied'
+        else
+          loc = 'stale'
+        end
       else
-        loc = 'stale'
+        loc = 'stale-session'
       end
-    else
-      loc = 'stale-session'
     end
   end
 
   local st = redis.call('HGET', hash, 'derivedStatus')
-  local la = tonumber(redis.call('HGET', hash, 'latitude') or '99')
-  local lo = tonumber(redis.call('HGET', hash, 'longitude') or '999')
+  local la = tonumber(redis.call('HGET', hash, 'latitude'))
+  local lo = tonumber(redis.call('HGET', hash, 'longitude'))
   local geoRes = 'removed'
   if st == 'AVAILABLE'
+    and la and lo
     and la >= -85.05112878 and la <= 85.05112878
     and lo >= -180 and lo <= 180 then
     redis.call('GEOADD', geo, tostring(lo), tostring(la), member)

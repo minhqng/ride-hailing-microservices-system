@@ -79,27 +79,68 @@ public sealed class RedisProjectionUpdater
     {
         try
         {
-            var db = _mux.GetDatabase();
-            var res = (RedisResult[])(await db.ExecuteAsync("FCALL", _functionName, 2,
-                RedisProjectionKeys.ProjectionKey(driverId),
-                RedisProjectionKeys.GeoKey,
-                RedisProjectionKeys.Member(driverId),
-                status, version, lon, lat, session, seq, capturedAt))!;
-            return new ProjectionResult(
-                Parse((string?)res[0]),
-                Parse((string?)res[1]),
-                string.Equals((string?)res[2], "added", StringComparison.Ordinal));
+            return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt)
+                .ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is RedisConnectionException
-            or RedisTimeoutException
-            or RedisServerException
-            or IOException
-            or SocketException
-            or TimeoutException)
+        catch (RedisServerException ex) when (IsFunctionMissing(ex))
+        {
+            // Function library missing (Redis restart / FUNCTION FLUSH after a
+            // successful startup load): reload once and retry the single call.
+            // A reload failure degrades like any other connection problem.
+            try
+            {
+                await EnsureFunctionAsync().ConfigureAwait(false);
+            }
+            catch (Exception reload) when (IsDegradation(reload))
+            {
+                return ProjectionResult.DegradedResult();
+            }
+
+            try
+            {
+                return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception retry) when (IsDegradation(retry))
+            {
+                return ProjectionResult.DegradedResult();
+            }
+        }
+        catch (Exception ex) when (IsDegradation(ex))
         {
             return ProjectionResult.DegradedResult();
         }
     }
+
+    private async Task<ProjectionResult> InvokeAsync(
+        Guid driverId,
+        string status, string version,
+        string lon, string lat, string session, string seq, string capturedAt)
+    {
+        var db = _mux.GetDatabase();
+        var res = (RedisResult[])(await db.ExecuteAsync("FCALL", _functionName, 2,
+            RedisProjectionKeys.ProjectionKey(driverId),
+            RedisProjectionKeys.GeoKey,
+            RedisProjectionKeys.Member(driverId),
+            status, version, lon, lat, session, seq, capturedAt))!;
+        return new ProjectionResult(
+            Parse((string?)res[0]),
+            Parse((string?)res[1]),
+            string.Equals((string?)res[2], "added", StringComparison.Ordinal));
+    }
+
+    // Missing-function detection: Redis 8 answers FCALL against an unloaded
+    // library with "ERR Function not found"; older servers answer NOSCRIPT.
+    private static bool IsFunctionMissing(RedisServerException ex) =>
+        ex.Message.Contains("NOSCRIPT", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("Function not found", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDegradation(Exception ex) => ex is RedisConnectionException
+        or RedisTimeoutException
+        or RedisServerException
+        or IOException
+        or SocketException
+        or TimeoutException;
 
     private static SectionOutcome Parse(string? s) => s switch
     {

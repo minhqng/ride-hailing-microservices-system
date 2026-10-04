@@ -134,11 +134,13 @@ namespace RideHailing.TripService.Migrations
                     b.Property<string>("Scope")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
+                        .UseCollation("C")
                         .HasColumnName("scope");
 
                     b.Property<string>("Key")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
+                        .UseCollation("C")
                         .HasColumnName("key");
 
                     b.Property<DateTimeOffset>("CreatedAt")

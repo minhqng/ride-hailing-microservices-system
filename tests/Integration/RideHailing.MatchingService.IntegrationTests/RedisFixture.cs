@@ -1,8 +1,9 @@
 // B-W02-05 (P1 review fix): Redis fixture with no fake-green (Testcontainers.Redis).
 // Same semantics as the PG fixtures: explicit REDIS_TEST_CONNECTION (or
 // Redis__ConnectionString) => infra EXPECTED => failure throws loud;
-// otherwise disposable Testcontainers Redis (redis:8.10.2, pinned like compose);
-// skip only when Docker is provably absent (loud SKIP).
+// otherwise disposable Testcontainers Redis (redis:8.10.2, pinned like compose).
+// Tests FAIL LOUD when Redis is unavailable (Assert.Fail with SkipReason):
+// an authoritative projection proof must never pass without real Redis.
 // Shared per collection: one container per test run (not per test).
 using StackExchange.Redis;
 using Testcontainers.Redis;

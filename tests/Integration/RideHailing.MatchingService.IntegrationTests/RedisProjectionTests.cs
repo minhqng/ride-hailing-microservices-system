@@ -24,9 +24,6 @@ public class RedisProjectionTests
     private void LogReady() =>
         _out.WriteLine($"INFRA: redis via {_db.Source} — real assertions will run.");
 
-    private void LogSkip() =>
-        _out.WriteLine("SKIP: " + _db.SkipReason);
-
     private RedisProjectionUpdater Updater() => new(_db.Multiplexer());
 
     private async Task<RedisProjectionUpdater> ReadyUpdaterAsync()
@@ -74,8 +71,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -107,8 +103,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -142,8 +137,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -175,8 +169,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -207,8 +200,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -237,8 +229,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -265,8 +256,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -294,8 +284,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -329,8 +318,7 @@ public class RedisProjectionTests
     {
         if (!Ready())
         {
-            LogSkip();
-            return;
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
         }
 
         LogReady();
@@ -339,5 +327,111 @@ public class RedisProjectionTests
         var r = await updater.ApplyStateAsync(new(Guid.NewGuid(), "AVAILABLE", 1));
         Assert.True(r.Degraded);
         Assert.Equal(SectionOutcome.Degraded, r.State);
+    }
+
+    // Function recovery: after FUNCTION FLUSH the library is gone, but the
+    // next projection call reloads it once and applies (no restart needed).
+    [Fact]
+    public async Task Updater_Recovers_After_Function_Flush()
+    {
+        if (!Ready())
+        {
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
+        }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            await Db().ExecuteAsync("FUNCTION", "FLUSH");
+
+            var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
+            var r1 = await updater.ApplyStateAsync(new(id, "AVAILABLE", 3));
+            Assert.False(r1.Degraded);
+            Assert.Equal(SectionOutcome.Applied, r1.State);
+            Assert.Equal("3", await HGetAsync(id, "driverAggregateVersion"));
+
+            var r2 = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 1, t0));
+            Assert.Equal(SectionOutcome.Applied, r2.Location);
+            Assert.True(r2.GeoMember);
+            Assert.True(await IsGeoMemberAsync(id));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+            await ReadyUpdaterAsync();
+        }
+    }
+
+    // Corrupt-hash rule: a hash with unparseable ordering fields (foreign
+    // writer) heals — the valid new sample overwrites garbage instead of
+    // erroring mid-function after a state write.
+    [Fact]
+    public async Task Corrupt_Hash_Heals_On_Valid_Sample()
+    {
+        if (!Ready())
+        {
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
+        }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var db = Db();
+            var key = RedisProjectionKeys.ProjectionKey(id);
+            await db.HashSetAsync(key, new[]
+            {
+                new HashEntry("derivedStatus", "RESERVED"),
+                new HashEntry("driverAggregateVersion", "not-a-number"),
+                new HashEntry("locationSessionId", "s1"),
+                new HashEntry("sequenceNo", "garbage"),
+            });
+
+            var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
+            var r = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 5, t0));
+            Assert.False(r.Degraded);
+            Assert.Equal(SectionOutcome.Applied, r.Location);
+            Assert.Equal("5", await HGetAsync(id, "sequenceNo"));
+
+            var rs = await updater.ApplyStateAsync(new(id, "AVAILABLE", 4));
+            Assert.Equal(SectionOutcome.Applied, rs.State);
+            Assert.Equal("4", await HGetAsync(id, "driverAggregateVersion"));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
+    }
+
+    // Missing coordinates never crash the geo section: unknown coords ZREM.
+    [Fact]
+    public async Task State_Only_With_No_Coords_Is_Not_Geo_Member()
+    {
+        if (!Ready())
+        {
+            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
+        }
+
+        LogReady();
+        var updater = await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var r = await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            Assert.Equal(SectionOutcome.Applied, r.State);
+            Assert.Equal(SectionOutcome.Skipped, r.Location);
+            Assert.False(r.GeoMember);
+            Assert.False(await IsGeoMemberAsync(id));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
     }
 }
