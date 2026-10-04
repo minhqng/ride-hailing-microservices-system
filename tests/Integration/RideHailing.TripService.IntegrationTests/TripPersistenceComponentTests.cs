@@ -1,11 +1,11 @@
-// Trip W2 component proofs against disposable real PostgreSQL.
+// Trip W3 component proofs against disposable real PostgreSQL.
 //
-// Required properties (A-W02-02/04/05/06):
+// Required properties (A-W02-02/04/05/06 evolved for A-W03-07):
 //   A. TripApplication_Boots_WithRealPostgres
 //   B. HealthLive_ReturnsSuccess
 //   C. HealthReady_ReturnsSuccess
-//   D. Migration_Applies_FromEmptyDatabase (+ no leaked business tables)
-//   E. LatestMigration_IsRecorded (via __EFMigrationsHistory)
+//   D. Migration_Applies_FromEmptyDatabase (current-head: trips exists, no pending)
+//   E. MigrationHistory_PreservesW02Baseline_AndRecordsW03 (durable history)
 //   F. TripDbContext_CanConnect_ToConfiguredRealPostgres
 //
 // SCOPE: component-level Trip database connectivity ONLY. A pass here proves
@@ -71,8 +71,8 @@ public sealed class TripPersistenceComponentTests
     [Fact]
     public async Task Migration_Applies_FromEmptyDatabase()
     {
-        // From-empty proof: a brand-new database on the disposable
-        // server, then apply the W2 migration set into it.
+        // Current-head from-empty proof: a brand-new database on the disposable
+        // server, then apply the full current migration set into it.
         var probeDb = "trip_probe_" + Guid.NewGuid().ToString("N");
         var maintenanceCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
         {
@@ -105,27 +105,22 @@ public sealed class TripPersistenceComponentTests
             Assert.Empty(await db.Database.GetPendingMigrationsAsync());
             Assert.True(await db.Database.CanConnectAsync());
 
-            // W2 scope: no business tables may exist yet. Only the EF
-            // migration-history relation is allowed.
+            // W3 scope: the authoritative trips table must exist at
+            // current head. No assertion that it is the ONLY table forever.
             var connection = db.Database.GetDbConnection();
             await connection.OpenAsync();
             await using var command = connection.CreateCommand();
             command.CommandText =
                 "SELECT tablename FROM pg_tables WHERE schemaname = 'public' " +
-                "AND tablename <> '__EFMigrationsHistory'";
-            var leaked = new List<string>();
-            await using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                leaked.Add(reader.GetString(0));
-            }
-
-            Assert.Empty(leaked);
+                "AND tablename = 'trips'";
+            var found = await command.ExecuteScalarAsync();
+            Assert.NotNull(found);
+            Assert.Equal("trips", found!.ToString());
         }
     }
 
     [Fact]
-    public async Task LatestMigration_IsRecorded()
+    public async Task MigrationHistory_PreservesW02Baseline_AndRecordsW03()
     {
         using var factory = CreateFactory();
 
@@ -137,8 +132,10 @@ public sealed class TripPersistenceComponentTests
         var applied = await db.Database.GetAppliedMigrationsAsync();
 
         Assert.Equal(defined, applied);
-        var latest = Assert.Single(applied);
-        Assert.EndsWith("W02_TripPersistenceBaseline", latest, StringComparison.Ordinal);
+        Assert.Contains(defined, m => m.EndsWith("W02_TripPersistenceBaseline", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("W02_TripPersistenceBaseline", StringComparison.Ordinal));
+        Assert.Contains(defined, m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal));
     }
 
     [Fact]
