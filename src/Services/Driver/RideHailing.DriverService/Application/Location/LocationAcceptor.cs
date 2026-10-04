@@ -48,6 +48,14 @@ public sealed class LocationAcceptor
                 continue;
             }
 
+            // Exact replay of the current sample (same seq, timestamp and
+            // payload) is the same logical effect: canonical success
+            // (DSR-002 idempotent replay), not a conflict.
+            if (sample == current.Sample)
+            {
+                return new LocationAcceptResult(LocationAcceptOutcome.Accepted, current.Sample);
+            }
+
             return new LocationAcceptResult(LocationAcceptOutcome.Stale, current.Sample);
         }
     }

@@ -23,8 +23,7 @@ public class MatchingSchemaBaselineTests
     {
         if (!_db.Ready())
         {
-            _out.WriteLine("SKIP: " + _db.SkipReason);
-            return;
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
         }
 
         _out.WriteLine($"INFRA: postgres via {_db.Source} — real assertions will run.");
@@ -43,8 +42,7 @@ public class MatchingSchemaBaselineTests
     {
         if (!_db.Ready())
         {
-            _out.WriteLine("SKIP: " + _db.SkipReason);
-            return;
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
         }
 
         await using var conn = new NpgsqlConnection(_db.ConnectionString);
@@ -71,8 +69,7 @@ public class MatchingSchemaBaselineTests
     {
         if (!_db.Ready())
         {
-            _out.WriteLine("SKIP: " + _db.SkipReason);
-            return;
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
         }
 
         await using var conn = new NpgsqlConnection(_db.ConnectionString);
