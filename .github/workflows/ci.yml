@@ -1,9 +1,9 @@
 name: ci
 on:
   push:
-    branches: [main]
+    branches: [main, 'MemC-*-Distributed']
   pull_request:
-    branches: [main]
+    branches: [main, 'MemC-*-Distributed']
 jobs:
   build-test:
     name: build-test
@@ -22,3 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config
+  platform-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: ride-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose --profile obs up -d --build
+      - run: python3 scripts/test/platform-smoke.py
+      - if: always()
+        run: docker compose --profile obs logs --no-color > platform-smoke.log
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: platform-smoke.log
+      - if: always()
+        run: docker compose --profile obs down -v

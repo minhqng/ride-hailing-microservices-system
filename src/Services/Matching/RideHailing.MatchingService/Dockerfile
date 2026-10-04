@@ -7,12 +7,8 @@ USER app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/Services/Matching/RideHailing.MatchingService/RideHailing.MatchingService.csproj", "src/Services/Matching/RideHailing.MatchingService/"]
-COPY ["Directory.Build.props", "./"]
-COPY ["Directory.Packages.props", "./"]
-COPY ["global.json", "./"]
-RUN dotnet restore "src/Services/Matching/RideHailing.MatchingService/RideHailing.MatchingService.csproj"
 COPY . .
+RUN dotnet restore "src/Services/Matching/RideHailing.MatchingService/RideHailing.MatchingService.csproj"
 WORKDIR "/src/src/Services/Matching/RideHailing.MatchingService"
 RUN dotnet build "RideHailing.MatchingService.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

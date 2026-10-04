@@ -1,3 +1,7 @@
-# otel — planned use (bootstrap placeholder)
+# W2 OpenTelemetry baseline
 
-Core must be healthy first. No fake config committed. Owner: C (OTel/platform), B (perf methodology). See Docs 02-03.
+The optional `obs` profile runs an OTLP Collector, Jaeger, Prometheus and provisioned Grafana data sources. Services export ASP.NET request traces and built-in server metrics with service.name, service.instance.id and deployment.environment. Collector failure does not gate readiness or business processing.
+
+Run `docker compose --profile obs up -d --build`, call `/info`, then inspect Jaeger on localhost:16686. CI runs `scripts/test/platform-smoke.py` and queries Jaeger to prove one trace. Fine-grained domain spans and worker messaging spans belong to later weeks.
+
+Reference: https://opentelemetry.io/docs/collector/configuration/

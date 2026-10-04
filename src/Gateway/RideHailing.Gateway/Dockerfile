@@ -7,12 +7,8 @@ USER app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["src/Gateway/RideHailing.Gateway/RideHailing.Gateway.csproj", "src/Gateway/RideHailing.Gateway/"]
-COPY ["Directory.Build.props", "./"]
-COPY ["Directory.Packages.props", "./"]
-COPY ["global.json", "./"]
-RUN dotnet restore "src/Gateway/RideHailing.Gateway/RideHailing.Gateway.csproj"
 COPY . .
+RUN dotnet restore "src/Gateway/RideHailing.Gateway/RideHailing.Gateway.csproj"
 WORKDIR "/src/src/Gateway/RideHailing.Gateway"
 RUN dotnet build "RideHailing.Gateway.csproj" -c $BUILD_CONFIGURATION -o /app/build
 

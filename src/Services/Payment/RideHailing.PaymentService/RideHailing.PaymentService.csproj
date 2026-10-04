@@ -6,4 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+  </ItemGroup>
 </Project>

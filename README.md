@@ -67,4 +67,4 @@ docker compose down
 
 ## Current implementation status
 
-Foundation only: projects compile, health endpoints, Compose networking, isolated DB roles. No business behavior, no migrations, no broker topology.
+W2 foundation: Compose core/optional obs, isolated DB roles, bounded owned-DB readiness, OTel traces/metrics and CI smoke. See `docs/member-c-week2.md` for issue coverage and pending peer review. Business behavior and broker bindings belong to later weeks.

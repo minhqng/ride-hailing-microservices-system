@@ -1,11 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+using RideHailing.Observability;
+using RideHailing.TripService.Infrastructure.Persistence;
+
 // Bootstrap skeleton for RideHailing.TripService (Trip service).
 // Owns: see src/Services/Trip/RideHailing.TripService/README.md. No business endpoints yet.
 // TODO(W3+): add owner-specific domain, persistence, messaging per Docs 00-05.
 
-using Microsoft.EntityFrameworkCore;
-using RideHailing.TripService.Infrastructure.Persistence;
-
 var builder = WebApplication.CreateBuilder(args);
+builder.AddRideTelemetry("trip-service");
+builder.Services.AddHealthChecks();
 
 // (A-W02-02) Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
 // connection string (key "Postgres", supplied as ConnectionStrings__Postgres
@@ -22,7 +25,7 @@ builder.Services.AddDbContext<TripDbContext>(options => options.UseNpgsql(postgr
 var app = builder.Build();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "trip-service" }));
-app.MapGet("/health/ready", () => Results.Ok(new { status = "Ready", service = "trip-service" }));
+app.MapRideReadiness();
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "trip-service", environment = env.EnvironmentName }));
 

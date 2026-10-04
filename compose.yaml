@@ -42,8 +42,8 @@ services:
   rabbitmq:
     image: rabbitmq:4.3.6-management
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
     volumes: [rabbitdata:/var/lib/rabbitmq]
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
@@ -53,11 +53,47 @@ services:
       retries: 20
     networks: [ride-net]
 
+  # Optional local observability stack. Start with: docker compose --profile obs up -d
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    profiles: [obs]
+    ports: ["127.0.0.1:16686:16686"]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks: [ride-net]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    profiles: [obs]
+    command: ["--config=/etc/otelcol/config.yml"]
+    volumes:
+      - ./deploy/otel/collector.yml:/etc/otelcol/config.yml:ro
+    ports: ["127.0.0.1:4317:4317", "127.0.0.1:4318:4318"]
+    networks: [ride-net]
+
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    profiles: [obs]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    networks: [ride-net]
+
+  grafana:
+    image: grafana/grafana:12.4.0
+    profiles: [obs]
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks: [ride-net]
+
   gateway:
     build:
       context: .
       dockerfile: src/Gateway/RideHailing.Gateway/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       Services__IdentityBaseUrl: http://identity:8080
       Services__DriverBaseUrl: http://driver:8080
@@ -73,6 +109,7 @@ services:
       context: .
       dockerfile: src/Services/Identity/RideHailing.IdentityService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:-identity_dev_pw}
     ports: ["8101:8080"]
@@ -85,6 +122,7 @@ services:
       context: .
       dockerfile: src/Services/Driver/RideHailing.DriverService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:-driver_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -99,6 +137,7 @@ services:
       context: .
       dockerfile: src/Services/Trip/RideHailing.TripService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw}
       RabbitMq__Host: rabbitmq
@@ -113,6 +152,7 @@ services:
       context: .
       dockerfile: src/Services/Matching/RideHailing.MatchingService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:-matching_dev_pw}
       Redis__ConnectionString: redis:6379
@@ -130,9 +170,13 @@ services:
       context: .
       dockerfile: src/Services/Payment/RideHailing.PaymentService/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:-payment_dev_pw}
       RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
+      ServiceInstanceId: ${PAYMENT_INSTANCE_ID:-payment-local}
     ports: ["8105:8080"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -144,8 +188,10 @@ services:
       context: .
       dockerfile: src/Workers/Notification/RideHailing.NotificationWorker/Dockerfile
     environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ConnectionStrings__Postgres: Host=postgres;Database=notification_db;Username=notification_app;Password=${NOTIFICATION_DB_PASSWORD:-notification_dev_pw}
       RabbitMq__Host: rabbitmq
+      ServiceInstanceId: ${NOTIFICATION_INSTANCE_ID:-notification-local}
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
