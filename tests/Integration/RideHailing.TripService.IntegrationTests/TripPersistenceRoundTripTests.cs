@@ -74,7 +74,13 @@ public sealed class TripPersistenceRoundTripTests
         var fare = new FareSnapshot(
             "VND", 50000m, "p0-test",
             new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero));
-        return Trip.Create(tripId, Guid.NewGuid(), pickup, dropoff, fare);
+        return Trip.Create(
+            tripId,
+            Guid.NewGuid(),
+            pickup,
+            dropoff,
+            fare,
+            new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero));
     }
 
     [Fact]

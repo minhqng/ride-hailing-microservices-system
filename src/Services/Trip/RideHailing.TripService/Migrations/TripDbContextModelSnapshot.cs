@@ -114,6 +114,11 @@ namespace RideHailing.TripService.Migrations
 
                     b.HasKey("TripId");
 
+                    b.HasIndex("RiderId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_trips_one_active_per_rider")
+                        .HasFilter("state IN ('CREATED', 'DRIVER_ACCEPTED', 'DRIVER_RESERVED', 'IN_PROGRESS', 'MATCHING', 'READY_TO_START')");
+
                     b.ToTable("trips", null, t =>
                         {
                             t.HasCheckConstraint("CK_trips_assignment_coherence", "(assigned_driver_id IS NULL AND reservation_id IS NULL AND matching_round IS NULL) OR (assigned_driver_id IS NOT NULL AND reservation_id IS NOT NULL AND matching_round IS NOT NULL)");
@@ -122,6 +127,50 @@ namespace RideHailing.TripService.Migrations
 
                             t.HasCheckConstraint("CK_trips_state_assignment_coherence", "(state NOT IN ('DRIVER_RESERVED', 'DRIVER_ACCEPTED', 'READY_TO_START', 'IN_PROGRESS', 'COMPLETED') OR (assigned_driver_id IS NOT NULL AND reservation_id IS NOT NULL AND matching_round IS NOT NULL)) AND (state NOT IN ('CREATED', 'MATCHING', 'MATCH_FAILED') OR (assigned_driver_id IS NULL AND reservation_id IS NULL AND matching_round IS NULL))");
                         });
+                });
+
+            modelBuilder.Entity("RideHailing.TripService.Infrastructure.Persistence.RequestIdempotencyRecord", b =>
+                {
+                    b.Property<string>("Scope")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("Key")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resource_id");
+
+                    b.HasKey("Scope", "Key")
+                        .HasName("PK_request_idempotency");
+
+                    b.HasIndex("ResourceId");
+
+                    b.ToTable("request_idempotency", (string)null);
+                });
+
+            modelBuilder.Entity("RideHailing.TripService.Infrastructure.Persistence.RequestIdempotencyRecord", b =>
+                {
+                    b.HasOne("RideHailing.TripService.Domain.Trips.Trip", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_request_idempotency_trips_resource_id");
                 });
 #pragma warning restore 612, 618
         }

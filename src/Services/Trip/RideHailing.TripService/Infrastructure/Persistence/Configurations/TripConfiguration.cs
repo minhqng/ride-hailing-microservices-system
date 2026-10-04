@@ -1,9 +1,11 @@
-// Trip aggregate EF mapping (A-W03-07).
+// Trip aggregate EF mapping (A-W03-07, A-W04-04 active-Rider defense).
 //
-// Authoritative W3 persistence for the Trip aggregate only. Value objects
+// Authoritative W3 persistence for the Trip aggregate only, plus the W4
+// DSI-013 partial unique index (one active Trip per Rider). Value objects
 // map into the same trips table as ComplexProperty columns (relational, not
 // JSON); no separate value-object tables, no entity keys for value objects,
-// no Driver/Matching/Payment/request-idempotency/Saga/Outbox/Inbox tables.
+// no Driver/Matching/Payment/Saga/Outbox/Inbox tables. Request-idempotency
+// bookkeeping lives in RequestIdempotencyConfiguration, not here.
 // State persists as canonical wire text via an infrastructure-only converter;
 // the Domain layer carries no persistence parsing concern.
 
@@ -38,6 +40,21 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             .HasMaxLength(32)
             .IsRequired()
             .HasConversion(StateConverter());
+
+        // DSI-013 race-safe defense: at most one active-state Trip row per
+        // Rider. The state set comes from the domain policy
+        // (TripStatePolicy.ActiveForRiderBooking) mapped through the canonical
+        // wire names, so the index predicate cannot drift from the domain
+        // rule; a dedicated test proves the generated predicate matches.
+        // States are ordered for stable migration SQL.
+        var activeNames = TripStatePolicy.ActiveForRiderBooking
+            .Select(s => s.ToCanonicalName())
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .Select(n => $"'{n}'");
+        builder.HasIndex(e => e.RiderId)
+            .HasDatabaseName("UX_trips_one_active_per_rider")
+            .HasFilter($"state IN ({string.Join(", ", activeNames)})")
+            .IsUnique();
 
         // Application-managed optimistic-concurrency token: the domain
         // advances Version once per committed transition; persistence only
