@@ -52,9 +52,11 @@ public sealed class CreateRideMigrationBoundaryTests
         }.ToString();
         var probeOptions = new DbContextOptionsBuilder<TripDbContext>()
             .UseNpgsql(probeCs).Options;
-        await using (var db = new TripDbContext(probeOptions))
+        try
         {
-            var defined = db.Database.GetMigrations();
+            await using (var db = new TripDbContext(probeOptions))
+            {
+                var defined = db.Database.GetMigrations();
             var w04Target = Assert.Single(
                 defined.Where(m => m.EndsWith("W04_CreateRideIdempotency", StringComparison.Ordinal)).ToList());
 
@@ -145,6 +147,119 @@ public sealed class CreateRideMigrationBoundaryTests
             {
                 Assert.DoesNotContain($"'{terminal}'", indexDef, StringComparison.Ordinal);
             }
+            }
         }
+        finally
+        {
+            await DropProbeDatabaseAsync(maintenanceOptions, probeDb);
+        }
+    }
+
+    [Fact]
+    public async Task W04_Collation_AppliesOnLatest_WithDownUpRoundTrip()
+    {
+        var probeDb = "trip_probe_" + Guid.NewGuid().ToString("N");
+        var maintenanceCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
+        {
+            Database = "postgres",
+        }.ToString();
+
+        var maintenanceOptions = new DbContextOptionsBuilder<TripDbContext>()
+            .UseNpgsql(maintenanceCs).Options;
+        await using (var maintenance = new TripDbContext(maintenanceOptions))
+        {
+            var connection = maintenance.Database.GetDbConnection();
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"CREATE DATABASE \"{probeDb}\"";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var probeCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
+        {
+            Database = probeDb,
+        }.ToString();
+        var probeOptions = new DbContextOptionsBuilder<TripDbContext>()
+            .UseNpgsql(probeCs).Options;
+        try
+        {
+            await using (var db = new TripDbContext(probeOptions))
+            {
+                var defined = db.Database.GetMigrations();
+            var w04Target = Assert.Single(
+                defined.Where(m => m.EndsWith("W04_CreateRideIdempotency", StringComparison.Ordinal)).ToList());
+            var migrator = db.GetService<IMigrator>();
+
+            async Task<string?> SingleStringAsync(string sql)
+            {
+                var connection = db.Database.GetDbConnection();
+                if (connection.State != System.Data.ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
+
+                await using var cmd = connection.CreateCommand();
+                cmd.CommandText = sql;
+                return (await cmd.ExecuteScalarAsync())?.ToString();
+            }
+
+            async Task<string?> ColumnCollationAsync(string column)
+            {
+                var connection = db.Database.GetDbConnection();
+                if (connection.State != System.Data.ConnectionState.Open)
+                {
+                    await connection.OpenAsync();
+                }
+
+                await using var cmd = connection.CreateCommand();
+                cmd.CommandText =
+                    "SELECT collation_name FROM information_schema.columns " +
+                    "WHERE table_schema = 'public' AND table_name = 'request_idempotency' AND column_name = $1";
+                var p = cmd.CreateParameter();
+                p.Value = column;
+                cmd.Parameters.Add(p);
+                return (await cmd.ExecuteScalarAsync())?.ToString();
+            }
+
+            // Latest: opaque-exact key columns pin bytewise collation, and the
+            // resource lookup index exists.
+            await migrator.MigrateAsync();
+            Assert.Equal("C", await ColumnCollationAsync("scope"));
+            Assert.Equal("C", await ColumnCollationAsync("key"));
+            Assert.Equal(
+                "IX_request_idempotency_resource_id",
+                await SingleStringAsync(
+                    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' " +
+                    "AND tablename = 'request_idempotency' AND indexname = 'IX_request_idempotency_resource_id'"));
+
+            // Down to the W04 target: collation pin is removed, table contract stays.
+            await migrator.MigrateAsync(w04Target);
+            Assert.NotEqual("C", await ColumnCollationAsync("scope"));
+            Assert.Equal(
+                "5",
+                await SingleStringAsync("SELECT count(*) FROM information_schema.columns " +
+                    "WHERE table_schema = 'public' AND table_name = 'request_idempotency'"));
+
+            // Back to latest: pin is re-applied idempotently.
+            await migrator.MigrateAsync();
+            Assert.Equal("C", await ColumnCollationAsync("scope"));
+            Assert.Equal("C", await ColumnCollationAsync("key"));
+            }
+        }
+        finally
+        {
+            await DropProbeDatabaseAsync(maintenanceOptions, probeDb);
+        }
+    }
+
+    private static async Task DropProbeDatabaseAsync(
+        DbContextOptions<TripDbContext> maintenanceOptions, string probeDb)
+    {
+        await using var cleanup = new TripDbContext(maintenanceOptions);
+        var connection = cleanup.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"DROP DATABASE IF EXISTS \"{probeDb}\" WITH (FORCE)";
+        await command.ExecuteNonQueryAsync();
     }
 }

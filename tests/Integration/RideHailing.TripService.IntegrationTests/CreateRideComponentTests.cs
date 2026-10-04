@@ -405,4 +405,52 @@ public sealed class CreateRideComponentTests
             Assert.DoesNotContain($"'{terminal.ToCanonicalName()}'", filter, StringComparison.Ordinal);
         }
     }
+
+    [Fact]
+    public async Task MaxLengthKey_IsAccepted_AtExactly128Chars()
+    {
+        await MigrateAsync();
+
+        var result = await CreateAsync(Guid.NewGuid(), new string('k', 128));
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.IsReplay);
+    }
+
+    [Fact]
+    public async Task Replay_AfterTerminal_ReplaysTerminalTripId()
+    {
+        await MigrateAsync();
+        var options = Options();
+        var rider = Guid.NewGuid();
+        const string key = "terminal-replay";
+
+        var first = await CreateAsync(rider, key);
+        Assert.True(first.IsSuccess);
+
+        // Move the referenced Trip to a terminal state out-of-band (a later
+        // workflow owns transitions; here only the replay binding is proven).
+        await using (var db = new TripDbContext(options))
+        {
+            var connection = (NpgsqlConnection)db.Database.GetDbConnection();
+            await connection.OpenAsync();
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = "UPDATE trips SET state = 'CANCELLED' WHERE trip_id = $1";
+            cmd.Parameters.Add(new NpgsqlParameter { Value = first.TripId });
+            Assert.Equal(1, await cmd.ExecuteNonQueryAsync());
+        }
+
+        // Same key + same semantic request still replays the SAME (now
+        // terminal) Trip: the key stays bound to its logical creation.
+        var replay = await CreateAsync(rider, key);
+        Assert.True(replay.IsSuccess);
+        Assert.True(replay.IsReplay);
+        Assert.Equal(first.TripId, replay.TripId);
+
+        // A fresh key for the freed Rider creates anew.
+        var fresh = await CreateAsync(rider, "after-terminal");
+        Assert.True(fresh.IsSuccess);
+        Assert.False(fresh.IsReplay);
+        Assert.NotEqual(first.TripId, fresh.TripId);
+    }
 }

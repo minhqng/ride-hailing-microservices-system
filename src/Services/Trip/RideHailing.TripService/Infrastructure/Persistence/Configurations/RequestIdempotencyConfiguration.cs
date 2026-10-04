@@ -5,6 +5,12 @@
 // or redundant unique index. ResourceId references trips.trip_id with
 // RESTRICT so a record can never silently dangle; the relationship is
 // Infrastructure-only with no domain navigation.
+//
+// Opaque-exact key rule: scope/key pin COLLATE "C" (bytewise) so the
+// database uniqueness arbiter treats keys case-sensitively regardless of the
+// database default collation. Without the pin, a case-insensitive default
+// collation would fold distinct keys into one logical request (wrong replay)
+// or split identical keys.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -27,11 +33,13 @@ internal sealed class RequestIdempotencyConfiguration : IEntityTypeConfiguration
         builder.Property(r => r.Scope)
             .HasColumnName("scope")
             .HasMaxLength(64)
+            .UseCollation("C")
             .IsRequired();
 
         builder.Property(r => r.Key)
             .HasColumnName("key")
             .HasMaxLength(128)
+            .UseCollation("C")
             .IsRequired();
 
         builder.Property(r => r.RequestFingerprint)

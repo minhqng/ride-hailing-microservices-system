@@ -112,6 +112,12 @@ public sealed class CreateRideHandler
                     $"Request-idempotency record ({scope}) references missing Trip {existing.ResourceId}.");
             }
 
+            if (replayed.RiderId != command.RiderId)
+            {
+                throw new InvalidOperationException(
+                    $"Request-idempotency record ({scope}) references Trip {existing.ResourceId} owned by a different Rider.");
+            }
+
             return CreateRideResult.Success(replayed.TripId, isReplay: true);
         }
 
@@ -200,6 +206,12 @@ public sealed class CreateRideHandler
             {
                 throw new InvalidOperationException(
                     $"Request-idempotency record ({scope}) references missing Trip {committed.ResourceId}.");
+            }
+
+            if (winner.RiderId != riderId)
+            {
+                throw new InvalidOperationException(
+                    $"Request-idempotency record ({scope}) references Trip {committed.ResourceId} owned by a different Rider.");
             }
 
             return CreateRideResult.Success(winner.TripId, isReplay: true);

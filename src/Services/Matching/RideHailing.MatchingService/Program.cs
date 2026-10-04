@@ -1,6 +1,9 @@
 // Matching service (Owner B). W4: Redis GEO projection ownership (derived only).
 // The projection updater is exercised directly in W4 (broker wiring is W8).
 // Startup loads the Lua function best-effort; the service still boots if Redis is down.
+// Calls self-heal a missing function library (reload-once-and-retry on the
+// missing-function server error), so recovery needs no restart after Redis
+// restarts or FUNCTION FLUSH.
 // B-W02-02 seam: typed Driver HTTP client (no retry handlers by design, Doc 02 §19).
 using RideHailing.MatchingService.Application.Projection;
 using RideHailing.MatchingService.Infrastructure.DriverClient;

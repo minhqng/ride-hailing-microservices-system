@@ -441,4 +441,62 @@ public sealed class CreateRideHttpTests : IDisposable
         Assert.Equal(0, await verify.RequestIdempotency.AsNoTracking()
             .CountAsync(r => r.Key == key));
     }
+
+    [Fact]
+    public async Task ValidNameIdentifier_Plus_MalformedSub_Rejects401_WithoutSideEffect()
+    {
+        var rider = Guid.NewGuid();
+        var key = $"http-cross-malformed-{Guid.NewGuid():N}";
+
+        using var response = await _client.SendAsync(Post(
+            key: key,
+            nameId: rider.ToString("D"),
+            sub: "not-a-guid",
+            role: "Rider"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("UNAUTHORIZED", await ProblemCodeAsync(response));
+
+        await using var verify = new TripDbContext(PlainOptions());
+        Assert.Equal(0, await verify.Trips.AsNoTracking()
+            .CountAsync(t => t.RiderId == rider));
+        Assert.Equal(0, await verify.RequestIdempotency.AsNoTracking()
+            .CountAsync(r => r.Key == key));
+    }
+
+    [Fact]
+    public async Task MaxLengthKey_At128Chars_IsAccepted()
+    {
+        using var response = await _client.SendAsync(Post(
+            key: new string('k', 128),
+            nameId: Rider(),
+            role: "Rider"));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MalformedJsonBody_Returns400_WithoutSideEffect()
+    {
+        var rider = Rider();
+        var key = $"http-malformed-json-{Guid.NewGuid():N}";
+        var body = new StringContent("{not-json", Encoding.UTF8, "application/json");
+
+        using var response = await _client.SendAsync(Post(
+            key: key,
+            nameId: rider,
+            role: "Rider",
+            body: body));
+
+        // Transport-level malformed JSON never reaches the handler: the
+        // framework answers 400 with its own envelope (no VALIDATION_ERROR
+        // code), and no Trip or idempotency row may be persisted.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        await using var verify = new TripDbContext(PlainOptions());
+        Assert.Equal(0, await verify.Trips.AsNoTracking()
+            .CountAsync(t => t.RiderId == Guid.Parse(rider)));
+        Assert.Equal(0, await verify.RequestIdempotency.AsNoTracking()
+            .CountAsync(r => r.Key == key));
+    }
 }

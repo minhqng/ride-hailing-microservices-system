@@ -10,7 +10,9 @@
 // Same-type duplicates resolve by distinct value: repeated identical Guids
 // are tolerated (claim mapping layers may duplicate), conflicting Guids or
 // any malformed/Guid.Empty value fails closed. A malformed secondary claim
-// is never ignored because another valid claim exists.
+// is never ignored because another valid claim exists. Only claims from
+// authenticated identities are considered; unauthenticated identities in a
+// multi-identity principal contribute no identity.
 
 using System.Security.Claims;
 
@@ -72,9 +74,12 @@ public static class RiderIdentity
 
     /// <summary>
     /// True when the authenticated principal carries the canonical Rider role.
+    /// Like identity extraction, only roles from authenticated identities
+    /// count: a role carried by an unauthenticated identity never authorizes.
     /// </summary>
     public static bool IsRider(ClaimsPrincipal principal) =>
-        principal.FindAll(ClaimTypes.Role).Concat(principal.FindAll(JwtRoleClaimType))
+        principal.Identities.Where(i => i.IsAuthenticated)
+            .SelectMany(i => i.FindAll(ClaimTypes.Role).Concat(i.FindAll(JwtRoleClaimType)))
             .Any(c => string.Equals(c.Value, RiderRole, StringComparison.Ordinal));
 
     /// <summary>
@@ -82,6 +87,8 @@ public static class RiderIdentity
     /// Returns true with a null value when the type is absent; true with a value
     /// when every present claim parses to the same non-empty Guid; false when any
     /// value is malformed/Guid.Empty or distinct values conflict.
+    /// Only claims from authenticated identities are considered: a claim
+    /// carried by an unauthenticated identity must never authenticate a request.
     /// </summary>
     private static bool TryResolveUniqueGuidClaim(
         ClaimsPrincipal principal,
@@ -92,20 +99,23 @@ public static class RiderIdentity
         var distinct = new HashSet<Guid>();
         var present = false;
 
-        foreach (var claim in principal.FindAll(claimType))
+        foreach (var identity in principal.Identities.Where(i => i.IsAuthenticated))
         {
-            present = true;
-            if (!Guid.TryParse(claim.Value, out var parsed) || parsed == Guid.Empty)
+            foreach (var claim in identity.FindAll(claimType))
             {
-                riderId = null;
-                return false;
-            }
+                present = true;
+                if (!Guid.TryParse(claim.Value, out var parsed) || parsed == Guid.Empty)
+                {
+                    riderId = null;
+                    return false;
+                }
 
-            distinct.Add(parsed);
-            if (distinct.Count > 1)
-            {
-                riderId = null;
-                return false;
+                distinct.Add(parsed);
+                if (distinct.Count > 1)
+                {
+                    riderId = null;
+                    return false;
+                }
             }
         }
 

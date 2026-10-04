@@ -191,4 +191,37 @@ public class DriverClientMappingTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => client.GetReservationAsync(Guid.NewGuid(), Guid.NewGuid()));
     }
+
+    [Fact]
+    public async Task Reconcile_Http404_Maps_NotFound_InsteadOfThrowing()
+    {
+        var driver = Guid.NewGuid();
+        var res = Guid.NewGuid();
+        var stub = new StubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        };
+        var client = Client(stub, out var captured);
+
+        var outcome = await client.GetReservationAsync(driver, res);
+
+        Assert.Equal(HttpMethod.Get, captured.LastRequest!.Method);
+        Assert.Equal(
+            $"/internal/drivers/{driver:N}/reservations/{res:N}",
+            captured.LastRequest.RequestUri!.AbsolutePath);
+        Assert.Equal(ReservationReconcileOutcome.NotFound, outcome);
+    }
+
+    [Fact]
+    public async Task Reconcile_Http500_Still_Throws_Transport()
+    {
+        var stub = new StubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError),
+        };
+        var client = Client(stub, out _);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.GetReservationAsync(Guid.NewGuid(), Guid.NewGuid()));
+    }
 }
