@@ -17,4 +17,4 @@ curl -X POST http://localhost:8105/simulator/operations \
 
 Choose `TimeoutAfterEffect` to receive HTTP 504 while the persisted operation reports `state: Unknown` and `providerEffectOccurred: true`; inspect it with the returned `id` at `GET /simulator/operations/{id}`. The same operation key is not yet deduplicated in W3.
 
-Verification and known limits: `docs/member-c-week3.md`. TransientFailure returns HTTP 503; illegal request values return HTTP 400 before persistence.
+Verification and known limits: `docs/05C-member-c-payment-messaging-platform.md` §22, Doc 01 §10. TransientFailure returns HTTP 503; illegal request values return HTTP 400 before persistence.
