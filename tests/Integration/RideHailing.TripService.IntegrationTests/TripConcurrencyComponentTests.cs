@@ -50,7 +50,8 @@ public sealed class TripConcurrencyComponentTests
         {
             var initial = Trip.Reconstitute(
                 tripId, riderId, pickup, dropoff, fare,
-                TripState.Matching, null,
+                TripState.Matching, 1, null,
+                new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
                 new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
                 0);
             seed.Trips.Add(initial);
@@ -66,8 +67,12 @@ public sealed class TripConcurrencyComponentTests
         Assert.Equal(tripA.Version, tripB.Version);
         var originalVersion = tripA.Version;
 
-        Assert.True(tripA.ApplyDriverReserved(winnerDriverId, winnerReservationId, 1).IsSuccess);
-        Assert.True(tripB.MarkMatchingFailed().IsSuccess);
+        Assert.True(tripA.ApplyDriverReserved(
+            winnerDriverId, winnerReservationId, 1,
+            new DateTimeOffset(2026, 9, 26, 8, 0, 0, TimeSpan.Zero)).IsSuccess);
+        Assert.True(tripB.MarkMatchingFailed(
+            1,
+            new DateTimeOffset(2026, 9, 26, 8, 0, 0, TimeSpan.Zero)).IsSuccess);
 
         await dbA.SaveChangesAsync();
 

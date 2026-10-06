@@ -1,0 +1,13 @@
+{
+  "tripId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "matchingRound": 1,
+  "pickup": {
+    "latitude": 10.762622,
+    "longitude": 106.660172
+  },
+  "dropoff": {
+    "latitude": 10.776889,
+    "longitude": 106.700806
+  },
+  "requestedAt": "2026-09-26T00:00:00+00:00"
+}
