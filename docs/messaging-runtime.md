@@ -18,6 +18,6 @@ await using var consumer = await ManualAckConsumer.StartAsync(factory, publisher
 await consumer.Completion.WaitAsync(stoppingToken);
 ```
 
-The host must observe Completion, dispose on failure/shutdown, and restart with bounded backoff. Failed initial connect fails startup. Closed consumer connections release unacknowledged work for redelivery. Handler cancellation may occur after commit; W9 processed-message dedup must make repeated durable effects harmless. This library does not claim exactly-once delivery or implement A/B business handlers.
+Broker cancellation (including queue deletion), channel shutdown and failed retry/error transfer fault `Completion` and stop further handling. The host must observe Completion, dispose on failure/shutdown, and restart with bounded backoff. Failed initial connect fails startup. Closed consumer connections release unacknowledged work for redelivery. Handler cancellation may occur after commit; W9 processed-message dedup must make repeated durable effects harmless. This library does not claim exactly-once delivery or implement A/B business handlers.
 
 Reference: [RabbitMQ .NET client guide](https://www.rabbitmq.com/client-libraries/dotnet-api-guide). Confirms cover publisher-to-broker responsibility; consumer ACK is independent. Real tests: RabbitBackboneTests (confirm before any consumer; persisted commit before ACK; mandatory return; trace/ACK ordering; poison/retry exhaustion; connection loss and explicit reconnect).
