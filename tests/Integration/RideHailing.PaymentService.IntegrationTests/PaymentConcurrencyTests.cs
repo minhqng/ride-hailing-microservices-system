@@ -17,7 +17,7 @@ public class PaymentConcurrencyTests(PaymentDatabase database, ITestOutputHelper
         var key = Guid.NewGuid().ToString();
         var trip = Guid.NewGuid();
         var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var provider = new ProviderLedger(database.Source.ConnectionString);
+        await using var provider = new ProviderLedger(database.ConnectionString);
         var tasks = Enumerable.Range(0, contenders).Select(async i =>
         {
             var request = PaymentOperation.Create(key, trip, PaymentOperationType.Capture, 100, "VND", DateTimeOffset.UtcNow);

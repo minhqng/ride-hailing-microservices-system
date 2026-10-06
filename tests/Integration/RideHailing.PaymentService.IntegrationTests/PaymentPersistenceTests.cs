@@ -8,12 +8,14 @@ namespace RideHailing.PaymentService.IntegrationTests;
 public sealed class PaymentDatabase : IAsyncLifetime
 {
     private readonly PostgreSqlContainer container = new PostgreSqlBuilder("postgres:18.6").Build();
+    public string ConnectionString { get; private set; } = null!;
     public NpgsqlDataSource Source { get; private set; } = null!;
     public PaymentOperationRepository Repository { get; private set; } = null!;
     public async Task InitializeAsync()
     {
         await container.StartAsync();
-        Source = NpgsqlDataSource.Create(container.GetConnectionString() + ";Maximum Pool Size=32");
+        ConnectionString = container.GetConnectionString() + ";Maximum Pool Size=32";
+        Source = NpgsqlDataSource.Create(ConnectionString);
         Repository = new(Source);
         await Repository.InitializeAsync(default);
     }
