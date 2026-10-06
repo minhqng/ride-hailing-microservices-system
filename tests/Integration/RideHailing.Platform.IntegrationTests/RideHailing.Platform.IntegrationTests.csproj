@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../../../deploy/rabbitmq/reliability.json" Link="broker-reliability.json" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
     <ProjectReference Include="../../../src/BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
   </ItemGroup>

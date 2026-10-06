@@ -1,0 +1,51 @@
+{
+  "policies": [
+    {
+      "vhost": "/",
+      "name": "ride-critical-delivery",
+      "pattern": "^(matching|trip|payment|driver|notification)\\..*\\.q$",
+      "apply-to": "quorum_queues",
+      "priority": 10,
+      "definition": {
+        "delivery-limit": 20,
+        "dead-letter-exchange": "ride.quarantine",
+        "dead-letter-strategy": "at-least-once",
+        "overflow": "reject-publish",
+        "max-length-bytes": 67108864
+      }
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "ride.quarantine",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "ride.quarantine.q",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-delivery-limit": -1
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "ride.quarantine",
+      "vhost": "/",
+      "destination": "ride.quarantine.q",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
+  ]
+}

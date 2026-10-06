@@ -17,6 +17,7 @@ public sealed class RabbitBackboneFixture : IAsyncLifetime
     public IContainer Broker { get; } = new ContainerBuilder("rabbitmq:4.3.6-management")
         .WithEnvironment("RABBITMQ_DEFAULT_USER", "proof")
         .WithEnvironment("RABBITMQ_DEFAULT_PASS", "proof-local-only")
+        .WithResourceMapping(Path.Combine(AppContext.BaseDirectory, "broker-reliability.json"), "/tmp/ride-reliability.json")
         .WithPortBinding(5672, true)
         .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server startup complete"))
         .Build();
@@ -31,6 +32,8 @@ public sealed class RabbitBackboneFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Broker.StartAsync();
+        var imported = await Broker.ExecAsync(new[] { "rabbitmqctl", "import_definitions", "/tmp/ride-reliability.json" });
+        Assert.Equal(0, imported.ExitCode);
         await database.StartAsync();
         Source = NpgsqlDataSource.Create(database.GetConnectionString());
         await using var command = Source.CreateCommand("CREATE TABLE committed_deliveries(message_id text PRIMARY KEY)");
@@ -233,6 +236,35 @@ public class RabbitBackboneTests(RabbitBackboneFixture fixture) : IClassFixture<
         Assert.True(redelivery!.Redelivered);
         Assert.Equal(message.MessageId, redelivery.BasicProperties.MessageId);
         await channel.BasicAckAsync(redelivery.DeliveryTag, false);
+    }
+
+    [Fact]
+    public async Task BrokerDeliveryLimitPreservesOriginalInQuarantine()
+    {
+        // Matches the deployed policy; never changes queue arguments of existing business queues.
+        var queue = "payment.proof-" + Guid.NewGuid().ToString("N") + ".q";
+        await using var connection = await fixture.Factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueueDeclareAsync(queue, true, false, false,
+            new Dictionary<string, object?> { ["x-queue-type"] = "quorum" });
+        await using var publisher = new ConfirmedPublisher(fixture.Factory);
+        var message = Message();
+        await publisher.PublishAsync("", queue, message);
+        // Basic.Reject(requeue:true) counts as failed delivery in RabbitMQ 4.3.
+        for (var attempt = 0; attempt <= 20; attempt++)
+        {
+            BasicGetResult? delivery = null;
+            await Eventually(async () => (delivery = await channel.BasicGetAsync(queue, false)) is not null);
+            await channel.BasicRejectAsync(delivery!.DeliveryTag, requeue: true);
+        }
+        BasicGetResult? quarantined = null;
+        await Eventually(async () => (quarantined = await channel.BasicGetAsync("ride.quarantine.q", false)) is not null);
+        Assert.Equal(message.MessageId, quarantined!.BasicProperties.MessageId);
+        Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(message), quarantined.Body.ToArray());
+        Assert.True(quarantined.BasicProperties.Headers!.ContainsKey("x-death"));
+        Assert.Null(await channel.BasicGetAsync(queue, false));
+        await channel.BasicAckAsync(quarantined.DeliveryTag, false);
+        await channel.QueueDeleteAsync(queue, false, false);
     }
 
 }
