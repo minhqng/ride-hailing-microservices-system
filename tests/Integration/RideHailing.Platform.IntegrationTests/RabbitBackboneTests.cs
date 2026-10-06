@@ -105,7 +105,7 @@ public class RabbitBackboneTests(RabbitBackboneFixture fixture) : IClassFixture<
     public async Task MandatoryUnroutablePublishFailsVisibly()
     {
         await using var publisher = new ConfirmedPublisher(fixture.Factory);
-        var error = await Assert.ThrowsAsync<PublishException>(() => publisher.PublishAsync("ride.commands", "missing." + Guid.NewGuid(), Message()));
+        var error = await Assert.ThrowsAsync<PublishReturnException>(() => publisher.PublishAsync("ride.commands", "missing." + Guid.NewGuid(), Message()));
         Assert.True(error.IsReturn);
     }
 
@@ -176,10 +176,20 @@ public class RabbitBackboneTests(RabbitBackboneFixture fixture) : IClassFixture<
         var queue = await fixture.QueueAsync();
         await using var publisher = new ConfirmedPublisher(fixture.Factory);
         await publisher.PublishAsync("ride.commands", queue, Message());
-        await fixture.Broker.StopAsync();
-        using (var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+        // Restart the broker application while retaining the same container endpoint.
+        // Docker can assign a different host port after a container stop/start.
+        var stopped = await fixture.Broker.ExecAsync(new[] { "rabbitmqctl", "stop_app" });
+        Assert.Equal(0, stopped.ExitCode);
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await Assert.ThrowsAnyAsync<Exception>(() => publisher.PublishAsync("ride.commands", queue, Message(), timeout.Token));
-        await fixture.Broker.StartAsync();
+        }
+        finally
+        {
+            var started = await fixture.Broker.ExecAsync(new[] { "rabbitmqctl", "start_app" });
+            Assert.Equal(0, started.ExitCode);
+        }
         await Eventually(async () =>
         {
             try { await using var probe = await fixture.Factory.CreateConnectionAsync(); return probe.IsOpen; }
