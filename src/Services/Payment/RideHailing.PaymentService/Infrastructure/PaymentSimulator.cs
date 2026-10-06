@@ -23,7 +23,11 @@ public sealed class PaymentSimulator(ProviderLedger? provider = null)
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
 
         if (provider is not null && mode is PaymentSimulatorMode.Success or PaymentSimulatorMode.SlowSuccess or PaymentSimulatorMode.TimeoutAfterEffect)
-            await provider.CommitEffectAsync(operation, cancellationToken);
+        {
+            var effectId = await provider.CommitEffectAsync(operation, cancellationToken);
+            if (mode != PaymentSimulatorMode.TimeoutAfterEffect)
+                return operation.Reconcile(effectId, DateTimeOffset.UtcNow);
+        }
         // Real independent ledger commit has completed, but the response boundary supplies no outcome.
         if (provider is not null && mode is PaymentSimulatorMode.TimeoutAfterEffect or PaymentSimulatorMode.TimeoutBeforeEffect)
             throw new ProviderResponseLostException();
