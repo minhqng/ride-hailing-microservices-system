@@ -20,6 +20,7 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddSingleton(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = 32 }.ConnectionString));
     builder.Services.AddSingleton<PaymentExecution>();
     builder.Services.AddSingleton<PaymentOperationRepository>();
+    builder.Services.AddSingleton(new ProviderLedger(connectionString));
     builder.Services.AddSingleton<PaymentSimulator>();
 }
 
