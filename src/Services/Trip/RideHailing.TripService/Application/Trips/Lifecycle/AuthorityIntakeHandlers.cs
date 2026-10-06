@@ -55,7 +55,11 @@ public sealed class MarkPaymentAuthorizedHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Authorization replay is already current: no mutation, skip the write.
+        if (!outcome.IsReplay)
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _log.LogInformation(
             "PaymentAuthorized {TripId} state {State} replay {IsReplay}.",
