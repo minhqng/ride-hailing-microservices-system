@@ -92,3 +92,13 @@ for result, body, status in saved:
         assert reconciled[1]["id"] == result["id"] and reconciled[1]["attemptCount"] == 1
         assert request("POST", "/simulator/operations", body) == reconciled
 print("PASS: W7 response loss after independent provider commit reconciles same key after restart")
+
+# Corrupt/conflicting provider meaning must remain visible, never become a false success.
+conflict_body = dict(operationKey=f"conflict-{uuid.uuid4()}", tripId=str(uuid.uuid4()),
+                     type="Authorize", amountMinor=100, currency="VND", mode="TimeoutAfterEffect")
+status, conflict = request("POST", "/simulator/operations", conflict_body)
+assert status == 504
+sql("UPDATE provider_effects SET request_fingerprint = request_fingerprint || ':conflict' WHERE effect_id = 'sim-" + uuid.UUID(conflict["id"]).hex + "'")
+assert request("POST", f'/simulator/operations/{conflict["id"]}/reconcile') == (409, {"error": "IDEMPOTENCY_CONFLICT"})
+assert request("GET", f'/simulator/operations/{conflict["id"]}') == (200, conflict)
+print("PASS: provider fingerprint conflict returns 409 and preserves UNKNOWN")

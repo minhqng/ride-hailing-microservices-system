@@ -84,14 +84,18 @@ if (!string.IsNullOrWhiteSpace(connectionString))
             PaymentOperationRepository repository, PaymentExecution execution, ProviderLedger provider, CancellationToken token) =>
         {
             var operation = await repository.GetAsync(id, token);
-            return operation is null ? Results.NotFound() : Results.Ok(await execution.ReconcileAsync(operation.OperationKey, provider, token));
+            if (operation is null) return Results.NotFound();
+            try { return Results.Ok(await execution.ReconcileAsync(operation.OperationKey, provider, token)); }
+            catch (PaymentConflictException) { return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" }); }
         });
         app.MapPost("/simulator/operations/{id:guid}/retry", async (Guid id, RetryPaymentRequest request,
             PaymentOperationRepository repository, PaymentExecution execution, CancellationToken token) =>
         {
             if (!Enum.IsDefined(request.Mode)) return Results.BadRequest();
             var operation = await repository.GetAsync(id, token);
-            return operation is null ? Results.NotFound() : Results.Ok(await execution.ExecuteAsync(operation, request.Mode, token, retry: true));
+            if (operation is null) return Results.NotFound();
+            try { return Results.Ok(await execution.ExecuteAsync(operation, request.Mode, token, retry: true)); }
+            catch (PaymentConflictException) { return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" }); }
         });
 
         app.MapGet("/simulator/operations/{id:guid}", async (
