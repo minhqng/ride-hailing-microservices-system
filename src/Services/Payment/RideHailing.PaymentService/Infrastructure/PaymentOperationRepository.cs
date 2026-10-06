@@ -7,14 +7,20 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
 {
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
-        await using var stream = typeof(PaymentOperationRepository).Assembly
-            .GetManifestResourceStream("RideHailing.PaymentService.Migrations.001_create_payment_operations.sql")
-            ?? throw new InvalidOperationException("Payment operations migration resource is missing.");
-        using var reader = new StreamReader(stream);
-        var sql = await reader.ReadToEndAsync(cancellationToken);
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(sql, connection);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var gate = new NpgsqlCommand("SELECT pg_advisory_xact_lock(754301)", connection, transaction))
+            await gate.ExecuteNonQueryAsync(cancellationToken);
+        var assembly = typeof(PaymentOperationRepository).Assembly;
+        foreach (var resource in assembly.GetManifestResourceNames().Where(n => n.Contains(".Migrations.") && n.EndsWith(".sql")).Order())
+        {
+            await using var stream = assembly.GetManifestResourceStream(resource)!;
+            using var reader = new StreamReader(stream);
+            var sql = await reader.ReadToEndAsync(cancellationToken);
+            await using var command = new NpgsqlCommand(sql, connection, transaction);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task SaveAsync(PaymentOperation operation, CancellationToken cancellationToken)
@@ -35,7 +41,18 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
                 result_code = EXCLUDED.result_code,
                 attempt_count = EXCLUDED.attempt_count,
                 updated_at = EXCLUDED.updated_at,
-                completed_at = EXCLUDED.completed_at;
+                completed_at = EXCLUDED.completed_at
+            WHERE payment_operations.operation_key = EXCLUDED.operation_key
+              AND payment_operations.trip_id = EXCLUDED.trip_id
+              AND payment_operations.operation_type = EXCLUDED.operation_type
+              AND payment_operations.amount_minor = EXCLUDED.amount_minor
+              AND payment_operations.currency = EXCLUDED.currency
+              AND payment_operations.updated_at <= EXCLUDED.updated_at
+              AND ((payment_operations.state = 'PROCESSING'
+                    AND EXCLUDED.state IN ('SUCCEEDED','DECLINED','UNKNOWN','PENDING')
+                    AND EXCLUDED.attempt_count = payment_operations.attempt_count)
+                OR (payment_operations.state = 'PENDING' AND EXCLUDED.state = 'PROCESSING'
+                    AND EXCLUDED.attempt_count = payment_operations.attempt_count + 1));
             """;
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -59,7 +76,8 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
         command.Parameters.AddWithValue("updated_at", operation.UpdatedAt);
         command.Parameters.AddWithValue("completed_at", NpgsqlTypes.NpgsqlDbType.TimestampTz,
             (object?)operation.CompletedAt ?? DBNull.Value);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        if (await command.ExecuteNonQueryAsync(cancellationToken) != 1)
+            throw new InvalidOperationException("Stale or illegal persisted Payment transition.");
     }
 
     public async Task<PaymentOperation?> GetAsync(Guid id, CancellationToken cancellationToken)
