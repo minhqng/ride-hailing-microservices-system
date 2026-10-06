@@ -59,7 +59,11 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
                     AND EXCLUDED.state IN ('SUCCEEDED','DECLINED','UNKNOWN','PENDING')
                     AND EXCLUDED.attempt_count = payment_operations.attempt_count)
                 OR (payment_operations.state = 'PENDING' AND EXCLUDED.state = 'PROCESSING'
-                    AND EXCLUDED.attempt_count = payment_operations.attempt_count + 1));
+                    AND EXCLUDED.attempt_count = payment_operations.attempt_count + 1)
+                OR (payment_operations.state IN ('UNKNOWN','PROCESSING') AND EXCLUDED.state IN ('SUCCEEDED','PENDING','REQUIRES_REVIEW')
+                    AND EXCLUDED.attempt_count = payment_operations.attempt_count)
+                OR (payment_operations.state = 'PENDING' AND EXCLUDED.state = 'REQUIRES_REVIEW'
+                    AND EXCLUDED.attempt_count = payment_operations.attempt_count));
             """;
 
         await using var command = new NpgsqlCommand(sql, connection, transaction);

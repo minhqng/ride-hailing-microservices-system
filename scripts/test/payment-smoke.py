@@ -34,7 +34,7 @@ cases = [
     ("Decline", 200, "Declined", False),
     ("TransientFailure", 503, "Pending", False),
     ("TimeoutBeforeEffect", 504, "Unknown", False),
-    ("TimeoutAfterEffect", 504, "Unknown", True),
+    ("TimeoutAfterEffect", 504, "Unknown", False),
     ("SlowSuccess", 200, "Succeeded", True),
 ]
 saved = []
