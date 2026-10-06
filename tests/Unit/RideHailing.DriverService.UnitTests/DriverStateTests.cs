@@ -192,7 +192,7 @@ public class DriverStateTests
     {
         var d = NewDriver();
         d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.GoOffline());
         Assert.Equal(DriverErrors.ReservationActive, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status); // unchanged
@@ -202,7 +202,7 @@ public class DriverStateTests
     public void Reserve_Requires_Available()
     {
         var d = NewDriver(); // OFFLINE
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid()));
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version));
         Assert.Equal(DriverErrors.DriverNotAvailable, ex.Code);
     }
 
@@ -213,9 +213,13 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        var v0 = d.Version;
+        d.Reserve(t, r, v0);
         var v = d.Version;
-        d.Reserve(t, r);
+        // Replay carries the version the caller originally saw (now stale):
+        // same logical effect already exists, so canonical success with no
+        // new effect and no version bump (DSI-005 over DSI-003 precedence).
+        d.Reserve(t, r, v0);
         Assert.Equal(DriverStatus.Reserved, d.Status);
         Assert.Equal(v, d.Version);
         Assert.Equal(t, d.ReservedTripId);
@@ -227,8 +231,8 @@ public class DriverStateTests
     {
         var d = NewDriver();
         d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid()));
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version));
         Assert.Equal(DriverErrors.DriverNotAvailable, ex.Code);
     }
 
@@ -239,7 +243,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.Release(t, r);
         Assert.Equal(DriverStatus.Available, d.Status);
         Assert.Null(d.ReservedTripId);
@@ -253,7 +257,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.Release(t, Guid.NewGuid()));
         Assert.Equal(DriverErrors.StaleReservation, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status);
@@ -267,7 +271,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         Assert.Equal(DriverStatus.OnTrip, d.Status);
         Assert.Equal(t, d.ActiveTripId);
@@ -278,7 +282,7 @@ public class DriverStateTests
     {
         var d = NewDriver();
         d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripStarted(Guid.NewGuid(), Guid.NewGuid()));
         Assert.Equal(DriverErrors.TripMismatch, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status);
@@ -291,7 +295,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         d.MarkTripCompleted(t);
         Assert.Equal(DriverStatus.Available, d.Status);
@@ -304,7 +308,7 @@ public class DriverStateTests
         var d = NewDriver();
         d.GoOnline();
         var t = Guid.NewGuid();
-        d.Reserve(t, Guid.NewGuid());
+        d.Reserve(t, Guid.NewGuid(), d.Version);
         d.MarkTripStarted(t, d.ReservationId!.Value);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripCompleted(Guid.NewGuid()));
         Assert.Equal(DriverErrors.TripMismatch, ex.Code);
@@ -317,7 +321,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         Assert.Throws<DriverDomainException>(() => d.Release(t, r));
         Assert.Equal(DriverStatus.OnTrip, d.Status);
