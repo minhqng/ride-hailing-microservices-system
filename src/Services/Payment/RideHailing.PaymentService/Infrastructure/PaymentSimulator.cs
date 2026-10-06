@@ -17,8 +17,8 @@ public sealed class PaymentSimulator(ProviderLedger? provider = null)
             throw new InvalidOperationException("Persist the processing attempt before invoking the simulator.");
         // Recovery after a crash between provider commit and Payment commit must not reinterpret
         // an existing effect as a decline or perform a new logical operation.
-        if (provider is not null && await provider.FindEffectAsync(operation.OperationKey, cancellationToken) is not null)
-            return operation.Resolve(PaymentSimulatorMode.Success, DateTimeOffset.UtcNow);
+        if (provider is not null && await provider.FindEffectAsync(operation, cancellationToken) is { } existingEffect)
+            return operation.Reconcile(existingEffect, DateTimeOffset.UtcNow);
         if (mode == PaymentSimulatorMode.SlowSuccess)
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
 
