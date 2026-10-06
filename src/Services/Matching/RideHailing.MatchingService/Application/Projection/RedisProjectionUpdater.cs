@@ -135,12 +135,19 @@ public sealed class RedisProjectionUpdater
         ex.Message.Contains("NOSCRIPT", StringComparison.OrdinalIgnoreCase)
         || ex.Message.Contains("Function not found", StringComparison.OrdinalIgnoreCase);
 
+    // Unknown function SHAPE (foreign library registered under our function
+    // name returning a non-array, or a short array) is also clean failure:
+    // InvalidCast/IndexOutOfRange here mean "no proven effect", never a bug
+    // in our own marshalling (covered by mapping tests), so degrade alike.
     private static bool IsDegradation(Exception ex) => ex is RedisConnectionException
         or RedisTimeoutException
+        or ObjectDisposedException
         or RedisServerException
         or IOException
         or SocketException
-        or TimeoutException;
+        or TimeoutException
+        or InvalidCastException
+        or IndexOutOfRangeException;
 
     private static SectionOutcome Parse(string? s) => s switch
     {
@@ -148,6 +155,7 @@ public sealed class RedisProjectionUpdater
         "stale" => SectionOutcome.Stale,
         "stale-session" => SectionOutcome.StaleSession,
         "skipped" => SectionOutcome.Skipped,
+        // 'keytype-error' and anything unrecognized: clean failure, no partial write.
         _ => SectionOutcome.Degraded,
     };
 }

@@ -3,26 +3,18 @@
 // Function is ensured once per test (idempotent FUNCTION LOAD REPLACE).
 using RideHailing.MatchingService.Application.Projection;
 using StackExchange.Redis;
-using Xunit.Abstractions;
 
 namespace RideHailing.MatchingService.IntegrationTests;
 
 [Collection(RedisCollection.Name)]
 public class RedisProjectionTests
 {
-    private readonly ITestOutputHelper _out;
     private readonly RedisDatabase _db;
 
-    public RedisProjectionTests(ITestOutputHelper output, RedisDatabase db)
+    public RedisProjectionTests(RedisDatabase db)
     {
-        _out = output;
         _db = db;
     }
-
-    private bool Ready() => _db.Ready();
-
-    private void LogReady() =>
-        _out.WriteLine($"INFRA: redis via {_db.Source} — real assertions will run.");
 
     private RedisProjectionUpdater Updater() => new(_db.Multiplexer());
 
@@ -69,12 +61,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task StateVersion_Stale_Event_Cannot_Regress()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -101,12 +87,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task StateOnly_Update_Does_Not_Touch_Location()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -135,12 +115,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Location_Stale_Sequence_Cannot_Regress()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -167,12 +141,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Location_Foreign_Session_Is_Rejected()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -198,12 +166,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Location_Same_Sequence_Newer_Timestamp_Wins()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -227,12 +189,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Available_Driver_Is_Discoverable_In_Geo()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -254,12 +210,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Polar_Latitude_Applied_But_Not_Indexed()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -282,12 +232,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Reserved_Driver_Removed_From_Geo()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -316,12 +260,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Updater_Returns_Degraded_On_Server_Error()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
 
         var updater = new RedisProjectionUpdater(_db.Multiplexer(), "definitely_not_a_loaded_function");
         var r = await updater.ApplyStateAsync(new(Guid.NewGuid(), "AVAILABLE", 1));
@@ -334,12 +272,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Updater_Recovers_After_Function_Flush()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -371,12 +303,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task Corrupt_Hash_Heals_On_Valid_Sample()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -412,12 +338,6 @@ public class RedisProjectionTests
     [Fact]
     public async Task State_Only_With_No_Coords_Is_Not_Geo_Member()
     {
-        if (!Ready())
-        {
-            Assert.Fail("Real Redis proof required but unavailable: " + _db.SkipReason);
-        }
-
-        LogReady();
         var updater = await ReadyUpdaterAsync();
 
         var id = Guid.NewGuid();
@@ -433,5 +353,195 @@ public class RedisProjectionTests
         {
             await CleanupAsync(id);
         }
+    }
+
+    // Forward progress: same-session seq increase applies with durable state + GEO.
+    [Fact]
+    public async Task Location_Newer_Sequence_Applies()
+    {
+        var updater = await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
+            await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            var r1 = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 20, t0));
+            Assert.Equal(SectionOutcome.Applied, r1.Location);
+
+            var r2 = await updater.ApplyLocationAsync(new(id, 106.7, 10.9, "s", 21, t0.AddSeconds(1)));
+            Assert.Equal(SectionOutcome.Applied, r2.Location);
+            Assert.Equal("21", await HGetAsync(id, "sequenceNo"));
+            Assert.Equal("10.9", await HGetAsync(id, "latitude"));
+            Assert.True(r2.GeoMember);
+            Assert.True(await IsGeoMemberAsync(id));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
+    }
+
+    // Tie-break negative: same session, same seq, OLDER timestamp -> stale, unchanged.
+    [Fact]
+    public async Task Location_Same_Sequence_Older_Timestamp_Is_Stale()
+    {
+        var updater = await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
+            await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 5, t0));
+
+            var r = await updater.ApplyLocationAsync(new(id, 106.9, 10.9, "s", 5, t0.AddSeconds(-10)));
+            Assert.Equal(SectionOutcome.Stale, r.Location);
+            Assert.Equal("10.8", await HGetAsync(id, "latitude"));
+            Assert.Equal("5", await HGetAsync(id, "sequenceNo"));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
+    }
+
+    // Fail-closed caller values: non-numeric version/seq via direct FCALL return
+    // stale and write nothing (C# can never produce these; the Lua guard owns them).
+    [Fact]
+    public async Task Malformed_Caller_Values_Fail_Closed_Without_Write()
+    {
+        await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var r1 = await RawFcallAsync(id, "AVAILABLE", "not-a-number", "", "", "", "", "");
+            Assert.Equal("stale", r1[0]);
+            Assert.Null(await HGetAsync(id, "driverAggregateVersion"));
+
+            var r2 = await RawFcallAsync(id, "", "", "106.6", "10.8", "s", "garbage",
+                new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero).ToString("O"));
+            Assert.Equal("stale", r2[1]);
+            Assert.Null(await HGetAsync(id, "locationSessionId"));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
+    }
+
+    // Stored garbage timestamp heals: numeric stored seq + garbage stored ts,
+    // same session, valid new sample -> applied (garbage carries no order).
+    [Fact]
+    public async Task Stored_Garbage_Timestamp_Heals_On_Valid_Sample()
+    {
+        var updater = await ReadyUpdaterAsync();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            var db = Db();
+            var key = RedisProjectionKeys.ProjectionKey(id);
+            await db.HashSetAsync(key, new[]
+            {
+                new HashEntry("locationSessionId", "s"),
+                new HashEntry("sequenceNo", "5"),
+                new HashEntry("capturedAt", "garbage"),
+                new HashEntry("longitude", "0"),
+                new HashEntry("latitude", "0"),
+            });
+
+            var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
+            var r = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s", 5, t0));
+            Assert.False(r.Degraded);
+            Assert.Equal(SectionOutcome.Applied, r.Location);
+            // Writer format is UtcDateTime "O" (Z-suffixed), not the +00:00 rendering.
+            Assert.Equal(t0.UtcDateTime.ToString("O"), await HGetAsync(id, "capturedAt"));
+        }
+        finally
+        {
+            await CleanupAsync(id);
+        }
+    }
+
+    // Key-type gate: repurposed GEO key fails the whole call with zero writes.
+    // Note: drivers:geo is shared across tests; same-collection xUnit runs
+    // sequentially and finally restores it (DEL), so no cross-test pollution.
+    [Fact]
+    public async Task Repurposed_Geo_Key_Fails_Without_Partial_Write()
+    {
+        var updater = await ReadyUpdaterAsync();
+        var db = Db();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            await db.StringSetAsync(RedisProjectionKeys.GeoKey, "junk");
+
+            var r = await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            Assert.True(r.Degraded);
+            Assert.False(await db.KeyExistsAsync(RedisProjectionKeys.ProjectionKey(id)));
+        }
+        finally
+        {
+            await db.KeyDeleteAsync(RedisProjectionKeys.GeoKey);
+            await CleanupAsync(id);
+        }
+    }
+
+    // Disposed multiplexer degrades instead of throwing (never-blocks contract).
+    [Fact]
+    public async Task Disposed_Multiplexer_Returns_Degraded()
+    {
+        var mux = await RedisProjectionUpdater.ConnectAsync(_db.ConnectionString);
+        await mux.DisposeAsync();
+
+        var r = await new RedisProjectionUpdater(mux).ApplyStateAsync(new(Guid.NewGuid(), "AVAILABLE", 1));
+        Assert.True(r.Degraded);
+        Assert.Equal(SectionOutcome.Degraded, r.State);
+    }
+
+    // Foreign library under our function name returning a wrong shape:
+    // no InvalidCast/IndexOutOfRange escapes — clean Degraded, then recovery.
+    [Fact]
+    public async Task Rogue_Function_Shape_Returns_Degraded()
+    {
+        var updater = await ReadyUpdaterAsync();
+        var db = Db();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            await db.ExecuteAsync("FUNCTION", "LOAD", "REPLACE",
+                "#!lua name=driverprojection\nredis.register_function('driver_projection_update', function() return 42 end)");
+
+            var r = await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            Assert.True(r.Degraded);
+            Assert.Equal(SectionOutcome.Degraded, r.State);
+            Assert.False(await db.KeyExistsAsync(RedisProjectionKeys.ProjectionKey(id)));
+        }
+        finally
+        {
+            await ReadyUpdaterAsync();
+            await CleanupAsync(id);
+        }
+    }
+
+    private async Task<string?[]> RawFcallAsync(
+        Guid driverId,
+        string status, string version,
+        string lon, string lat, string session, string seq, string capturedAt)
+    {
+        var raw = await Db().ExecuteAsync("FCALL", new object[]
+        {
+            "driver_projection_update", 2,
+            RedisProjectionKeys.ProjectionKey(driverId),
+            RedisProjectionKeys.GeoKey,
+            RedisProjectionKeys.Member(driverId),
+            status, version, lon, lat, session, seq, capturedAt,
+        });
+        Assert.False(raw.IsNull, "FCALL must return an array.");
+        var res = ((RedisResult[])raw)!;
+        return res.Select(r => (string?)r).ToArray();
     }
 }

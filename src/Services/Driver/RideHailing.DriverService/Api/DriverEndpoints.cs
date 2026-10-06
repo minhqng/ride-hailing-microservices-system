@@ -130,7 +130,7 @@ public static class DriverEndpoints
 
     private static IResult MapDomainError(DriverDomainException ex) => ex.Code switch
     {
-        DriverErrors.InvalidCoordinate or DriverErrors.InvalidLocation or DriverErrors.InvalidRequest =>
+        DriverErrors.InvalidCoordinate or DriverErrors.InvalidLocation or DriverErrors.InvalidRequest or DriverErrors.InvalidIdentity =>
             Results.BadRequest(new { code = ex.Code, message = ex.Message }),
         _ => Results.Conflict(new { code = ex.Code, message = ex.Message }),
     };

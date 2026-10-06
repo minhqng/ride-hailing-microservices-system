@@ -5,13 +5,40 @@
 // missing-function server error), so recovery needs no restart after Redis
 // restarts or FUNCTION FLUSH.
 // B-W02-02 seam: typed Driver HTTP client (no retry handlers by design, Doc 02 §19).
+using RideHailing.MatchingService.Api;
+using RideHailing.MatchingService.Application.Matching;
 using RideHailing.MatchingService.Application.Projection;
+using RideHailing.MatchingService.Domain.Matching;
 using RideHailing.MatchingService.Infrastructure.DriverClient;
+using RideHailing.MatchingService.Infrastructure.Persistence;
 using RideHailing.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddRideTelemetry("matching-service");
 builder.Services.AddHealthChecks();
+builder.Services.AddOptions<MatchingPolicy>()
+    .Bind(builder.Configuration.GetSection("Matching"))
+    .Validate(p => MatchingPolicyValidator.Validate(p) is null, "Invalid Matching policy configuration.")
+    .ValidateOnStart();
+builder.Services.AddSingleton(_ =>
+{
+    var cs = builder.Configuration.GetConnectionString("Postgres")
+        ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
+        ?? "Host=localhost;Port=5432;Database=matching_db;Username=matching_app;Password=matching_dev_pw";
+    return new MatchingRepository(cs);
+});
+builder.Services.AddSingleton(_ =>
+{
+    var cs = builder.Configuration["Redis__ConnectionString"]
+        ?? Environment.GetEnvironmentVariable("Redis__ConnectionString")
+        ?? "localhost:6379";
+    return new SharedRedisMultiplexer(cs);
+});
+builder.Services.AddSingleton(sp => new CandidateDiscovery(
+    ct => sp.GetRequiredService<SharedRedisMultiplexer>().GetDatabaseAsync(ct)));
+builder.Services.AddSingleton<MatchingMetrics>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<MatchingRoundService>();
 builder.Services.AddHttpClient<IDriverClient, HttpDriverClient>((_, http) =>
 {
     var baseUrl = builder.Configuration["Services:DriverBaseUrl"]
@@ -28,6 +55,25 @@ app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "ma
 app.MapRideReadiness();
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "matching-service", environment = env.EnvironmentName }));
+
+MatchingEndpoints.Map(app);
+
+// Best-effort baseline ensure (idempotent SQL). Service still boots if PG is down.
+try
+{
+    var pgCs = builder.Configuration.GetConnectionString("Postgres")
+        ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
+        ?? "Host=localhost;Port=5432;Database=matching_db;Username=matching_app;Password=matching_dev_pw";
+    await using var conn = new Npgsql.NpgsqlConnection(pgCs);
+    await conn.OpenAsync();
+    await using var cmd = new Npgsql.NpgsqlCommand(MatchingSqlBaseline.Load(), conn);
+    await cmd.ExecuteNonQueryAsync();
+    app.Logger.LogInformation("Matching PostgreSQL baseline ensured.");
+}
+catch (Exception ex)
+{
+    app.Logger.LogWarning(ex, "Matching EnsureTables failed at startup; API still serves, persistence will fail until PG recovers.");
+}
 
 try
 {
