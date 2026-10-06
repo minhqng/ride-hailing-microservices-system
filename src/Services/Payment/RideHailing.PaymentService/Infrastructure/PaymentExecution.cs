@@ -22,7 +22,7 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         await using (var insert = new NpgsqlCommand("""
             INSERT INTO payment_operations(id,operation_key,trip_id,operation_type,amount_minor,currency,state,created_at,updated_at)
             VALUES(@id,@key,@trip,@type,@amount,@currency,'PENDING',@now,@now)
-            ON CONFLICT ((operation_key COLLATE "C")) DO NOTHING
+            ON CONFLICT DO NOTHING
             """, connection))
         {
             insert.Parameters.AddWithValue("id", request.Id);
