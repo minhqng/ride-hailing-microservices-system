@@ -42,13 +42,34 @@
   client, no retry handlers by design), request/response/outcome contracts,
   `README.md` freeze note with open questions for A/C.
 - Mapping proven by stub-transport unit tests (no server needed): request
-  shape, 200/409/404 mapping, 5xx/timeout propagate (caller classifies
-  UNKNOWN in W6/W7), all 7 reconcile outcomes over 200-body plus HTTP 404
-  mapping to NotFound, unknown-outcome throws.
+  shape, 200/409 mapping, 5xx/timeout/bare-404 propagate (caller keeps
+  UNKNOWN per DSI-031; NOT_FOUND arrives only as 200-body outcome),
+  all 7 reconcile outcomes, unknown-outcome throws.
 - Driver-side `/internal/*` endpoints land in W6/W7; timeout budgets frozen there.
+
+## Deterministic candidate pipeline (B-W05)
+
+- `POST /internal/matching/rounds` (internal test/demo seam; W8 invokes the
+  same application entry from `RideRequestedV1`): body carries trip/round
+  identity + pickup only (all policy is config-owned). Idempotent replay.
+  Errors: 400 `INVALID_REQUEST` (bad input), 409 `DOMAIN_CONFLICT`
+  (terminal/cancelled/blocked round, exhausted ledger retry), 503
+  `DEPENDENCY_UNAVAILABLE` (backing store down, static message).
+- Pipeline: load-or-create round (PROCESSING, S0) → GEOSEARCH nearest-first
+  bounded → eligibility (AVAILABLE, fresh location, capability hook,
+  not-rejected; DSI-020 by type) → deterministic rank (distance ASC,
+  optional freshness weight, driverId tie-break; DSI-019) → persisted
+  snapshot + READY attempt ledger with stable reservationIds (DSI-018).
+  Concurrent duplicate triggers converge (fresh-ordinal retry, bounded);
+  unresolved attempts block new candidates (DSI-017 at the ledger).
+- Authority: Redis is a hint, Driver reserve (W6) decides. No terminal round
+  states here (`NO_DRIVER` needs W9 Outbox atomicity); empty candidates stay
+  PROCESSING. Redis failure degrades (empty + flag), never fabricates.
+- Policy: `Matching` config section (radius, bounds, freshness window,
+  capability, ranking version). Capability feed pending (projection carries
+  no vehicle data; non-null requirement safely excludes).
 
 ## NOT implemented (later weeks)
 
-- W5: GEOSEARCH ranking/eligibility, MatchingRound/Attempt ledger.
-- W6: Reserve OCC. W7: UNKNOWN reconciliation. W8+: RabbitMQ wiring
-  (W4 updater is invoked directly; broker consumer comes later).
+- W6: Reserve OCC + UNKNOWN reconciliation start. W7: UNKNOWN/reconcile completion.
+  W8+: RabbitMQ wiring (pipeline is invoked directly; broker consumer comes later).

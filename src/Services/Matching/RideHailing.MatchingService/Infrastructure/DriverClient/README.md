@@ -15,7 +15,7 @@ Body: `{ "tripId": "<uuid>", "reservationId": "<uuid>" }`.
 |---|---|---|
 | 200/201 `{status: RESERVED, version}` | authoritative commit | `Reserved(version)` |
 | 409 `{code}` | conclusive conflict (e.g. `DRIVER_NOT_AVAILABLE`) | `Rejected(code)` — must NOT trip breaker |
-| 404 | driver unknown | `Rejected(DRIVER_NOT_FOUND)` |
+| 404 | driver unknown (fresh attempt) | `Rejected(DRIVER_NOT_FOUND)` — EXCEPTION: same-`reservationId` retry receiving 404 is a transport anomaly (wrong server/route, since a correct server answers idempotent success); W6 caller must reconcile, not advance |
 | 5xx / timeout / connection drop | transport uncertainty | **throw** → caller classifies UNKNOWN, reconciles same id |
 
 Rules: no generic retry (`02 §19`), no hedging (`02 §19.7`), 409 is not
@@ -28,6 +28,9 @@ infrastructure failure (`02 §19.4`), never assume success on unavailability
 `NOT_COMMITTED_OR_AVAILABLE`, `RESERVED_BY_OTHER`, `OFFLINE`, `ON_TRIP`,
 `NOT_FOUND` (`02 §12.6`). Transport failure ⇒ caller treats as
 `DEPENDENCY_UNAVAILABLE`. Unknown outcome string ⇒ throw (drift fails loud).
+A BARE 404 (no domain body) is NEVER a conclusive `NOT_FOUND`: it may be a
+wrong BaseAddress, proxy, or missing route (DSI-031 — advancing on it could
+double-reserve). The client throws; `NOT_FOUND` arrives only as a 200 outcome.
 
 ## Open questions for A/C
 
