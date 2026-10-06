@@ -39,10 +39,22 @@ public sealed class ManualAckConsumer : IAsyncDisposable
             var runtime = new ManualAckConsumer(connection, channel, publisher);
             var consumer = new AsyncEventingBasicConsumer(channel);
             consumer.ReceivedAsync += (_, delivery) => runtime.ReceiveAsync(queue, supportedTypes, commitHandler, delivery);
+            consumer.UnregisteredAsync += (_, _) =>
+            {
+                if (!runtime.stopping.IsCancellationRequested)
+                {
+                    runtime.completion.TrySetException(new IOException("Broker cancelled consumer registration"));
+                    runtime.stopping.Cancel();
+                }
+                return Task.CompletedTask;
+            };
             channel.ChannelShutdownAsync += (_, args) =>
             {
                 if (!runtime.stopping.IsCancellationRequested)
+                {
                     runtime.completion.TrySetException(new IOException($"Consumer channel closed: {args.ReplyCode}"));
+                    runtime.stopping.Cancel();
+                }
                 return Task.CompletedTask;
             };
             runtime.consumerTag = await channel.BasicConsumeAsync(queue, autoAck: false, consumer, token);
@@ -59,6 +71,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
     private async Task ReceiveAsync(string queue, IReadOnlySet<string> supportedTypes,
         Func<MessageEnvelope<JsonElement>, CancellationToken, Task> handler, BasicDeliverEventArgs delivery)
     {
+        if (stopping.IsCancellationRequested) return;
         // RabbitMQ owns delivery memory. Copy before any asynchronous work.
         var oversized = delivery.Body.Length > 1024 * 1024;
         var body = oversized ? [] : delivery.Body.ToArray();

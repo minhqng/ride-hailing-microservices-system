@@ -198,4 +198,41 @@ public class RabbitBackboneTests(RabbitBackboneFixture fixture) : IClassFixture<
         // New explicit call, not an automatic replay of the uncertain publication.
         await publisher.PublishAsync("ride.commands", queue, Message());
     }
+
+    [Fact]
+    public async Task BrokerCancellationFaultsCompletionForHostSupervision()
+    {
+        var queue = await fixture.QueueAsync();
+        await using var publisher = new ConfirmedPublisher(fixture.Factory);
+        await using var consumer = await ManualAckConsumer.StartAsync(fixture.Factory, publisher, queue,
+            new HashSet<string> { "ProofV1" }, (_, _) => Task.CompletedTask);
+        await using var connection = await fixture.Factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueueDeleteAsync(queue, false, false);
+        await Assert.ThrowsAsync<IOException>(() => consumer.Completion.WaitAsync(TimeSpan.FromSeconds(20)));
+        Assert.Equal(0, consumer.AcknowledgedCount);
+    }
+
+    [Fact]
+    public async Task FailedErrorTransferLeavesOriginalUnacknowledgedForRedelivery()
+    {
+        var queue = await fixture.QueueAsync();
+        var message = Message();
+        await using var connection = await fixture.Factory.CreateConnectionAsync();
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueueDeleteAsync(queue + ".dead", false, false);
+        await using var publisher = new ConfirmedPublisher(fixture.Factory);
+        await using var consumer = await ManualAckConsumer.StartAsync(fixture.Factory, publisher, queue,
+            new HashSet<string> { "ProofV1" }, (_, _) => throw new DeliveryFailureException(FailureKind.Poison, "POISON"));
+        await publisher.PublishAsync("ride.commands", queue, message);
+        await Assert.ThrowsAsync<PublishReturnException>(() => consumer.Completion.WaitAsync(TimeSpan.FromSeconds(20)));
+        Assert.Equal(0, consumer.AcknowledgedCount);
+        await consumer.DisposeAsync();
+        BasicGetResult? redelivery = null;
+        await Eventually(async () => (redelivery = await channel.BasicGetAsync(queue, false)) is not null);
+        Assert.True(redelivery!.Redelivered);
+        Assert.Equal(message.MessageId, redelivery.BasicProperties.MessageId);
+        await channel.BasicAckAsync(redelivery.DeliveryTag, false);
+    }
+
 }
