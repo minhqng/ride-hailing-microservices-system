@@ -82,3 +82,13 @@ for result, body, status in saved:
     assert request("POST", "/simulator/operations", body) == (status, result)
     assert request("GET", f'/simulator/operations/{result["id"]}') == (200, result)
 print("PASS: 18 type/mode cases, DB assertions, 14 invalid/missing-field requests with no row writes, and persistence after restart. Same-key replay and conflicting payload rejection verified, including service restart.")
+
+# W7: independent provider truth survives process restart; caller uncertainty is reconciled.
+for result, body, status in saved:
+    if body["mode"] == "TimeoutAfterEffect":
+        assert sql("SELECT count(*) FROM provider_effects WHERE effect_id = 'sim-" + uuid.UUID(result["id"]).hex + "'") == "1"
+        reconciled = request("POST", f'/simulator/operations/{result["id"]}/reconcile')
+        assert reconciled[0] == 200 and reconciled[1]["state"] == "Succeeded", reconciled
+        assert reconciled[1]["id"] == result["id"] and reconciled[1]["attemptCount"] == 1
+        assert request("POST", "/simulator/operations", body) == reconciled
+print("PASS: W7 response loss after independent provider commit reconciles same key after restart")
