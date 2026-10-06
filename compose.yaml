@@ -52,7 +52,7 @@ services:
     healthcheck:
       test: ["CMD", "sh", "/etc/rabbitmq/ride-health-ready.sh"]
       interval: 10s
-      timeout: 5s
+      timeout: 15s
       retries: 20
     networks: [ride-net]
 
