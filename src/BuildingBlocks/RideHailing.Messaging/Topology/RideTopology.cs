@@ -49,6 +49,14 @@ public static class RideTopology
         await channel.ExchangeDeclareAsync(EventsExchange, ExchangeType.Topic, durable: true,
             autoDelete: false, cancellationToken: cancellationToken);
 
+        await channel.ExchangeDeclareAsync("ride.deadletter", ExchangeType.Topic, durable: true,
+            autoDelete: false, cancellationToken: cancellationToken);
+        foreach (var queue in Bindings.Select(b => b.Queue).Distinct())
+        {
+            await channel.QueueDeclareAsync(queue + ".dead", durable: true, exclusive: false, autoDelete: false,
+                arguments: new Dictionary<string, object?> { ["x-queue-type"] = "quorum" }, cancellationToken: cancellationToken);
+            await channel.QueueBindAsync(queue + ".dead", "ride.deadletter", queue, cancellationToken: cancellationToken);
+        }
         foreach (var (queue, exchange, routingKey) in Bindings)
         {
             var arguments = new Dictionary<string, object?> { ["x-queue-type"] = "quorum" };
