@@ -137,6 +137,7 @@ public sealed class RedisProjectionUpdater
 
     private static bool IsDegradation(Exception ex) => ex is RedisConnectionException
         or RedisTimeoutException
+        or ObjectDisposedException
         or RedisServerException
         or IOException
         or SocketException
@@ -148,6 +149,7 @@ public sealed class RedisProjectionUpdater
         "stale" => SectionOutcome.Stale,
         "stale-session" => SectionOutcome.StaleSession,
         "skipped" => SectionOutcome.Skipped,
+        // 'keytype-error' and anything unrecognized: clean failure, no partial write.
         _ => SectionOutcome.Degraded,
     };
 }

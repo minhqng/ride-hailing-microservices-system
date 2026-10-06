@@ -1,12 +1,15 @@
-// B-W02-09 (P1/P2 review fix): cross-service DB access is DENIED at the
-// PostgreSQL authorization layer — not just absent from connection strings.
-// Replicates deploy/postgres/init/01-roles-dbs.sh isolation (per-DB roles +
-// REVOKE CONNECT FROM PUBLIC) inside a disposable container and asserts both
-// directions fail with 42501, while owned access works.
+// B-W02-09: cross-service DB access is DENIED at the PostgreSQL authorization
+// layer — not just absent from connection strings.
+// Scope: CONNECT denial exactly as SEC-08 requires (Doc 03: Trip→Driver and
+// Matching→Driver attempts must fail authorization). Schema-level privileges
+// (TEMPORARY, CREATE) and the other four service roles belong to the platform
+// init script review (C-owned), not to this CONNECT-scoped proof.
+// Replicates the CONNECT half of deploy/postgres/init/01-roles-dbs.sh
+// (per-DB roles + REVOKE CONNECT FROM PUBLIC) inside a disposable container
+// and asserts both directions fail with 42501, while owned access works.
 // Feeds SEC-08 (Doc 03; owner C): this is B-side executable evidence C can cite.
 using Npgsql;
 using Testcontainers.PostgreSql;
-using Xunit.Abstractions;
 
 namespace RideHailing.Platform.IntegrationTests;
 
@@ -15,37 +18,19 @@ public class DbIsolationTests : IAsyncLifetime
     static DbIsolationTests()
     {
         // Same as service fixtures: Ryuk cannot start inside the SDK container;
-        // DisposeAsync cleans up explicitly.
+        // DisposeAsync + AutoRemove clean up explicitly.
         Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
     }
 
-    private readonly ITestOutputHelper _out;
     private PostgreSqlContainer? _container;
-    private bool _skipped;
-    private string _skipReason = "";
-
-    public DbIsolationTests(ITestOutputHelper output)
-    {
-        _out = output;
-    }
 
     public async Task InitializeAsync()
     {
-        static bool DockerMightExist() =>
-            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCKER_HOST"))
-            || File.Exists("/var/run/docker.sock");
-
-        if (!DockerMightExist())
-        {
-            _skipped = true;
-            _skipReason = "No DOCKER_HOST and no /var/run/docker.sock.";
-            return;
-        }
-
-        _container = new PostgreSqlBuilder("postgres:18.6").Build();
+        _container = new PostgreSqlBuilder("postgres:18.6")
+            .WithAutoRemove(true)
+            .Build();
         await _container.StartAsync();
         await ApplyIsolationTopologyAsync(SuperuserConnectionString());
-        _out.WriteLine("INFRA: disposable postgres with isolated roles — real assertions will run.");
     }
 
     public async Task DisposeAsync()
@@ -112,12 +97,6 @@ public class DbIsolationTests : IAsyncLifetime
     [Fact]
     public async Task Driver_Role_Cannot_Connect_Matching_Db()
     {
-        if (_skipped)
-        {
-            _out.WriteLine("SKIP: " + _skipReason);
-            return;
-        }
-
         var ex = await ConnectDeniedAsync(RoleConnectionString("matching_db", "driver_app", "driver_dev_pw"));
         Assert.Equal("42501", ex.SqlState);
     }
@@ -125,12 +104,6 @@ public class DbIsolationTests : IAsyncLifetime
     [Fact]
     public async Task Matching_Role_Cannot_Connect_Driver_Db()
     {
-        if (_skipped)
-        {
-            _out.WriteLine("SKIP: " + _skipReason);
-            return;
-        }
-
         var ex = await ConnectDeniedAsync(RoleConnectionString("driver_db", "matching_app", "matching_dev_pw"));
         Assert.Equal("42501", ex.SqlState);
     }
@@ -138,12 +111,6 @@ public class DbIsolationTests : IAsyncLifetime
     [Fact]
     public async Task Each_Role_Connects_Own_Db()
     {
-        if (_skipped)
-        {
-            _out.WriteLine("SKIP: " + _skipReason);
-            return;
-        }
-
         await using var driver = new NpgsqlConnection(
             FixHost(RoleConnectionString("driver_db", "driver_app", "driver_dev_pw")));
         await driver.OpenAsync();
