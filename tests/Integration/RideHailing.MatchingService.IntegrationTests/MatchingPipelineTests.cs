@@ -287,6 +287,12 @@ public sealed class MatchingPipelineTests : IAsyncLifetime
         Assert.True(counters.GetValueOrDefault("matching.candidates.discovered") >= 2);
         Assert.True(counters.GetValueOrDefault("matching.candidates.eligible") >= 1);
         Assert.True(counters.GetValueOrDefault("matching.candidates.stale_filtered") >= 1);
+
+        // Capability-required run: projection carries no vehicle data, so the
+        // fresh candidate lands in the excluded counter (documented gap).
+        var capable = new MatchingPolicy { RequiredCapability = "SUV" };
+        await Service().ComputeAsync(Req(Guid.NewGuid()), capable);
+        Assert.True(counters.GetValueOrDefault("matching.candidates.excluded") >= 1);
     }
 
     [Fact]
@@ -355,14 +361,99 @@ public sealed class MatchingPipelineTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Unresolved_Attempt_Blocks_New_Candidates()
+    {
+        // DSI-017 at the ledger: a foreign/unresolved attempt means no new
+        // candidate may be offered until it reconciles (W6 owns reconcile).
+        var trip = Guid.NewGuid();
+        var d1 = Guid.NewGuid();
+        var t = Now.AddMinutes(-1);
+        await SeedAsync(d1, "AVAILABLE", 1, 106.6, 10.804, "s", 1, t);
+
+        var svc = Service();
+        var first = await svc.ComputeAsync(Req(trip), MatchingPolicy.FrozenW5Baseline());
+        Assert.Single(first.Candidates);
+
+        await using var conn = new NpgsqlConnection(_pg.ConnectionString);
+        await conn.OpenAsync();
+        await using var mark = new NpgsqlCommand(
+            "UPDATE matching_attempts SET state = 'IN_FLIGHT' " +
+            "WHERE trip_id = @t AND matching_round = 1 AND driver_id = @d", conn);
+        mark.Parameters.AddWithValue("t", trip);
+        mark.Parameters.AddWithValue("d", d1);
+        Assert.Equal(1, await mark.ExecuteNonQueryAsync());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => svc.ComputeAsync(Req(trip), MatchingPolicy.FrozenW5Baseline()));
+    }
+
+    [Fact]
+    public async Task Crash_Before_Snapshot_Store_Converges_On_Replay()
+    {
+        // Simulates a crash between attempt inserts and snapshot store: an
+        // attempt row exists but next_attempt_ordinal is stale (0) and no
+        // snapshot was stored. Replay with a CHANGED Redis view must converge
+        // (append at fresh ordinals from max+1), never reuse ordinals, never
+        // throw. The true-concurrent-collision branch (unique-violation with
+        // reload-miss) is covered by Concurrent_Duplicate_Compute_Converges
+        // for identical views; a third exhausted-retries throw is an
+        // unreachable-by-construction backstop, not a tested path.
+        var trip = Guid.NewGuid();
+        var d1 = Guid.NewGuid();
+        var d2 = Guid.NewGuid();
+        var t = Now.AddMinutes(-1);
+        await SeedAsync(d1, "AVAILABLE", 1, 106.6, 10.804, "s", 1, t);
+
+        var svc = Service();
+        var policy = MatchingPolicy.FrozenW5Baseline();
+
+        // Round exists with a stale ordinal counter and one attempt, no snapshot.
+        var first = await svc.ComputeAsync(Req(trip), policy);
+        Assert.Single(first.Candidates);
+
+        await using var conn = new NpgsqlConnection(_pg.ConnectionString);
+        await conn.OpenAsync();
+        await using var rewind = new NpgsqlCommand(
+            "UPDATE matching_rounds SET next_attempt_ordinal = 0, candidate_snapshot_hash = NULL " +
+            "WHERE trip_id = @t AND matching_round = 1", conn);
+        rewind.Parameters.AddWithValue("t", trip);
+        Assert.Equal(1, await rewind.ExecuteNonQueryAsync());
+
+        // Redis view changed by addition: D2 appears fresh alongside D1.
+        await SeedAsync(d2, "AVAILABLE", 1, 106.6, 10.806, "s", 1, t);
+
+        var second = await svc.ComputeAsync(Req(trip), policy);
+
+        // D2 appended at a fresh ordinal; D1's row reused untouched.
+        var d2out = Assert.Single(second.Candidates, c => c.DriverId == d2);
+        Assert.Equal(1, d2out.Ordinal);
+        Assert.Equal(
+            first.Candidates.Select(c => c.ReservationId),
+            second.Candidates.Where(c => c.DriverId == d1).Select(c => c.ReservationId));
+
+        await using var check = new NpgsqlConnection(_pg.ConnectionString);
+        await check.OpenAsync();
+        await using var cmd = new NpgsqlCommand(
+            "SELECT COUNT(*), COUNT(DISTINCT ordinal), COUNT(DISTINCT reservation_id) " +
+            "FROM matching_attempts WHERE trip_id = @t AND matching_round = 1", conn);
+        cmd.Parameters.AddWithValue("t", trip);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        Assert.Equal(2L, reader.GetInt64(0));
+        Assert.Equal(2L, reader.GetInt64(1));
+        Assert.Equal(2L, reader.GetInt64(2));
+    }
+
+    [Fact]
     public async Task Empty_Capability_Means_No_Requirement()
     {
         var trip = Guid.NewGuid();
         var d1 = Guid.NewGuid();
         await SeedAsync(d1, "AVAILABLE", 1, 106.6, 10.804, "s", 1, Now.AddMinutes(-1));
 
-        var req = Req(trip) with { RequiredCapability = "" };
-        var r = await Service().ComputeAsync(req, MatchingPolicy.FrozenW5Baseline());
+        var policy = MatchingPolicy.FrozenW5Baseline();
+        policy.RequiredCapability = "";
+        var r = await Service().ComputeAsync(Req(trip), policy);
 
         Assert.Equal(new[] { d1 }, r.Candidates.Select(c => c.DriverId));
     }

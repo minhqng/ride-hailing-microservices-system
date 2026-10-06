@@ -51,12 +51,17 @@
 
 - `POST /internal/matching/rounds` (internal test/demo seam; W8 invokes the
   same application entry from `RideRequestedV1`): body carries trip/round
-  identity + pickup + optional overrides. Idempotent replay, 400 on invalid.
+  identity + pickup only (all policy is config-owned). Idempotent replay.
+  Errors: 400 `INVALID_REQUEST` (bad input), 409 `DOMAIN_CONFLICT`
+  (terminal/cancelled/blocked round, exhausted ledger retry), 503
+  `DEPENDENCY_UNAVAILABLE` (backing store down, static message).
 - Pipeline: load-or-create round (PROCESSING, S0) → GEOSEARCH nearest-first
   bounded → eligibility (AVAILABLE, fresh location, capability hook,
   not-rejected; DSI-020 by type) → deterministic rank (distance ASC,
   optional freshness weight, driverId tie-break; DSI-019) → persisted
   snapshot + READY attempt ledger with stable reservationIds (DSI-018).
+  Concurrent duplicate triggers converge (fresh-ordinal retry, bounded);
+  unresolved attempts block new candidates (DSI-017 at the ledger).
 - Authority: Redis is a hint, Driver reserve (W6) decides. No terminal round
   states here (`NO_DRIVER` needs W9 Outbox atomicity); empty candidates stay
   PROCESSING. Redis failure degrades (empty + flag), never fabricates.

@@ -1,4 +1,7 @@
 // B-W05-05/06: round/attempt aggregate + policy baseline proofs.
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using RideHailing.MatchingService.Domain.Matching;
 
 namespace RideHailing.MatchingService.UnitTests;
@@ -6,8 +9,11 @@ namespace RideHailing.MatchingService.UnitTests;
 public sealed class MatchingPolicyTests
 {
     [Fact]
-    public void Frozen_Baseline_Matches_Documented_Values()
+    public void Frozen_Baseline_Matches_Shipped_Config_Defaults()
     {
+        // The frozen baseline equals the shipped appsettings.json "Matching"
+        // section (verified by review against the file); this test pins the
+        // code side so silent default drift fails loudly.
         var p = MatchingPolicy.FrozenW5Baseline();
         Assert.Equal(5.0, p.SearchRadiusKm);
         Assert.Equal(20, p.MaxCandidates);
@@ -17,6 +23,121 @@ public sealed class MatchingPolicyTests
         Assert.Equal(0.0, p.FreshnessWeightKmPerSecond);
         Assert.Null(p.RequiredCapability);
         Assert.Equal("v1", p.RankingConfigVersion);
+        Assert.Null(MatchingPolicyValidator.Validate(p));
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(-1.0)]
+    [InlineData(0.0)]
+    public void Validator_Rejects_Bad_Radius(double radius)
+    {
+        var p = MatchingPolicy.FrozenW5Baseline();
+        p.SearchRadiusKm = radius;
+        Assert.NotNull(MatchingPolicyValidator.Validate(p));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    public void Validator_Rejects_Negative_MaxCandidates(int max)
+    {
+        var p = MatchingPolicy.FrozenW5Baseline();
+        p.MaxCandidates = max;
+        Assert.NotNull(MatchingPolicyValidator.Validate(p));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-2)]
+    public void Validator_Rejects_Bad_Oversample_And_HardCap(int value)
+    {
+        var over = MatchingPolicy.FrozenW5Baseline();
+        over.DiscoveryOversample = value;
+        Assert.NotNull(MatchingPolicyValidator.Validate(over));
+
+        var cap = MatchingPolicy.FrozenW5Baseline();
+        cap.DiscoveryHardCap = value;
+        Assert.NotNull(MatchingPolicyValidator.Validate(cap));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Validator_Rejects_NonPositive_Freshness_Window(double minutes)
+    {
+        var p = MatchingPolicy.FrozenW5Baseline();
+        p.LocationFreshnessWindow = TimeSpan.FromMinutes(minutes);
+        Assert.NotNull(MatchingPolicyValidator.Validate(p));
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(-0.5)]
+    public void Validator_Rejects_Bad_Freshness_Weight(double weight)
+    {
+        var p = MatchingPolicy.FrozenW5Baseline();
+        p.FreshnessWeightKmPerSecond = weight;
+        Assert.NotNull(MatchingPolicyValidator.Validate(p));
+    }
+
+    [Fact]
+    public void Validator_Rejects_Empty_Config_Version()
+    {
+        var p = MatchingPolicy.FrozenW5Baseline();
+        p.RankingConfigVersion = " ";
+        Assert.NotNull(MatchingPolicyValidator.Validate(p));
+    }
+
+    [Fact]
+    public void Validator_Rejects_Null_Policy()
+    {
+        Assert.NotNull(MatchingPolicyValidator.Validate(null));
+    }
+
+    [Fact]
+    public void Options_Pipeline_Fails_Fast_On_Invalid_Config()
+    {
+        // Exercises the REAL options stack (bind + Validate), not the predicate:
+        // this is what ValidateOnStart enforces at service boot.
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Matching:SearchRadiusKm"] = "-3",
+            })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddOptions<MatchingPolicy>()
+            .Bind(config.GetSection("Matching"))
+            .Validate(p => MatchingPolicyValidator.Validate(p) is null, "Invalid Matching policy configuration.");
+        using var provider = services.BuildServiceProvider();
+        Assert.Throws<OptionsValidationException>(
+            () => provider.GetRequiredService<IOptions<MatchingPolicy>>().Value);
+    }
+
+    [Fact]
+    public void Options_Pipeline_Accepts_Frozen_Baseline()
+    {
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Matching:SearchRadiusKm"] = "5.0",
+                ["Matching:MaxCandidates"] = "20",
+                ["Matching:DiscoveryOversample"] = "3",
+                ["Matching:DiscoveryHardCap"] = "100",
+                ["Matching:LocationFreshnessWindow"] = "00:05:00",
+                ["Matching:FreshnessWeightKmPerSecond"] = "0",
+                ["Matching:RankingConfigVersion"] = "v1",
+            })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddOptions<MatchingPolicy>()
+            .Bind(config.GetSection("Matching"))
+            .Validate(p => MatchingPolicyValidator.Validate(p) is null, "Invalid Matching policy configuration.");
+        using var provider = services.BuildServiceProvider();
+        var value = provider.GetRequiredService<IOptions<MatchingPolicy>>().Value;
+        Assert.Equal(5.0, value.SearchRadiusKm);
+        Assert.Null(MatchingPolicyValidator.Validate(value));
     }
 }
 

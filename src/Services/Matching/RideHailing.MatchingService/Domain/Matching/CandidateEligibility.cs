@@ -57,8 +57,13 @@ public static class CandidateEligibility
             return (EligibilityReason.StaleLocation, null);
         }
 
-        if (policy.RequiredCapability is not null
-            && !string.Equals(candidate.Capability, policy.RequiredCapability, StringComparison.Ordinal))
+        // Empty requirement normalizes to no requirement (single rule lives here,
+        // not scattered across callers): blank policy behaves exactly like null.
+        var required = string.IsNullOrWhiteSpace(policy.RequiredCapability)
+            ? null
+            : policy.RequiredCapability;
+        if (required is not null
+            && !string.Equals(candidate.Capability, required, StringComparison.Ordinal))
         {
             return (EligibilityReason.Incapable, null);
         }

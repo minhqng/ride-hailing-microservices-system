@@ -49,9 +49,10 @@ public sealed class CandidateDiscovery
                 continue;
             }
 
-            if (!Guid.TryParse((string?)pair[0], out var driverId))
+            if (!Guid.TryParse((string?)pair[0], out var driverId) || driverId == Guid.Empty)
             {
-                continue; // foreign member: not ours, never a candidate.
+                // Foreign member or nonsense identity: never a candidate.
+                continue;
             }
 
             if (!double.TryParse((string?)pair[1], NumberStyles.Float,

@@ -16,7 +16,10 @@ using RideHailing.Observability;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddRideTelemetry("matching-service");
 builder.Services.AddHealthChecks();
-builder.Services.Configure<MatchingPolicy>(builder.Configuration.GetSection("Matching"));
+builder.Services.AddOptions<MatchingPolicy>()
+    .Bind(builder.Configuration.GetSection("Matching"))
+    .Validate(p => MatchingPolicyValidator.Validate(p) is null, "Invalid Matching policy configuration.")
+    .ValidateOnStart();
 builder.Services.AddSingleton(_ =>
 {
     var cs = builder.Configuration.GetConnectionString("Postgres")

@@ -20,10 +20,7 @@ public sealed record ComputeRoundRequest(
     Guid TripId,
     int MatchingRound,
     double PickupLongitude,
-    double PickupLatitude,
-    double? SearchRadiusKm = null,
-    int? MaxCandidates = null,
-    string? RequiredCapability = null);
+    double PickupLatitude);
 
 public sealed record RoundCandidate(
     int Ordinal,
@@ -35,6 +32,7 @@ public sealed record ComputeRoundMetrics(
     int Discovered,
     int Eligible,
     int StaleFiltered,
+    int Excluded,
     double GeoQueryMs);
 
 public sealed record ComputeRoundResult(
@@ -70,9 +68,8 @@ public sealed class MatchingRoundService
         CancellationToken ct = default)
     {
         Validate(request, policy);
-        var effective = EffectivePolicy(request, policy);
 
-        var round = await LoadOrCreateRoundAsync(request, effective, ct);
+        var round = await LoadOrCreateRoundAsync(request, policy, ct);
         var attempts = await _repo.LoadAttemptsAsync(request.TripId, request.MatchingRound, ct);
         var rejected = attempts
             .Where(a => string.Equals(a.State, "REJECTED", StringComparison.Ordinal))
@@ -83,34 +80,44 @@ public sealed class MatchingRoundService
         {
             byDriver.TryAdd(a.DriverId, a);
         }
+
         var blocked = attempts
             .Where(a => !string.Equals(a.State, "READY", StringComparison.Ordinal)
                 && !string.Equals(a.State, "REJECTED", StringComparison.Ordinal))
             .Select(a => a.DriverId)
             .ToHashSet();
+        if (blocked.Count > 0)
+        {
+            // DSI-017 at the ledger: an unresolved attempt exists, so no new
+            // candidate may be offered for this round until it reconciles.
+            // W5 never creates such rows itself; this guards foreign/W6 rows.
+            throw new InvalidOperationException(
+                "Matching round has unresolved attempts; reconcile before requesting new candidates.");
+        }
 
         var sw = Stopwatch.StartNew();
         IReadOnlyList<EnrichedCandidate> discovered;
         try
         {
+            // Overflow-safe: (long) product first, then clamp to the hard cap.
             var count = Math.Min(
-                effective.MaxCandidates * effective.DiscoveryOversample,
-                effective.DiscoveryHardCap);
+                (long)policy.MaxCandidates * policy.DiscoveryOversample,
+                policy.DiscoveryHardCap);
             discovered = await _discovery.DiscoverAsync(
                 request.PickupLongitude, request.PickupLatitude,
-                effective.SearchRadiusKm, Math.Max(1, count), ct);
+                policy.SearchRadiusKm, (int)Math.Max(1L, count), ct);
         }
-        catch (Exception ex) when (ex is RedisConnectionException
-            or RedisTimeoutException
+        catch (Exception ex) when (ex is RedisException
             or SocketException
             or TimeoutException)
         {
             sw.Stop();
             _metrics.GeoQueryDuration(sw.Elapsed);
+            _metrics.Degraded();
             return new ComputeRoundResult(
                 request.TripId, request.MatchingRound, "PROCESSING",
                 Array.Empty<RoundCandidate>(),
-                new ComputeRoundMetrics(0, 0, 0, sw.Elapsed.TotalMilliseconds),
+                new ComputeRoundMetrics(0, 0, 0, 0, sw.Elapsed.TotalMilliseconds),
                 Degraded: true);
         }
 
@@ -121,18 +128,22 @@ public sealed class MatchingRoundService
         var now = _clock.GetUtcNow();
         var eligible = new List<EligibleCandidate>(discovered.Count);
         var stale = 0;
+        var excluded = 0;
         foreach (var hit in discovered)
         {
-            if (blocked.Contains(hit.DriverId))
-            {
-                stale++;
-                continue;
-            }
-
-            var (reason, candidate) = CandidateEligibility.Decide(hit, rejected, effective, now);
+            var (reason, candidate) = CandidateEligibility.Decide(hit, rejected, policy, now);
             if (candidate is null)
             {
-                stale++;
+                if (reason == EligibilityReason.StaleLocation
+                    || reason == EligibilityReason.MissingLocation)
+                {
+                    stale++;
+                }
+                else
+                {
+                    excluded++;
+                }
+
                 continue;
             }
 
@@ -141,49 +152,50 @@ public sealed class MatchingRoundService
 
         _metrics.Eligible(eligible.Count);
         _metrics.StaleFiltered(stale);
+        _metrics.Excluded(excluded);
 
-        var ranked = CandidateRanker.Rank(eligible, effective);
-        var hash = CandidateRanker.SnapshotHash(ranked, effective.RankingConfigVersion);
-        var json = JsonSerializer.Serialize(ranked.Select(c => new
-        {
-            ordinal = c.Ordinal,
-            driverId = c.DriverId,
-            distanceKm = c.DistanceKm,
-            version = c.DriverAggregateVersion,
-        }));
+        var ranked = CandidateRanker.Rank(eligible, policy);
 
         var nextOrdinal = round.NextAttemptOrdinal;
+        if (attempts.Count > 0)
+        {
+            // Crash-recovery determinism: the persisted row counter may predate
+            // attempt rows when a previous compute died before storing its
+            // snapshot. Ordinals must continue past existing rows, never reuse.
+            nextOrdinal = Math.Max(nextOrdinal, attempts.Max(a => a.Ordinal) + 1);
+        }
+
         var outputs = new List<RoundCandidate>(ranked.Count);
+        var snapshots = new List<SnapshotEntry>(ranked.Count);
         foreach (var c in ranked)
         {
             if (!byDriver.TryGetValue(c.DriverId, out var row))
             {
-                var reservationId = Guid.NewGuid();
-                try
-                {
-                    await _repo.InsertAttemptAsync(
-                        request.TripId, request.MatchingRound, nextOrdinal,
-                        c.DriverId, reservationId, ct);
-                    row = new MatchingRepository.AttemptRow(
-                        request.TripId, request.MatchingRound, nextOrdinal,
-                        c.DriverId, reservationId, "READY");
-                    nextOrdinal++;
-                }
-                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
-                {
-                    // Lost an insert race with a concurrent recompute of the same
-                    // round: reuse the winner's row instead of failing (idempotent
-                    // trigger). Bounded single retry; anything else propagates.
-                    var current = await _repo.LoadAttemptsAsync(
-                        request.TripId, request.MatchingRound, ct);
-                    row = current.FirstOrDefault(a => a.DriverId == c.DriverId)
-                        ?? throw new InvalidOperationException(
-                            "Concurrent attempt insert won by an unknown row.");
-                }
+                row = await InsertConvergentAsync(
+                    request.TripId, request.MatchingRound, c.DriverId,
+                    byDriver, nextOrdinal, ct);
+                nextOrdinal = row.Ordinal + 1;
+                byDriver[c.DriverId] = row;
             }
 
             outputs.Add(new RoundCandidate(row.Ordinal, row.DriverId, row.ReservationId, c.DistanceKm));
+            snapshots.Add(new SnapshotEntry(
+                row.Ordinal, c.DriverId, row.ReservationId, c.DistanceKm,
+                c.Score, c.DriverAggregateVersion, c.CapturedAt));
         }
+
+        var hash = CandidateRanker.SnapshotHash(
+            snapshots, policy.RankingConfigVersion, now);
+        var json = JsonSerializer.Serialize(snapshots.Select(s => new
+        {
+            ordinal = s.Ordinal,
+            driverId = s.DriverId,
+            reservationId = s.ReservationId,
+            distanceKm = s.DistanceKm,
+            score = s.Score,
+            version = s.Version,
+            capturedAt = s.CapturedAt,
+        }));
 
         await _repo.StoreSnapshotAsync(
             request.TripId, request.MatchingRound, hash, json, ranked.Count, nextOrdinal, ct);
@@ -192,9 +204,50 @@ public sealed class MatchingRoundService
             request.TripId, request.MatchingRound, "PROCESSING",
             outputs,
             new ComputeRoundMetrics(
-                discovered.Count, eligible.Count, stale,
+                discovered.Count, eligible.Count, stale, excluded,
                 sw.Elapsed.TotalMilliseconds),
             Degraded: false);
+    }
+
+    /// <summary>
+    /// Inserts one READY attempt, converging with concurrent duplicate computes:
+    /// first try the next free ordinal; on uniqueness loss reload and reuse the
+    /// winner's row for the same driver, else continue past the max ordinal.
+    /// Bounded: at most 3 attempts, then fail loud (never silent, never sleep).
+    /// </summary>
+    private async Task<MatchingRepository.AttemptRow> InsertConvergentAsync(
+        Guid tripId, int round, Guid driverId,
+        Dictionary<Guid, MatchingRepository.AttemptRow> byDriver,
+        int firstOrdinal, CancellationToken ct)
+    {
+        var ordinal = firstOrdinal;
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            var reservationId = Guid.NewGuid();
+            try
+            {
+                await _repo.InsertAttemptAsync(
+                    tripId, round, ordinal, driverId, reservationId, ct);
+                return new MatchingRepository.AttemptRow(
+                    tripId, round, ordinal, driverId, reservationId, "READY");
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+            {
+                var current = await _repo.LoadAttemptsAsync(tripId, round, ct);
+                var winner = current.FirstOrDefault(a => a.DriverId == driverId);
+                if (winner is not null)
+                {
+                    return winner;
+                }
+
+                ordinal = current.Count == 0
+                    ? ordinal + 1
+                    : current.Max(a => a.Ordinal) + 1;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Attempt ledger did not converge after bounded retries.");
     }
 
     private static void Validate(ComputeRoundRequest request, MatchingPolicy policy)
@@ -217,15 +270,14 @@ public sealed class MatchingRoundService
             throw new ArgumentException("pickup coordinates out of range.", nameof(request));
         }
 
-        if (!double.IsFinite(request.SearchRadiusKm ?? policy.SearchRadiusKm)
-            || (request.SearchRadiusKm ?? policy.SearchRadiusKm) <= 0)
+        if (!double.IsFinite(policy.SearchRadiusKm) || policy.SearchRadiusKm <= 0)
         {
-            throw new ArgumentException("search radius must be a finite value > 0.", nameof(request));
+            throw new ArgumentException("search radius must be a finite value > 0.", nameof(policy));
         }
 
-        if ((request.MaxCandidates ?? policy.MaxCandidates) < 0)
+        if (policy.MaxCandidates < 0)
         {
-            throw new ArgumentException("max candidates must be >= 0.", nameof(request));
+            throw new ArgumentException("max candidates must be >= 0.", nameof(policy));
         }
 
         if (policy.DiscoveryOversample < 1 || policy.DiscoveryHardCap < 1)
@@ -234,22 +286,8 @@ public sealed class MatchingRoundService
         }
     }
 
-    private static MatchingPolicy EffectivePolicy(ComputeRoundRequest request, MatchingPolicy policy) => new()
-    {
-        SearchRadiusKm = request.SearchRadiusKm ?? policy.SearchRadiusKm,
-        MaxCandidates = request.MaxCandidates ?? policy.MaxCandidates,
-        DiscoveryOversample = policy.DiscoveryOversample,
-        DiscoveryHardCap = policy.DiscoveryHardCap,
-        LocationFreshnessWindow = policy.LocationFreshnessWindow,
-        FreshnessWeightKmPerSecond = policy.FreshnessWeightKmPerSecond,
-        RequiredCapability = string.IsNullOrWhiteSpace(request.RequiredCapability)
-            ? (string.IsNullOrWhiteSpace(policy.RequiredCapability) ? null : policy.RequiredCapability)
-            : request.RequiredCapability,
-        RankingConfigVersion = policy.RankingConfigVersion,
-    };
-
     private async Task<MatchingRepository.RoundRow> LoadOrCreateRoundAsync(
-        ComputeRoundRequest request, MatchingPolicy effective, CancellationToken ct)
+        ComputeRoundRequest request, MatchingPolicy policy, CancellationToken ct)
     {
         var existing = await _repo.LoadRoundAsync(request.TripId, request.MatchingRound, ct);
         if (existing is not null)
@@ -276,7 +314,7 @@ public sealed class MatchingRoundService
         {
             await _repo.InsertRoundAsync(
                 request.TripId, request.MatchingRound, Guid.NewGuid(),
-                effective.RankingConfigVersion, ct);
+                policy.RankingConfigVersion, ct);
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
         {

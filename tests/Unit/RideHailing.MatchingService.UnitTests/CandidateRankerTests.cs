@@ -103,17 +103,48 @@ public sealed class CandidateRankerTests
     }
 
     [Fact]
-    public void Snapshot_Hash_Stable_For_Same_Ranked_Set()
+    public void Snapshot_Hash_Binds_Full_Ordering_Determinants()
     {
-        var policy = MatchingPolicy.FrozenW5Baseline();
-        var first = CandidateRanker.Rank(
-            new[] { C(Guid.NewGuid(), 2.0), C(Guid.NewGuid(), 1.0) }, policy);
-        // Rebuild with fresh GUIDs in different order: different set → different hash...
-        var h1 = CandidateRanker.SnapshotHash(first, policy.RankingConfigVersion);
-        var h2 = CandidateRanker.SnapshotHash(first, policy.RankingConfigVersion);
-        Assert.Equal(h1, h2);
+        var t0 = new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
+        SnapshotEntry E(int ordinal, Guid driver, double distance, double score) =>
+            new(ordinal, driver, Guid.NewGuid(), distance, score, 1, t0);
 
-        var h3 = CandidateRanker.SnapshotHash(first, "v2");
-        Assert.NotEqual(h1, h3);
+        var d1 = Guid.NewGuid();
+        var d2 = Guid.NewGuid();
+        var setA = new[]
+        {
+            E(0, d1, 1.0, 1.0),
+            E(1, d2, 2.0, 2.0),
+        };
+
+        // Same entries, same instant → identical hash (replay key).
+        Assert.Equal(
+            CandidateRanker.SnapshotHash(setA, "v1", t0),
+            CandidateRanker.SnapshotHash(setA, "v1", t0));
+
+        // Different order → different hash.
+        Assert.NotEqual(
+            CandidateRanker.SnapshotHash(setA, "v1", t0),
+            CandidateRanker.SnapshotHash(setA.Reverse().ToArray(), "v1", t0));
+
+        // Different score (same order/distances) → different hash.
+        var rescored = new[]
+        {
+            E(0, d1, 1.0, 9.0),
+            E(1, d2, 2.0, 2.0),
+        };
+        Assert.NotEqual(
+            CandidateRanker.SnapshotHash(setA, "v1", t0),
+            CandidateRanker.SnapshotHash(rescored, "v1", t0));
+
+        // Same entries, different rank instant → different hash (time-bound replay key).
+        Assert.NotEqual(
+            CandidateRanker.SnapshotHash(setA, "v1", t0),
+            CandidateRanker.SnapshotHash(setA, "v1", t0.AddMinutes(1)));
+
+        // Different config version → different hash.
+        Assert.NotEqual(
+            CandidateRanker.SnapshotHash(setA, "v1", t0),
+            CandidateRanker.SnapshotHash(setA, "v2", t0));
     }
 }

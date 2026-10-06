@@ -31,4 +31,19 @@ public sealed record RankedCandidate(
     Guid DriverId,
     double DistanceKm,
     double Score,
-    int DriverAggregateVersion);
+    int DriverAggregateVersion,
+    DateTimeOffset CapturedAt);
+
+/// <summary>
+/// Persisted snapshot entry: ranked order + attempt identity + the full
+/// ordering determinants (score inputs), so the hash binds what the order
+/// depended on (DSI-019), and W6 can resume without recomputation.
+/// </summary>
+public sealed record SnapshotEntry(
+    int Ordinal,
+    Guid DriverId,
+    Guid ReservationId,
+    double DistanceKm,
+    double Score,
+    int Version,
+    DateTimeOffset CapturedAt);

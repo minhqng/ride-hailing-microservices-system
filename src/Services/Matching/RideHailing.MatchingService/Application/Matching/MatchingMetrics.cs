@@ -16,7 +16,11 @@ public sealed class MatchingMetrics
     private readonly Counter<long> _eligible =
         Meter.CreateCounter<long>("matching.candidates.eligible", description: "Candidates passing eligibility.");
     private readonly Counter<long> _staleFiltered =
-        Meter.CreateCounter<long>("matching.candidates.stale_filtered", description: "Candidates rejected as stale/missing/unknown.");
+        Meter.CreateCounter<long>("matching.candidates.stale_filtered", description: "Candidates rejected as stale or missing location/freshness.");
+    private readonly Counter<long> _excluded =
+        Meter.CreateCounter<long>("matching.candidates.excluded", description: "Candidates excluded as incapable, rejected, blocked or invalid (not stale).");
+    private readonly Counter<long> _degraded =
+        Meter.CreateCounter<long>("matching.rounds.degraded", description: "Compute calls returning degraded for dependency failure.");
     private readonly Histogram<double> _geoQueryDurationMs =
         Meter.CreateHistogram<double>("matching.geo.query.duration", unit: "ms", description: "GEOSEARCH+enrich wall time.");
 
@@ -25,6 +29,10 @@ public sealed class MatchingMetrics
     public void Eligible(int count) => _eligible.Add(count);
 
     public void StaleFiltered(int count) => _staleFiltered.Add(count);
+
+    public void Excluded(int count) => _excluded.Add(count);
+
+    public void Degraded() => _degraded.Add(1);
 
     public void GeoQueryDuration(TimeSpan duration) => _geoQueryDurationMs.Record(duration.TotalMilliseconds);
 }
