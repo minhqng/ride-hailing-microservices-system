@@ -46,6 +46,44 @@ public class PaymentRecoveryTests(PaymentDatabase database) : IClassFixture<Paym
         var review = await execution.ExecuteAsync(request, PaymentSimulatorMode.Success, default, retry: true);
         Assert.Equal(PaymentOperationState.RequiresReview, review.State);
         Assert.Equal(3, review.AttemptCount);
+        Assert.Equal(review, await execution.ExecuteAsync(request, PaymentSimulatorMode.Success, default, retry: true));
+        Assert.Equal(review, await database.Repository.GetAsync(review.Id, default));
         Assert.Null(await provider.FindEffectAsync(request.OperationKey, default));
     }
+
+    [Theory]
+    [InlineData(PaymentOperationType.Authorize)]
+    [InlineData(PaymentOperationType.Capture)]
+    [InlineData(PaymentOperationType.Void)]
+    public async Task ProviderCommitSurvivesPaymentTransactionRollbackAndCannotBecomeDecline(PaymentOperationType type)
+    {
+        var request = PaymentOperation.Create(Guid.NewGuid().ToString(), Guid.NewGuid(), type, 100, "VND", DateTimeOffset.UtcNow);
+        await database.Repository.SaveAsync(request, default); // Durable intent precedes the attempt.
+        await using (var connection = await database.Source.OpenConnectionAsync())
+        await using (var transaction = await connection.BeginTransactionAsync())
+        {
+            await using var processing = new Npgsql.NpgsqlCommand("""
+                UPDATE payment_operations SET state='PROCESSING',attempt_count=1,updated_at=clock_timestamp()
+                WHERE id=@id
+                """, connection, transaction);
+            processing.Parameters.AddWithValue("id", request.Id);
+            Assert.Equal(1, await processing.ExecuteNonQueryAsync());
+            await using var provider = new ProviderLedger(database.ConnectionString);
+            await provider.CommitEffectAsync(request, default);
+            // Models the database boundary of process death before Payment commits its result.
+            await transaction.RollbackAsync();
+        }
+        Assert.Equal(PaymentOperationState.Pending, (await database.Repository.GetAsync(request.Id, default))!.State);
+        await using var restartedProvider = new ProviderLedger(database.ConnectionString);
+        var restarted = new PaymentExecution(database.Source, new PaymentSimulator(restartedProvider));
+        var result = await restarted.ExecuteAsync(request, PaymentSimulatorMode.Decline, default);
+        Assert.Equal(PaymentOperationState.Succeeded, result.State);
+        Assert.Equal(request.Id, result.Id);
+        Assert.Equal(await restartedProvider.FindEffectAsync(request.OperationKey, default), result.ProviderEffectId);
+        Assert.Equal(result, await restarted.ExecuteAsync(request, PaymentSimulatorMode.Success, default));
+        await using var count = database.Source.CreateCommand("SELECT count(*) FROM provider_effects WHERE operation_key=@key");
+        count.Parameters.AddWithValue("key", request.OperationKey);
+        Assert.Equal(1L, (long)(await count.ExecuteScalarAsync())!);
+    }
+
 }
