@@ -1,5 +1,5 @@
 using RideHailing.Observability;
-// Development Payment simulator. Production operation deduplication starts in W5.
+// Development simulator endpoints use the durable Payment execution authority.
 
 using Npgsql;
 using System.Text.Json.Serialization;
