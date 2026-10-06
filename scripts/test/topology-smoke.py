@@ -36,13 +36,13 @@ expected = {
 
 def snapshot():
     exchanges = {x["name"]: (x["type"], x["durable"], x["auto_delete"]) for x in api("GET", "exchanges/%2F") if x["name"].startswith("ride.")}
-    assert exchanges == {"ride.commands": ("topic", True, False), "ride.events": ("topic", True, False)}
+    assert exchanges == {"ride.commands": ("topic", True, False), "ride.events": ("topic", True, False), "ride.deadletter": ("topic", True, False)}
     queues = {q["name"]: (q["durable"], q["auto_delete"], q["exclusive"], q["arguments"]) for q in api("GET", "queues/%2F")}
-    assert set(queues) == set(expected)
+    assert set(queues) == set(expected) | {q + ".dead" for q in expected}
     for declaration in queues.values():
         assert declaration == (True, False, False, {"x-queue-type": "quorum"})
     bindings = {(b["source"], b["destination"], b["routing_key"]) for b in api("GET", "bindings/%2F") if b["source"].startswith("ride.")}
-    assert bindings == {(exchange, queue, key) for queue, (exchange, keys) in expected.items() for key in keys}
+    assert bindings == {(exchange, queue, key) for queue, (exchange, keys) in expected.items() for key in keys} | {("ride.deadletter", q + ".dead", q) for q in expected}
     return exchanges, queues, bindings
 
 
