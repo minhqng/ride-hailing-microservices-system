@@ -66,7 +66,9 @@ for field in body:
     assert request("POST", "/simulator/operations", missing)[0] == 400, field
 assert sql("SELECT count(*) FROM payment_operations") == before
 
-subprocess.run(["docker", "compose", "restart", "payment"], check=True)
+# Abrupt process death: committed outcomes must survive without graceful shutdown hooks.
+subprocess.run(["docker", "compose", "kill", "-s", "SIGKILL", "payment"], check=True)
+subprocess.run(["docker", "compose", "start", "payment"], check=True)
 for attempt in range(60):
     try:
         if request("GET", "/health/ready")[0] == 200:
