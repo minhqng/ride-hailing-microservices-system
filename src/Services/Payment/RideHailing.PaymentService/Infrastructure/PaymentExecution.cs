@@ -73,7 +73,7 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         var stored = await LoadAsync(key, connection, transaction, token);
         if (stored.State is PaymentOperationState.Unknown or PaymentOperationState.Processing)
         {
-            stored = stored.Reconcile(await provider.FindEffectAsync(key, token), DateTimeOffset.UtcNow);
+            stored = stored.Reconcile(await provider.FindEffectAsync(stored, token), DateTimeOffset.UtcNow);
             if (stored.State == PaymentOperationState.Pending && stored.AttemptCount >= 3)
                 stored = stored.RequireReview(DateTimeOffset.UtcNow);
             await PaymentOperationRepository.SaveAsync(stored, connection, transaction, token);

@@ -29,6 +29,16 @@ public sealed class ProviderLedger : IAsyncDisposable
         return reader.GetString(1);
     }
 
+    public async Task<string?> FindEffectAsync(PaymentOperation operation, CancellationToken token)
+    {
+        await using var command = source.CreateCommand("SELECT request_fingerprint,effect_id FROM provider_effects WHERE operation_key=@key");
+        command.Parameters.AddWithValue("key", operation.OperationKey);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token)) return null;
+        if (reader.GetString(0) != PaymentExecution.Fingerprint(operation)) throw new PaymentConflictException();
+        return reader.GetString(1);
+    }
+
     public async Task<string?> FindEffectAsync(string operationKey, CancellationToken token)
     {
         await using var command = source.CreateCommand("SELECT effect_id FROM provider_effects WHERE operation_key=@key");

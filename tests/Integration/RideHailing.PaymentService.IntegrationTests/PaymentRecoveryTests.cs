@@ -86,4 +86,29 @@ public class PaymentRecoveryTests(PaymentDatabase database) : IClassFixture<Paym
         Assert.Equal(1L, (long)(await count.ExecuteScalarAsync())!);
     }
 
+    [Fact]
+    public async Task ProviderRecoveryPreservesOriginalReferenceAndRejectsConflictingMeaning()
+    {
+        await using var provider = new ProviderLedger(database.ConnectionString);
+        var request = Request();
+        var originalReference = await provider.CommitEffectAsync(request, default);
+        var restoredIntent = PaymentOperation.Create(request.OperationKey, request.TripId, request.Type,
+            request.AmountMinor, request.Currency, DateTimeOffset.UtcNow);
+        var execution = new PaymentExecution(database.Source, new PaymentSimulator(provider));
+        var result = await execution.ExecuteAsync(restoredIntent, PaymentSimulatorMode.Decline, default);
+        Assert.Equal(originalReference, result.ProviderEffectId);
+        Assert.Equal(PaymentOperationState.Succeeded, result.State);
+
+        var other = Request();
+        await provider.CommitEffectAsync(PaymentOperation.Create(other.OperationKey, other.TripId, other.Type,
+            other.AmountMinor + 1, other.Currency, DateTimeOffset.UtcNow), default);
+        await Assert.ThrowsAsync<PaymentConflictException>(() => execution.ExecuteAsync(other, PaymentSimulatorMode.Success, default));
+        Assert.Equal(PaymentOperationState.Pending, (await database.Repository.GetAsync(other.Id, default))!.State);
+        var processing = other.BeginAttempt(DateTimeOffset.UtcNow);
+        await database.Repository.SaveAsync(processing, default);
+        await database.Repository.SaveAsync(processing.ObserveUnknown(DateTimeOffset.UtcNow), default);
+        await Assert.ThrowsAsync<PaymentConflictException>(() => execution.ReconcileAsync(other.OperationKey, provider, default));
+        Assert.Equal(PaymentOperationState.Unknown, (await database.Repository.GetAsync(other.Id, default))!.State);
+    }
+
 }
