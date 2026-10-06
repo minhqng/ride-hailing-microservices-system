@@ -31,21 +31,16 @@ public enum SectionOutcome
 
 /// <summary>
 /// Outcome of one atomic FCALL: per-section results + resulting GEO membership.
-/// <see cref="Degraded"/> is DERIVED (both sections degraded): transport failure
-/// or a clean function-level failure (e.g. key-type gate). Individual
-/// stale/skipped outcomes with <see cref="Degraded"/>=false are normal
-/// (idempotent replays, absent sections) and report per-section truth.
-/// Callers must check <see cref="Degraded"/> first and never treat GeoMember
-/// as evidence.
+/// When <see cref="Degraded"/> is true the projection call had no proven
+/// effect and <see cref="GeoMember"/> is unknown (false): callers must check
+/// <see cref="Degraded"/> first and never treat GeoMember as evidence.
 /// </summary>
 public sealed record ProjectionResult(
     SectionOutcome State,
     SectionOutcome Location,
-    bool GeoMember)
+    bool GeoMember,
+    bool Degraded = false)
 {
-    public bool Degraded => State == SectionOutcome.Degraded
-        && Location == SectionOutcome.Degraded;
-
     public static ProjectionResult DegradedResult() =>
-        new(SectionOutcome.Degraded, SectionOutcome.Degraded, false);
+        new(SectionOutcome.Degraded, SectionOutcome.Degraded, false, true);
 }

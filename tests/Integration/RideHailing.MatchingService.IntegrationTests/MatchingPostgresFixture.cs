@@ -1,7 +1,6 @@
-// Matching PostgreSQL fixture: REAL infrastructure, never a vacuous pass.
-// MATCHING_TEST_POSTGRES explicitly set => verified now, failure throws loud.
-// Otherwise disposable Testcontainers PostgreSQL; any start/apply failure
-// throws loud ( Ryuk disabled; cleanup explicit via AutoRemove + DisposeAsync).
+// B-W02-04 (P1 review fix): Matching PostgreSQL fixture with no fake-green.
+// Same semantics as DriverPostgresDatabase: explicit env => fail loud;
+// otherwise disposable Testcontainers; skip only without Docker.
 // Applies ALL migration scripts in filename order (001 baseline, 002 status fix, ...).
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -19,6 +18,11 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
     private PostgreSqlContainer? _container;
 
     public string ConnectionString { get; private set; } = "";
+    public string Source { get; private set; } = "";
+    public bool Skipped { get; private set; }
+    public string SkipReason { get; private set; } = "";
+
+    public bool Ready() => !Skipped && !string.IsNullOrEmpty(ConnectionString);
 
     public async Task InitializeAsync()
     {
@@ -28,7 +32,15 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
             await using var probe = new NpgsqlConnection(env);
             await probe.OpenAsync();
             ConnectionString = env;
+            Source = "env";
             await ApplyScriptsAsync(env);
+            return;
+        }
+
+        if (!DockerMightExist())
+        {
+            Skipped = true;
+            SkipReason = "No DOCKER_HOST and no /var/run/docker.sock: cannot start disposable PostgreSQL.";
             return;
         }
 
@@ -40,6 +52,7 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
             .Build();
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
+        Source = "testcontainers";
         await ApplyScriptsAsync(ConnectionString);
     }
 
@@ -125,6 +138,10 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
         throw new DirectoryNotFoundException(
             "Matching Migrations dir not found. Tried: " + string.Join("; ", candidates));
     }
+
+    private static bool DockerMightExist() =>
+        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCKER_HOST"))
+        || File.Exists("/var/run/docker.sock");
 
     // Same sibling-container host rewrite as Driver (see DriverPostgresDatabase).
     internal static string FixContainerHost(string connectionString)

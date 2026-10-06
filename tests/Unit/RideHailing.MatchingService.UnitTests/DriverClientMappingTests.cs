@@ -193,13 +193,8 @@ public class DriverClientMappingTests
     }
 
     [Fact]
-    public async Task Reconcile_Bare_Http404_Throws_Never_Maps_NotFound()
+    public async Task Reconcile_Http404_Maps_NotFound_InsteadOfThrowing()
     {
-        // DSI-031: a bare 404 carries no domain body — it may be a wrong
-        // BaseAddress/proxy/missing route. Mapping it to conclusive NOT_FOUND
-        // would let the caller advance to the next candidate while an earlier
-        // reservation may already be committed (double reservation).
-        // NOT_FOUND arrives ONLY as a 200 body outcome (proven above).
         var driver = Guid.NewGuid();
         var res = Guid.NewGuid();
         var stub = new StubHandler
@@ -208,13 +203,13 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out var captured);
 
-        await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.GetReservationAsync(driver, res));
+        var outcome = await client.GetReservationAsync(driver, res);
 
         Assert.Equal(HttpMethod.Get, captured.LastRequest!.Method);
         Assert.Equal(
             $"/internal/drivers/{driver:N}/reservations/{res:N}",
             captured.LastRequest.RequestUri!.AbsolutePath);
+        Assert.Equal(ReservationReconcileOutcome.NotFound, outcome);
     }
 
     [Fact]

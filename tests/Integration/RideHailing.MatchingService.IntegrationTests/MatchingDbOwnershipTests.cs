@@ -1,6 +1,4 @@
-// B-W02-09 (config-shape half): asserts Matching tests are POINTED at matching_db
-// and never at driver_db (05B §11.3). PostgreSQL-level denial is proven by
-// Platform DbIsolationTests, not here.
+// B-W02-09: Matching must never target driver_db (05B §11.3).
 namespace RideHailing.MatchingService.IntegrationTests;
 
 public class MatchingDbOwnershipTests
