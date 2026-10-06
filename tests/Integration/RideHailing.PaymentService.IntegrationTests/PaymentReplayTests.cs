@@ -19,6 +19,14 @@ public class PaymentReplayTests(PaymentDatabase database) : IClassFixture<Paymen
         var restarted = new PaymentExecution(database.Source, new());
         Assert.Equal(result, await restarted.ExecuteAsync(Request(), PaymentSimulatorMode.Decline, default));
         await Assert.ThrowsAsync<PaymentConflictException>(() => restarted.ExecuteAsync(Request(101), PaymentSimulatorMode.Success, default));
+        var conflicts = new[]
+        {
+            PaymentOperation.Create(key, Guid.NewGuid(), type, 100, "VND", DateTimeOffset.UtcNow),
+            PaymentOperation.Create(key, trip, type == PaymentOperationType.Authorize ? PaymentOperationType.Capture : PaymentOperationType.Authorize, 100, "VND", DateTimeOffset.UtcNow),
+            PaymentOperation.Create(key, trip, type, 100, "USD", DateTimeOffset.UtcNow)
+        };
+        foreach (var conflict in conflicts)
+            await Assert.ThrowsAsync<PaymentConflictException>(() => restarted.ExecuteAsync(conflict, PaymentSimulatorMode.Success, default));
         Assert.Equal(result, await database.Repository.GetAsync(result.Id, default));
         await using var query = database.Source.CreateCommand("SELECT count(*), min(request_fingerprint) FROM payment_operations WHERE operation_key=@key");
         query.Parameters.AddWithValue("key", key);

@@ -9,10 +9,16 @@ namespace RideHailing.PaymentService.IntegrationTests;
 public class PaymentConcurrencyTests(PaymentDatabase database, ITestOutputHelper output) : IClassFixture<PaymentDatabase>
 {
     [Theory]
-    [InlineData(10)]
-    [InlineData(50)]
-    [InlineData(100)]
-    public async Task SynchronizedCallersConvergeToOneIndependentProviderEffect(int contenders)
+    [InlineData(10, PaymentOperationType.Authorize)]
+    [InlineData(50, PaymentOperationType.Authorize)]
+    [InlineData(100, PaymentOperationType.Authorize)]
+    [InlineData(10, PaymentOperationType.Capture)]
+    [InlineData(50, PaymentOperationType.Capture)]
+    [InlineData(100, PaymentOperationType.Capture)]
+    [InlineData(10, PaymentOperationType.Void)]
+    [InlineData(50, PaymentOperationType.Void)]
+    [InlineData(100, PaymentOperationType.Void)]
+    public async Task SynchronizedCallersConvergeToOneIndependentProviderEffect(int contenders, PaymentOperationType type)
     {
         var key = Guid.NewGuid().ToString();
         var trip = Guid.NewGuid();
@@ -20,7 +26,7 @@ public class PaymentConcurrencyTests(PaymentDatabase database, ITestOutputHelper
         await using var provider = new ProviderLedger(database.ConnectionString);
         var tasks = Enumerable.Range(0, contenders).Select(async i =>
         {
-            var request = PaymentOperation.Create(key, trip, PaymentOperationType.Capture, 100, "VND", DateTimeOffset.UtcNow);
+            var request = PaymentOperation.Create(key, trip, type, 100, "VND", DateTimeOffset.UtcNow);
             // Separate application objects; synchronization is in PostgreSQL, not a process mutex.
             var service = new PaymentExecution(database.Source, new PaymentSimulator(provider));
             await start.Task;
@@ -41,6 +47,6 @@ public class PaymentConcurrencyTests(PaymentDatabase database, ITestOutputHelper
         Assert.Equal(1, rows.GetInt64(0));
         Assert.Equal(1, rows.GetInt64(1));
         var timings = results.Select(r => r.elapsed).Order().ToArray();
-        output.WriteLine($"CON-03 N={contenders}; key={key}; rows=1; providerEffects=1; canonical callers={results.Length}; p50={timings[(int)Math.Ceiling(contenders * .50)-1]:F2}ms; p95={timings[(int)Math.Ceiling(contenders * .95)-1]:F2}ms");
+        output.WriteLine($"CON-03 type={type}; N={contenders}; key={key}; rows=1; providerEffects=1; canonical callers={results.Length}; p50={timings[(int)Math.Ceiling(contenders * .50)-1]:F2}ms; p95={timings[(int)Math.Ceiling(contenders * .95)-1]:F2}ms");
     }
 }
