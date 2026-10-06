@@ -17,7 +17,7 @@ public sealed class RabbitBackboneFixture : IAsyncLifetime
     public IContainer Broker { get; } = new ContainerBuilder("rabbitmq:4.3.6-management")
         .WithEnvironment("RABBITMQ_DEFAULT_USER", "proof")
         .WithEnvironment("RABBITMQ_DEFAULT_PASS", "proof-local-only")
-        .WithResourceMapping(Path.Combine(AppContext.BaseDirectory, "broker-reliability.json"), "/tmp/ride-reliability.json")
+        .WithResourceMapping(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "broker-reliability.json")), "/tmp/ride-reliability.json")
         .WithPortBinding(5672, true)
         .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server startup complete"))
         .Build();
@@ -33,7 +33,7 @@ public sealed class RabbitBackboneFixture : IAsyncLifetime
     {
         await Broker.StartAsync();
         var imported = await Broker.ExecAsync(new[] { "rabbitmqctl", "import_definitions", "/tmp/ride-reliability.json" });
-        Assert.Equal(0, imported.ExitCode);
+        Assert.True(imported.ExitCode == 0, imported.Stdout + imported.Stderr);
         await database.StartAsync();
         Source = NpgsqlDataSource.Create(database.GetConnectionString());
         await using var command = Source.CreateCommand("CREATE TABLE committed_deliveries(message_id text PRIMARY KEY)");
