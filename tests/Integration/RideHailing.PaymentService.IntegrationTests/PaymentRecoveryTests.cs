@@ -10,7 +10,7 @@ public class PaymentRecoveryTests(PaymentDatabase database) : IClassFixture<Paym
     [Fact]
     public async Task LostResponseAfterEffectIsUnknownThenReconcilesSameKeyAfterRestart()
     {
-        await using var provider = new ProviderLedger(database.Source.ConnectionString);
+        await using var provider = new ProviderLedger(database.ConnectionString);
         var request = Request();
         var execution = new PaymentExecution(database.Source, new PaymentSimulator(provider));
         var unknown = await execution.ExecuteAsync(request, PaymentSimulatorMode.TimeoutAfterEffect, default);
@@ -31,7 +31,7 @@ public class PaymentRecoveryTests(PaymentDatabase database) : IClassFixture<Paym
     [Fact]
     public async Task MissingEffectReconcilesBeforeRetryAndRetryBudgetIsFinite()
     {
-        await using var provider = new ProviderLedger(database.Source.ConnectionString);
+        await using var provider = new ProviderLedger(database.ConnectionString);
         var request = Request();
         var execution = new PaymentExecution(database.Source, new PaymentSimulator(provider));
         var unknown = await execution.ExecuteAsync(request, PaymentSimulatorMode.TimeoutBeforeEffect, default);
