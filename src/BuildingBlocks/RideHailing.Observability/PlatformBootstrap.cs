@@ -24,6 +24,7 @@ public static class PlatformBootstrap
             .WithTracing(t =>
             {
                 t.AddAspNetCoreInstrumentation();
+                t.AddSource("RideHailing.Messaging");
                 if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
                     t.AddOtlpExporter();
             })
