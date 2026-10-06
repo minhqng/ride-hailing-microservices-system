@@ -1,0 +1,1 @@
+{"contentionMetrics":"n/a: N=2/10/50/100 latency/conflict-rate metrics belong to the B-owned CON-01 Driver harness (DEPENDENCY_PENDING); this Trip-side proof asserts a single deterministic race outcome, not a load profile","durationSeconds":1,"exitCode":0,"note":"Observed run facts only. No perf metrics fabricated for a local OCC proof.","testsExecuted":5,"testsPassed":5}
