@@ -80,6 +80,20 @@ if (!string.IsNullOrWhiteSpace(connectionString))
                     : Results.Ok(result);
         });
 
+        app.MapPost("/simulator/operations/{id:guid}/reconcile", async (Guid id,
+            PaymentOperationRepository repository, PaymentExecution execution, ProviderLedger provider, CancellationToken token) =>
+        {
+            var operation = await repository.GetAsync(id, token);
+            return operation is null ? Results.NotFound() : Results.Ok(await execution.ReconcileAsync(operation.OperationKey, provider, token));
+        });
+        app.MapPost("/simulator/operations/{id:guid}/retry", async (Guid id, RetryPaymentRequest request,
+            PaymentOperationRepository repository, PaymentExecution execution, CancellationToken token) =>
+        {
+            if (!Enum.IsDefined(request.Mode)) return Results.BadRequest();
+            var operation = await repository.GetAsync(id, token);
+            return operation is null ? Results.NotFound() : Results.Ok(await execution.ExecuteAsync(operation, request.Mode, token, retry: true));
+        });
+
         app.MapGet("/simulator/operations/{id:guid}", async (
             Guid id,
             PaymentOperationRepository repository,
@@ -110,3 +124,5 @@ internal sealed record SimulatePaymentRequest(
     [property: JsonRequired] long AmountMinor,
     [property: JsonRequired] string Currency,
     [property: JsonRequired] PaymentSimulatorMode Mode);
+
+internal sealed record RetryPaymentRequest([property: JsonRequired] PaymentSimulatorMode Mode);
