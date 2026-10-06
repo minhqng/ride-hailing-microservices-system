@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using Npgsql;
 using RideHailing.PaymentService.Domain;
 
@@ -46,6 +44,7 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         {
             var review = stored.RequireReview(DateTimeOffset.UtcNow);
             await PaymentOperationRepository.SaveAsync(review, connection, transaction, cancellationToken);
+            review = await LoadAsync(request.OperationKey, connection, transaction, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return review;
         }
