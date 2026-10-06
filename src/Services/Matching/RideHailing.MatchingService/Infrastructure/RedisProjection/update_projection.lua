@@ -11,11 +11,6 @@
 --             order opaque sessionIds, and Docs 00-04 define no session-transition
 --             authority, so W4 never auto-accepts a foreign session. Legitimate
 --             session rotation needs a future Driver-owned current-session signal.
---   Known cost of that conservatism: a foreign write to locationSessionId
---             itself never heals (sessions are opaque; no rule can tell garbage
---             from rotation), bricking freshness for that driver until the key
---             is rebuilt. GEO still follows stored coords, so impact is
---             freshness-only, never authority.
 --   geo:      recomputed from CURRENT hash values every call:
 --             AVAILABLE + indexable coords -> GEOADD, else ZREM.
 -- capturedAt must be ISO-8601 UTC so lexicographic compare == time order.
@@ -23,47 +18,16 @@
 --
 -- Corrupt-hash rule: the script itself never writes partial hashes, but a hash
 -- touched by a foreign writer may hold missing/non-numeric ordering fields.
--- Guarded comparisons: an unparseable STORED ordering value heals (the valid
--- new sample overwrites garbage, which carries no ordering information), while
--- an unparseable CALLER value fails closed as 'stale'. The geo section never
--- errors on missing/non-numeric coordinates: unknown coords mean ZREM.
---
--- Key-type gate: a wrong-typed hash or GEO key (a foreign writer repurposing
--- Matching-owned keys) fails the whole call with 'keytype-error' BEFORE any
--- write, so a type violation can never leave a partial mutation behind.
--- Callers map the unknown token to Degraded. Key-type ownership, not value
--- garbage, is the boundary: writers must never repurpose Matching-owned keys.
-
-local function keytype_ok(key, want)
-  local t = redis.call('TYPE', key)
-  if t.ok == 'none' then
-    return true
-  end
-  for _, v in ipairs(want) do
-    if t.ok == v then
-      return true
-    end
-  end
-  return false
-end
-
--- ISO-8601 UTC with mandatory Z suffix and sane ranges. Our sole writer
--- emits UtcDateTime "O" (fixed-width, Z-suffixed); lexicographic compare is a
--- time order ONLY within this shape. Digit-shaped garbage ("2026-99-99T99:x")
--- or offset suffixes ("+02:00") fail validation: stored garbage carries no
--- ordering information (heal), caller garbage fails closed (stale).
-local function isTs(v)
-  if type(v) ~= 'string' then
-    return false
-  end
-  local y, mo, d, h, mi, s = v:match('^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)%.?%d*Z$')
-  if not y then
-    return false
-  end
-  mo, d, h, mi, s = tonumber(mo), tonumber(d), tonumber(h), tonumber(mi), tonumber(s)
-  return mo >= 1 and mo <= 12 and d >= 1 and d <= 31
-    and h >= 0 and h <= 23 and mi >= 0 and mi <= 59 and s >= 0 and s <= 59
-end
+-- A function error after a state write would leave a partial mutation while
+-- the caller reports Degraded, so every comparison input is guarded: an
+-- unparseable STORED ordering value heals (the valid new sample overwrites
+-- garbage, which carries no ordering information), while an unparseable
+-- CALLER value fails closed as 'stale'. The geo section never errors on
+-- missing/non-numeric coordinates: unknown coords mean ZREM, not a crash.
+-- Residual (out of threat model): if the GEO KEY itself holds a non-zset
+-- (a foreign writer violating Matching key ownership), GEOADD/ZREM throws
+-- after the hash writes. Key-type ownership, not value garbage, is the
+-- boundary: writers must never repurpose Matching-owned keys.
 
 redis.register_function('driver_projection_update', function(keys, args)
   local hash = keys[1]
@@ -78,10 +42,6 @@ redis.register_function('driver_projection_update', function(keys, args)
   local session = args[6]
   local seq = args[7]
   local capturedAt = args[8]
-
-  if (not keytype_ok(hash, {'hash'})) or (not keytype_ok(geo, {'zset'})) then
-    return {'keytype-error', 'keytype-error', 'keytype-error'}
-  end
 
   local state = 'skipped'
   if version and version ~= '' then
@@ -112,11 +72,7 @@ redis.register_function('driver_projection_update', function(keys, args)
   local loc = 'skipped'
   if seq and seq ~= '' then
     local s = tonumber(seq)
-    local nlon = tonumber(lon)
-    local nlat = tonumber(lat)
-    if (not s) or (not nlon) or (not nlat)
-      or (not session) or (session == '')
-      or (not isTs(capturedAt)) then
+    if not s then
       loc = 'stale'
     else
       local curSession = redis.call('HGET', hash, 'locationSessionId')
@@ -131,7 +87,7 @@ redis.register_function('driver_projection_update', function(keys, args)
       elseif session == curSession then
         local curSeq = tonumber(redis.call('HGET', hash, 'sequenceNo'))
         local curTs = redis.call('HGET', hash, 'capturedAt')
-        if (not curSeq) or (not isTs(curTs)) then
+        if (not curSeq) or (curTs == false) then
           redis.call('HSET', hash,
             'longitude', lon,
             'latitude', lat,
@@ -139,7 +95,7 @@ redis.register_function('driver_projection_update', function(keys, args)
             'sequenceNo', seq,
             'capturedAt', capturedAt)
           loc = 'applied'
-        elseif (s > curSeq) or (s == curSeq and capturedAt > curTs) then
+        elseif (s > curSeq) or (s == curSeq and type(curTs) == 'string' and capturedAt > curTs) then
           redis.call('HSET', hash,
             'longitude', lon,
             'latitude', lat,

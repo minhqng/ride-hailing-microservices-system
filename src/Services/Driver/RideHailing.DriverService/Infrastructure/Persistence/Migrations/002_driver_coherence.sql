@@ -13,34 +13,7 @@
 -- Idempotent: safe to re-apply (guarded DDL).
 
 DO $$
-DECLARE
-  incoherent integer;
-  sample text;
 BEGIN
-  -- Fail loud (not silent): 001 had no coherence CHECK, so operator-written
-  -- rows may violate DSI-002. Aborting here keeps the migration all-or-nothing
-  -- with a clear message instead of an obscure 23514 from ADD CONSTRAINT.
-  SELECT COUNT(*) INTO incoherent FROM drivers WHERE NOT (
-    (status IN ('AVAILABLE', 'OFFLINE')
-      AND reserved_trip_id IS NULL AND reservation_id IS NULL AND active_trip_id IS NULL)
-    OR (status = 'RESERVED'
-      AND reserved_trip_id IS NOT NULL AND reservation_id IS NOT NULL AND active_trip_id IS NULL)
-    OR (status = 'ON_TRIP'
-      AND active_trip_id IS NOT NULL AND reserved_trip_id IS NULL AND reservation_id IS NULL)
-  );
-  IF incoherent > 0 THEN
-    SELECT COALESCE(string_agg(driver_id::text, ', '), '') INTO sample
-    FROM (SELECT driver_id FROM drivers WHERE NOT (
-      (status IN ('AVAILABLE', 'OFFLINE')
-        AND reserved_trip_id IS NULL AND reservation_id IS NULL AND active_trip_id IS NULL)
-      OR (status = 'RESERVED'
-        AND reserved_trip_id IS NOT NULL AND reservation_id IS NOT NULL AND active_trip_id IS NULL)
-      OR (status = 'ON_TRIP'
-        AND active_trip_id IS NOT NULL AND reserved_trip_id IS NULL AND reservation_id IS NULL)
-    ) LIMIT 5) bad;
-    RAISE EXCEPTION 'driver coherence pre-check failed: % incoherent rows violate DSI-002 (e.g. %); clean them before applying chk_drivers_coherence', incoherent, sample;
-  END IF;
-
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'chk_drivers_coherence'
   ) THEN

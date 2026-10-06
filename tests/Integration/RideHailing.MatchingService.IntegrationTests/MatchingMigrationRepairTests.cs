@@ -3,7 +3,6 @@
 // OPEN/SEARCHING vocabulary). The reordered 002 drops the legacy CHECK before
 // backfilling, so legacy rows become PROCESSING instead of aborting the
 // migration mid-script. Runs on real PostgreSQL; restores shared schema.
-// All SQL is parameterized (no interpolated values, even GUIDs).
 using Npgsql;
 
 namespace RideHailing.MatchingService.IntegrationTests;
@@ -21,8 +20,19 @@ public sealed class MatchingMigrationRepairTests
     [Fact]
     public async Task Legacy_Rows_Migrate_To_Processing_Under_Reordered_002()
     {
+        if (!_db.Ready())
+        {
+            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
+        }
+
         await using var conn = new NpgsqlConnection(_db.ConnectionString);
         await conn.OpenAsync();
+
+        static async Task ExecuteAsync(NpgsqlConnection connection, string sql)
+        {
+            await using var cmd = new NpgsqlCommand(sql, connection);
+            await cmd.ExecuteNonQueryAsync();
+        }
 
         try
         {
@@ -34,10 +44,9 @@ public sealed class MatchingMigrationRepairTests
             var legacyOpen = Guid.NewGuid();
             var legacySearching = Guid.NewGuid();
             await ExecuteAsync(conn,
-                "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
-                "VALUES (@a, 1, @ma, 'OPEN'), (@b, 1, @mb, 'SEARCHING')",
-                ("a", (object)legacyOpen), ("ma", Guid.NewGuid()),
-                ("b", (object)legacySearching), ("mb", Guid.NewGuid()));
+                "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) VALUES " +
+                $"('{legacyOpen}', 1, '{Guid.NewGuid()}', 'OPEN'), " +
+                $"('{legacySearching}', 1, '{Guid.NewGuid()}', 'SEARCHING')");
 
             // The repaired 002 must not abort on legacy rows.
             await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("002_matching_round_status.sql"));
@@ -49,9 +58,7 @@ public sealed class MatchingMigrationRepairTests
             // And the legacy vocabulary is now rejected for new rows.
             await using var legacy = new NpgsqlCommand(
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
-                "VALUES (@t, 1, @m, 'OPEN')", conn);
-            legacy.Parameters.AddWithValue("t", Guid.NewGuid());
-            legacy.Parameters.AddWithValue("m", Guid.NewGuid());
+                $"VALUES ('{Guid.NewGuid()}', 1, '{Guid.NewGuid()}', 'OPEN')", conn);
             var ex = await Assert.ThrowsAsync<PostgresException>(() => legacy.ExecuteNonQueryAsync());
             Assert.Equal("23514", ex.SqlState);
         }
@@ -61,17 +68,5 @@ public sealed class MatchingMigrationRepairTests
             await ExecuteAsync(conn, "DROP TABLE IF EXISTS matching_rounds");
             await _db.ReapplyScriptsAsync();
         }
-    }
-
-    private static async Task ExecuteAsync(
-        NpgsqlConnection connection, string sql, params (string Name, object Value)[] parameters)
-    {
-        await using var cmd = new NpgsqlCommand(sql, connection);
-        foreach (var (name, value) in parameters)
-        {
-            cmd.Parameters.AddWithValue(name, value);
-        }
-
-        await cmd.ExecuteNonQueryAsync();
     }
 }
