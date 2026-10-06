@@ -12,3 +12,9 @@ Canonical specs (do not rewrite; code wins only for exact patch/config after app
 - `05C-member-c-payment-messaging-platform.md` → Member C playbook
 
 Reading order: 00 → 01 → 02 → 03 → 04 → 05A/B/C. Priority: 00–03 over 04 over 05.
+
+
+Runtime guides (implementation usage; canonical specs above remain authoritative):
+
+- [Messaging runtime](messaging-runtime.md): publisher/consumer lifecycle, confirms, ACK and retry ownership.
+- [Payment simulator](../src/Services/Payment/RideHailing.PaymentService/README.md): durable replay, reconciliation and verification commands.

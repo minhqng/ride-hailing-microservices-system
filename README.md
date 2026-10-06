@@ -1,6 +1,6 @@
 # Distributed Ride-Hailing System
 
-**Status: Member C W1-W4 implementation; team acceptance pending**
+**Distributed platform with durable Payment simulation and a reusable RabbitMQ runtime. Team integration and acceptance remain required.**
 
 Thesis: ride-hailing is the vehicle to study a deeper distributed-systems question — how independent services preserve safety invariants and eventually recover when requests race, reads are stale, messages duplicate, responses disappear, and processes crash. See `docs/00-project-scope-architecture.md`.
 
@@ -8,12 +8,12 @@ Thesis: ride-hailing is the vehicle to study a deeper distributed-systems questi
 
 Five authoritative services (Identity, Driver/Vehicle/Location, Trip/Booking, Matching, Payment Simulator) + Notification Worker + API Gateway. PostgreSQL is per-service ACID authority (logical DBs on one local server); RabbitMQ is async broker; Redis GEO is Matching-owned derived read model only. Planned (not yet implemented): PostgreSQL-guarded Driver reservation (never a Redis lock) and Trip-owned persisted Saga. See Docs 00–02.
 
-Planned (not yet implemented): Saga, Outbox, OCC, UNKNOWN reconciliation, fencing, idempotency, retry/DLQ, faultpoints. Links: `docs/01-domain-correctness-contract.md`, `docs/02-distributed-workflow-engineering.md`.
+Payment implements durable operation-key idempotency, same-key UNKNOWN reconciliation and finite retry. The messaging library implements confirms, manual ACK and bounded retry/error transfer. Persisted Saga integration, Outbox/processed-message atomic dedup and general faultpoint orchestration remain later milestones. Links: `docs/01-domain-correctness-contract.md`, `docs/02-distributed-workflow-engineering.md`.
 
 ## Repository layout
 
 - `src/Gateway|Services|Workers|BuildingBlocks` — 7 deployables + 3 libs
-- `tests/Unit|Integration|System` — xUnit skeletons
+- `tests/Unit|Integration|System` — xUnit unit and real-infrastructure integration suites
 - `deploy/postgres|rabbitmq|redis|otel|prometheus|grafana|jaeger|compose`
 - `scripts/dev|test|fault|evidence`, `evidence/`, `.github/`, `compose.yaml`
 
@@ -68,3 +68,11 @@ docker compose down
 ## Current implementation status
 
 Platform foundation: Compose core/optional obs profiles, isolated per-service DB roles, bounded owned-DB readiness, OTel traces/metrics and CI smoke (playbook `docs/05C-member-c-payment-messaging-platform.md` §§21–23; run `python scripts/test/platform-smoke.py` on a disposable project). Payment provides a Development-only deterministic simulator with PostgreSQL persistence (see `src/Services/Payment/RideHailing.PaymentService/README.md`, Doc 01 §10). Integration messages use the canonical `MessageEnvelope<T>` with W3C trace headers and code-declared RabbitMQ topology with persistent delivery (Doc 02 §§5–6; run `python scripts/test/topology-smoke.py` on a disposable broker).
+
+
+## Payment and messaging integration
+
+- [Payment simulator runtime](src/Services/Payment/RideHailing.PaymentService/README.md): replay/conflict semantics, development retry/reconcile routes and crash verification.
+- [RabbitMQ runtime](docs/messaging-runtime.md): host lifecycle, publisher confirms, manual ACK, failure handling and trace propagation.
+
+The simulator endpoints are Development-only. Mobile integration still needs the team-owned authenticated Trip/Saga flow; a successful simulator call does not establish that end-to-end workflow.
