@@ -99,6 +99,30 @@ public sealed record PaymentOperation
             PaymentOperationState.Pending, false, null, null, 0, now, now, null);
     }
 
+    public PaymentOperation ObserveUnknown(DateTimeOffset now)
+    {
+        if (State != PaymentOperationState.Processing || now < UpdatedAt) throw new InvalidOperationException("Only an active attempt can become UNKNOWN");
+        return this with { State = PaymentOperationState.Unknown, ResultCode = "PROVIDER_RESPONSE_LOST", UpdatedAt = now };
+    }
+
+    public PaymentOperation Reconcile(string? effectId, DateTimeOffset now)
+    {
+        if (State is not (PaymentOperationState.Unknown or PaymentOperationState.Processing) || now < UpdatedAt)
+            throw new InvalidOperationException("Only uncertain operations can be reconciled");
+        if (effectId is not null && string.IsNullOrWhiteSpace(effectId)) throw new ArgumentException("Invalid provider reference");
+        return effectId is null
+            ? this with { State = PaymentOperationState.Pending, ResultCode = "NO_PROVIDER_EFFECT", UpdatedAt = now }
+            : this with { State = PaymentOperationState.Succeeded, ProviderEffectOccurred = true,
+                ProviderEffectId = effectId, ResultCode = "APPROVED", CompletedAt = now, UpdatedAt = now };
+    }
+
+    public PaymentOperation RequireReview(DateTimeOffset now)
+    {
+        if (State is not (PaymentOperationState.Pending or PaymentOperationState.Unknown) || AttemptCount == 0 || now < UpdatedAt)
+            throw new InvalidOperationException("Only unresolved attempted operations may require review");
+        return this with { State = PaymentOperationState.RequiresReview, ResultCode = "RETRY_EXHAUSTED", UpdatedAt = now };
+    }
+
     public PaymentOperation BeginAttempt(DateTimeOffset now)
     {
         if (now < UpdatedAt) throw new ArgumentException("Time cannot move backwards", nameof(now));
