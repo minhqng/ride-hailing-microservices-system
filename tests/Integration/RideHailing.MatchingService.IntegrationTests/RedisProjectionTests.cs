@@ -501,6 +501,32 @@ public class RedisProjectionTests
         Assert.Equal(SectionOutcome.Degraded, r.State);
     }
 
+    // Foreign library under our function name returning a wrong shape:
+    // no InvalidCast/IndexOutOfRange escapes — clean Degraded, then recovery.
+    [Fact]
+    public async Task Rogue_Function_Shape_Returns_Degraded()
+    {
+        var updater = await ReadyUpdaterAsync();
+        var db = Db();
+
+        var id = Guid.NewGuid();
+        try
+        {
+            await db.ExecuteAsync("FUNCTION", "LOAD", "REPLACE",
+                "#!lua name=driverprojection\nredis.register_function('driver_projection_update', function() return 42 end)");
+
+            var r = await updater.ApplyStateAsync(new(id, "AVAILABLE", 1));
+            Assert.True(r.Degraded);
+            Assert.Equal(SectionOutcome.Degraded, r.State);
+            Assert.False(await db.KeyExistsAsync(RedisProjectionKeys.ProjectionKey(id)));
+        }
+        finally
+        {
+            await ReadyUpdaterAsync();
+            await CleanupAsync(id);
+        }
+    }
+
     private async Task<string?[]> RawFcallAsync(
         Guid driverId,
         string status, string version,

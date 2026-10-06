@@ -1,12 +1,11 @@
 // B-W02-09: cross-service DB access is DENIED at the PostgreSQL authorization
 // layer — not just absent from connection strings.
-// Scope: CONNECT denial exactly as SEC-08 requires (Doc 03: Trip→Driver and
-// Matching→Driver attempts must fail authorization). Schema-level privileges
-// (TEMPORARY, CREATE) and the other four service roles belong to the platform
-// init script review (C-owned), not to this CONNECT-scoped proof.
+// Scope: CONNECT denial for exactly the pairs SEC-08 names (Trip→Driver DB,
+// Matching→Driver DB; plus the symmetric denials and owned-access positives).
+// Schema-level privileges (TEMPORARY, CREATE) and the remaining service roles
+// belong to the platform init script review (C-owned), not to this proof.
 // Replicates the CONNECT half of deploy/postgres/init/01-roles-dbs.sh
-// (per-DB roles + REVOKE CONNECT FROM PUBLIC) inside a disposable container
-// and asserts both directions fail with 42501, while owned access works.
+// (per-DB roles + REVOKE CONNECT FROM PUBLIC) inside a disposable container.
 // Feeds SEC-08 (Doc 03; owner C): this is B-side executable evidence C can cite.
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -58,25 +57,41 @@ public class DbIsolationTests : IAsyncLifetime
         return builder.ToString();
     }
 
-    private static string FixHost(string cs) =>
-        File.Exists("/.dockerenv")
-            ? cs.Replace("Host=localhost", "Host=host.docker.internal")
-                .Replace("Host=172.17.0.1", "Host=host.docker.internal")
-            : cs;
+    private static string FixHost(string cs)
+    {
+        if (!File.Exists("/.dockerenv"))
+        {
+            return cs;
+        }
+
+        foreach (var host in new[] { "localhost", "127.0.0.1", "0.0.0.0", "172.17.0.1" })
+        {
+            cs = cs.Replace(
+                $"Host={host}", "Host=host.docker.internal", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return cs;
+    }
 
     private async Task ApplyIsolationTopologyAsync(string superuserCs)
     {
-        // Mirror of deploy/postgres/init/01-roles-dbs.sh for the two B-owned roles.
+        // Mirror of deploy/postgres/init/01-roles-dbs.sh for the B-owned roles
+        // plus trip_app/trip_db: SEC-08 names Trip→Driver and Matching→Driver
+        // attempts, so the Trip role must exist here to execute its denial.
         var statements = new[]
         {
             "CREATE ROLE driver_app WITH LOGIN PASSWORD 'driver_dev_pw'",
             "CREATE ROLE matching_app WITH LOGIN PASSWORD 'matching_dev_pw'",
+            "CREATE ROLE trip_app WITH LOGIN PASSWORD 'trip_dev_pw'",
             "CREATE DATABASE driver_db OWNER driver_app",
             "CREATE DATABASE matching_db OWNER matching_app",
+            "CREATE DATABASE trip_db OWNER trip_app",
             "REVOKE CONNECT ON DATABASE driver_db FROM PUBLIC",
             "GRANT CONNECT ON DATABASE driver_db TO driver_app",
             "REVOKE CONNECT ON DATABASE matching_db FROM PUBLIC",
             "GRANT CONNECT ON DATABASE matching_db TO matching_app",
+            "REVOKE CONNECT ON DATABASE trip_db FROM PUBLIC",
+            "GRANT CONNECT ON DATABASE trip_db TO trip_app",
         };
         await using var conn = new NpgsqlConnection(FixHost(superuserCs));
         await conn.OpenAsync();
@@ -109,6 +124,14 @@ public class DbIsolationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Trip_Role_Cannot_Connect_Driver_Db()
+    {
+        // The exact second pair SEC-08 names (Trip→Driver DB).
+        var ex = await ConnectDeniedAsync(RoleConnectionString("driver_db", "trip_app", "trip_dev_pw"));
+        Assert.Equal("42501", ex.SqlState);
+    }
+
+    [Fact]
     public async Task Each_Role_Connects_Own_Db()
     {
         await using var driver = new NpgsqlConnection(
@@ -117,5 +140,8 @@ public class DbIsolationTests : IAsyncLifetime
         await using var matching = new NpgsqlConnection(
             FixHost(RoleConnectionString("matching_db", "matching_app", "matching_dev_pw")));
         await matching.OpenAsync();
+        await using var trip = new NpgsqlConnection(
+            FixHost(RoleConnectionString("trip_db", "trip_app", "trip_dev_pw")));
+        await trip.OpenAsync();
     }
 }

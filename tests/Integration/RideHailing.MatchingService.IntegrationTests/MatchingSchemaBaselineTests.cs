@@ -76,4 +76,35 @@ public class MatchingSchemaBaselineTests
     {
         await _db.ReapplyScriptsAsync();
     }
+
+    [Fact]
+    public async Task Round_Status_Default_Is_Processing()
+    {
+        // Guards the 002 SET DEFAULT against silent vocabulary regression:
+        // writers omitting status must land on the canonical initial state.
+        var trip = Guid.NewGuid();
+        await using var conn = new NpgsqlConnection(_db.ConnectionString);
+        await conn.OpenAsync();
+        try
+        {
+            await using var insert = new NpgsqlCommand(
+                "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id) " +
+                "VALUES (@t, 1, @m)", conn);
+            insert.Parameters.AddWithValue("t", trip);
+            insert.Parameters.AddWithValue("m", Guid.NewGuid());
+            await insert.ExecuteNonQueryAsync();
+
+            await using var check = new NpgsqlCommand(
+                "SELECT status FROM matching_rounds WHERE trip_id = @t", conn);
+            check.Parameters.AddWithValue("t", trip);
+            Assert.Equal("PROCESSING", await check.ExecuteScalarAsync());
+        }
+        finally
+        {
+            await using var cleanup = new NpgsqlCommand(
+                "DELETE FROM matching_rounds WHERE trip_id = @t", conn);
+            cleanup.Parameters.AddWithValue("t", trip);
+            await cleanup.ExecuteNonQueryAsync();
+        }
+    }
 }
