@@ -1,6 +1,9 @@
 // Driver service (Owner B). W3: FSM + location ingress, Npgsql raw, no Redis/Matching yet.
+// W8: best-effort Driver authoritative event publication (Outbox-capable
+// shape, dual-write gap documented for W9 Outbox).
 using RideHailing.DriverService.Api;
 using RideHailing.DriverService.Application.Location;
+using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Infrastructure.Persistence;
 using RideHailing.Observability;
 
@@ -21,6 +24,18 @@ builder.Services.AddSingleton(_ =>
     return new DriverRepository(cs);
 });
 builder.Services.AddSingleton<LocationAcceptor>();
+builder.Services.Configure<DriverBrokerOptions>(builder.Configuration.GetSection(DriverBrokerOptions.SectionName));
+builder.Services.AddSingleton<DriverEventPublisher>();
+
+{
+    var brokerOptions = new DriverBrokerOptions();
+    builder.Configuration.GetSection(DriverBrokerOptions.SectionName).Bind(brokerOptions);
+    var brokerError = brokerOptions.Validate();
+    if (brokerError is not null)
+    {
+        throw new InvalidOperationException($"Invalid RabbitMQ configuration: {brokerError}");
+    }
+}
 
 var app = builder.Build();
 
