@@ -51,7 +51,7 @@ public class DriverReserveConcurrencyTests
     private static async Task<Guid> SeedAvailableDriverAsync(DriverRepository repo)
     {
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
-        driver.GoOnline();
+        driver.GoOnline(driver.Version);
         Assert.True(await repo.TryInsertAsync(driver));
         return driver.DriverId;
     }
