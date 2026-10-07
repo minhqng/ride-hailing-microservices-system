@@ -97,17 +97,37 @@ public sealed class Driver
         Touch();
     }
 
-    // OFFLINE -> AVAILABLE. AVAILABLE retry is idempotent (Doc 01 §4.4).
-    public void GoOnline()
+    // OFFLINE -> AVAILABLE with OCC fence (B-W07-04 Race-B family, DSI-003).
+    // Precedence mirrors Reserve: idempotent retry first (already AVAILABLE
+    // succeeds regardless of version — the desired end-state already holds),
+    // then the version fence (a stale caller must not overwrite newer
+    // authority), then state legality. A blind full-row overwrite of a newer
+    // RESERVED row is exactly the lost-reservation shape DSI-003 forbids.
+    public void GoOnline(int expectedVersion)
     {
+        if (expectedVersion < 1)
+        {
+            throw new DriverDomainException(DriverErrors.IllegalTransition, "expectedVersion must be >= 1.");
+        }
+
+        if (Status == DriverStatus.Available)
+        {
+            return; // idempotent retry: end-state already holds, no new effect.
+        }
+
+        if (Version != expectedVersion)
+        {
+            throw new DriverDomainException(
+                DriverErrors.StaleVersion,
+                $"GoOnline fenced: expected version {expectedVersion}, current version {Version}.");
+        }
+
         switch (Status)
         {
             case DriverStatus.Offline:
                 Status = DriverStatus.Available;
                 Touch();
                 break;
-            case DriverStatus.Available:
-                break; // idempotent retry
             case DriverStatus.Reserved:
             case DriverStatus.OnTrip:
                 throw new DriverDomainException(
@@ -119,17 +139,35 @@ public sealed class Driver
         }
     }
 
-    // AVAILABLE -> OFFLINE. OFFLINE retry idempotent. Active reservation blocks (Race B groundwork).
-    public void GoOffline()
+    // AVAILABLE -> OFFLINE with OCC fence (B-W07-04 Race B, DSR-004/DSI-003).
+    // Same precedence: already-OFFLINE replay succeeds version-agnostic, then
+    // the fence, then legality (RESERVED with an active reservation rejects;
+    // only the guarded path may decide offline-vs-reserved).
+    public void GoOffline(int expectedVersion)
     {
+        if (expectedVersion < 1)
+        {
+            throw new DriverDomainException(DriverErrors.IllegalTransition, "expectedVersion must be >= 1.");
+        }
+
+        if (Status == DriverStatus.Offline)
+        {
+            return; // idempotent retry: end-state already holds, no new effect.
+        }
+
+        if (Version != expectedVersion)
+        {
+            throw new DriverDomainException(
+                DriverErrors.StaleVersion,
+                $"GoOffline fenced: expected version {expectedVersion}, current version {Version}.");
+        }
+
         switch (Status)
         {
             case DriverStatus.Available:
                 Status = DriverStatus.Offline;
                 Touch();
                 break;
-            case DriverStatus.Offline:
-                break; // idempotent retry
             case DriverStatus.Reserved:
                 throw new DriverDomainException(
                     DriverErrors.ReservationActive,
@@ -201,7 +239,15 @@ public sealed class Driver
         }
     }
 
-    // Exact-token release. Stale token throws WITHOUT mutating (fencing groundwork, W7 persists it).
+    // Exact-token release with fencing (B-W07-01/02, DSI-004/033, R-06).
+    // Rule: release returns success iff the AVAILABLE-no-refs end-state holds
+    // or is achieved by this call; a DIFFERENT live reservation conflicts and
+    // is never freed. Concretely: exact token on RESERVED frees (effect);
+    // anything on coherent AVAILABLE (no refs) is an idempotent cleanup
+    // no-op (duplicate delivery, retried compensation); token mismatch on a
+    // live RESERVED row throws WITHOUT mutating (fencing); ON_TRIP rejects.
+    // Release carries no version: token equality on the locked fresh row is
+    // the complete guard.
     // Malformed (empty) tokens are rejected as invalid input BEFORE state
     // evaluation: they can never match a real reservation.
     public void Release(Guid tripId, Guid reservationId)
@@ -209,6 +255,11 @@ public sealed class Driver
         if (tripId == Guid.Empty || reservationId == Guid.Empty)
         {
             throw new DriverDomainException(DriverErrors.InvalidIdentity, "tripId/reservationId must not be empty.");
+        }
+
+        if (Status == DriverStatus.Available)
+        {
+            return; // end-state already holds: idempotent cleanup no-op.
         }
 
         if (Status != DriverStatus.Reserved)

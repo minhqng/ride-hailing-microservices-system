@@ -68,13 +68,14 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out var captured);
 
-        var result = await client.ReserveAsync(new(driver, trip, res));
+        var result = await client.ReserveAsync(new(driver, trip, res, 3));
 
         Assert.Equal(HttpMethod.Post, captured.LastRequest!.Method);
-        Assert.Equal($"/internal/drivers/{driver:N}/reservations", captured.LastRequest.RequestUri!.AbsolutePath);
+        Assert.Equal($"/drivers/{driver:N}/reserve", captured.LastRequest.RequestUri!.AbsolutePath);
         var body = JsonDocument.Parse(captured.LastBody!).RootElement;
         Assert.Equal(trip.ToString(), body.GetProperty("tripId").GetString());
         Assert.Equal(res.ToString(), body.GetProperty("reservationId").GetString());
+        Assert.Equal(3, body.GetProperty("expectedVersion").GetInt32());
         Assert.Equal(DriverReserveOutcomeKind.Reserved, result.Kind);
         Assert.Equal(7, result.DriverVersion);
     }
@@ -88,7 +89,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1));
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("DRIVER_NOT_AVAILABLE", result.Code);
@@ -104,7 +105,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1));
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("RATE_LIMITED_TRY_LATER", result.Code);
@@ -119,7 +120,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()));
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1));
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("DRIVER_NOT_FOUND", result.Code);
@@ -136,7 +137,7 @@ public class DriverClientMappingTests
 
         // Never a business answer: caller classifies UNKNOWN (W6/W7).
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid())));
+            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1)));
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public class DriverClientMappingTests
 
         // Timeout ≠ failure: must propagate so the caller reconciles same id.
         await Assert.ThrowsAsync<TaskCanceledException>(
-            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid())));
+            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1)));
     }
 
     [Theory]
@@ -228,5 +229,49 @@ public class DriverClientMappingTests
 
         await Assert.ThrowsAsync<HttpRequestException>(
             () => client.GetReservationAsync(Guid.NewGuid(), Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task VersionRead_Maps_Version_And_Status()
+    {
+        var driver = Guid.NewGuid();
+        var stub = new StubHandler
+        {
+            Responder = _ => JsonResponse(HttpStatusCode.OK, new { version = 9, status = "AVAILABLE" }),
+        };
+        var client = Client(stub, out var captured);
+
+        var read = await client.TryGetDriverVersionAsync(driver);
+
+        Assert.Equal(HttpMethod.Get, captured.LastRequest!.Method);
+        Assert.Equal($"/drivers/{driver:N}", captured.LastRequest.RequestUri!.AbsolutePath);
+        Assert.NotNull(read);
+        Assert.Equal(9, read!.Version);
+        Assert.Equal("AVAILABLE", read.Status);
+    }
+
+    [Fact]
+    public async Task VersionRead_404_Maps_Null()
+    {
+        var stub = new StubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        };
+        var client = Client(stub, out _);
+
+        Assert.Null(await client.TryGetDriverVersionAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task VersionRead_500_Throws_Transport()
+    {
+        var stub = new StubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.InternalServerError),
+        };
+        var client = Client(stub, out _);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.TryGetDriverVersionAsync(Guid.NewGuid()));
     }
 }
