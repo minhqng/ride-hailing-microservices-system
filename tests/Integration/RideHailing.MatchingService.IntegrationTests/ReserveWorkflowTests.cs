@@ -876,6 +876,106 @@ public class ReserveWorkflowTests
     }
 
     [Fact]
+    public async Task Lost_Reconcile_Race_Does_Not_Mark_Round_Reserved()
+    {
+        // Lost-transition race, gate-ordered (no sleep): this worker polls
+        // OWNED truth while a duplicate worker concurrently resolves the
+        // attempt as REJECTED. The loser must report durable truth and must
+        // NOT mark the round RESERVED for an unowned reservation.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stub = new StubDriverClient
+        {
+            OnReserve = (_, _) => throw new TimeoutException("injected loss"),
+            OnQuery = async (_, _, _) =>
+            {
+                entered.SetResult();
+                await gate.Task;
+                return ReservationReconcileOutcome.OwnedByThisReservation;
+            },
+        };
+        var orch = Orchestrator(stub);
+
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
+
+        var reconciling = Task.Run(() => orch.ReconcileAsync(trip, 1, 0));
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(60));
+        var moved = await Attempts().TryTransitionAsync(
+            trip, 1, 0,
+            [MatchingAttemptStates.Unknown], MatchingAttemptStates.Rejected, "RESERVED_BY_OTHER");
+        Assert.True(moved);
+        gate.SetResult();
+        var result = await reconciling;
+
+        Assert.Equal(AttemptOutcome.Rejected, result.Outcome);
+        var round = await Attempts().LoadRoundAsync(trip, 1);
+        Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
+        Assert.Null(round.SelectedDriverId);
+    }
+
+    [Fact]
+    public async Task Lost_Reserve_Race_Does_Not_Mark_Round_Reserved()
+    {
+        // Same race on the reserve-win path: our reserve observes success
+        // but the guarded transition loses to a concurrent conclusive
+        // resolution. Durable truth wins; no round mark follows.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var ok = new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, 4);
+        var stub = new StubDriverClient
+        {
+            OnVersion = (_, _) => Task.FromResult<DriverVersionRead?>(new DriverVersionRead(3, "AVAILABLE")),
+            OnReserve = (_, _) => Task.FromResult(ok),
+        };
+        var orch = Orchestrator(stub);
+
+        var first = await orch.ExecuteAttemptAsync(trip, 1, 0, d1);
+        Assert.Equal(AttemptOutcome.Reserved, first.Outcome);
+        var r = first.ReservationId;
+
+        await using (var conn = new Npgsql.NpgsqlConnection(_matching.ConnectionString))
+        {
+            await conn.OpenAsync();
+            await using var reset = new Npgsql.NpgsqlCommand(
+                "UPDATE matching_attempts SET state = 'IN_FLIGHT', last_error_code = NULL " +
+                "WHERE trip_id = @trip AND matching_round = 1 AND ordinal = 0", conn);
+            reset.Parameters.AddWithValue("trip", trip);
+            await reset.ExecuteNonQueryAsync();
+            await using var unmark = new Npgsql.NpgsqlCommand(
+                "UPDATE matching_rounds SET status = 'PROCESSING', " +
+                "selected_driver_id = NULL, selected_reservation_id = NULL " +
+                "WHERE trip_id = @trip AND matching_round = 1", conn);
+            unmark.Parameters.AddWithValue("trip", trip);
+            await unmark.ExecuteNonQueryAsync();
+        }
+
+        stub.OnReserve = async (_, _) =>
+        {
+            entered.SetResult();
+            await gate.Task;
+            return ok;
+        };
+        var racing = Task.Run(() => orch.ExecuteAttemptAsync(trip, 1, 0, d1));
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(60));
+        var moved = await Attempts().TryTransitionAsync(
+            trip, 1, 0,
+            [MatchingAttemptStates.InFlight], MatchingAttemptStates.Rejected, "RESERVED_BY_OTHER");
+        Assert.True(moved);
+        gate.SetResult();
+        var result = await racing;
+
+        Assert.Equal(AttemptOutcome.Rejected, result.Outcome);
+        Assert.Equal(r, result.ReservationId);
+        var round = await Attempts().LoadRoundAsync(trip, 1);
+        Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
+    }
+
+    [Fact]
     public async Task Terminal_Round_Refuses_New_Work()
     {
 

@@ -259,8 +259,16 @@ public sealed class MatchingReserveOrchestrator
                     var concluded = await TryConcludeAsync(
                         tripId, round, ordinal,
                         [MatchingAttemptStates.Unknown], MatchingAttemptStates.Reserved, null, ct);
-                    await _attempts.TryMarkRoundReservedAsync(
-                        tripId, round, row.DriverId, row.ReservationId, ct);
+                    if (concluded is null)
+                    {
+                        // Our transition won: this observation concluded the
+                        // attempt, so converge the round. A lost race returns
+                        // the durable outcome instead and must NOT mark (the
+                        // remap path marks only for durably RESERVED rows).
+                        await _attempts.TryMarkRoundReservedAsync(
+                            tripId, round, row.DriverId, row.ReservationId, ct);
+                    }
+
                     return concluded
                         ?? new AttemptResult(AttemptOutcome.Reserved, row.ReservationId, null);
                 case ReservationReconcileOutcome.NotCommittedOrAvailable:
@@ -370,7 +378,14 @@ public sealed class MatchingReserveOrchestrator
                     tripId, round, ordinal,
                     [MatchingAttemptStates.InFlight, MatchingAttemptStates.Unknown, MatchingAttemptStates.Ready],
                     MatchingAttemptStates.Reserved, null, ct);
-                await _attempts.TryMarkRoundReservedAsync(tripId, round, row.DriverId, row.ReservationId, ct);
+                if (won is null)
+                {
+                    // Our transition won: converge the round. A lost race
+                    // returns the durable outcome instead and must NOT mark
+                    // (the remap path marks only for durably RESERVED rows).
+                    await _attempts.TryMarkRoundReservedAsync(tripId, round, row.DriverId, row.ReservationId, ct);
+                }
+
                 return won
                     ?? new AttemptResult(AttemptOutcome.Reserved, row.ReservationId, null);
             }
