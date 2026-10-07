@@ -609,6 +609,244 @@ public class ReserveWorkflowTests
     }
 
     [Fact]
+    public async Task Ambiguous_Attempt_Bare_404_Stays_Unresolved_Without_Advance()
+    {
+
+        // F1 CASE 2: timeout makes R ambiguous (row UNKNOWN); a later bare
+        // 404 (proxy/wrong-route/deleted-row — indistinguishable on the wire)
+        // must NOT become conclusive rejection. Contrast with the fresh-404
+        // path (Missing_Driver_Is_Conclusive), which may conclude.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var d2 = Guid.NewGuid();
+        var phase = 0;
+        var stub = new StubDriverClient
+        {
+            OnVersion = (_, _) => Task.FromResult<DriverVersionRead?>(
+                phase == 0 ? new DriverVersionRead(3, "AVAILABLE") : null),
+            OnReserve = (_, _) =>
+            {
+                phase++;
+                throw new TimeoutException("injected response loss");
+            },
+        };
+
+        var first = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, first.Outcome);
+        var persistedR = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
+
+        phase = 1;
+        var callsBefore = stub.Calls.Count;
+        var second = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, second.Outcome);
+        Assert.Equal("PRIOR_AMBIGUITY", second.Code);
+
+        var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
+        Assert.Equal(MatchingAttemptStates.Unknown, row.State);
+        Assert.Equal(persistedR, row.ReservationId);
+        Assert.DoesNotContain(stub.Calls.Skip(callsBefore), c => c.Contains(d2.ToString("N"), StringComparison.Ordinal));
+        var round = await Attempts().LoadRoundAsync(trip, 1);
+        Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
+    }
+
+    [Fact]
+    public async Task Restart_After_Ambiguity_Bare_404_Keeps_Same_R_Unresolved()
+    {
+
+        // F1 CASE 3: ambiguity context is durable, not process memory. A
+        // fresh orchestrator instance after restart must reach the same
+        // verdict: same R retained, single row, no D2 call.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var d2 = Guid.NewGuid();
+        var stub = new StubDriverClient
+        {
+            OnVersion = (_, _) => Task.FromResult<DriverVersionRead?>(new DriverVersionRead(3, "AVAILABLE")),
+            OnReserve = (_, _) => throw new TimeoutException("injected response loss"),
+        };
+
+        var blocked = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
+        var persistedR = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
+
+        var restarted = new StubDriverClient
+        {
+            OnVersion = (_, _) => Task.FromResult<DriverVersionRead?>(null),
+            OnReserve = (_, _) => throw new InvalidOperationException("must not be called after ambiguity"),
+        };
+        var result = await Orchestrator(restarted).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, result.Outcome);
+        var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
+        Assert.Equal(MatchingAttemptStates.Unknown, row.State);
+        Assert.Equal(persistedR, row.ReservationId);
+        Assert.DoesNotContain(restarted.Calls, c => c.Contains(d2.ToString("N"), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Reconcile_Bare_404_Throw_Stays_Unknown_Bounded()
+    {
+
+        // F1 CASE 5: the reconcile transport itself 404s bare (client throws
+        // per the DSI-031 rule) → stays UNKNOWN, bounded polls, visible end.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var queries = 0;
+        var stub = new StubDriverClient
+        {
+            OnReserve = (_, _) => throw new TimeoutException("injected loss"),
+            OnQuery = (_, _, _) =>
+            {
+                queries++;
+                throw new HttpRequestException("bare 404 throw");
+            },
+        };
+        var orch = Orchestrator(stub, maxReconcile: 2);
+
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
+        var terminal = await orch.ReconcileAsync(trip, 1, 0);
+        Assert.Equal(AttemptOutcome.NeedsReview, terminal.Outcome);
+        Assert.Equal(2, queries);
+        Assert.Equal(MatchingAttemptStates.Unknown, Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).State);
+    }
+
+    [Fact]
+    public async Task Reserved_Attempt_Heals_Unmarked_Round_Without_New_Call()
+    {
+
+        // F2 CASE 1: crash between attempt commit and round mark, simulated
+        // by flipping a durably RESERVED round back to PROCESSING. Replay
+        // must converge the round, issue zero Driver calls, keep identity.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var stub = new StubDriverClient
+        {
+            OnReserve = (_, _) => Task.FromResult(
+                new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, 8)),
+        };
+        var orch = Orchestrator(stub);
+
+        var won = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.Reserved, won.Outcome);
+        var winnerR = won.ReservationId;
+        Assert.NotNull(winnerR);
+
+        await using (var conn = new Npgsql.NpgsqlConnection(_matching.ConnectionString))
+        {
+            await conn.OpenAsync();
+            await using var flip = new Npgsql.NpgsqlCommand(
+                "UPDATE matching_rounds SET status = 'PROCESSING', " +
+                "selected_driver_id = NULL, selected_reservation_id = NULL " +
+                "WHERE trip_id = @trip AND matching_round = 1", conn);
+            flip.Parameters.AddWithValue("trip", trip);
+            Assert.Equal(1, await flip.ExecuteNonQueryAsync());
+        }
+
+        var silent = new StubDriverClient
+        {
+            OnVersion = (_, _) => throw new InvalidOperationException("must not call Driver"),
+            OnReserve = (_, _) => throw new InvalidOperationException("must not call Driver"),
+            OnQuery = (_, _, _) => throw new InvalidOperationException("must not call Driver"),
+        };
+        var healed = await Orchestrator(silent).ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+
+        Assert.Equal(RoundOutcome.Reserved, healed.Outcome);
+        Assert.Equal(winnerR, healed.ReservationId);
+        Assert.Equal(d1, healed.DriverId);
+        var round = await Attempts().LoadRoundAsync(trip, 1);
+        Assert.Equal(MatchingRoundStatuses.Reserved, round!.Status);
+        Assert.Equal(d1, round.SelectedDriverId);
+        Assert.Equal(winnerR, round.SelectedReservationId);
+    }
+
+    [Fact]
+    public async Task Round_Repair_Is_Idempotent_Under_Duplicate_Workers()
+    {
+
+        // F2 CASES 2+3: repeated and concurrent replays converge without
+        // duplicate effects; both workers report the durable winner.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var stub = new StubDriverClient
+        {
+            OnReserve = (_, _) => Task.FromResult(
+                new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, 8)),
+        };
+        var orch = Orchestrator(stub);
+        var won = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.Reserved, won.Outcome);
+
+        await using (var conn = new Npgsql.NpgsqlConnection(_matching.ConnectionString))
+        {
+            await conn.OpenAsync();
+            await using var flip = new Npgsql.NpgsqlCommand(
+                "UPDATE matching_rounds SET status = 'PROCESSING', " +
+                "selected_driver_id = NULL, selected_reservation_id = NULL " +
+                "WHERE trip_id = @trip AND matching_round = 1", conn);
+            flip.Parameters.AddWithValue("trip", trip);
+            await flip.ExecuteNonQueryAsync();
+        }
+
+        var silent = new StubDriverClient
+        {
+            OnVersion = (_, _) => throw new InvalidOperationException("must not call Driver"),
+            OnReserve = (_, _) => throw new InvalidOperationException("must not call Driver"),
+            OnQuery = (_, _, _) => throw new InvalidOperationException("must not call Driver"),
+        };
+        var repairer = Orchestrator(silent);
+        using var barrier = new Barrier(2);
+        var runs = await Task.WhenAll(
+            Task.Run(async () =>
+            {
+                barrier.SignalAndWait(TimeSpan.FromSeconds(60));
+                return await repairer.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+            }),
+            Task.Run(async () =>
+            {
+                barrier.SignalAndWait(TimeSpan.FromSeconds(60));
+                return await repairer.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+            }));
+
+        Assert.All(runs, r => Assert.Equal(RoundOutcome.Reserved, r.Outcome));
+        Assert.Equal(runs[0].ReservationId, runs[1].ReservationId);
+        var round = await Attempts().LoadRoundAsync(trip, 1);
+        Assert.Equal(MatchingRoundStatuses.Reserved, round!.Status);
+        Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
+    }
+
+    [Fact]
+    public async Task Unresolved_Attempt_Never_Marks_Round_Reserved()
+    {
+
+        // F2 CASES 4+5: UNKNOWN and REJECTED attempts must not mark the round.
+        var trip = NewTrip();
+        var d1 = Guid.NewGuid();
+        var stub = new StubDriverClient
+        {
+            OnReserve = (_, _) => throw new TimeoutException("injected loss"),
+        };
+        var orch = Orchestrator(stub);
+
+        var blocked = await orch.ExecuteRoundAsync(trip, 7, [d1], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
+        Assert.Equal(
+            MatchingRoundStatuses.Processing,
+            (await Attempts().LoadRoundAsync(trip, 7))!.Status);
+
+        var rejecting = new StubDriverClient
+        {
+            OnReserve = (_, _) => Task.FromResult(
+                new DriverReserveResult(DriverReserveOutcomeKind.Rejected, "DRIVER_NOT_AVAILABLE", null)),
+        };
+        var exhausted = await Orchestrator(rejecting).ExecuteRoundAsync(trip, 8, [d1], Guid.NewGuid());
+        Assert.Equal(RoundOutcome.Exhausted, exhausted.Outcome);
+        Assert.Equal(
+            MatchingRoundStatuses.Processing,
+            (await Attempts().LoadRoundAsync(trip, 8))!.Status);
+    }
+
+    [Fact]
     public async Task Terminal_Round_Refuses_New_Work()
     {
 
