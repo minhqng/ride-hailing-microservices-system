@@ -1,12 +1,14 @@
-// B-W02-09 (P1/P2 review fix): cross-service DB access is DENIED at the
-// PostgreSQL authorization layer — not just absent from connection strings.
-// Replicates deploy/postgres/init/01-roles-dbs.sh isolation (per-DB roles +
-// REVOKE CONNECT FROM PUBLIC) inside a disposable container and asserts both
-// directions fail with 42501, while owned access works.
+// B-W02-09: cross-service DB access is DENIED at the PostgreSQL authorization
+// layer — not just absent from connection strings.
+// Scope: CONNECT denial for exactly the pairs SEC-08 names (Trip→Driver DB,
+// Matching→Driver DB; plus the symmetric denials and owned-access positives).
+// Schema-level privileges (TEMPORARY, CREATE) and the remaining service roles
+// belong to the platform init script review (C-owned), not to this proof.
+// Replicates the CONNECT half of deploy/postgres/init/01-roles-dbs.sh
+// (per-DB roles + REVOKE CONNECT FROM PUBLIC) inside a disposable container.
 // Feeds SEC-08 (Doc 03; owner C): this is B-side executable evidence C can cite.
 using Npgsql;
 using Testcontainers.PostgreSql;
-using Xunit.Abstractions;
 
 namespace RideHailing.Platform.IntegrationTests;
 
@@ -15,37 +17,19 @@ public class DbIsolationTests : IAsyncLifetime
     static DbIsolationTests()
     {
         // Same as service fixtures: Ryuk cannot start inside the SDK container;
-        // DisposeAsync cleans up explicitly.
+        // DisposeAsync + AutoRemove clean up explicitly.
         Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
     }
 
-    private readonly ITestOutputHelper _out;
     private PostgreSqlContainer? _container;
-    private bool _skipped;
-    private string _skipReason = "";
-
-    public DbIsolationTests(ITestOutputHelper output)
-    {
-        _out = output;
-    }
 
     public async Task InitializeAsync()
     {
-        static bool DockerMightExist() =>
-            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCKER_HOST"))
-            || File.Exists("/var/run/docker.sock");
-
-        if (!DockerMightExist())
-        {
-            _skipped = true;
-            _skipReason = "No DOCKER_HOST and no /var/run/docker.sock.";
-            return;
-        }
-
-        _container = new PostgreSqlBuilder("postgres:18.6").Build();
+        _container = new PostgreSqlBuilder("postgres:18.6")
+            .WithAutoRemove(true)
+            .Build();
         await _container.StartAsync();
         await ApplyIsolationTopologyAsync(SuperuserConnectionString());
-        _out.WriteLine("INFRA: disposable postgres with isolated roles — real assertions will run.");
     }
 
     public async Task DisposeAsync()
@@ -73,25 +57,41 @@ public class DbIsolationTests : IAsyncLifetime
         return builder.ToString();
     }
 
-    private static string FixHost(string cs) =>
-        File.Exists("/.dockerenv")
-            ? cs.Replace("Host=localhost", "Host=host.docker.internal")
-                .Replace("Host=172.17.0.1", "Host=host.docker.internal")
-            : cs;
+    private static string FixHost(string cs)
+    {
+        if (!File.Exists("/.dockerenv"))
+        {
+            return cs;
+        }
+
+        foreach (var host in new[] { "localhost", "127.0.0.1", "0.0.0.0", "172.17.0.1" })
+        {
+            cs = cs.Replace(
+                $"Host={host}", "Host=host.docker.internal", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return cs;
+    }
 
     private async Task ApplyIsolationTopologyAsync(string superuserCs)
     {
-        // Mirror of deploy/postgres/init/01-roles-dbs.sh for the two B-owned roles.
+        // Mirror of deploy/postgres/init/01-roles-dbs.sh for the B-owned roles
+        // plus trip_app/trip_db: SEC-08 names Trip→Driver and Matching→Driver
+        // attempts, so the Trip role must exist here to execute its denial.
         var statements = new[]
         {
             "CREATE ROLE driver_app WITH LOGIN PASSWORD 'driver_dev_pw'",
             "CREATE ROLE matching_app WITH LOGIN PASSWORD 'matching_dev_pw'",
+            "CREATE ROLE trip_app WITH LOGIN PASSWORD 'trip_dev_pw'",
             "CREATE DATABASE driver_db OWNER driver_app",
             "CREATE DATABASE matching_db OWNER matching_app",
+            "CREATE DATABASE trip_db OWNER trip_app",
             "REVOKE CONNECT ON DATABASE driver_db FROM PUBLIC",
             "GRANT CONNECT ON DATABASE driver_db TO driver_app",
             "REVOKE CONNECT ON DATABASE matching_db FROM PUBLIC",
             "GRANT CONNECT ON DATABASE matching_db TO matching_app",
+            "REVOKE CONNECT ON DATABASE trip_db FROM PUBLIC",
+            "GRANT CONNECT ON DATABASE trip_db TO trip_app",
         };
         await using var conn = new NpgsqlConnection(FixHost(superuserCs));
         await conn.OpenAsync();
@@ -112,12 +112,6 @@ public class DbIsolationTests : IAsyncLifetime
     [Fact]
     public async Task Driver_Role_Cannot_Connect_Matching_Db()
     {
-        if (_skipped)
-        {
-            _out.WriteLine("SKIP: " + _skipReason);
-            return;
-        }
-
         var ex = await ConnectDeniedAsync(RoleConnectionString("matching_db", "driver_app", "driver_dev_pw"));
         Assert.Equal("42501", ex.SqlState);
     }
@@ -125,30 +119,29 @@ public class DbIsolationTests : IAsyncLifetime
     [Fact]
     public async Task Matching_Role_Cannot_Connect_Driver_Db()
     {
-        if (_skipped)
-        {
-            _out.WriteLine("SKIP: " + _skipReason);
-            return;
-        }
-
         var ex = await ConnectDeniedAsync(RoleConnectionString("driver_db", "matching_app", "matching_dev_pw"));
+        Assert.Equal("42501", ex.SqlState);
+    }
+
+    [Fact]
+    public async Task Trip_Role_Cannot_Connect_Driver_Db()
+    {
+        // The exact second pair SEC-08 names (Trip→Driver DB).
+        var ex = await ConnectDeniedAsync(RoleConnectionString("driver_db", "trip_app", "trip_dev_pw"));
         Assert.Equal("42501", ex.SqlState);
     }
 
     [Fact]
     public async Task Each_Role_Connects_Own_Db()
     {
-        if (_skipped)
-        {
-            _out.WriteLine("SKIP: " + _skipReason);
-            return;
-        }
-
         await using var driver = new NpgsqlConnection(
             FixHost(RoleConnectionString("driver_db", "driver_app", "driver_dev_pw")));
         await driver.OpenAsync();
         await using var matching = new NpgsqlConnection(
             FixHost(RoleConnectionString("matching_db", "matching_app", "matching_dev_pw")));
         await matching.OpenAsync();
+        await using var trip = new NpgsqlConnection(
+            FixHost(RoleConnectionString("trip_db", "trip_app", "trip_dev_pw")));
+        await trip.OpenAsync();
     }
 }
