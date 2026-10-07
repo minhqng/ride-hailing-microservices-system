@@ -1,9 +1,8 @@
-// B-W02-05 (P1 review fix): Redis fixture with no fake-green (Testcontainers.Redis).
-// Same semantics as the PG fixtures: explicit REDIS_TEST_CONNECTION (or
-// Redis__ConnectionString) => infra EXPECTED => failure throws loud;
-// otherwise disposable Testcontainers Redis (redis:8.10.2, pinned like compose).
-// Tests FAIL LOUD when Redis is unavailable (Assert.Fail with SkipReason):
-// an authoritative projection proof must never pass without real Redis.
+// Redis fixture: REAL Redis, never a vacuous pass.
+// REDIS_TEST_CONNECTION (or Redis__ConnectionString) explicitly set =>
+// verified now, failure throws loud. Otherwise disposable Testcontainers
+// Redis (redis:8.10.2, pinned like compose); any start failure throws loud
+// (Ryuk disabled; cleanup explicit via AutoRemove + DisposeAsync).
 // Shared per collection: one container per test run (not per test).
 using StackExchange.Redis;
 using Testcontainers.Redis;
@@ -22,11 +21,6 @@ public sealed class RedisDatabase : IAsyncLifetime
     private ConnectionMultiplexer? _mux;
 
     public string ConnectionString { get; private set; } = "";
-    public string Source { get; private set; } = "";
-    public bool Skipped { get; private set; }
-    public string SkipReason { get; private set; } = "";
-
-    public bool Ready() => !Skipped && _mux is not null;
 
     public async Task InitializeAsync()
     {
@@ -49,14 +43,6 @@ public sealed class RedisDatabase : IAsyncLifetime
             }
 
             ConnectionString = env;
-            Source = "env";
-            return;
-        }
-
-        if (!DockerMightExist())
-        {
-            Skipped = true;
-            SkipReason = "No DOCKER_HOST and no /var/run/docker.sock: cannot start disposable Redis.";
             return;
         }
 
@@ -65,7 +51,6 @@ public sealed class RedisDatabase : IAsyncLifetime
             .Build();
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
-        Source = "testcontainers";
         _mux = await ConnectAsync(ConnectionString);
     }
 
@@ -99,10 +84,6 @@ public sealed class RedisDatabase : IAsyncLifetime
             SyncTimeout = 5000,
             AbortOnConnectFail = true,
         });
-
-    private static bool DockerMightExist() =>
-        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCKER_HOST"))
-        || File.Exists("/var/run/docker.sock");
 
     // Testcontainers.Redis returns "localhost:port" (or gateway IP); unreachable
     // from inside a sibling container — same rewrite as the PG fixtures.
