@@ -9,7 +9,7 @@ public class DriverReserveTests
     private static Driver AvailableDriver()
     {
         var d = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
-        d.GoOnline();
+        d.GoOnline(d.Version);
         return d;
     }
 
@@ -94,7 +94,7 @@ public class DriverReserveTests
         var d = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
         if (_ == DriverStatus.OnTrip)
         {
-            d.GoOnline();
+            d.GoOnline(d.Version);
             var t = Guid.NewGuid();
             var r = Guid.NewGuid();
             d.Reserve(t, r, d.Version);
