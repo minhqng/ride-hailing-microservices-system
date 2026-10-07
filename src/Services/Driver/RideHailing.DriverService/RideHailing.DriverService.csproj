@@ -8,7 +8,9 @@
 
   <ItemGroup>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
     <PackageReference Include="Npgsql" />
+    <PackageReference Include="RabbitMQ.Client" />
   </ItemGroup>
 
   <ItemGroup>
