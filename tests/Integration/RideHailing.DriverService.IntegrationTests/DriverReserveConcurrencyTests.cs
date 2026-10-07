@@ -43,10 +43,9 @@ public class DriverReserveConcurrencyTests
 
     private void RequireDb()
     {
-        if (!_db.Ready())
-        {
-            Assert.Fail("Real PostgreSQL proof required but unavailable: " + _db.SkipReason);
-        }
+        // Fixture is fail-loud: any infrastructure failure already fails every
+        // test via InitializeAsync. No skip path remains.
+        Assert.False(string.IsNullOrWhiteSpace(_db.ConnectionString));
     }
 
     private static async Task<Guid> SeedAvailableDriverAsync(DriverRepository repo)

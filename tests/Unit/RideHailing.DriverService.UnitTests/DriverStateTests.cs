@@ -49,7 +49,7 @@ public class DriverStateTests
         var d = NewDriver();
         d.GoOnline();
         var v = d.Version;
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.Empty, Guid.NewGuid()));
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.Empty, Guid.NewGuid(), d.Version));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
         Assert.Equal(DriverStatus.Available, d.Status);
         Assert.Equal(v, d.Version);
@@ -67,7 +67,7 @@ public class DriverStateTests
     {
         var d = NewDriver();
         d.GoOnline();
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.Empty));
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.Empty, d.Version));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
         Assert.Equal(DriverStatus.Available, d.Status);
     }
@@ -114,7 +114,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         var v = d.Version;
         var ex = Assert.Throws<DriverDomainException>(() => d.Release(Guid.Empty, Guid.Empty));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
@@ -128,7 +128,7 @@ public class DriverStateTests
     {
         var d = NewDriver();
         d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripStarted(Guid.Empty, Guid.Empty));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status);
@@ -141,7 +141,7 @@ public class DriverStateTests
         d.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripCompleted(Guid.Empty));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
