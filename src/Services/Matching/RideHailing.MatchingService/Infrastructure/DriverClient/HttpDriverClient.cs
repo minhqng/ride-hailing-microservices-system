@@ -20,9 +20,18 @@ public sealed class HttpDriverClient : IDriverClient
         DriverReserveRequest request,
         CancellationToken cancellationToken = default)
     {
+        // Landed W6 contract: POST /drivers/{id}/reserve with the
+        // caller-observed version (B-W06-01). Mapping below is unchanged:
+        // 200 → Reserved, 409 → Rejected(code), 404 → Rejected(DRIVER_NOT_FOUND),
+        // anything else throws for the caller to classify (UNKNOWN).
         using var response = await _http.PostAsJsonAsync(
-            $"internal/drivers/{request.DriverId:N}/reservations",
-            new { tripId = request.TripId, reservationId = request.ReservationId },
+            $"drivers/{request.DriverId:N}/reserve",
+            new
+            {
+                tripId = request.TripId,
+                reservationId = request.ReservationId,
+                expectedVersion = request.ExpectedVersion,
+            },
             cancellationToken);
 
         if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.Created)
@@ -53,6 +62,35 @@ public sealed class HttpDriverClient : IDriverClient
         // to classify (UNKNOWN), never a business answer.
         throw new HttpRequestException(
             $"Driver reserve transport failure: {(int)response.StatusCode} {response.ReasonPhrase}.");
+    }
+
+    /// <summary>
+    /// Reads the current Driver version (see <see cref="IDriverClient"/>).
+    /// 404 means the driver is unknown (conclusive: start no attempt);
+    /// anything else unexpected throws for the caller to classify.
+    /// </summary>
+    public async Task<DriverVersionRead?> TryGetDriverVersionAsync(
+        Guid driverId,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync(
+            $"drivers/{driverId:N}",
+            cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        using var doc = await System.Text.Json.JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync(cancellationToken),
+            cancellationToken: cancellationToken);
+        var root = doc.RootElement;
+        return new DriverVersionRead(
+            root.GetProperty("version").GetInt32(),
+            root.GetProperty("status").GetString() ?? "UNKNOWN");
     }
 
     public async Task<ReservationReconcileOutcome> GetReservationAsync(

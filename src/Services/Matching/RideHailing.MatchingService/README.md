@@ -5,7 +5,25 @@
 - DB: `matching_db` (role `matching_app`)
 - Deps: `ConnectionStrings__Postgres`, `Redis__ConnectionString`, `RabbitMq__Host`, `Services__DriverBaseUrl`
 - Read: Docs 00 §8, 01 §8-9, 02 §12-13, 05B
-- Bootstrap: skeleton only. NOT implemented: rounds, ranking, UNKNOWN reconciliation, Redis GEO logic.
+- Bootstrap: skeleton only. NOT implemented: GEOSEARCH ranking, broker wiring, terminal NO_DRIVER marking.
+- W7: durable reserve workflow on the frozen W2 attempt/round tables
+  (`Infrastructure/Persistence/MatchingAttemptRepository`: write-ahead
+  `IN_FLIGHT` persist, guarded transitions, PK-convergent duplicate workers,
+  DSI-017 unresolved guard): `Application/Reserve/MatchingReserveOrchestrator`
+  (serial executor: persist → read Driver version → reserve same-R with
+  bounded STALE retry → Reserved/Rejected/Unknown; reconcile loop with same R
+  and bounded exhaustion to visible `NeedsReview`; advance only on conclusive
+  outcomes; round stays PROCESSING unless RESERVED — NO_DRIVER needs W9
+  Outbox). `HttpDriverClient` targets the landed W6 reserve route with the
+  observed version; reconcile query maps the 7 canonical outcomes.
+  REL-01 proven via transport stub over real driver_db + matching_db.
+
+## NOT implemented (later weeks)
+
+- W5 bulk pipeline (GEOSEARCH ranking/eligibility over Redis) remains absent
+  (reverted from main; W7 consumes explicit candidate lists, not the pipeline).
+- W8+: RabbitMQ wiring (W4 updater is invoked directly; broker consumer comes
+  later). W9: terminal publication/Outbox.
 
 ## Implemented (W2+W4)
 

@@ -28,7 +28,17 @@
   (200 won/replayed, 409 conflict codes, 404 unknown driver, 400 validation,
   static 503 dependency), migration `003` (non-empty reserve/active identity
   CHECK), CON-01 harness + proof (N=2/10/50/100, final-DB oracle, first E01 data).
+- W7: exact-token release (`POST /drivers/{id}/release`: exact token frees,
+  coherent AVAILABLE is an idempotent cleanup no-op, live foreign reservation
+  conflicts with `STALE_RESERVATION` and is never freed — DSI-004/033),
+  version-fenced `POST /drivers/{id}/online|offline` (`{expectedVersion}`
+  required; stale writers fence with `STALE_VERSION`, replays no-op
+  version-agnostic — Race B closure, DSR-004), read-only reservation truth
+  `GET /internal/drivers/{id}/reservations/{rid}` (200 with the canonical
+  outcome value incl. `NOT_FOUND`; only transport is 503, caller stays
+  UNKNOWN), CON-02 barrier proof (exactly one of OFFLINE/RESERVED wins),
+  CON-04 sequence proof (late stale release cannot free the newer owner).
 
 ## NOT implemented (later weeks)
 
-- W7: fencing persistence, UNKNOWN reconciliation. W8+: RabbitMQ/Outbox.
+- W8+: RabbitMQ/Outbox.

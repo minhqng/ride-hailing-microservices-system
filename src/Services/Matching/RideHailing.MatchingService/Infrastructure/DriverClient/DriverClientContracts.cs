@@ -6,8 +6,11 @@
 // reconciles with the same reservationId. This client never retries.
 namespace RideHailing.MatchingService.Infrastructure.DriverClient;
 
-/// <summary>Reserve request: one guarded reservation attempt for one driver.</summary>
-public sealed record DriverReserveRequest(Guid DriverId, Guid TripId, Guid ReservationId);
+/// <summary>Reserve request: one guarded reservation attempt for one driver.
+/// ExpectedVersion is the caller-observed Driver version (read-then-attempt
+/// OCC dance); a stale fence value yields STALE_VERSION, never an overwrite.
+/// </summary>
+public sealed record DriverReserveRequest(Guid DriverId, Guid TripId, Guid ReservationId, int ExpectedVersion);
 
 public enum DriverReserveOutcomeKind
 {
@@ -23,6 +26,9 @@ public sealed record DriverReserveResult(
     DriverReserveOutcomeKind Kind,
     string? Code,
     int? DriverVersion);
+
+/// <summary>Current Driver version observed for the OCC dance.</summary>
+public sealed record DriverVersionRead(int Version, string Status);
 
 /// <summary>Reconcile outcomes, Doc 02 §12.6 (caller maps transport failure
 /// to DEPENDENCY_UNAVAILABLE).</summary>

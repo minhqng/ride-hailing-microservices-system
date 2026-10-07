@@ -14,7 +14,7 @@ public class DriverReserveResultsTests
     private static Driver ReservedDriver(out Guid trip, out Guid reservation)
     {
         var d = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
-        d.GoOnline();
+        d.GoOnline(d.Version);
         trip = Guid.NewGuid();
         reservation = Guid.NewGuid();
         d.Reserve(trip, reservation, d.Version);

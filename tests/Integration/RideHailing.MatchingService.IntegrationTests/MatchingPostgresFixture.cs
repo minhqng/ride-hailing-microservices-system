@@ -102,9 +102,15 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
 
     private static string FindMigrationsDir()
     {
+        // NOTE (B-W07): source-tree candidates come FIRST. Test assemblies
+        // that (transitively) reference another service inherit that
+        // service's copied *.sql Content into their own output dir, so the
+        // bin-dir candidate below can resolve to FOREIGN scripts (e.g. driver
+        // migrations inside matching test output). Source tree is always
+        // present where tests run and is unambiguous per service.
         var candidates = new[]
         {
-            Path.Combine(AppContext.BaseDirectory, "Infrastructure", "Persistence", "Migrations"),
+            // Dev/test source-tree fallbacks (service + test working dirs).
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,
                 "..", "..", "..", "..", "..", "..",
                 "src", "Services", "Matching", "RideHailing.MatchingService",
@@ -113,6 +119,8 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
                 "..", "..", "..", "..",
                 "src", "Services", "Matching", "RideHailing.MatchingService",
                 "Infrastructure", "Persistence", "Migrations")),
+            // Published service output (csproj copies *.sql to output).
+            Path.Combine(AppContext.BaseDirectory, "Infrastructure", "Persistence", "Migrations"),
         };
         foreach (var p in candidates)
         {
