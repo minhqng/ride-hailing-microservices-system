@@ -19,9 +19,10 @@ public interface IDriverClient
     /// <summary>
     /// Reconciles one reservation attempt: GET
     /// /internal/drivers/{driverId}/reservations/{reservationId} (Doc 02 §12.6).
-    /// HTTP 404 maps to <see cref="ReservationReconcileOutcome.NotFound"/> (the
-    /// wire form of NOT_FOUND); unknown outcome strings in a 200 body throw
-    /// (contract drift must fail loud).
+    /// <see cref="ReservationReconcileOutcome.NotFound"/> arrives ONLY as a 200
+    /// body outcome; a bare HTTP 404 (wrong server/proxy/missing route) throws
+    /// because it carries no domain evidence (DSI-031: never advance on it).
+    /// Unknown outcome strings in a 200 body throw (contract drift fails loud).
     /// </summary>
     Task<ReservationReconcileOutcome> GetReservationAsync(
         Guid driverId,
