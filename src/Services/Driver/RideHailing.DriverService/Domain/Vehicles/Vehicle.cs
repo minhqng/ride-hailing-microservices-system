@@ -15,17 +15,17 @@ public sealed class Vehicle
     {
         if (vehicleId == Guid.Empty || driverId == Guid.Empty)
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "vehicleId/driverId must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "vehicleId/driverId must not be empty.");
         }
 
         if (string.IsNullOrWhiteSpace(plate))
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "plate must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidRequest, "plate must not be empty.");
         }
 
         if (string.IsNullOrWhiteSpace(vehicleType))
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "vehicleType must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidRequest, "vehicleType must not be empty.");
         }
 
         VehicleId = vehicleId;

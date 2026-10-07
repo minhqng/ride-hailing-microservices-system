@@ -118,11 +118,27 @@ public sealed class RedisProjectionUpdater
         string lon, string lat, string session, string seq, string capturedAt)
     {
         var db = _mux.GetDatabase();
-        var res = (RedisResult[])(await db.ExecuteAsync("FCALL", _functionName, 2,
+        var raw = await db.ExecuteAsync("FCALL", _functionName, 2,
             RedisProjectionKeys.ProjectionKey(driverId),
             RedisProjectionKeys.GeoKey,
             RedisProjectionKeys.Member(driverId),
-            status, version, lon, lat, session, seq, capturedAt))!;
+            status, version, lon, lat, session, seq, capturedAt);
+        // Explicit protocol validation: a foreign library registered under our
+        // function name may return a non-array or a short array. That is a
+        // clean Degraded (no proven effect), detected here rather than via
+        // accidental InvalidCast/IndexOutOfRange, so those exception types
+        // retain their fail-loud meaning for genuine programming bugs.
+        if (raw.Resp2Type != ResultType.Array)
+        {
+            return ProjectionResult.DegradedResult();
+        }
+
+        var res = (RedisResult[])raw!;
+        if (res.Length != 3)
+        {
+            return ProjectionResult.DegradedResult();
+        }
+
         return new ProjectionResult(
             Parse((string?)res[0]),
             Parse((string?)res[1]),
@@ -135,8 +151,14 @@ public sealed class RedisProjectionUpdater
         ex.Message.Contains("NOSCRIPT", StringComparison.OrdinalIgnoreCase)
         || ex.Message.Contains("Function not found", StringComparison.OrdinalIgnoreCase);
 
+    // Degradation covers transport/dependency failure only. Reply-shape
+    // violations are handled by explicit validation in InvokeAsync above;
+    // InvalidCast/IndexOutOfRange are deliberately NOT degraded so a genuine
+    // marshalling bug in our own code fails loud instead of masquerading as
+    // routine dependency degradation.
     private static bool IsDegradation(Exception ex) => ex is RedisConnectionException
         or RedisTimeoutException
+        or ObjectDisposedException
         or RedisServerException
         or IOException
         or SocketException
@@ -148,6 +170,7 @@ public sealed class RedisProjectionUpdater
         "stale" => SectionOutcome.Stale,
         "stale-session" => SectionOutcome.StaleSession,
         "skipped" => SectionOutcome.Skipped,
+        // 'keytype-error' and anything unrecognized: clean failure, no partial write.
         _ => SectionOutcome.Degraded,
     };
 }
