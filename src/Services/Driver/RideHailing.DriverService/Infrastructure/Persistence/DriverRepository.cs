@@ -21,6 +21,12 @@ public sealed class DriverRepository
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    /// <summary>
+    /// TEST/SEED-ONLY blind upsert (round-trips, fixture seeding). Production
+    /// HTTP mutations MUST use the guarded Try* methods: a blind full-row
+    /// overwrite with a stale object silently unreserves newer state
+    /// (DSI-003 lost-reservation shape). Kept public for test seeding.
+    /// </summary>
     public async Task SaveAsync(Driver driver, CancellationToken ct = default)
     {
         const string Sql = """
@@ -236,6 +242,244 @@ public sealed class DriverRepository
                 DriverErrors.DriverNotAvailable,
                 "Reservation identity is already held by another driver.");
         }
+    }
+
+    /// <summary>
+    /// B-W07-01/02: exact-token release under the same row-lock discipline as
+    /// reserve (DSI-004 fencing, DSI-033 exact identity, R-06). The domain
+    /// decides on the fresh locked row: exact token frees (effect), coherent
+    /// AVAILABLE is an idempotent cleanup no-op, a live foreign reservation
+    /// conflicts without mutation. No version parameter: token equality on
+    /// the locked row is the complete guard.
+    /// </summary>
+    public async Task<DriverMutationResult> TryReleaseAsync(
+        Guid driverId, Guid tripId, Guid reservationId,
+        CancellationToken ct = default)
+    {
+        if (driverId == Guid.Empty || tripId == Guid.Empty || reservationId == Guid.Empty)
+        {
+            throw new ArgumentException("driverId/tripId/reservationId must not be empty.");
+        }
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
+        if (current is null)
+        {
+            await tx.RollbackAsync(ct);
+            return DriverMutationResult.NotFound();
+        }
+
+        var effected = current.Status == DriverStatus.Reserved
+            && current.ReservedTripId == tripId
+            && current.ReservationId == reservationId;
+
+        try
+        {
+            current.Release(tripId, reservationId);
+        }
+        catch (DriverDomainException ex)
+        {
+            await tx.RollbackAsync(ct);
+            return DriverMutationResult.Conflict(ex.Code, ex.Message);
+        }
+
+        await StoreAsync(conn, tx, current, ct);
+        await tx.CommitAsync(ct);
+        return effected
+            ? DriverMutationResult.Applied(current)
+            : DriverMutationResult.Unchanged(current);
+    }
+
+    /// <summary>
+    /// B-W07-04 Race B: version-fenced GoOffline under row lock (DSR-004).
+    /// Only one of offline-vs-reserve may commit from the same version; the
+    /// loser observes the winner's row and conflicts.
+    /// </summary>
+    public async Task<DriverMutationResult> TryGoOfflineAsync(
+        Guid driverId, int expectedVersion,
+        CancellationToken ct = default)
+    {
+        if (driverId == Guid.Empty)
+        {
+            throw new ArgumentException("driverId must not be empty.");
+        }
+
+        if (expectedVersion < 1)
+        {
+            throw new ArgumentException("expectedVersion must be >= 1.");
+        }
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
+        if (current is null)
+        {
+            await tx.RollbackAsync(ct);
+            return DriverMutationResult.NotFound();
+        }
+
+        var already = current.Status == DriverStatus.Offline;
+        try
+        {
+            current.GoOffline(expectedVersion);
+        }
+        catch (DriverDomainException ex)
+        {
+            await tx.RollbackAsync(ct);
+            return DriverMutationResult.Conflict(ex.Code, ex.Message);
+        }
+
+        await StoreAsync(conn, tx, current, ct);
+        await tx.CommitAsync(ct);
+        return already
+            ? DriverMutationResult.Unchanged(current)
+            : DriverMutationResult.Applied(current);
+    }
+
+    /// <summary>
+    /// DSI-003 closure for the online path: version-fenced GoOnline under row
+    /// lock. A stale online object must not overwrite a newer RESERVED row
+    /// (the same lost-reservation shape as Race B, via the blind upsert).
+    /// </summary>
+    public async Task<DriverMutationResult> TryGoOnlineAsync(
+        Guid driverId, int expectedVersion,
+        CancellationToken ct = default)
+    {
+        if (driverId == Guid.Empty)
+        {
+            throw new ArgumentException("driverId must not be empty.");
+        }
+
+        if (expectedVersion < 1)
+        {
+            throw new ArgumentException("expectedVersion must be >= 1.");
+        }
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
+        if (current is null)
+        {
+            await tx.RollbackAsync(ct);
+            return DriverMutationResult.NotFound();
+        }
+
+        var already = current.Status == DriverStatus.Available;
+        try
+        {
+            current.GoOnline(expectedVersion);
+        }
+        catch (DriverDomainException ex)
+        {
+            await tx.RollbackAsync(ct);
+            return DriverMutationResult.Conflict(ex.Code, ex.Message);
+        }
+
+        await StoreAsync(conn, tx, current, ct);
+        await tx.CommitAsync(ct);
+        return already
+            ? DriverMutationResult.Unchanged(current)
+            : DriverMutationResult.Applied(current);
+    }
+
+    /// <summary>
+    /// B-W07-07: read-only reservation truth for reconciliation (Doc 02 §12.6).
+    /// Plain SELECT, no lock: this is a truth query, not a mutation. A racing
+    /// writer only means "current truth", which is exactly what polling needs.
+    /// </summary>
+    public async Task<ReservationQuery> QueryReservationAsync(
+        Guid driverId, Guid reservationId,
+        CancellationToken ct = default)
+    {
+        if (driverId == Guid.Empty || reservationId == Guid.Empty)
+        {
+            throw new ArgumentException("driverId/reservationId must not be empty.");
+        }
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        const string Sql = """
+            SELECT status, version, reserved_trip_id, reservation_id
+            FROM drivers WHERE driver_id = @id;
+            """;
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("id", driverId);
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+        {
+            return new ReservationQuery(ReservationQueryOutcome.NotFound, null);
+        }
+
+        var status = FromDb(reader.GetString(0));
+        var version = reader.GetInt32(1);
+        Guid? reservedTrip = reader.IsDBNull(2) ? null : reader.GetGuid(2);
+        Guid? held = reader.IsDBNull(3) ? null : reader.GetGuid(3);
+
+        ReservationQueryOutcome outcome = status switch
+        {
+            DriverStatus.Reserved when held == reservationId => ReservationQueryOutcome.OwnedByThisReservation,
+            DriverStatus.Reserved => ReservationQueryOutcome.ReservedByOther,
+            DriverStatus.Available => ReservationQueryOutcome.NotCommittedOrAvailable,
+            DriverStatus.Offline => ReservationQueryOutcome.Offline,
+            DriverStatus.OnTrip => ReservationQueryOutcome.OnTrip,
+            _ => throw new DriverDomainException(
+                DriverErrors.IllegalTransition, $"Unknown DB status '{status}'."),
+        };
+        return new ReservationQuery(outcome, version);
+    }
+
+    private static async Task<Driver?> LoadForUpdateAsync(
+        NpgsqlConnection conn, NpgsqlTransaction tx, Guid driverId, CancellationToken ct)
+    {
+        const string Sql = """
+            SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at
+            FROM drivers WHERE driver_id = @id FOR UPDATE;
+            """;
+        await using var sel = new NpgsqlCommand(Sql, conn, tx);
+        sel.Parameters.AddWithValue("id", driverId);
+        await using var reader = await sel.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct))
+        {
+            return null;
+        }
+
+        return Driver.Rehydrate(
+            reader.GetGuid(0), reader.GetGuid(1), FromDb(reader.GetString(2)), reader.GetInt32(3),
+            reader.IsDBNull(4) ? null : reader.GetGuid(4),
+            reader.IsDBNull(5) ? null : reader.GetGuid(5),
+            reader.IsDBNull(6) ? null : reader.GetGuid(6),
+            reader.IsDBNull(7) ? null : reader.GetGuid(7),
+            new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)));
+    }
+
+    private static async Task StoreAsync(
+        NpgsqlConnection conn, NpgsqlTransaction tx, Driver driver, CancellationToken ct)
+    {
+        const string Sql = """
+            UPDATE drivers SET
+                status = @status,
+                version = @version,
+                reserved_trip_id = @reservedTrip,
+                reservation_id = @reservation,
+                active_trip_id = @activeTrip,
+                vehicle_id = @vehicle,
+                updated_at = @updated
+            WHERE driver_id = @id;
+            """;
+        await using var upd = new NpgsqlCommand(Sql, conn, tx);
+        upd.Parameters.AddWithValue("id", driver.DriverId);
+        upd.Parameters.AddWithValue("status", ToDb(driver.Status));
+        upd.Parameters.AddWithValue("version", driver.Version);
+        upd.Parameters.AddWithValue("reservedTrip", (object?)driver.ReservedTripId ?? DBNull.Value);
+        upd.Parameters.AddWithValue("reservation", (object?)driver.ReservationId ?? DBNull.Value);
+        upd.Parameters.AddWithValue("activeTrip", (object?)driver.ActiveTripId ?? DBNull.Value);
+        upd.Parameters.AddWithValue("vehicle", (object?)driver.VehicleId ?? DBNull.Value);
+        upd.Parameters.AddWithValue("updated", driver.UpdatedAt.UtcDateTime);
+        await upd.ExecuteNonQueryAsync(ct);
     }
 
     public static string ToDb(DriverStatus status) => status switch

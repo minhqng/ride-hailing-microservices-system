@@ -24,6 +24,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Matching\RideHailing.MatchingService\RideHailing.MatchingService.csproj" />
+    <!-- Test-only: REL-01 component proof drives a REAL DriverRepository
+         (real driver_db) behind a transport stub. Production Matching code
+         never references DriverService (seam-only rule, 05B §11.3). -->
+    <ProjectReference Include="..\..\..\src\Services\Driver\RideHailing.DriverService\RideHailing.DriverService.csproj" />
   </ItemGroup>
 
 </Project>

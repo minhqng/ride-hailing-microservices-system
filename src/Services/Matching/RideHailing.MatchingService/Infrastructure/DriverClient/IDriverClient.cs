@@ -28,4 +28,15 @@ public interface IDriverClient
         Guid driverId,
         Guid reservationId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the current Driver version for the read-then-attempt OCC dance
+    /// (B-W07): the caller attempts reserve with the observed version and
+    /// retries same-R on STALE_VERSION. Returns null when the driver is
+    /// unknown (conclusive: no attempt is started). Transport failure throws
+    /// and the caller stays UNKNOWN.
+    /// </summary>
+    Task<DriverVersionRead?> TryGetDriverVersionAsync(
+        Guid driverId,
+        CancellationToken cancellationToken = default);
 }
