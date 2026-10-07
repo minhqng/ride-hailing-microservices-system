@@ -64,16 +64,12 @@ public sealed class HttpDriverClient : IDriverClient
             $"internal/drivers/{driverId:N}/reservations/{reservationId:N}",
             cancellationToken);
 
-        // HTTP 404 is the natural wire form of "reservation not found": map it
-        // to the domain NotFound outcome (mirroring ReserveAsync mapping HTTP
-        // 404 to DRIVER_NOT_FOUND) so the caller terminates reconciliation
-        // instead of classifying it as UNKNOWN transport failure. Unknown
-        // outcome STRINGS in a 200 body still throw (contract drift is loud).
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            return ReservationReconcileOutcome.NotFound;
-        }
-
+        // DSI-031: a BARE 404 carries no domain body, so it can never be a
+        // conclusive NOT_FOUND. It may be a wrong BaseAddress, a proxy, or a
+        // missing route — all transport uncertainty. Throw so the caller keeps
+        // the attempt UNKNOWN and reconciles instead of advancing to the next
+        // candidate (which could double-reserve). NOT_FOUND arrives ONLY as a
+        // 200 body outcome below. Unknown outcome STRINGS still throw.
         response.EnsureSuccessStatusCode();
 
         var body = await response.Content

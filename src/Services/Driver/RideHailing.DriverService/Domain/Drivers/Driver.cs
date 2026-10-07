@@ -37,12 +37,17 @@ public sealed class Driver
     {
         if (driverId == Guid.Empty)
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "driverId must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "driverId must not be empty.");
         }
 
         if (userId == Guid.Empty)
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "userId must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "userId must not be empty.");
+        }
+
+        if (vehicleId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "vehicleId must not be empty.");
         }
 
         return new Driver(driverId, userId, DriverStatus.Offline, 1, null, null, null, vehicleId, DateTimeOffset.UtcNow);
@@ -54,6 +59,24 @@ public sealed class Driver
         Guid? reservedTripId, Guid? reservationId, Guid? activeTripId, Guid? vehicleId,
         DateTimeOffset updatedAt)
     {
+        if (driverId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "driverId must not be empty.");
+        }
+
+        if (userId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "userId must not be empty.");
+        }
+
+        // Optional refs must be real identities when present: Guid.Empty is
+        // corrupt data, not "no reservation" (null means absent).
+        if (reservedTripId == Guid.Empty || reservationId == Guid.Empty
+            || activeTripId == Guid.Empty || vehicleId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "reservation/active/vehicle refs must not be empty.");
+        }
+
         if (version < 1)
         {
             throw new DriverDomainException(DriverErrors.IllegalTransition, "version must be >= 1.");
@@ -67,7 +90,7 @@ public sealed class Driver
     {
         if (vehicleId == Guid.Empty)
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "vehicleId must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "vehicleId must not be empty.");
         }
 
         VehicleId = vehicleId;
@@ -126,7 +149,7 @@ public sealed class Driver
     {
         if (tripId == Guid.Empty || reservationId == Guid.Empty)
         {
-            throw new DriverDomainException(DriverErrors.IllegalTransition, "tripId/reservationId must not be empty.");
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "tripId/reservationId must not be empty.");
         }
 
         switch (Status)
@@ -158,8 +181,15 @@ public sealed class Driver
     }
 
     // Exact-token release. Stale token throws WITHOUT mutating (fencing groundwork, W7 persists it).
+    // Malformed (empty) tokens are rejected as invalid input BEFORE state
+    // evaluation: they can never match a real reservation.
     public void Release(Guid tripId, Guid reservationId)
     {
+        if (tripId == Guid.Empty || reservationId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "tripId/reservationId must not be empty.");
+        }
+
         if (Status != DriverStatus.Reserved)
         {
             throw new DriverDomainException(
@@ -182,6 +212,11 @@ public sealed class Driver
 
     public void MarkTripStarted(Guid tripId, Guid reservationId)
     {
+        if (tripId == Guid.Empty || reservationId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "tripId/reservationId must not be empty.");
+        }
+
         if (Status != DriverStatus.Reserved)
         {
             throw new DriverDomainException(
@@ -205,6 +240,11 @@ public sealed class Driver
 
     public void MarkTripCompleted(Guid tripId)
     {
+        if (tripId == Guid.Empty)
+        {
+            throw new DriverDomainException(DriverErrors.InvalidIdentity, "tripId must not be empty.");
+        }
+
         if (Status != DriverStatus.OnTrip)
         {
             throw new DriverDomainException(

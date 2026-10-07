@@ -11,6 +11,7 @@ public static class DriverErrors
     public const string InvalidCoordinate = "INVALID_COORDINATE";
     public const string InvalidLocation = "INVALID_LOCATION";
     public const string InvalidRequest = "INVALID_REQUEST";
+    public const string InvalidIdentity = "INVALID_IDENTITY";
     public const string AlreadyExists = "DRIVER_ALREADY_EXISTS";
     public const string StaleLocation = "STALE_LOCATION";
 }

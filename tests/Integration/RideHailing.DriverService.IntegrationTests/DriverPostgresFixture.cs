@@ -1,12 +1,10 @@
-// B-W02-06 (P1 review fix): Driver PostgreSQL fixture with no fake-green.
-// Semantics (frozen):
-//   - DRIVER_TEST_POSTGRES (or ConnectionStrings__Postgres) explicitly set
-//     => infra is EXPECTED => any failure THROWS (test fails loud, never skips).
-//   - No env => disposable Testcontainers PostgreSQL (postgres:18.6, same seed
-//     as compose). Start failure throws; only a provably missing Docker daemon
-//     produces a loud SKIP (DockerUnavailableException).
-//   - Baseline scripts are applied in filename order (001, 002, ...).
-using System.Net.Sockets;
+// Driver PostgreSQL fixture: REAL infrastructure, never a vacuous pass.
+// Resolution order:
+//   1. DRIVER_TEST_POSTGRES explicitly set => verify now; any failure throws loud.
+//   2. Otherwise disposable Testcontainers PostgreSQL (postgres:18.6, same seed
+//      as compose); any start/apply failure throws loud ( Ryuk disabled; cleanup
+//      is explicit via AutoRemove + DisposeAsync).
+// Applies ALL migration scripts in filename order (001, 002, ...).
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -25,32 +23,16 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
     private PostgreSqlContainer? _container;
 
     public string ConnectionString { get; private set; } = "";
-    public string Source { get; private set; } = "";
-    public bool Skipped { get; private set; }
-    public string SkipReason { get; private set; } = "";
-
-    public bool Ready() => !Skipped && !string.IsNullOrEmpty(ConnectionString);
 
     public async Task InitializeAsync()
     {
-        var env = Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES")
-            ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres");
-
+        var env = Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES");
         if (!string.IsNullOrWhiteSpace(env))
         {
-            // Explicit infra expectation: verify now, fail loud on any error.
             await using var probe = new NpgsqlConnection(env);
             await probe.OpenAsync();
             ConnectionString = env;
-            Source = "env";
             await ApplyScriptsAsync(env);
-            return;
-        }
-
-        if (!DockerMightExist())
-        {
-            Skipped = true;
-            SkipReason = "No DOCKER_HOST and no /var/run/docker.sock: cannot start disposable PostgreSQL.";
             return;
         }
 
@@ -62,7 +44,6 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             .Build();
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
-        Source = "testcontainers";
         await ApplyScriptsAsync(ConnectionString);
     }
 
@@ -76,11 +57,16 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
 
     public Task ReapplyScriptsAsync() => ApplyScriptsAsync(ConnectionString);
 
+    /// <summary>
+    /// Loads one migration script by filename for tests that must apply
+    /// migrations out of order (e.g. dirty-dataset pre-flight proofs).
+    /// </summary>
+    public static string LoadMigrationScript(string fileName) =>
+        File.ReadAllText(Path.Combine(FindMigrationsDir(), fileName));
+
     // Configured (not yet connected) connection string for ownership assertions.
-    // Testcontainers default is used when no env is set.
     public static string ConfiguredConnectionString() =>
         Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES")
-        ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
         ?? "Host=localhost;Port=5432;Database=driver_db;Username=driver_app;Password=driver_dev_pw";
 
     public async Task<HashSet<string>> GetTablesAsync()
@@ -144,14 +130,9 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             "Driver Migrations dir not found. Tried: " + string.Join("; ", candidates));
     }
 
-    private static bool DockerMightExist() =>
-        !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCKER_HOST"))
-        || File.Exists("/var/run/docker.sock");
-
-    // Testcontainers returns localhost- or gateway-mapped endpoints, which are
-    // unreachable from inside a sibling container (SDK-container runs on Docker
-    // Desktop). Rewrite to host.docker.internal only in that topology; native
-    // runs (CI ubuntu, real localhost) keep the original value.
+    // Testcontainers returns localhost-/gateway-mapped endpoints, unreachable
+    // from inside a sibling container: rewrite to host.docker.internal there.
+    // Native runs (CI ubuntu, real localhost) keep the original value.
     internal static string FixContainerHost(string connectionString)
     {
         if (!File.Exists("/.dockerenv"))
