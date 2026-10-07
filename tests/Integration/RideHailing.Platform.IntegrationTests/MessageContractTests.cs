@@ -90,4 +90,32 @@ public class MessageContractTests
         Assert.False(TraceHeaderPropagation.TryExtract(new Dictionary<string, object?> { ["traceparent"] = trace }, out _));
         Envelope().Validate();
     }
+
+    [Fact]
+    public void Semantic_Null_Payload_Is_Rejected_In_All_Representations()
+    {
+        // Hardening: null reference, JSON null and default(JsonElement)
+        // (Undefined) are all the same semantic absence and must fail.
+        Assert.Throws<ArgumentException>(() =>
+            new MessageEnvelope<object>("t", "m", 1, DateTimeOffset.UtcNow, "c", null, null!).Validate());
+        Assert.Throws<ArgumentException>(() =>
+            new MessageEnvelope<JsonElement>("t", "m", 1, DateTimeOffset.UtcNow, "c", null,
+                JsonDocument.Parse("null").RootElement).Validate());
+        Assert.Throws<ArgumentException>(() =>
+            new MessageEnvelope<JsonElement>("t", "m", 1, DateTimeOffset.UtcNow, "c", null,
+                default).Validate());
+    }
+
+    [Theory]
+    [InlineData("false")]
+    [InlineData("0")]
+    [InlineData("\"\"")]
+    [InlineData("{}")]
+    [InlineData("[]")]
+    public void Valid_Scalar_Payloads_Are_Accepted(string json)
+    {
+        // Valid JSON scalars/empties are real payloads, not semantic null.
+        new MessageEnvelope<JsonElement>("t", "m", 1, DateTimeOffset.UtcNow, "c", null,
+            JsonDocument.Parse(json).RootElement).Validate();
+    }
 }

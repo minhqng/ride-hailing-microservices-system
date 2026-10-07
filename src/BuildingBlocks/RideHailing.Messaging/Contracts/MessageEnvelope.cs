@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace RideHailing.Messaging.Contracts;
 
@@ -24,7 +25,7 @@ public sealed record MessageEnvelope<T>(
         if (SchemaVersion != 1) throw new ArgumentException("Only schemaVersion 1 is supported");
         if (OccurredAt == default) throw new ArgumentException("occurredAt is required");
         if (string.IsNullOrWhiteSpace(CorrelationId)) throw new ArgumentException("correlationId is required");
-        if (Payload is null) throw new ArgumentException("payload is required");
+        if (Payload is null || (Payload is JsonElement json && json.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)) throw new ArgumentException("payload is required");
         if (AggregateVersion < 0) throw new ArgumentException("aggregateVersion cannot be negative");
         if ((AggregateType is null) != (AggregateId is null))
             throw new ArgumentException("aggregateType and aggregateId must be supplied together");
