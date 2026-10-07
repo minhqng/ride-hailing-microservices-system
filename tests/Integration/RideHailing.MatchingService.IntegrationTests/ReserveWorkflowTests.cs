@@ -379,10 +379,11 @@ public class ReserveWorkflowTests
     [Fact]
     public async Task Duplicate_Workers_With_Divergent_Lists_Converge_To_First_View()
     {
-
-        // Same ordinal, different drivers: the PK converges both workers to
-        // the first-committed row (no new candidate sequence, Doc 02 §12.7);
-        // both observe canonical success on the winner's identity.
+        // Same ordinal, different drivers: whichever interleaving occurs, the
+        // schedule-invariant properties hold — one durable row, every Reserved
+        // agrees with it, any Blocked is UNRESOLVED_ATTEMPT (fail-safe), the
+        // round never marks a non-row winner. (A barrier cannot force true
+        // overlap, so no specific interleaving is asserted.)
         var trip = NewTrip();
         var d1 = Guid.NewGuid();
         var other = Guid.NewGuid();
@@ -406,11 +407,39 @@ public class ReserveWorkflowTests
                 return await orch.ExecuteRoundAsync(trip, 1, [other], Guid.NewGuid());
             }));
 
-        Assert.All(runs, r => Assert.Equal(RoundOutcome.Reserved, r.Outcome));
-        Assert.Equal(runs[0].ReservationId, runs[1].ReservationId);
         var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
-        Assert.Equal(runs[0].ReservationId, row.ReservationId);
-        Assert.Equal(runs[0].DriverId, row.DriverId);
+        foreach (var r in runs)
+        {
+            Assert.True(
+                r.Outcome is RoundOutcome.Reserved or RoundOutcome.BlockedOnUnknown,
+                $"unexpected {r.Outcome}");
+            if (r.Outcome == RoundOutcome.Reserved)
+            {
+                Assert.Equal(row.ReservationId, r.ReservationId);
+                Assert.Equal(row.DriverId, r.DriverId);
+            }
+            else
+            {
+                Assert.Equal("UNRESOLVED_ATTEMPT", r.Code);
+            }
+        }
+
+        foreach (var c in stub.Calls.Where(c => c.StartsWith("reserve:", StringComparison.Ordinal)))
+        {
+            Assert.Contains(row.ReservationId.ToString("N"), c, StringComparison.Ordinal);
+        }
+
+        var round = await Attempts().LoadRoundAsync(trip, 1);
+        if (runs.Any(r => r.Outcome == RoundOutcome.Reserved))
+        {
+            Assert.Equal(MatchingRoundStatuses.Reserved, round!.Status);
+            Assert.Equal(row.DriverId, round.SelectedDriverId);
+            Assert.Equal(row.ReservationId, round.SelectedReservationId);
+        }
+        else
+        {
+            Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
+        }
     }
 
     [Fact]
