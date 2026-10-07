@@ -125,7 +125,16 @@ public sealed class MatchingReserveOrchestrator
                     // Report the DURABLE row's identity, not the caller's
                     // list: under divergent candidate lists the winner may be
                     // a different driver than the one requested at this index.
+                    // Converge the round mark too: a crash between the
+                    // attempt commit and the round mark must heal on replay
+                    // (idempotent consequence of durable attempt truth).
                     var durable = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
+                    if (durable is not null && durable.State == MatchingAttemptStates.Reserved)
+                    {
+                        await _attempts.TryMarkRoundReservedAsync(
+                            tripId, round, durable.DriverId, durable.ReservationId, ct);
+                    }
+
                     return new RoundReserveResult(
                         RoundOutcome.Reserved,
                         durable?.DriverId ?? driverId,
@@ -173,12 +182,26 @@ public sealed class MatchingReserveOrchestrator
 
         return row.State switch
         {
-            MatchingAttemptStates.Reserved => new AttemptResult(
-                AttemptOutcome.Reserved, row.ReservationId, null),
+            MatchingAttemptStates.Reserved => await RepairRoundAndReportAsync(tripId, round, row, ct),
             MatchingAttemptStates.Rejected => new AttemptResult(
                 AttemptOutcome.Rejected, row.ReservationId, row.LastErrorCode),
             _ => await CallReserveAsync(tripId, round, ordinal, row, ct),
         };
+    }
+
+    /// <summary>
+    /// F2 convergence: a durably RESERVED attempt implies a RESERVED round.
+    /// The conditional mark is idempotent (PROCESSING-only) and converges
+    /// duplicate workers; it never invents a winner (row is the authority).
+    /// </summary>
+    private async Task<AttemptResult> RepairRoundAndReportAsync(
+        Guid tripId,
+        int round,
+        MatchingAttemptRow row,
+        CancellationToken ct)
+    {
+        await _attempts.TryMarkRoundReservedAsync(tripId, round, row.DriverId, row.ReservationId, ct);
+        return new AttemptResult(AttemptOutcome.Reserved, row.ReservationId, null);
     }
 
     /// <summary>
@@ -201,6 +224,7 @@ public sealed class MatchingReserveOrchestrator
 
         if (row.State == MatchingAttemptStates.Reserved)
         {
+            await _attempts.TryMarkRoundReservedAsync(tripId, round, row.DriverId, row.ReservationId, ct);
             return new AttemptResult(AttemptOutcome.Reserved, row.ReservationId, null);
         }
 
@@ -285,6 +309,12 @@ public sealed class MatchingReserveOrchestrator
         MatchingAttemptRow row,
         CancellationToken ct)
     {
+        // F1 gate: once this logical attempt is durably UNKNOWN, a later bare
+        // 404 (proxy/wrong-route/deleted-row) must NOT become conclusive
+        // proof of no-effect. Only a fresh attempt (never ambiguous) may
+        // treat absence as conclusive. Derived from durable row state, never
+        // process memory, so restart preserves it.
+        var alreadyAmbiguous = row.State == MatchingAttemptStates.Unknown;
         for (var i = 0; i < _maxReserveAttempts; i++)
         {
             DriverVersionRead? observed;
@@ -302,6 +332,11 @@ public sealed class MatchingReserveOrchestrator
 
             if (observed is null)
             {
+                if (alreadyAmbiguous)
+                {
+                    return new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "PRIOR_AMBIGUITY");
+                }
+
                 // Conclusive: an unknown driver cannot hold an effect
                 // (W6 reserve returns NotFound without writing).
                 var missing = await TryConcludeAsync(
@@ -342,6 +377,15 @@ public sealed class MatchingReserveOrchestrator
 
             if (!string.Equals(call.Code, "STALE_VERSION", StringComparison.Ordinal))
             {
+                if (alreadyAmbiguous
+                    && string.Equals(call.Code, "DRIVER_NOT_FOUND", StringComparison.Ordinal))
+                {
+                    // Same rule as the version-read path: after ambiguity, a
+                    // bare absence is not proof of no-effect (proxy/wrong
+                    // route/deleted row are indistinguishable on the wire).
+                    return new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "PRIOR_AMBIGUITY");
+                }
+
                 var lost = await TryConcludeAsync(
                     tripId, round, ordinal,
                     [MatchingAttemptStates.InFlight, MatchingAttemptStates.Unknown, MatchingAttemptStates.Ready],
