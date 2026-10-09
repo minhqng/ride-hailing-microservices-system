@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RideHailing.Observability;
 using RideHailing.TripService.Api;
 using RideHailing.TripService.Application.Trips.CreateRide;
+using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Infrastructure.Persistence;
 
 // Bootstrap skeleton for RideHailing.TripService (Trip service).
@@ -30,7 +31,22 @@ builder.Services.AddDbContext<TripDbContext>(options => options.UseNpgsql(postgr
 
 // W4-local application dependencies: scoped handler/DbContext per request,
 // single system clock, stateless deterministic fare policy needs no service.
+// W5 adds the lifecycle intake handlers (rider-scoped StartMatching/Cancel
+// plus system-shaped reservation/decision/payment/matching/progress intakes);
+// the W5 skeleton has no broker, so the system intakes are exercised by
+// component/system tests with authoritative-shaped fixtures until W8 wires
+// real transport.
 builder.Services.AddScoped<CreateRideHandler>();
+builder.Services.AddScoped<StartMatchingHandler>();
+builder.Services.AddScoped<CancelRideHandler>();
+builder.Services.AddScoped<RecordDriverReservationHandler>();
+builder.Services.AddScoped<RecordDriverAcceptedHandler>();
+builder.Services.AddScoped<RecordDriverRejectedHandler>();
+builder.Services.AddScoped<MarkPaymentAuthorizedHandler>();
+builder.Services.AddScoped<MarkPaymentFailedHandler>();
+builder.Services.AddScoped<MarkMatchingFailedHandler>();
+builder.Services.AddScoped<StartTripHandler>();
+builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 var app = builder.Build();
@@ -41,6 +57,8 @@ app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "trip-service", environment = env.EnvironmentName }));
 
 app.MapTripEndpoints();
+app.MapGetTripEndpoint();
+app.MapCancelRideEndpoint();
 
 app.Run();
 

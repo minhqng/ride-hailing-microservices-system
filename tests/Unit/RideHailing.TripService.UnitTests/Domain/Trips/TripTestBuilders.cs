@@ -14,6 +14,9 @@ internal static class TripTestBuilders
     internal static readonly Guid OtherDriverId = Guid.Parse("33333333-3333-3333-3333-333333333333");
     internal static readonly Guid OtherReservationId = Guid.Parse("44444444-4444-4444-4444-444444444444");
 
+    internal static readonly DateTimeOffset CreatedMoment = new(2026, 9, 26, 0, 0, 0, TimeSpan.Zero);
+    internal static readonly DateTimeOffset ActionMoment = new(2026, 9, 26, 7, 0, 0, TimeSpan.Zero);
+
     internal static TripLocation Location(double latitude = 10.762622, double longitude = 106.660172) =>
         new(latitude, longitude);
 
@@ -22,7 +25,7 @@ internal static class TripTestBuilders
         decimal amount = 50000m,
         string pricingPolicyVersion = "p0-test",
         DateTimeOffset? createdAt = null) =>
-        new(currency, amount, pricingPolicyVersion, createdAt ?? new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero));
+        new(currency, amount, pricingPolicyVersion, createdAt ?? CreatedMoment);
 
     internal static TripAssignment Assignment(
         Guid? driverId = null,
@@ -37,15 +40,22 @@ internal static class TripTestBuilders
             Location(),
             Location(10.776889, 106.700806),
             Fare(),
-            createdAt ?? new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero));
+            createdAt ?? CreatedMoment);
 
-    internal static Trip AtState(TripState state, bool withAssignment = true, int version = 7)
+    internal static Trip AtState(
+        TripState state,
+        bool withAssignment = true,
+        int version = 7,
+        int? currentRound = null,
+        DateTimeOffset? moment = null)
     {
+        var round = currentRound ?? (state == TripState.Created ? 0 : 1);
+        var at = moment ?? CreatedMoment;
         TripAssignment? assignment = withAssignment switch
         {
             true when state is TripState.DriverReserved or TripState.DriverAccepted
                 or TripState.ReadyToStart or TripState.InProgress
-                or TripState.Completed or TripState.Cancelled => Assignment(),
+                or TripState.Completed or TripState.Cancelled => Assignment(matchingRound: round),
             _ => null,
         };
 
@@ -56,8 +66,10 @@ internal static class TripTestBuilders
             Location(10.776889, 106.700806),
             Fare(),
             state,
+            round,
             assignment,
-            new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero),
+            CreatedMoment,
+            at,
             version);
     }
 

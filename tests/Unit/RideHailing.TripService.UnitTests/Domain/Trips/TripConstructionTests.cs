@@ -26,6 +26,9 @@ public sealed class TripConstructionTests
         Assert.Null(trip.Assignment);
         Assert.Equal(TripTestBuilders.Fare(), trip.Fare);
         Assert.Equal(new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero), trip.CreatedAt);
+        Assert.Equal(0, trip.CurrentMatchingRound);
+        Assert.Equal(trip.CreatedAt, trip.UpdatedAt);
+        Assert.Equal(0, trip.Version);
     }
 
     [Fact]
@@ -67,7 +70,9 @@ public sealed class TripConstructionTests
             TripTestBuilders.Location(),
             TripTestBuilders.Fare(),
             state,
+            1,
             null,
+            DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
             0));
     }
@@ -78,6 +83,7 @@ public sealed class TripConstructionTests
     [InlineData(TripState.MatchFailed)]
     public void Reconstitute_WithoutAssignment_IsAllowed(TripState state)
     {
+        var round = state == TripState.Created ? 0 : 1;
         var trip = Trip.Reconstitute(
             TripTestBuilders.TripId,
             TripTestBuilders.RiderId,
@@ -85,12 +91,15 @@ public sealed class TripConstructionTests
             TripTestBuilders.Location(),
             TripTestBuilders.Fare(),
             state,
+            round,
             null,
+            DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
             0);
 
         Assert.Equal(state, trip.State);
         Assert.Null(trip.Assignment);
+        Assert.Equal(round, trip.CurrentMatchingRound);
     }
 
     [Fact]
@@ -103,7 +112,9 @@ public sealed class TripConstructionTests
             TripTestBuilders.Location(),
             TripTestBuilders.Fare(),
             TripState.Cancelled,
+            1,
             null,
+            DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
             2);
 
@@ -115,6 +126,7 @@ public sealed class TripConstructionTests
     public void Reconstitute_PreservesHistoricalState()
     {
         var createdAt = new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero);
+        var updatedAt = new DateTimeOffset(2026, 9, 26, 8, 0, 0, TimeSpan.Zero);
 
         var trip = Trip.Reconstitute(
             TripTestBuilders.TripId,
@@ -123,13 +135,17 @@ public sealed class TripConstructionTests
             TripTestBuilders.Location(),
             TripTestBuilders.Fare(),
             TripState.DriverReserved,
+            1,
             TripTestBuilders.Assignment(),
             createdAt,
+            updatedAt,
             4);
 
         Assert.Equal(TripState.DriverReserved, trip.State);
         Assert.Equal(TripTestBuilders.Assignment(), trip.Assignment);
         Assert.Equal(createdAt, trip.CreatedAt);
+        Assert.Equal(updatedAt, trip.UpdatedAt);
+        Assert.Equal(1, trip.CurrentMatchingRound);
         Assert.Equal(4, trip.Version);
     }
 
@@ -143,12 +159,65 @@ public sealed class TripConstructionTests
             TripTestBuilders.Location(),
             TripTestBuilders.Fare(),
             TripState.Cancelled,
+            1,
             TripTestBuilders.Assignment(),
+            DateTimeOffset.UtcNow,
             DateTimeOffset.UtcNow,
             5);
 
         Assert.Equal(TripState.Cancelled, trip.State);
         Assert.Equal(TripTestBuilders.DriverId, trip.Assignment!.DriverId);
         Assert.Equal(TripTestBuilders.ReservationId, trip.Assignment.ReservationId);
+    }
+
+    [Fact]
+    public void Reconstitute_CreatedWithOpenRound_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Trip.Reconstitute(
+            TripTestBuilders.TripId,
+            TripTestBuilders.RiderId,
+            TripTestBuilders.Location(),
+            TripTestBuilders.Location(),
+            TripTestBuilders.Fare(),
+            TripState.Created,
+            1,
+            null,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            0));
+    }
+
+    [Fact]
+    public void Reconstitute_MatchingWithoutOpenRound_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Trip.Reconstitute(
+            TripTestBuilders.TripId,
+            TripTestBuilders.RiderId,
+            TripTestBuilders.Location(),
+            TripTestBuilders.Location(),
+            TripTestBuilders.Fare(),
+            TripState.Matching,
+            0,
+            null,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            0));
+    }
+
+    [Fact]
+    public void Reconstitute_AssignmentDisagreeingWithCurrentRound_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Trip.Reconstitute(
+            TripTestBuilders.TripId,
+            TripTestBuilders.RiderId,
+            TripTestBuilders.Location(),
+            TripTestBuilders.Location(),
+            TripTestBuilders.Fare(),
+            TripState.DriverReserved,
+            2,
+            TripTestBuilders.Assignment(matchingRound: 1),
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            3));
     }
 }

@@ -1,0 +1,33 @@
+# Curated W06 proof run output (noise removed, no secrets)
+
+Run: w06-assignment-20261006-002 against code commit fc7ad69ce462f85d05a8a8fee20da394c8d95a7c (clean tree).
+
+Command (containerized SDK; socket plumbing mirrors scripts/test/quick.sh,
+no hard-coded GID — resolve the host docker group at run time):
+  DOCKER_GID="$(getent group docker 2>/dev/null | cut -d: -f3 || true)"
+  GROUP_ADD=""; [ -n "${DOCKER_GID:-}" ] && GROUP_ADD="--group-add $DOCKER_GID"
+  SECURITY_OPT=""; [ "$(uname -s)" = "Linux" ] && SECURITY_OPT="--security-opt label=disable"
+  docker run --rm $SECURITY_OPT $GROUP_ADD -v "$PWD:/work:z" -v /var/run/docker.sock:/var/run/docker.sock \
+    -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c \
+    'dotnet --version; dotnet test tests/Integration/RideHailing.TripService.IntegrationTests \
+      -c Release --filter FullyQualifiedName~TripW06AssignmentProofsTests'
+
+Toolchain:
+  dotnet SDK 10.0.401
+  Build: TripService + IntegrationTests, Release, 0 warnings / 0 errors
+
+Tests executed (tests/Integration/.../TripW06AssignmentProofsTests.cs):
+  CompetingReservations_SameGeneration_OneWins_OneConflicts_SingleAssignmentPersists
+  MatchingFailed_SameRound_AfterReserved_DoesNotRegress
+  MatchingFailed_SameRound_AfterAccepted_DoesNotRegress
+  ReservationReplay_ViaHandler_PreservesDbRow
+  ReservationAfterMatchFailedTerminal_DoesNotReactivate
+
+Result:
+  Passed! - Failed: 0, Passed: 5, Skipped: 0, Total: 5, Duration: 1 s
+  Exit code: 0
+  Provider: disposable real PostgreSQL 18.6 (Testcontainers, per-run container)
+
+Same-session broader regression (same container image, same committed source):
+  Trip unit suite:        Passed! - Failed: 0, Passed: 252, Total: 252
+  Trip integration suite: Passed! - Failed: 0, Passed: 94,  Total: 94

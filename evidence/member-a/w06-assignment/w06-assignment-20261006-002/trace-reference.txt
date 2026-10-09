@@ -1,0 +1,11 @@
+No distributed trace applies to this run.
+
+This proof exercises the Trip service against a disposable local PostgreSQL
+only: no HTTP edge, no broker, no Matching/Driver call path (that wiring
+belongs to W8+; B-W06 does not exist). There is therefore no cross-service
+span chain to record, per the trace-evidence contract (docs/03 §26 covers the
+messaging-path chains, none of which execute here).
+
+Applicable traces arrive with the CON-01 Driver-contention harness (B-owned)
+and later messaging integration, and will be referenced from their own
+scenario bundles.

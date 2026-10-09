@@ -219,7 +219,7 @@ public sealed class CreateRideComponentTests
                 new TripLocation(10.762622, 106.660172),
                 new TripLocation(10.776889, 106.700806),
                 new FareSnapshot("VND", 33568.45m, "p0-w4-v1", FixedNow),
-                TripState.Cancelled, null, FixedNow, 2);
+                TripState.Cancelled, 1, null, FixedNow, FixedNow, 2);
             seed.Trips.Add(terminal);
             await seed.SaveChangesAsync();
         }
@@ -352,16 +352,21 @@ public sealed class CreateRideComponentTests
         static async Task InsertTripAsync(NpgsqlConnection connection, Guid tripId, Guid rider, string state)
         {
             await using var cmd = connection.CreateCommand();
+            // W5 round durability: post-CREATED non-cancelled states carry an
+            // open round, so the helper mirrors the domain invariant
+            // (MATCHING/MATCH_FAILED rows carry round 1, the rest carry 0).
+            var round = state is "MATCHING" or "MATCH_FAILED" ? 1 : 0;
             cmd.CommandText =
-                "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+                "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
                 "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
                 "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
                 "assigned_driver_id, reservation_id, matching_round) " +
-                "VALUES ($1, $2, $3, now(), 0, 10.0, 106.0, 10.1, 106.1, " +
+                "VALUES ($1, $2, $3, now(), now(), $4, 0, 10.0, 106.0, 10.1, 106.1, " +
                 "'VND', 50000, 'p0-w4-v1', now(), NULL, NULL, NULL)";
             cmd.Parameters.Add(new NpgsqlParameter { Value = tripId });
             cmd.Parameters.Add(new NpgsqlParameter { Value = rider });
             cmd.Parameters.Add(new NpgsqlParameter { Value = state });
+            cmd.Parameters.Add(new NpgsqlParameter { Value = round });
             await cmd.ExecuteNonQueryAsync();
         }
 
