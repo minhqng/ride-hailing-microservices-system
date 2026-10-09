@@ -6,6 +6,9 @@ using RideHailing.Messaging.Contracts;
 
 namespace RideHailing.Messaging.Reliability;
 
+public sealed record MessageDeliveryContext(string RoutingKey, byte[] Body,
+    IDictionary<string, object?> Headers, ulong DeliveryTag, bool Redelivered);
+
 /// <summary>Handler must return only after durable commit; caller supervises Completion and disposes on fault.</summary>
 public sealed class ManualAckConsumer : IAsyncDisposable
 {
@@ -26,6 +29,13 @@ public sealed class ManualAckConsumer : IAsyncDisposable
     public static async Task<ManualAckConsumer> StartAsync(ConnectionFactory factory, ConfirmedPublisher publisher,
         string queue, IReadOnlySet<string> supportedTypes,
         Func<MessageEnvelope<JsonElement>, CancellationToken, Task> commitHandler,
+        ushort prefetch = 16, CancellationToken token = default)
+        => await StartDeliveryAsync(factory, publisher, queue, supportedTypes,
+            (envelope, _, ct) => commitHandler(envelope, ct), prefetch, token);
+
+    public static async Task<ManualAckConsumer> StartDeliveryAsync(ConnectionFactory factory, ConfirmedPublisher publisher,
+        string queue, IReadOnlySet<string> supportedTypes,
+        Func<MessageEnvelope<JsonElement>, MessageDeliveryContext, CancellationToken, Task> commitHandler,
         ushort prefetch = 16, CancellationToken token = default)
     {
         if (prefetch is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(prefetch));
@@ -69,7 +79,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
     }
 
     private async Task ReceiveAsync(string queue, IReadOnlySet<string> supportedTypes,
-        Func<MessageEnvelope<JsonElement>, CancellationToken, Task> handler, BasicDeliverEventArgs delivery)
+        Func<MessageEnvelope<JsonElement>, MessageDeliveryContext, CancellationToken, Task> handler, BasicDeliverEventArgs delivery)
     {
         if (stopping.IsCancellationRequested) return;
         // RabbitMQ owns delivery memory. Copy before any asynchronous work.
@@ -77,6 +87,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
         var body = oversized ? [] : delivery.Body.ToArray();
         var properties = new BasicProperties(delivery.BasicProperties);
         var attempt = 0;
+        var routingKey = delivery.RoutingKey;
         MessageEnvelope<JsonElement>? envelope = null;
         try
         {
@@ -87,6 +98,13 @@ public sealed class ManualAckConsumer : IAsyncDisposable
                 if (properties.Headers?.TryGetValue("x-ride-attempt", out var value) == true)
                     attempt = value is int number ? number : throw new ArgumentException("Invalid retry counter");
                 new RetryMetadata(attempt).Validate();
+                if (attempt > 0 && properties.Headers?.TryGetValue("x-ride-original-routing-key", out var route) == true)
+                    routingKey = route switch
+                    {
+                        string text => text,
+                        byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes),
+                        _ => throw new ArgumentException("Invalid original routing key")
+                    };
                 envelope = JsonSerializer.Deserialize<MessageEnvelope<JsonElement>>(body) ?? throw new ArgumentException("Missing envelope");
                 envelope.Validate();
                 if (!supportedTypes.Contains(envelope.MessageType)) throw new ArgumentException("Unsupported message type");
@@ -102,7 +120,8 @@ public sealed class ManualAckConsumer : IAsyncDisposable
             activity?.SetTag("messaging.correlation.id", properties.CorrelationId);
             if (failure is null)
             {
-                try { await handler(envelope!, stopping.Token); }
+                try { await handler(envelope!, new MessageDeliveryContext(routingKey, body,
+                    properties.Headers ?? new Dictionary<string, object?>(), delivery.DeliveryTag, delivery.Redelivered), stopping.Token); }
                 catch (DeliveryFailureException error) { failure = error; }
                 catch (OperationCanceledException) when (stopping.IsCancellationRequested) { return; }
                 catch (Exception) { failure = new DeliveryFailureException(FailureKind.Configuration, "UNCLASSIFIED_HANDLER_FAILURE"); }
@@ -115,6 +134,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
                     await Task.Delay(FailurePolicy.Delay(attempt), stopping.Token);
                     properties.Headers ??= new Dictionary<string, object?>();
                     properties.Headers["x-ride-attempt"] = attempt + 1;
+                    properties.Headers["x-ride-original-routing-key"] = routingKey;
                     await publisher.PublishRawAsync("", queue, properties, body, stopping.Token);
                 }
                 else

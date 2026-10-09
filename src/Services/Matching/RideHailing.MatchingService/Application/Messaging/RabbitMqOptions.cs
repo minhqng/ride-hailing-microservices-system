@@ -18,6 +18,7 @@ public sealed class RabbitMqOptions
     public string RideRequestedQueue { get; set; } = "matching.ride-requested.q";
     public string DriverProjectionQueue { get; set; } = "matching.driver-projection.q";
     public ushort Prefetch { get; set; } = 16;
+    // Total handler calls including the initial delivery; platform permits at most three retries.
     public int MaxRedeliveries { get; set; } = 3;
     public bool ConsumersEnabled { get; set; } = true;
 
@@ -38,9 +39,9 @@ public sealed class RabbitMqOptions
             return "RabbitMq:Prefetch must be within 1..256.";
         }
 
-        if (MaxRedeliveries is < 1 or > 10)
+        if (MaxRedeliveries is < 1 or > 4)
         {
-            return "RabbitMq:MaxRedeliveries must be within 1..10.";
+            return "RabbitMq:MaxRedeliveries must be within 1..4.";
         }
 
         if (Port is < 1 or > 65535)

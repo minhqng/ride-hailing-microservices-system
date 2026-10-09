@@ -91,6 +91,17 @@ public class BrokerConsumeTests
             ContentType = "application/json",
             Headers = headers,
         };
+        try
+        {
+            var envelope = JsonSerializer.Deserialize<MessageEnvelope<JsonElement>>(body);
+            if (envelope is not null)
+            {
+                props.MessageId = envelope.MessageId;
+                props.CorrelationId = envelope.CorrelationId;
+                props.Type = envelope.MessageType;
+            }
+        }
+        catch (JsonException) { }
         await channel.BasicPublishAsync(exchange, routingKey, mandatory: true, props, body);
     }
 
@@ -99,7 +110,7 @@ public class BrokerConsumeTests
         var payload = JsonDocument.Parse(
             $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":{round},\"inputMessageId\":\"{messageId:N}\"{extra ?? string.Empty}}}").RootElement;
         var envelope = MessageEnvelope<JsonElement>.Create(
-            "RideRequestedV1", Guid.NewGuid().ToString("N"), payload);
+            "RideRequestedV1", Guid.NewGuid().ToString("N"), payload, messageId: messageId.ToString("N"));
         return JsonSerializer.SerializeToUtf8Bytes(envelope, Json);
     }
 
@@ -120,6 +131,78 @@ public class BrokerConsumeTests
         var logger = new TestLogger<BrokerConsumeTests>();
         await BrokerConsume.RunAsync(
             Factory(), queue, 8, maxRedeliveries, handle, logger, ct);
+    }
+
+    [Fact]
+    public async Task Trip_Contract_Through_Shared_Publisher_Converges_With_Envelope_Identity()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var trip = RideHailing.TripService.Domain.Trips.Trip.Create(Guid.NewGuid(), Guid.NewGuid(),
+            new(10.7, 106.6), new(10.8, 106.7), new("VND", 50000m, "w8", now), now);
+        trip.StartMatching(now);
+        var payload = RideHailing.TripService.Integration.Matching.RideRequestedV1.FromTrip(trip, now);
+        var messageId = Guid.NewGuid();
+        var envelope = MessageEnvelope<RideHailing.TripService.Integration.Matching.RideRequestedV1>.Create(
+            "RideRequestedV1", Guid.NewGuid().ToString("N"), payload, messageId: messageId.ToString("N"));
+        await using (var connection = await Factory().CreateConnectionAsync())
+            await RideTopology.DeclareAsync(connection);
+        await using var publisher = new RideHailing.Messaging.Reliability.ConfirmedPublisher(Factory());
+        await publisher.PublishAsync("ride.events", "trip.ride-requested.v1", envelope);
+        await publisher.PublishAsync("ride.events", "trip.ride-requested.v1", envelope);
+        using var stop = new CancellationTokenSource();
+        var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
+        var committed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var count = 0;
+        var run = RunConsumerAsync("matching.ride-requested.q", async (delivery, ct) =>
+        {
+            var result = await handler.HandleAsync(delivery, ct);
+            if (Interlocked.Increment(ref count) == 2) committed.TrySetResult();
+            return result;
+        }, stop.Token);
+        try
+        {
+            await committed.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await using var db = new Npgsql.NpgsqlConnection(_pg.ConnectionString);
+            await db.OpenAsync();
+            await using var command = new Npgsql.NpgsqlCommand(
+                "SELECT input_message_id FROM matching_rounds WHERE trip_id = @trip AND matching_round = 1", db);
+            command.Parameters.AddWithValue("trip", trip.TripId);
+            Assert.Equal(messageId, (Guid)(await command.ExecuteScalarAsync())!);
+            Assert.Empty(await Rounds().LoadAttemptsAsync(trip.TripId, 1));
+        }
+        finally { stop.Cancel(); await run.WaitAsync(TimeSpan.FromSeconds(30)); }
+    }
+
+    [Fact]
+    public async Task Broker_Cancellation_Recreates_Consumer_And_Processes_New_Work()
+    {
+        await using var connection = await Factory().CreateConnectionAsync();
+        await RideTopology.DeclareAsync(connection);
+        await using var channel = await connection.CreateChannelAsync();
+        const string queue = "matching.ride-requested.q";
+        using var stop = new CancellationTokenSource();
+        var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
+        var committed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var run = RunConsumerAsync(queue, async (delivery, ct) =>
+        {
+            var result = await handler.HandleAsync(delivery, ct);
+            committed.TrySetResult();
+            return result;
+        }, stop.Token);
+        try
+        {
+            await PollUntilAsync(async () => (await channel.QueueDeclarePassiveAsync(queue)).ConsumerCount == 1,
+                "initial registration");
+            await channel.QueueDeleteAsync(queue, false, false);
+            await RideTopology.DeclareAsync(connection);
+            await PollUntilAsync(async () => (await channel.QueueDeclarePassiveAsync(queue)).ConsumerCount == 1,
+                "supervisor registration after broker cancellation");
+            var trip = Guid.NewGuid();
+            await PublishAsync("ride.events", "trip.ride-requested.v1", await RideRequestedBytesAsync(trip, 1, Guid.NewGuid()));
+            await committed.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            Assert.NotNull(await Rounds().LoadRoundAsync(trip, 1));
+        }
+        finally { stop.Cancel(); await run.WaitAsync(TimeSpan.FromSeconds(30)); }
     }
 
     [Fact]
@@ -195,6 +278,7 @@ public class BrokerConsumeTests
         using var cts = new CancellationTokenSource();
         async Task<HandlerOutcome> Flaky(BrokerDelivery d, CancellationToken ct)
         {
+            Assert.Equal("trip.ride-requested.v1", d.RoutingKey);
             calls++;
             if (calls == 1)
             {
@@ -319,6 +403,10 @@ public class BrokerConsumeTests
         // Order matters: queue depth can read transient 0 while a requeue is
         // in flight, so first prove both handler calls happened (redelivery
         // flowed), then prove the queue drained (third sighting dropped).
+        await using var errorConnection = await Factory().CreateConnectionAsync();
+        await RideTopology.DeclareAsync(errorConnection);
+        await using var errorChannel = await errorConnection.CreateChannelAsync();
+        await errorChannel.QueuePurgeAsync("matching.ride-requested.q.dead");
         var body = await RideRequestedBytesAsync(Guid.NewGuid(), 5, Guid.NewGuid());
         await PublishAsync("ride.events", "trip.ride-requested.v1", body);
 
@@ -335,7 +423,7 @@ public class BrokerConsumeTests
             AlwaysTransient, new TestLogger<BrokerConsumeTests>(), cts.Token);
         await PollUntilAsync(async () => Volatile.Read(ref calls) >= 2, "both redeliveries handled");
         await PollUntilAsync(async () =>
-            await QueueDepthAsync("matching.ride-requested.q") == 0, "bounded drop");
+            await QueueDepthAsync("matching.ride-requested.q.dead") == 1, "confirmed error transfer");
         cts.Cancel();
         await run.WaitAsync(TimeSpan.FromSeconds(30));
 

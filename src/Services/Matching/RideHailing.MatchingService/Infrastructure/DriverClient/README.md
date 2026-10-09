@@ -71,8 +71,9 @@ C-owned; B consumes the frozen shape and owns only its endpoint mapping.
 - **Envelope:** shared `MessageEnvelope` (V1, validated) + trace headers.
   ACK happens only after the durable local effect commits.
 - **Consumed — `RideRequestedV1`** (`trip.ride-requested.v1`, producer: Trip
-  Outbox, A-owned): minimal fields `tripId` + `matchingRound` + `inputMessageId`
-  (all required; unknown extras ignored). Same `(tripId, matchingRound)`
+  Outbox, A-owned): payload uses A's `RideRequestedV1` shape (`tripId`, `matchingRound`,
+  `pickup`, `dropoff`, `requestedAt`). The durable input identity comes from
+  envelope `messageId`; an optional legacy payload `inputMessageId` must agree. Same `(tripId, matchingRound)`
   resumes the same round — never a new candidate sequence, never reserve
   execution from broker input. Duplicate/concurrent/crash-before-ACK delivery
   converges on the round PK.
@@ -80,7 +81,7 @@ C-owned; B consumes the frozen shape and owns only its endpoint mapping.
   state `{driverId, status, version}` and location
   `{driverId, longitude, latitude, sessionId, sequenceNo, capturedAt}` feed the
   derived Redis projection only (version/freshness/GEO guards stay in the W4 Lua).
-  Degraded results requeue boundedly; unknown routing keys are poison (drop loud).
+  Degraded results use confirmed bounded retry; unknown routing keys transfer to the error queue.
 - **Produced — Driver authoritative events** (best-effort after commit, W9
   Outbox closes the dual-write gap; failure never fails the committed domain op):
   `driver.reserved.v1`, `driver.reservation-released.v1`, `driver.available.v1`,
@@ -88,22 +89,25 @@ C-owned; B consumes the frozen shape and owns only its endpoint mapping.
   and `driver.location-accepted.v1` with the accepted sample. Payload wire form
   is explicit camelCase; messageId is deterministic per logical effect
   (win/replay/recovery republish the same identity).
-- **Bounds:** transient requeue bounded by the broker acquisition count
-  (`x-acquired-count`, RabbitMQ 4.x quorum; headerless redelivery fails closed);
-  1 MiB body cap; validated queue/prefetch/retry config; broker outage retries
-  with backoff without killing the host.
-- **NOT in W8:** Outbox/Inbox, `MatchingFailedV1`/`NO_DRIVER` publication,
-  Saga compensation, DLQ/error-store arrival (C/W9 scope).
+- **Bounds:** the shared C `ManualAckConsumer` owns validation, ACK, retry and
+  confirmed error transfer. `MaxRedeliveries` is the total handler-call budget
+  (1..4, default 3); the platform caps retries at three. Original routing keys
+  survive direct-to-queue retries. Broker cancellation/channel loss faults
+  `Completion`; the Matching supervisor disposes and reconnects with backoff.
+- **Error handling:** sanitized failures are confirmed to
+  `matching.ride-requested.q.dead` / `matching.driver-projection.q.dead`
+  before ACK. Failed handoff leaves the original unacknowledged.
+- **Later scope:** atomic Outbox/Inbox and `MatchingFailedV1` publication
+  remain W9. The W8 round consumer commits round intake only; the production
+  Trip start/publish and Matching candidate pipeline are separate A/B work.
 
-### Open broker questions for A/C
+### Cross-owner integration
 
-- [ ] A: confirm `RideRequestedV1` producer payload carries
-  `tripId`/`matchingRound`/`inputMessageId` (names + requiredness) and the
-  `trip.ride-requested.v1` routing key.
-- [ ] C: converge B's interim consume/publish glue onto the platform
-  consumer/publisher base (same exchanges/queues/envelope/ACK discipline);
-  confirm DLQ/error-store arrival story for W9.
-- [ ] C: broker-enforced maximum message size (B drops >1 MiB on consume).
+`BrokerConsumeTests.Trip_Contract_Through_Shared_Publisher_Converges_With_Envelope_Identity`
+uses A's actual Trip aggregate/payload, C's confirmed publisher/manual consumer,
+real RabbitMQ and B's PostgreSQL round ledger. This proves wire compatibility
+and duplicate convergence; it is not proof of a running Trip API producer,
+full dispatch workflow, or human A/B review approval.
 
 ## What this is NOT
 

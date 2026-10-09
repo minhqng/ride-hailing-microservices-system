@@ -22,8 +22,15 @@
 
 - W5 bulk pipeline (GEOSEARCH ranking/eligibility over Redis) remains absent
   (reverted from main; W7 consumes explicit candidate lists, not the pipeline).
-- W8+: RabbitMQ wiring (W4 updater is invoked directly; broker consumer comes
-  later). W9: terminal publication/Outbox.
+- W9: terminal publication and atomic Outbox.
+
+## W8 broker runtime
+
+RideRequested intake and Driver projection consumers use the shared C runtime:
+manual ACK after commit, confirmed retry/error transfer, bounded retries, and
+supervised reconnection on channel closure or broker cancellation. The Trip
+payload contract uses the envelope messageId as the round input identity. See
+`Infrastructure/DriverClient/README.md` for the integration boundary.
 
 ## Implemented (W2+W4)
 
@@ -69,5 +76,12 @@
 
 - W5 bulk pipeline (GEOSEARCH ranking/eligibility over Redis) remains absent
   (reverted from main; W7 consumes explicit candidate lists, not the pipeline).
-- W8+: RabbitMQ wiring (W4 updater is invoked directly; broker consumer comes
-  later). W9: terminal publication/Outbox.
+- W9: terminal publication and atomic Outbox.
+
+## W8 broker runtime
+
+RideRequested intake and Driver projection consumers use the shared C runtime:
+manual ACK after commit, confirmed retry/error transfer, bounded retries, and
+supervised reconnection on channel closure or broker cancellation. The Trip
+payload contract uses the envelope messageId as the round input identity. See
+`Infrastructure/DriverClient/README.md` for the integration boundary.

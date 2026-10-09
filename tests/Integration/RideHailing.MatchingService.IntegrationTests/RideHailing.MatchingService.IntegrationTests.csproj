@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Matching\RideHailing.MatchingService\RideHailing.MatchingService.csproj" />
+    <ProjectReference Include="../../../src/Services/Trip/RideHailing.TripService/RideHailing.TripService.csproj" />
     <!-- Test-only: REL-01 component proof drives a REAL DriverRepository
          (real driver_db) behind a transport stub. Production Matching code
          never references DriverService (seam-only rule, 05B §11.3). -->

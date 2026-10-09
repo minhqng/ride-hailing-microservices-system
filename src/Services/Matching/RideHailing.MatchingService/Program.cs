@@ -63,7 +63,7 @@ builder.Services.AddSingleton(_ => new ConnectionFactory
     UserName = brokerOptions.Username,
     Password = brokerOptions.Password,
     ClientProvidedName = "matching-service/broker-consumers",
-    AutomaticRecoveryEnabled = true,
+    AutomaticRecoveryEnabled = false,
 });
 builder.Services.AddSingleton<RideRequestedHandler>();
 builder.Services.AddHostedService<RideRequestedConsumer>();

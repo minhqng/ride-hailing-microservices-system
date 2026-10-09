@@ -4,9 +4,7 @@
 // a new candidate sequence, never new reservation IDs (orchestrator owns
 // attempts; this handler performs NO reserve calls — candidates arrive via a
 // future pipeline, and reserve execution stays in W7-tested code paths).
-// Minimal payload contract (B-documented, open coordination with A, the
-// producer): tripId + matchingRound + inputMessageId, all required; unknown
-// extra fields are ignored (forward-compatible tolerant reader).
+// Payload follows the Trip contract; envelope messageId is the durable input identity.
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -73,11 +71,12 @@ public sealed class RideRequestedHandler
             throw new ArgumentException("RideRequestedV1 requires matchingRound >= 1.");
         }
 
-        if (!payload.TryGetProperty("inputMessageId", out var msgEl) || msgEl.ValueKind != JsonValueKind.String
-            || !Guid.TryParse(msgEl.GetString(), out var inputMessageId) || inputMessageId == Guid.Empty)
-        {
-            throw new ArgumentException("RideRequestedV1 requires a non-empty inputMessageId.");
-        }
+        if (!Guid.TryParse(envelope.MessageId, out var inputMessageId) || inputMessageId == Guid.Empty)
+            throw new ArgumentException("RideRequestedV1 requires a non-empty envelope messageId UUID.");
+        if (payload.TryGetProperty("inputMessageId", out var legacyId)
+            && (legacyId.ValueKind != JsonValueKind.String
+                || !Guid.TryParse(legacyId.GetString(), out var suppliedId) || suppliedId != inputMessageId))
+            throw new ArgumentException("Legacy inputMessageId must match envelope messageId.");
 
         return (tripId, matchingRound, inputMessageId);
     }

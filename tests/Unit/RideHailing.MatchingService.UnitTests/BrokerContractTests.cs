@@ -1,67 +1,24 @@
 // B-W08: broker decision/unit proof (pure logic, no infrastructure).
 // Covers failure classification, redelivery bounds, payload mapping, and
 // options validation for the Matching consumption side.
-using System.Net.Sockets;
 using RideHailing.MatchingService.Application.Messaging;
 
 namespace RideHailing.MatchingService.UnitTests;
 
-public class BrokerDecisionsTests
+public class BrokerContractTests
 {
     [Fact]
-    public void Transient_Failures_Requeue()
+    public void Canonical_Trip_Payload_Uses_Envelope_Id_And_Rejects_Conflicting_Legacy_Id()
     {
-        Assert.Equal(ConsumeDisposition.Requeue, BrokerDecisions.ClassifyFailure(new TimeoutException()));
-        Assert.Equal(ConsumeDisposition.Requeue, BrokerDecisions.ClassifyFailure(new SocketException()));
-        Assert.Equal(ConsumeDisposition.Requeue, BrokerDecisions.ClassifyFailure(new OperationCanceledException()));
-    }
-
-    [Fact]
-    public void Permanent_And_Unknown_Failures_Drop()
-    {
-        Assert.Equal(ConsumeDisposition.Drop, BrokerDecisions.ClassifyFailure(new ArgumentException("bad payload")));
-        Assert.Equal(ConsumeDisposition.Drop, BrokerDecisions.ClassifyFailure(new InvalidOperationException("bug")));
-    }
-
-    [Fact]
-    public void Delivery_Count_Reads_Quorum_Acquired_Header()
-    {
-        // RabbitMQ 4.x quorum: redelivery carries x-acquired-count (Int64);
-        // sightings = value + 1. Legacy x-delivery-count honored identically.
-        Assert.Equal(1, BrokerDecisions.DeliveryCount(null, false));
-        Assert.Equal(1, BrokerDecisions.DeliveryCount(
-            new Dictionary<string, object?> { ["x-acquired-count"] = 0L }, false));
-        Assert.Equal(2, BrokerDecisions.DeliveryCount(
-            new Dictionary<string, object?> { ["x-acquired-count"] = 1L }, true));
-        Assert.Equal(3, BrokerDecisions.DeliveryCount(
-            new Dictionary<string, object?> { ["x-acquired-count"] = 2 }, true));
-        Assert.Equal(3, BrokerDecisions.DeliveryCount(
-            new Dictionary<string, object?> { ["x-delivery-count"] = 2L }, true));
-        Assert.Equal(1, BrokerDecisions.DeliveryCount(
-            new Dictionary<string, object?> { ["x-acquired-count"] = "garbage" }, false));
-    }
-
-    [Fact]
-    public void Headerless_Redelivery_Fails_Closed()
-    {
-        // No acquisition evidence (classic queue): the count always exceeds
-        // any valid budget, so the loop drops instead of hot-looping.
-        Assert.Equal(int.MaxValue, BrokerDecisions.DeliveryCount(null, true));
-        Assert.True(BrokerDecisions.ExceedsBudget(BrokerDecisions.DeliveryCount(null, true), 10));
-    }
-
-    [Fact]
-    public void Budget_Bound_Respected()
-    {
-        Assert.False(BrokerDecisions.ExceedsBudget(3, 3));
-        Assert.True(BrokerDecisions.ExceedsBudget(4, 3));
-    }
-
-    [Fact]
-    public void Oversized_Bodies_Rejected_At_Boundary()
-    {
-        Assert.False(BrokerDecisions.BodyTooLarge(BrokerDecisions.MaxBodyBytes));
-        Assert.True(BrokerDecisions.BodyTooLarge(BrokerDecisions.MaxBodyBytes + 1));
+        var trip = Guid.NewGuid();
+        var messageId = Guid.NewGuid();
+        var payload = System.Text.Json.JsonSerializer.SerializeToElement(new { tripId = trip, matchingRound = 1 });
+        var envelope = RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>.Create(
+            "RideRequestedV1", "correlation", payload, messageId: messageId.ToString("N"));
+        Assert.Equal(messageId, RideRequestedHandler.ReadPayload(envelope).InputMessageId);
+        var conflict = envelope with { Payload = System.Text.Json.JsonSerializer.SerializeToElement(
+            new { tripId = trip, matchingRound = 1, inputMessageId = Guid.NewGuid() }) };
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(conflict));
     }
 
     [Fact]
@@ -73,7 +30,7 @@ public class BrokerDecisionsTests
             "RideRequestedV1",
             Guid.NewGuid().ToString("N"),
             System.Text.Json.JsonDocument.Parse(
-                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":2,\"inputMessageId\":\"{msg:N}\",\"futureField\":1}}").RootElement);
+                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":2,\"inputMessageId\":\"{msg:N}\",\"futureField\":1}}").RootElement, messageId: msg.ToString("N"));
         var (t, round, m) = RideRequestedHandler.ReadPayload(good);
         Assert.Equal(trip, t);
         Assert.Equal(2, round);
