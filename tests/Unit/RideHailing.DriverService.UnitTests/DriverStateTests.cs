@@ -47,9 +47,9 @@ public class DriverStateTests
     public void Reserve_Empty_Identity_Is_Invalid_Not_Conflict()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var v = d.Version;
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.Empty, Guid.NewGuid()));
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.Empty, Guid.NewGuid(), d.Version));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
         Assert.Equal(DriverStatus.Available, d.Status);
         Assert.Equal(v, d.Version);
@@ -66,8 +66,8 @@ public class DriverStateTests
     public void Reserve_Empty_Reservation_Is_Invalid()
     {
         var d = NewDriver();
-        d.GoOnline();
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.Empty));
+        d.GoOnline(d.Version);
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.Empty, d.Version));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
         Assert.Equal(DriverStatus.Available, d.Status);
     }
@@ -111,10 +111,10 @@ public class DriverStateTests
     public void Release_Empty_Token_Is_Invalid_Without_Mutation()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         var v = d.Version;
         var ex = Assert.Throws<DriverDomainException>(() => d.Release(Guid.Empty, Guid.Empty));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
@@ -127,8 +127,8 @@ public class DriverStateTests
     public void Start_Empty_Token_Is_Invalid_Without_Mutation()
     {
         var d = NewDriver();
-        d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
+        d.GoOnline(d.Version);
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripStarted(Guid.Empty, Guid.Empty));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status);
@@ -138,10 +138,10 @@ public class DriverStateTests
     public void Complete_Empty_Trip_Is_Invalid_Without_Mutation()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripCompleted(Guid.Empty));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
@@ -154,7 +154,7 @@ public class DriverStateTests
     {
         var d = NewDriver();
         var v0 = d.Version;
-        d.GoOnline();
+        d.GoOnline(d.Version);
         Assert.Equal(DriverStatus.Available, d.Status);
         Assert.Equal(v0 + 1, d.Version);
     }
@@ -163,9 +163,9 @@ public class DriverStateTests
     public void GoOnline_Retry_Is_Idempotent()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var v = d.Version;
-        d.GoOnline();
+        d.GoOnline(d.Version);
         Assert.Equal(DriverStatus.Available, d.Status);
         Assert.Equal(v, d.Version);
     }
@@ -174,8 +174,8 @@ public class DriverStateTests
     public void GoOffline_Available_To_Offline()
     {
         var d = NewDriver();
-        d.GoOnline();
-        d.GoOffline();
+        d.GoOnline(d.Version);
+        d.GoOffline(d.Version);
         Assert.Equal(DriverStatus.Offline, d.Status);
     }
 
@@ -183,7 +183,7 @@ public class DriverStateTests
     public void GoOffline_Retry_Is_Idempotent()
     {
         var d = NewDriver();
-        d.GoOffline();
+        d.GoOffline(d.Version);
         Assert.Equal(DriverStatus.Offline, d.Status);
     }
 
@@ -191,9 +191,9 @@ public class DriverStateTests
     public void GoOffline_While_Reserved_Is_Rejected()
     {
         var d = NewDriver();
-        d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
-        var ex = Assert.Throws<DriverDomainException>(() => d.GoOffline());
+        d.GoOnline(d.Version);
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
+        var ex = Assert.Throws<DriverDomainException>(() => d.GoOffline(d.Version));
         Assert.Equal(DriverErrors.ReservationActive, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status); // unchanged
     }
@@ -202,7 +202,7 @@ public class DriverStateTests
     public void Reserve_Requires_Available()
     {
         var d = NewDriver(); // OFFLINE
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid()));
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version));
         Assert.Equal(DriverErrors.DriverNotAvailable, ex.Code);
     }
 
@@ -210,12 +210,16 @@ public class DriverStateTests
     public void Reserve_Same_Reservation_Is_Idempotent()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        var v0 = d.Version;
+        d.Reserve(t, r, v0);
         var v = d.Version;
-        d.Reserve(t, r);
+        // Replay carries the version the caller originally saw (now stale):
+        // same logical effect already exists, so canonical success with no
+        // new effect and no version bump (DSI-005 over DSI-003 precedence).
+        d.Reserve(t, r, v0);
         Assert.Equal(DriverStatus.Reserved, d.Status);
         Assert.Equal(v, d.Version);
         Assert.Equal(t, d.ReservedTripId);
@@ -226,9 +230,9 @@ public class DriverStateTests
     public void Reserve_Different_Reservation_Conflicts()
     {
         var d = NewDriver();
-        d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
-        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid()));
+        d.GoOnline(d.Version);
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
+        var ex = Assert.Throws<DriverDomainException>(() => d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version));
         Assert.Equal(DriverErrors.DriverNotAvailable, ex.Code);
     }
 
@@ -236,10 +240,10 @@ public class DriverStateTests
     public void Release_Exact_Token_Returns_Available()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.Release(t, r);
         Assert.Equal(DriverStatus.Available, d.Status);
         Assert.Null(d.ReservedTripId);
@@ -250,10 +254,10 @@ public class DriverStateTests
     public void Release_Stale_Token_Does_Not_Mutate()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.Release(t, Guid.NewGuid()));
         Assert.Equal(DriverErrors.StaleReservation, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status);
@@ -264,10 +268,10 @@ public class DriverStateTests
     public void StartTrip_Exact_Identity_Goes_OnTrip()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         Assert.Equal(DriverStatus.OnTrip, d.Status);
         Assert.Equal(t, d.ActiveTripId);
@@ -277,8 +281,8 @@ public class DriverStateTests
     public void StartTrip_Stale_Identity_Rejected()
     {
         var d = NewDriver();
-        d.GoOnline();
-        d.Reserve(Guid.NewGuid(), Guid.NewGuid());
+        d.GoOnline(d.Version);
+        d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripStarted(Guid.NewGuid(), Guid.NewGuid()));
         Assert.Equal(DriverErrors.TripMismatch, ex.Code);
         Assert.Equal(DriverStatus.Reserved, d.Status);
@@ -288,10 +292,10 @@ public class DriverStateTests
     public void CompleteTrip_Current_Trip_Returns_Available()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         d.MarkTripCompleted(t);
         Assert.Equal(DriverStatus.Available, d.Status);
@@ -302,9 +306,9 @@ public class DriverStateTests
     public void CompleteTrip_Wrong_Trip_Rejected()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
-        d.Reserve(t, Guid.NewGuid());
+        d.Reserve(t, Guid.NewGuid(), d.Version);
         d.MarkTripStarted(t, d.ReservationId!.Value);
         var ex = Assert.Throws<DriverDomainException>(() => d.MarkTripCompleted(Guid.NewGuid()));
         Assert.Equal(DriverErrors.TripMismatch, ex.Code);
@@ -314,10 +318,10 @@ public class DriverStateTests
     public void Release_While_OnTrip_Rejected()
     {
         var d = NewDriver();
-        d.GoOnline();
+        d.GoOnline(d.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        d.Reserve(t, r);
+        d.Reserve(t, r, d.Version);
         d.MarkTripStarted(t, r);
         Assert.Throws<DriverDomainException>(() => d.Release(t, r));
         Assert.Equal(DriverStatus.OnTrip, d.Status);

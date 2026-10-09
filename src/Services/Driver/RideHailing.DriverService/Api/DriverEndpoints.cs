@@ -1,8 +1,8 @@
 // B-W03-08: FUN-02 minimal API. Maps DomainException codes to HTTP (chốt ②).
 // Domain never knows HTTP. Invalid* -> 400, conflicts/stale -> 409.
 using Microsoft.Extensions.Options;
-using RideHailing.DriverService.Application.Drivers;
 using RideHailing.DriverService.Application.Location;
+using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
 
@@ -56,53 +56,238 @@ public static class DriverEndpoints
             return driver is null ? Results.NotFound() : Results.Ok(ToDto(driver));
         });
 
-        app.MapPost("/drivers/{id:guid}/online", async (Guid id, DriverRepository repo) =>
+        // B-W07-04 Race-B closure: version-fenced online/offline. The blind
+        // LoadAsync + SaveAsync shape could overwrite a newer RESERVED row
+        // with stale state (lost reservation, DSI-003); the guarded
+        // TryGoOnline/TryGoOffline row-lock transaction is the only writer now.
+        app.MapPost("/drivers/{id:guid}/online", async (
+            Guid id,
+            StateVersionRequest req,
+            DriverRepository repo,
+            DriverEventPublisher publisher,
+            CancellationToken ct) =>
         {
-            var driver = await repo.LoadAsync(id);
-            if (driver is null)
+            if (id == Guid.Empty || req.ExpectedVersion < 1)
             {
-                return Results.NotFound();
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "driverId must not be empty and expectedVersion must be >= 1.",
+                });
             }
 
             try
             {
-                GoOnlineHandler.Handle(driver);
-            }
-            catch (DriverDomainException ex)
-            {
-                return MapDomainError(ex);
-            }
+                var result = await repo.TryGoOnlineAsync(id, req.ExpectedVersion, ct);
+                var published = DriverEventMapper.ForOnlineResult(id, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
 
-            await repo.SaveAsync(driver);
-            return Results.Ok(ToDto(driver));
+                return DriverStateResults.ToHttpResult(result, "online");
+            }
+            catch (Exception ex) when (ex is Npgsql.NpgsqlException
+                or System.Net.Sockets.SocketException
+                or TimeoutException)
+            {
+                return Results.Json(
+                    new { code = "DEPENDENCY_UNAVAILABLE", message = "A backing dependency is unavailable." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
         });
 
-        app.MapPost("/drivers/{id:guid}/offline", async (Guid id, DriverRepository repo) =>
+        app.MapPost("/drivers/{id:guid}/offline", async (
+            Guid id,
+            StateVersionRequest req,
+            DriverRepository repo,
+            DriverEventPublisher publisher,
+            CancellationToken ct) =>
         {
-            var driver = await repo.LoadAsync(id);
-            if (driver is null)
+            if (id == Guid.Empty || req.ExpectedVersion < 1)
             {
-                return Results.NotFound();
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "driverId must not be empty and expectedVersion must be >= 1.",
+                });
             }
 
             try
             {
-                GoOfflineHandler.Handle(driver);
-            }
-            catch (DriverDomainException ex)
-            {
-                return MapDomainError(ex);
-            }
+                var result = await repo.TryGoOfflineAsync(id, req.ExpectedVersion, ct);
+                var published = DriverEventMapper.ForOfflineResult(id, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
 
-            await repo.SaveAsync(driver);
-            return Results.Ok(ToDto(driver));
+                return DriverStateResults.ToHttpResult(result, "offline");
+            }
+            catch (Exception ex) when (ex is Npgsql.NpgsqlException
+                or System.Net.Sockets.SocketException
+                or TimeoutException)
+            {
+                return Results.Json(
+                    new { code = "DEPENDENCY_UNAVAILABLE", message = "A backing dependency is unavailable." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
         });
 
-        app.MapPost("/drivers/{id:guid}/location", (
+        // B-W07-01/02: exact-token release (DSI-004/033, R-06). Exact token on
+        // a live reservation frees (200); coherent AVAILABLE is an idempotent
+        // cleanup no-op (200); a live foreign reservation conflicts (409) and
+        // is never freed. Cancellation is never caught; dependency failure
+        // without proven effect is a static 503.
+        app.MapPost("/drivers/{id:guid}/release", async (
+            Guid id,
+            ReleaseDriverRequest req,
+            DriverRepository repo,
+            DriverEventPublisher publisher,
+            CancellationToken ct) =>
+        {
+            if (id == Guid.Empty || req.TripId == Guid.Empty || req.ReservationId == Guid.Empty)
+            {
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "driverId/tripId/reservationId must not be empty.",
+                });
+            }
+
+            try
+            {
+                var result = await repo.TryReleaseAsync(id, req.TripId, req.ReservationId, ct);
+                var published = DriverEventMapper.ForReleaseResult(id, req.TripId, req.ReservationId, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
+
+                return DriverStateResults.ToHttpResult(result, "released");
+            }
+            catch (Exception ex) when (ex is Npgsql.NpgsqlException
+                or System.Net.Sockets.SocketException
+                or TimeoutException)
+            {
+                return Results.Json(
+                    new { code = "DEPENDENCY_UNAVAILABLE", message = "A backing dependency is unavailable." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+        });
+
+        // B-W07-07: read-only reservation truth for reconciliation
+        // (Doc 02 §12.6). Always 200 with the canonical outcome value
+        // (NOT_FOUND included); only transport failure is 503, which the
+        // caller treats as stay-UNKNOWN. Cancellation is never caught.
+        app.MapGet("/internal/drivers/{id:guid}/reservations/{reservationId:guid}", async (
+            Guid id,
+            Guid reservationId,
+            DriverRepository repo,
+            CancellationToken ct) =>
+        {
+            if (id == Guid.Empty || reservationId == Guid.Empty)
+            {
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "driverId/reservationId must not be empty.",
+                });
+            }
+
+            try
+            {
+                var query = await repo.QueryReservationAsync(id, reservationId, ct);
+                return DriverStateResults.ToHttpResult(query, id);
+            }
+            catch (Exception ex) when (ex is Npgsql.NpgsqlException
+                or System.Net.Sockets.SocketException
+                or TimeoutException)
+            {
+                return Results.Json(
+                    new { code = "DEPENDENCY_UNAVAILABLE", message = "A backing dependency is unavailable." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+        });
+
+        // B-W06-01: OCC reserve. Sync authority decision (Doc 00 §5.3, 02 §2.2-2.3):
+        // the guarded Driver DB write inside TryReserveAsync is the
+        // linearization point. 200 carries the canonical reservation on both
+        // win and same-reservation replay; conflicts are 409 domain branches,
+        // never system errors. Dependency failure without proven effect is a
+        // static 503; cancellation is never caught.
+        app.MapPost("/drivers/{id:guid}/reserve", async (
+            Guid id,
+            ReserveDriverRequest req,
+            DriverRepository repo,
+            DriverEventPublisher publisher,
+            CancellationToken ct) =>
+        {
+            if (req.TripId == Guid.Empty || req.ReservationId == Guid.Empty || req.ExpectedVersion < 1
+                || id == Guid.Empty)
+            {
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "driverId/tripId/reservationId must not be empty and expectedVersion must be >= 1.",
+                });
+            }
+
+            try
+            {
+                var result = await repo.TryReserveAsync(
+                    id, req.TripId, req.ReservationId, req.ExpectedVersion, ct);
+                var published = DriverEventMapper.ForReserveResult(id, req.TripId, req.ReservationId, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
+
+                return DriverReserveResults.ToHttpResult(result);
+            }
+            catch (Exception ex) when (ex is Npgsql.NpgsqlException
+                or System.Net.Sockets.SocketException
+                or TimeoutException)
+            {
+                // No proven effect: static message, never exception text.
+                // OperationCanceledException is deliberately NOT caught.
+                return Results.Json(
+                    new { code = "DEPENDENCY_UNAVAILABLE", message = "A backing dependency is unavailable." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+        });
+
+        app.MapPost("/drivers/{id:guid}/location", async (
             Guid id,
             LocationRequest req,
             LocationAcceptor acceptor,
-            IOptions<LocationIngressOptions> ingressOptions) =>
+            DriverEventPublisher publisher,
+            IOptions<LocationIngressOptions> ingressOptions,
+            CancellationToken ct) =>
         {
             LocationSample sample;
             try
@@ -119,6 +304,18 @@ public static class DriverEndpoints
                     });
                 }
 
+                // Best-effort location fact (P0 documented path: no
+                // relational dual-write, so no Outbox requirement). The
+                // projection Lua re-validates ordering; duplicates converge.
+                await publisher.PublishLocationAsync(
+                    new DriverLocationEventPayload(
+                        id,
+                        result.Current.Longitude,
+                        result.Current.Latitude,
+                        result.Current.DeviceSessionId,
+                        result.Current.SequenceNo,
+                        result.Current.CapturedAt),
+                    ct: ct);
                 return Results.Accepted(value: new { accepted = result.Current });
             }
             catch (DriverDomainException ex)
@@ -149,6 +346,12 @@ public static class DriverEndpoints
     };
 
     public sealed record CreateDriverRequest(Guid? DriverId, Guid UserId, Guid? VehicleId);
+
+    public sealed record ReserveDriverRequest(Guid TripId, Guid ReservationId, int ExpectedVersion);
+
+    public sealed record StateVersionRequest(int ExpectedVersion);
+
+    public sealed record ReleaseDriverRequest(Guid TripId, Guid ReservationId);
 
     public sealed record LocationRequest(
         string DeviceSessionId, long SequenceNo, DateTimeOffset CapturedAt,

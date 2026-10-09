@@ -24,7 +24,7 @@ public class DriverPersistenceTests
         var repo = Repo();
         var vehicle = Guid.NewGuid();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid(), vehicle);
-        driver.GoOnline();
+        driver.GoOnline(driver.Version);
         await repo.SaveAsync(driver);
 
         var loaded = await repo.LoadAsync(driver.DriverId);
@@ -45,10 +45,10 @@ public class DriverPersistenceTests
     {
         var repo = Repo();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
-        driver.GoOnline();
+        driver.GoOnline(driver.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        driver.Reserve(t, r);
+        driver.Reserve(t, r, driver.Version);
         await repo.SaveAsync(driver);
 
         var loaded = await repo.LoadAsync(driver.DriverId);
@@ -64,10 +64,10 @@ public class DriverPersistenceTests
     {
         var repo = Repo();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
-        driver.GoOnline();
+        driver.GoOnline(driver.Version);
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        driver.Reserve(t, r);
+        driver.Reserve(t, r, driver.Version);
         driver.MarkTripStarted(t, r);
         await repo.SaveAsync(driver);
 
