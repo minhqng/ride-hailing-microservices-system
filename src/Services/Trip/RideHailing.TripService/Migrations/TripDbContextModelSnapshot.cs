@@ -33,6 +33,10 @@ namespace RideHailing.TripService.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("CurrentMatchingRound")
+                        .HasColumnType("integer")
+                        .HasColumnName("current_matching_round");
+
                     b.Property<Guid>("RiderId")
                         .HasColumnType("uuid")
                         .HasColumnName("rider_id");
@@ -42,6 +46,10 @@ namespace RideHailing.TripService.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -123,7 +131,17 @@ namespace RideHailing.TripService.Migrations
                         {
                             t.HasCheckConstraint("CK_trips_assignment_coherence", "(assigned_driver_id IS NULL AND reservation_id IS NULL AND matching_round IS NULL) OR (assigned_driver_id IS NOT NULL AND reservation_id IS NOT NULL AND matching_round IS NOT NULL)");
 
+                            t.HasCheckConstraint("CK_trips_assignment_round_agreement", "(assigned_driver_id IS NULL OR matching_round = current_matching_round)");
+
+                            t.HasCheckConstraint("CK_trips_assignment_round_positive", "(matching_round IS NULL OR matching_round >= 1)");
+
+                            t.HasCheckConstraint("CK_trips_created_without_round", "(state <> 'CREATED' OR current_matching_round = 0)");
+
+                            t.HasCheckConstraint("CK_trips_current_round_non_negative", "current_matching_round >= 0");
+
                             t.HasCheckConstraint("CK_trips_fare_amount_non_negative", "fare_amount >= 0");
+
+                            t.HasCheckConstraint("CK_trips_post_created_have_round", "(state NOT IN ('MATCHING', 'DRIVER_RESERVED', 'DRIVER_ACCEPTED', 'READY_TO_START', 'IN_PROGRESS', 'COMPLETED', 'MATCH_FAILED') OR current_matching_round >= 1)");
 
                             t.HasCheckConstraint("CK_trips_state_assignment_coherence", "(state NOT IN ('DRIVER_RESERVED', 'DRIVER_ACCEPTED', 'READY_TO_START', 'IN_PROGRESS', 'COMPLETED') OR (assigned_driver_id IS NOT NULL AND reservation_id IS NOT NULL AND matching_round IS NOT NULL)) AND (state NOT IN ('CREATED', 'MATCHING', 'MATCH_FAILED') OR (assigned_driver_id IS NULL AND reservation_id IS NULL AND matching_round IS NULL))");
                         });

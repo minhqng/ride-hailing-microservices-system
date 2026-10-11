@@ -26,7 +26,7 @@
 //     intentionally absent. Fare belongs to W4 (A-W04-05); the rest are never
 //     part of the external read surface.
 //   - Intended route/method: GET /trips/{tripId:guid} (see TripRoutes).
-//     Not registered in Program.cs.
+//     Registered with the rider-scoped read adapter since W5.
 
 using System.Text.Json.Serialization;
 

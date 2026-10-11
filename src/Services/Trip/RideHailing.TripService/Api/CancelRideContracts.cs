@@ -18,8 +18,8 @@
 //   - Response echoes tripId + terminal status string ("CANCELLED").
 //   - Intended route/method: POST /trips/{tripId:guid}/cancel (see TripRoutes).
 //     POST (not DELETE) because cancel is a domain transition with
-//     compensation side effects, not a resource deletion. Not registered in
-//     Program.cs, so no fake success can be observed.
+//     compensation side effects, not a resource deletion. Registered with the
+//     rider-scoped CancelRideHandler since W5.
 
 using System.Text.Json.Serialization;
 

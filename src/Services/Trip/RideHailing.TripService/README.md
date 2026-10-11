@@ -35,9 +35,24 @@
   authentication.
 - A-W02-01/07/08: `Api/` freezes Trip HTTP transport shapes
   (`CreateRide`, `GetTrip`, `CancelRide`, `TripLocationDto`, `TripRoutes`,
-  `TripIdentityHeaders`) + stable-identity representation. No business routes
-  registered in `Program.cs` (no fake behavior); `Domain/`, `Application/`,
-  `Infrastructure/`, `Observability/` remain W3+ (`.gitkeep`).
+  `TripIdentityHeaders`) + stable-identity representation. Since W4/W5 the
+  behavior-backed routes POST /trips, GET /trips/{id} and POST
+  /trips/{id}/cancel are registered in `Program.cs`; Driver-actor lifecycle
+  routes remain future (not Trip-owned transport identity).
+- A-W05 (local lifecycle + first read/cancel REST slice, no broker): `Trip`
+  owns StartMatching/current-round fencing (round 1), replay/stale/conflict
+  intake for reservation/accept/payment/matching-failure, validated Driver
+  rejection with guarded-cleanup exposure (no state change), the pre-start
+  cancellation matrix with `TripCompensation` requirement representation,
+  authorization-gated Start and terminal Complete, and explicit-timestamp
+  `UpdatedAt`. `Application/Trips/Lifecycle/` coordinates the intakes
+  (rider-scoped StartMatching/Cancel plus system-shaped reservation, decision,
+  payment, matching-failure and progress intakes). `Integration/Matching/`
+  freezes the `RideRequestedV1` payload shape + example fixture for B/C
+  review (no publish path). Migration `W05_TripLifecycle` adds
+  `current_matching_round`/`updated_at` with round/assignment database
+  defense. No RabbitMQ runtime, Outbox, Inbox, Saga or W6+ reservation
+  orchestration in Trip.
 - Boundary: Trip references no Driver/Matching/Payment service or DB; no Redis;
   no EF/Outbox/Saga in `Api/`; nothing Trip-domain added to BuildingBlocks.
 - A-W02-02/04/05/06: `Infrastructure/Persistence/TripDbContext.cs` (DbContext

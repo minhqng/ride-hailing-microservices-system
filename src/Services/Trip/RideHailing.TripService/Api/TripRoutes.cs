@@ -1,8 +1,10 @@
 // Trip HTTP route/method mechanical freeze.
 //
-// These are DOCUMENTED CONSTANTS ONLY. Program.cs does NOT MapPost/MapGet
-// business routes, so no unimplemented endpoint can pretend success.
-// Real handlers arrive with later domain implementation.
+// W2 froze the intended routes as documented constants; W5 registers the
+// first behavior-backed slice (CreateRide since W4; GetTrip + CancelRide
+// since W5) in Program.cs. Driver-actor lifecycle routes (accept/start/
+// complete) remain future: their transport identity is Driver-fenced and the
+// edge/middleware owner is not Trip, so no route is invented for them here.
 //
 // W2 MECHANICAL FREEZE — reasons:
 //   - Resource noun "/trips" (not "/rides"): aligns with the canonical
@@ -27,7 +29,9 @@
 namespace RideHailing.TripService.Api;
 
 /// <summary>
-/// Intended Trip HTTP routes and methods (documented freeze, not registered).
+/// Intended Trip HTTP routes and methods. CreateRide, GetTrip and CancelRide
+/// are registered in Program.cs with behavior-backed handlers; any route
+/// added here in the future must follow the same rule.
 /// </summary>
 public static class TripRoutes
 {

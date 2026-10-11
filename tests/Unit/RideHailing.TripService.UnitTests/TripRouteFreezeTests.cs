@@ -3,9 +3,9 @@ using RideHailing.TripService.Api;
 namespace RideHailing.TripService.UnitTests;
 
 // Intended routes/methods + header locations.
-// Routes are documented constants only (not registered in Program.cs),
-// so these tests freeze the team-parallelism convention without implying
-// any implemented behavior.
+// CreateRide, GetTrip and CancelRide are registered in Program.cs with
+// behavior-backed handlers; these tests freeze the team-parallelism
+// convention (paths, methods, header locations) those registrations follow.
 public sealed class TripRouteFreezeTests
 {
     [Fact]

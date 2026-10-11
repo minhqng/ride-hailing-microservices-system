@@ -49,7 +49,9 @@ public sealed class TripPersistenceRoundTripTests
                 "VND", 75000m, "p0-test",
                 new DateTimeOffset(2026, 9, 26, 0, 0, 0, TimeSpan.Zero)),
             TripState.DriverReserved,
+            1,
             new TripAssignment(Guid.NewGuid(), sharedReservation, 1),
+            new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
             3);
 
@@ -143,7 +145,9 @@ public sealed class TripPersistenceRoundTripTests
             var trip = Trip.Reconstitute(
                 tripId, Guid.NewGuid(), pickup, dropoff, fare,
                 TripState.DriverReserved,
+                1,
                 new TripAssignment(driverId, reservationId, 1),
+                new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
                 new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero),
                 3);
             db.Trips.Add(trip);
@@ -156,10 +160,17 @@ public sealed class TripPersistenceRoundTripTests
 
             Assert.Equal(TripState.DriverReserved, reloaded.State);
             Assert.Equal(3, reloaded.Version);
+            Assert.Equal(1, reloaded.CurrentMatchingRound);
             Assert.NotNull(reloaded.Assignment);
             Assert.Equal(driverId, reloaded.Assignment.DriverId);
             Assert.Equal(reservationId, reloaded.Assignment.ReservationId);
             Assert.Equal(1, reloaded.Assignment.MatchingRound);
+            // PostgreSQL timestamptz stores microsecond precision while .NET
+            // ticks are 100ns: allow sub-millisecond truncation on UpdatedAt.
+            var expectedUpdatedAt = new DateTimeOffset(2026, 9, 26, 7, 0, 0, TimeSpan.Zero);
+            Assert.True(
+                Math.Abs((expectedUpdatedAt - reloaded.UpdatedAt.ToUniversalTime()).TotalMilliseconds) < 1,
+                $"UpdatedAt drifted more than 1ms: {expectedUpdatedAt:o} vs {reloaded.UpdatedAt:o}");
             Assert.Equal(new TripLocation(10.762622, 106.660172), reloaded.Pickup);
             Assert.Equal(new TripLocation(10.776889, 106.700806), reloaded.Dropoff);
             Assert.Equal("VND", reloaded.Fare.Currency);
@@ -182,11 +193,11 @@ public sealed class TripPersistenceRoundTripTests
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+            "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
             "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
             "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
             "assigned_driver_id, reservation_id, matching_round) " +
-            "VALUES ($1, $2, 'CREATED', now(), 0, 10.0, 106.0, 10.1, 106.1, " +
+            "VALUES ($1, $2, 'CREATED', now(), now(), 0, 0, 10.0, 106.0, 10.1, 106.1, " +
             "'VND', 50000, 'p0-test', now(), $3, NULL, NULL)";
         command.Parameters.Add(new NpgsqlParameter { Value = tripId });
         command.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
@@ -197,7 +208,13 @@ public sealed class TripPersistenceRoundTripTests
             await command.ExecuteNonQueryAsync();
         });
         Assert.Equal("23514", rejected.SqlState);
-        Assert.Equal("CK_trips_assignment_coherence", rejected.ConstraintName);
+        // A partial assignment violates both the all-or-nothing coherence
+        // CHECK and the round-agreement CHECK; PostgreSQL reports one
+        // violated CHECK, so either assignment-shape defense name proves the
+        // rejection without parsing human error text.
+        Assert.Contains(
+            rejected.ConstraintName,
+            new[] { "CK_trips_assignment_coherence", "CK_trips_assignment_round_agreement" });
     }
 
     [Fact]
@@ -214,11 +231,11 @@ public sealed class TripPersistenceRoundTripTests
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+            "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
             "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
             "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
             "assigned_driver_id, reservation_id, matching_round) " +
-            "VALUES ($1, $2, 'DRIVER_RESERVED', now(), 0, 10.0, 106.0, 10.1, 106.1, " +
+            "VALUES ($1, $2, 'DRIVER_RESERVED', now(), now(), 1, 0, 10.0, 106.0, 10.1, 106.1, " +
             "'VND', 50000, 'p0-test', now(), NULL, NULL, NULL)";
         command.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
         command.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
@@ -245,11 +262,11 @@ public sealed class TripPersistenceRoundTripTests
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+            "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
             "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
             "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
             "assigned_driver_id, reservation_id, matching_round) " +
-            "VALUES ($1, $2, 'MATCHING', now(), 0, 10.0, 106.0, 10.1, 106.1, " +
+            "VALUES ($1, $2, 'MATCHING', now(), now(), 1, 0, 10.0, 106.0, 10.1, 106.1, " +
             "'VND', 50000, 'p0-test', now(), $3, $4, 1)";
         command.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
         command.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
@@ -279,11 +296,11 @@ public sealed class TripPersistenceRoundTripTests
         await connection.OpenAsync();
         await using var command = connection.CreateCommand();
         command.CommandText =
-            "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+            "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
             "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
             "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
             "assigned_driver_id, reservation_id, matching_round) " +
-            "VALUES ($1, $2, 'MATCHING', now(), 0, 10.0, 106.0, 10.1, 106.1, " +
+            "VALUES ($1, $2, 'MATCHING', now(), now(), 1, 0, 10.0, 106.0, 10.1, 106.1, " +
             "'VND', 50000, 'p0-test', now(), NULL, NULL, NULL)";
         command.Parameters.Add(new NpgsqlParameter { Value = tripId });
         command.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
@@ -314,11 +331,11 @@ public sealed class TripPersistenceRoundTripTests
         await using (var bare = connection.CreateCommand())
         {
             bare.CommandText =
-                "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+                "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
                 "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
                 "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
                 "assigned_driver_id, reservation_id, matching_round) " +
-                "VALUES ($1, $2, 'CANCELLED', now(), 0, 10.0, 106.0, 10.1, 106.1, " +
+                "VALUES ($1, $2, 'CANCELLED', now(), now(), 0, 0, 10.0, 106.0, 10.1, 106.1, " +
                 "'VND', 50000, 'p0-test', now(), NULL, NULL, NULL)";
             bare.Parameters.Add(new NpgsqlParameter { Value = bareId });
             bare.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });
@@ -328,11 +345,11 @@ public sealed class TripPersistenceRoundTripTests
         await using (var assigned = connection.CreateCommand())
         {
             assigned.CommandText =
-                "INSERT INTO trips (trip_id, rider_id, state, created_at, version, " +
+                "INSERT INTO trips (trip_id, rider_id, state, created_at, updated_at, current_matching_round, version, " +
                 "pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, " +
                 "fare_currency, fare_amount, fare_policy_version, fare_created_at, " +
                 "assigned_driver_id, reservation_id, matching_round) " +
-                "VALUES ($1, $2, 'CANCELLED', now(), 1, 10.0, 106.0, 10.1, 106.1, " +
+                "VALUES ($1, $2, 'CANCELLED', now(), now(), 2, 1, 10.0, 106.0, 10.1, 106.1, " +
                 "'VND', 50000, 'p0-test', now(), $3, $4, 2)";
             assigned.Parameters.Add(new NpgsqlParameter { Value = assignedId });
             assigned.Parameters.Add(new NpgsqlParameter { Value = Guid.NewGuid() });

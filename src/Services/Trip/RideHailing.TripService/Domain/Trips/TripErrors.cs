@@ -54,4 +54,13 @@ public enum TripErrorCode
     /// until that policy is decided.
     /// </summary>
     CancellationPolicyUnresolved = 6,
+
+    /// <summary>
+    /// The supplied round/reservation generation is not the Trip's current
+    /// generation: an older/superseded round, an old reservation from a
+    /// previous assignment, or an unknown future generation (DSI-016).
+    /// The aggregate is unchanged; the caller must reconcile against the
+    /// current round/reservation instead of overwriting it.
+    /// </summary>
+    StaleIdentity = 7,
 }
