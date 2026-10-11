@@ -27,6 +27,21 @@ public sealed class DriverProjectionHandler
     public async Task<HandlerOutcome> HandleAsync(BrokerDelivery delivery, CancellationToken ct)
     {
         var envelope = BrokerEnvelope.Parse(delivery.Body);
+        var (expectedType, expectedStatus) = delivery.RoutingKey switch
+        {
+            "driver.available.v1" => ("DriverAvailableV1", "AVAILABLE"),
+            "driver.offline.v1" => ("DriverOfflineV1", "OFFLINE"),
+            "driver.reserved.v1" => ("DriverReservedV1", "RESERVED"),
+            "driver.reservation-released.v1" => ("DriverReservationReleasedV1", "AVAILABLE"),
+            "driver.trip-started.v1" => ("DriverTripStartedV1", "ON_TRIP"),
+            "driver.trip-completed.v1" => ("DriverTripCompletedV1", "AVAILABLE"),
+            "driver.location-accepted.v1" => ("DriverLocationAcceptedV1", (string?)null),
+            _ => throw new ArgumentException("Unsupported Driver routing key.")
+        };
+        if (envelope.MessageType != expectedType)
+            throw new ArgumentException("Driver message type does not match routing key.");
+        if (expectedStatus is not null && ReadState(envelope.Payload).DerivedStatus != expectedStatus)
+            throw new ArgumentException("Driver state does not match event type.");
         ProjectionResult result = delivery.RoutingKey switch
         {
             "driver.available.v1" or "driver.offline.v1" or "driver.reserved.v1"
