@@ -68,38 +68,28 @@ builder.Services.AddSingleton(_ => new ConnectionFactory
 builder.Services.AddSingleton<RideRequestedHandler>();
 builder.Services.AddHostedService<RideRequestedConsumer>();
 
-// Projection ingestion needs Redis. Connect once here: on success the mux,
-// updater, handler and consumer are all registered; on failure only a
-// warning is logged and the projection path stays down until restart — the
-// round consumer above is unaffected (blast-radius isolation; derived state
-// rebuilds from authority later).
-IConnectionMultiplexer? mux = null;
+// Always register projection ingestion. Redis transport outages must not
+// permanently remove the consumer from this process's hosted services.
+var redisCs = builder.Configuration["Redis:ConnectionString"]
+    ?? builder.Configuration["Redis__ConnectionString"]
+    ?? Environment.GetEnvironmentVariable("Redis__ConnectionString")
+    ?? "localhost:6379";
+var mux = await RedisProjectionUpdater.ConnectAsync(redisCs);
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => mux);
+builder.Services.AddSingleton<RedisProjectionUpdater>();
+builder.Services.AddSingleton<DriverProjectionHandler>();
+builder.Services.AddHostedService<DriverProjectionConsumer>();
 using (var bootLogs = LoggerFactory.Create(logging => logging.AddConsole()))
 {
-    var bootLog = bootLogs.CreateLogger("MatchingStartup");
     try
     {
-        var redisCs = builder.Configuration["Redis__ConnectionString"]
-            ?? Environment.GetEnvironmentVariable("Redis__ConnectionString")
-            ?? "localhost:6379";
-        mux = await RedisProjectionUpdater.ConnectAsync(redisCs);
         await new RedisProjectionUpdater(mux).EnsureFunctionAsync();
-        bootLog.LogInformation("Redis projection function loaded.");
     }
-    catch (Exception ex)
+    catch (RedisException ex)
     {
-        bootLog.LogWarning(
-            ex,
-            "Redis unavailable at startup; projection ingestion is disabled until restart. Round consumption unaffected.");
+        bootLogs.CreateLogger("MatchingStartup").LogWarning(ex,
+            "Redis unavailable at startup; projection consumer remains registered and retries with the shared bounded policy.");
     }
-}
-
-if (mux is not null)
-{
-    builder.Services.AddSingleton(mux);
-    builder.Services.AddSingleton<RedisProjectionUpdater>();
-    builder.Services.AddSingleton<DriverProjectionHandler>();
-    builder.Services.AddHostedService<DriverProjectionConsumer>();
 }
 
 var app = builder.Build();

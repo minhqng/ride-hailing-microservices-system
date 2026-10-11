@@ -70,27 +70,34 @@ else:
     raise AssertionError("Payment failed to redeclare topology")
 assert snapshot() == before
 
-# Route every catalog contract to its independent consumer queues.
-routes = {(exchange, key) for queue, (exchange, keys) in expected.items() if queue != "notification.business-events.q" for key in keys}
-for exchange, key in sorted(routes):
-    result = api("POST", f"exchanges/%2F/{exchange}/publish", dict(
-        properties=dict(delivery_mode=2, message_id=key, content_type="application/json"),
-        routing_key=key, payload=json.dumps({"contract": key}), payload_encoding="string"))
-    assert result["routed"], key
+# This routing probe reads the business queues itself. Pause competing consumers
+# only for this disposable topology probe and always restore the service.
+subprocess.run(["docker", "compose", "stop", "matching"], check=True)
+try:
+    # Route every catalog contract to its independent consumer queues.
+    routes = {(exchange, key) for queue, (exchange, keys) in expected.items() if queue != "notification.business-events.q" for key in keys}
+    for exchange, key in sorted(routes):
+        result = api("POST", f"exchanges/%2F/{exchange}/publish", dict(
+            properties=dict(delivery_mode=2, message_id=key, content_type="application/json"),
+            routing_key=key, payload=json.dumps({"contract": key}), payload_encoding="string"))
+        assert result["routed"], key
 
-for queue, (exchange, keys) in expected.items():
-    wanted = {key for source, key in routes if source == exchange} if queue == "notification.business-events.q" else set(keys)
-    received = set()
-    for attempt in range(20):
-        messages = api("POST", f"queues/%2F/{urllib.parse.quote(queue, safe='')}/get",
-            dict(count=50, ackmode="ack_requeue_false", encoding="auto", truncate=10000))
-        for message in messages:
-            assert message["properties"]["delivery_mode"] == 2
-            received.add(message["properties"]["message_id"])
-        if received == wanted:
-            break
-        time.sleep(0.2)
-    assert received == wanted, (queue, received, wanted)
+    for queue, (exchange, keys) in expected.items():
+        wanted = {key for source, key in routes if source == exchange} if queue == "notification.business-events.q" else set(keys)
+        received = set()
+        for attempt in range(20):
+            messages = api("POST", f"queues/%2F/{urllib.parse.quote(queue, safe='')}/get",
+                dict(count=50, ackmode="ack_requeue_false", encoding="auto", truncate=10000))
+            for message in messages:
+                assert message["properties"]["delivery_mode"] == 2
+                received.add(message["properties"]["message_id"])
+            if received == wanted:
+                break
+            time.sleep(0.2)
+        assert received == wanted, (queue, received, wanted)
+
+finally:
+    subprocess.run(["docker", "compose", "start", "matching"], check=True)
 
 # Separate Production instance shares only this disposable test project's infrastructure.
 container = subprocess.run(["docker", "compose", "run", "-d", "--no-deps", "--rm",

@@ -22,13 +22,13 @@ public sealed class RedisProjectionUpdater
 
     public static async Task<IConnectionMultiplexer> ConnectAsync(string configuration)
     {
-        return await ConnectionMultiplexer.ConnectAsync(new ConfigurationOptions
-        {
-            EndPoints = { configuration },
-            ConnectTimeout = 3000,
-            SyncTimeout = 5000,
-            AbortOnConnectFail = true,
-        });
+        var options = ConfigurationOptions.Parse(configuration);
+        options.ConnectTimeout = 3000;
+        options.SyncTimeout = 5000;
+        // Keep the multiplexer alive across startup outages; it reconnects in
+        // the background and CallAsync reloads the function when needed.
+        options.AbortOnConnectFail = false;
+        return await ConnectionMultiplexer.ConnectAsync(options);
     }
 
     // Idempotent: FUNCTION LOAD REPLACE succeeds whether or not the lib exists.
