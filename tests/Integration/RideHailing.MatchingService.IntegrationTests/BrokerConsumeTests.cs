@@ -357,7 +357,7 @@ public class BrokerConsumeTests
                 CancellationToken.None);
 
         var state = MessageEnvelope<JsonElement>.Create(
-            "DriverReservedV1", Guid.NewGuid().ToString("N"),
+            "DriverAvailableV1", Guid.NewGuid().ToString("N"),
             JsonDocument.Parse(
                 $"{{\"driverId\":\"{driver:N}\",\"status\":\"AVAILABLE\",\"version\":5}}").RootElement);
         Assert.Equal(HandlerOutcome.Done,
@@ -378,7 +378,7 @@ public class BrokerConsumeTests
         // with A-owned trip work): status is stored verbatim and version
         // guarded; non-AVAILABLE stays out of GEO. Same code path as above.
         var started = MessageEnvelope<JsonElement>.Create(
-            "DriverReservedV1", Guid.NewGuid().ToString("N"),
+            "DriverTripStartedV1", Guid.NewGuid().ToString("N"),
             JsonDocument.Parse(
                 $"{{\"driverId\":\"{driver:N}\",\"status\":\"ON_TRIP\",\"version\":8}}").RootElement);
         Assert.Equal(HandlerOutcome.Done,
@@ -387,7 +387,7 @@ public class BrokerConsumeTests
         Assert.True(await db.GeoPositionAsync("drivers:geo", driver.ToString("N")) is null);
 
         var stale = MessageEnvelope<JsonElement>.Create(
-            "DriverReservedV1", Guid.NewGuid().ToString("N"),
+            "DriverAvailableV1", Guid.NewGuid().ToString("N"),
             JsonDocument.Parse(
                 $"{{\"driverId\":\"{driver:N}\",\"status\":\"AVAILABLE\",\"version\":4}}").RootElement);
         Assert.Equal(HandlerOutcome.Done,
@@ -397,7 +397,7 @@ public class BrokerConsumeTests
         // Re-availability re-enters the dispatchable set only once a fresh
         // location arrives (GEO needs both AVAILABLE state and location).
         var back = MessageEnvelope<JsonElement>.Create(
-            "DriverReservedV1", Guid.NewGuid().ToString("N"),
+            "DriverAvailableV1", Guid.NewGuid().ToString("N"),
             JsonDocument.Parse(
                 $"{{\"driverId\":\"{driver:N}\",\"status\":\"AVAILABLE\",\"version\":9}}").RootElement);
         Assert.Equal(HandlerOutcome.Done,
@@ -415,6 +415,24 @@ public class BrokerConsumeTests
         var pos = await db.GeoPositionAsync("drivers:geo", driver.ToString("N"));
         Assert.NotNull(pos);
         Assert.Equal(10.9, pos!.Value.Latitude, 4);
+    }
+
+    [Theory]
+    [InlineData("DriverReservedV1", "driver.available.v1", "AVAILABLE")]
+    [InlineData("DriverAvailableV1", "driver.available.v1", "RESERVED")]
+    [InlineData("RideRequestedV1", "driver.reserved.v1", "RESERVED")]
+    public async Task Mismatched_Driver_Event_Is_Rejected_Before_Projection_Mutation(
+        string type, string route, string status)
+    {
+        var driver = Guid.NewGuid();
+        var mux = _redis.Multiplexer();
+        var handler = new DriverProjectionHandler(new RedisProjectionUpdater(mux), new TestLogger<DriverProjectionHandler>());
+        var payload = JsonSerializer.SerializeToElement(new { driverId = driver, status, version = 100 });
+        var envelope = MessageEnvelope<JsonElement>.Create(type, Guid.NewGuid().ToString("N"), payload);
+        await Assert.ThrowsAsync<ArgumentException>(() => handler.HandleAsync(new BrokerDelivery(route,
+            JsonSerializer.SerializeToUtf8Bytes(envelope, Json), new Dictionary<string, object?>(), 0, false),
+            CancellationToken.None));
+        Assert.False(await mux.GetDatabase().KeyExistsAsync($"driver:projection:{driver:N}"));
     }
 
     [Fact]
