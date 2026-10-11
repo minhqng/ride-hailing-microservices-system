@@ -1,5 +1,5 @@
 using RideHailing.Observability;
-// Development Payment simulator. Production operation deduplication starts in W5.
+// Development simulator endpoints use the durable Payment execution authority.
 
 using Npgsql;
 using System.Text.Json.Serialization;
@@ -17,7 +17,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 var connectionString = builder.Configuration.GetConnectionString("Postgres");
 if (!string.IsNullOrWhiteSpace(connectionString))
 {
-    builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+    builder.Services.AddSingleton(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = 32 }.ConnectionString));
+    builder.Services.AddSingleton<PaymentExecution>();
     builder.Services.AddSingleton<PaymentOperationRepository>();
     builder.Services.AddSingleton<PaymentSimulator>();
 }
@@ -50,7 +51,7 @@ if (!string.IsNullOrWhiteSpace(connectionString))
         app.MapPost("/simulator/operations", async (
             SimulatePaymentRequest request,
             PaymentOperationRepository repository,
-            PaymentSimulator simulator,
+            PaymentExecution execution,
             CancellationToken cancellationToken) =>
         {
             PaymentOperation operation;
@@ -64,16 +65,12 @@ if (!string.IsNullOrWhiteSpace(connectionString))
             {
                 return Results.BadRequest(new { error = exception.Message });
             }
-            var started = operation.BeginAttempt(DateTimeOffset.UtcNow);
-            await repository.SaveAsync(started, cancellationToken);
-            // Once execution starts, caller disconnect must not cancel durable outcome recording.
-            // A process crash can still leave PROCESSING; W7 owns reconciliation.
-            using var completionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var result = await simulator.ExecuteAsync(started, request.Mode, completionTimeout.Token);
-            await repository.SaveAsync(result, completionTimeout.Token);
-            // Return the canonical stored representation, including PostgreSQL timestamp precision.
-            result = await repository.GetAsync(result.Id, completionTimeout.Token)
-                ?? throw new InvalidOperationException("Persisted operation is missing.");
+            PaymentOperation result;
+            try { result = await execution.ExecuteAsync(operation, request.Mode, cancellationToken); }
+            catch (PaymentConflictException)
+            {
+                return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" });
+            }
 
             return result.State == PaymentOperationState.Unknown
                 ? Results.Json(result, statusCode: StatusCodes.Status504GatewayTimeout)

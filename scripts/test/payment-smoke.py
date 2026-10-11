@@ -52,7 +52,9 @@ for operation_type in ["Authorize", "Capture", "Void"]:
         # Query persisted authority independently of the HTTP repository read.
         actual = sql(f"SELECT state || '|' || provider_effect_occurred::text || '|' || attempt_count::text FROM payment_operations WHERE id = '{uuid.UUID(result['id'])}'")
         assert actual == f"{state.upper()}|{str(effect).lower()}|1", actual
-        saved.append(result)
+        assert request("POST", "/simulator/operations", body) == (status, result)
+        assert request("POST", "/simulator/operations", dict(body, amountMinor=12001))[0] == 409
+        saved.append((result, body, status))
 
 before = sql("SELECT count(*) FROM payment_operations")
 for update in [dict(type=999), dict(mode=999), dict(type="invalid"), dict(mode="invalid"),
@@ -64,7 +66,9 @@ for field in body:
     assert request("POST", "/simulator/operations", missing)[0] == 400, field
 assert sql("SELECT count(*) FROM payment_operations") == before
 
-subprocess.run(["docker", "compose", "restart", "payment"], check=True)
+# Abrupt process death: committed outcomes must survive without graceful shutdown hooks.
+subprocess.run(["docker", "compose", "kill", "-s", "SIGKILL", "payment"], check=True)
+subprocess.run(["docker", "compose", "start", "payment"], check=True)
 for attempt in range(60):
     try:
         if request("GET", "/health/ready")[0] == 200:
@@ -74,6 +78,7 @@ for attempt in range(60):
     time.sleep(1)
 else:
     raise AssertionError("Payment did not recover after restart")
-for result in saved:
+for result, body, status in saved:
+    assert request("POST", "/simulator/operations", body) == (status, result)
     assert request("GET", f'/simulator/operations/{result["id"]}') == (200, result)
-print("PASS: 18 type/mode cases, DB assertions, 14 invalid/missing-field requests with no row writes, and persistence after restart. No operationKey replay guarantee claimed.")
+print("PASS: 18 type/mode cases, DB assertions, 14 invalid/missing-field requests with no row writes, and persistence after restart. Same-key replay and conflicting payload rejection verified, including service restart.")

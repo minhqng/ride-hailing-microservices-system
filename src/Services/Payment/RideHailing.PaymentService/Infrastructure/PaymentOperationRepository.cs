@@ -25,6 +25,13 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
 
     public async Task SaveAsync(PaymentOperation operation, CancellationToken cancellationToken)
     {
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await SaveAsync(operation, connection, null, cancellationToken);
+    }
+
+    internal static async Task SaveAsync(PaymentOperation operation, NpgsqlConnection connection,
+        NpgsqlTransaction? transaction, CancellationToken cancellationToken)
+    {
         const string sql = """
             INSERT INTO payment_operations (
                 id, operation_key, trip_id, operation_type, amount_minor, currency,
@@ -55,8 +62,7 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
                     AND EXCLUDED.attempt_count = payment_operations.attempt_count + 1));
             """;
 
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        await using var command = new NpgsqlCommand(sql, connection);
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("id", operation.Id);
         command.Parameters.AddWithValue("operation_key", operation.OperationKey);
         command.Parameters.AddWithValue("trip_id", operation.TripId);
@@ -94,7 +100,11 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         if (!await reader.ReadAsync(cancellationToken)) return null;
 
-        return PaymentOperation.Restore(
+        return Read(reader);
+    }
+
+    internal static PaymentOperation Read(NpgsqlDataReader reader) =>
+        PaymentOperation.Restore(
             reader.GetGuid(0), reader.GetString(1), reader.GetGuid(2),
             Enum.Parse<PaymentOperationType>(reader.GetString(3), ignoreCase: true),
             reader.GetInt64(4), reader.GetString(5).TrimEnd(),
@@ -103,5 +113,4 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
             reader.IsDBNull(9) ? null : reader.GetString(9), reader.GetInt32(10),
             reader.GetFieldValue<DateTimeOffset>(11), reader.GetFieldValue<DateTimeOffset>(12),
             reader.IsDBNull(13) ? null : reader.GetFieldValue<DateTimeOffset>(13));
-    }
 }
