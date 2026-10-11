@@ -14,6 +14,8 @@
   <ItemGroup>
     <!-- Ship the Lua function source with the service; loader reads it at startup. -->
     <Content Include="Infrastructure\RedisProjection\*.lua" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Ship migration scripts; startup EnsureTables applies them in order. -->
+    <Content Include="Infrastructure\Persistence\Migrations\*.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
