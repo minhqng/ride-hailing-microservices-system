@@ -14,4 +14,5 @@ public static class DriverErrors
     public const string InvalidIdentity = "INVALID_IDENTITY";
     public const string AlreadyExists = "DRIVER_ALREADY_EXISTS";
     public const string StaleLocation = "STALE_LOCATION";
+    public const string StaleVersion = "STALE_VERSION";
 }

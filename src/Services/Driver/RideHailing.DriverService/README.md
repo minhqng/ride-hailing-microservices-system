@@ -19,9 +19,16 @@
 - Decisions: ingress accepts lat [-90,90] (polar valid at authority;
   `LocationValidator.IsGeoIndexable` ±85.05112878 reserved for W4 GEO projection);
   Domain throws `DriverDomainException(Code)`, API maps Invalid*→400 else 409;
-  persistence is Npgsql raw (EF Core deferred to W6 OCC).
+  persistence is Npgsql raw (no EF).
+- W6: OCC reserve (`Driver.Reserve` with expected-version fence: same-R replay
+  succeeds version-agnostic, stale version → `STALE_VERSION`, foreign/state
+  conflict → `DRIVER_NOT_AVAILABLE`), `DriverRepository.TryReserveAsync`
+  (row-locked tx: `SELECT .. FOR UPDATE` → decide on fresh row → write;
+  linearization point is lock acquisition), `POST /drivers/{id}/reserve`
+  (200 won/replayed, 409 conflict codes, 404 unknown driver, 400 validation,
+  static 503 dependency), migration `003` (non-empty reserve/active identity
+  CHECK), CON-01 harness + proof (N=2/10/50/100, final-DB oracle, first E01 data).
 
 ## NOT implemented (later weeks)
 
-- W4: Redis GEO projection/Function. W6: OCC/conditional Reserve + CON-01.
 - W7: fencing persistence, UNKNOWN reconciliation. W8+: RabbitMQ/Outbox.
