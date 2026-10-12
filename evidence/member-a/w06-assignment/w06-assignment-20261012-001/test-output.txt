@@ -1,0 +1,12 @@
+dotnet test TripW06AssignmentProofsTests + TripDriverAgreementTests, Release, real Testcontainers PostgreSQL 18.6
+Result: Passed! - Failed: 0, Passed: 8, Skipped: 0, Total: 8
+Full Trip regression on the same tree: 252/252 unit, 97/97 integration
+
+CompetingReservations_SameGeneration_OneWins_OneConflicts_SingleAssignmentPersists Passed
+MatchingFailed_SameRound_AfterAccepted_DoesNotRegress Passed
+MatchingFailed_SameRound_AfterReserved_DoesNotRegress Passed
+Loser_Reference_Cannot_Overwrite_Agreement Passed
+Winner_Reference_Agrees_Across_Services Passed
+Replay_Keeps_Agreement_Without_Second_Effect Passed
+ReservationAfterMatchFailedTerminal_DoesNotReactivate Passed
+ReservationReplay_ViaHandler_PreservesDbRow Passed

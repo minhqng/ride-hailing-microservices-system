@@ -1,0 +1,1 @@
+Distributed trace collection is not wired for the Trip assignment proof (local Testcontainers run, no OTLP exporter asserted). N/A with reason: correctness is proven by the authoritative DB oracle (single assignment, fenced replays, cross-service agreement), not by trace sampling.
