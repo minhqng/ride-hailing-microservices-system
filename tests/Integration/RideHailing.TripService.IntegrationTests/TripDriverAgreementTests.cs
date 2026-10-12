@@ -93,7 +93,7 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     private static async Task<Guid> SeedAvailableDriverAsync(DriverPersistence.DriverRepository repo)
     {
         var driver = DriverDomain.Driver.Create(Guid.NewGuid(), Guid.NewGuid());
-        driver.GoOnline();
+        driver.GoOnline(driver.Version);
         Assert.True(await repo.TryInsertAsync(driver));
         return driver.DriverId;
     }
