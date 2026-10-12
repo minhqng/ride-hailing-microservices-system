@@ -48,7 +48,7 @@ public class DriverPersistenceTests
         driver.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        driver.Reserve(t, r);
+        driver.Reserve(t, r, driver.Version);
         await repo.SaveAsync(driver);
 
         var loaded = await repo.LoadAsync(driver.DriverId);
@@ -67,7 +67,7 @@ public class DriverPersistenceTests
         driver.GoOnline();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();
-        driver.Reserve(t, r);
+        driver.Reserve(t, r, driver.Version);
         driver.MarkTripStarted(t, r);
         await repo.SaveAsync(driver);
 

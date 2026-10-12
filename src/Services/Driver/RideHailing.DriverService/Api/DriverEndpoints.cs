@@ -98,6 +98,46 @@ public static class DriverEndpoints
             return Results.Ok(ToDto(driver));
         });
 
+        // B-W06-01: OCC reserve. Sync authority decision (Doc 00 §5.3, 02 §2.2-2.3):
+        // the guarded Driver DB write inside TryReserveAsync is the
+        // linearization point. 200 carries the canonical reservation on both
+        // win and same-reservation replay; conflicts are 409 domain branches,
+        // never system errors. Dependency failure without proven effect is a
+        // static 503; cancellation is never caught.
+        app.MapPost("/drivers/{id:guid}/reserve", async (
+            Guid id,
+            ReserveDriverRequest req,
+            DriverRepository repo,
+            CancellationToken ct) =>
+        {
+            if (req.TripId == Guid.Empty || req.ReservationId == Guid.Empty || req.ExpectedVersion < 1
+                || id == Guid.Empty)
+            {
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "driverId/tripId/reservationId must not be empty and expectedVersion must be >= 1.",
+                });
+            }
+
+            try
+            {
+                var result = await repo.TryReserveAsync(
+                    id, req.TripId, req.ReservationId, req.ExpectedVersion, ct);
+                return DriverReserveResults.ToHttpResult(result);
+            }
+            catch (Exception ex) when (ex is Npgsql.NpgsqlException
+                or System.Net.Sockets.SocketException
+                or TimeoutException)
+            {
+                // No proven effect: static message, never exception text.
+                // OperationCanceledException is deliberately NOT caught.
+                return Results.Json(
+                    new { code = "DEPENDENCY_UNAVAILABLE", message = "A backing dependency is unavailable." },
+                    statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+        });
+
         app.MapPost("/drivers/{id:guid}/location", (
             Guid id,
             LocationRequest req,
@@ -149,6 +189,8 @@ public static class DriverEndpoints
     };
 
     public sealed record CreateDriverRequest(Guid? DriverId, Guid UserId, Guid? VehicleId);
+
+    public sealed record ReserveDriverRequest(Guid TripId, Guid ReservationId, int ExpectedVersion);
 
     public sealed record LocationRequest(
         string DeviceSessionId, long SequenceNo, DateTimeOffset CapturedAt,

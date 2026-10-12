@@ -144,12 +144,38 @@ public sealed class Driver
         }
     }
 
-    // Domain-level reserve (state legality only). W6 adds the DB guarded write / OCC.
-    public void Reserve(Guid tripId, Guid reservationId)
+    // Domain-level reserve with OCC fence (B-W06-01/02/03, Doc 01 §1.4/§4.4,
+    // DSI-001/003/005). Precedence is load-bearing:
+    //   1. empty identity rejection (never a candidate effect);
+    //   2. same-reservation replay (DSI-005): the effect already exists, so
+    //      return canonical success WITHOUT consulting expectedVersion — a
+    //      retry carries the version it originally saw;
+    //   3. expected-version fence (DSI-003): a stale caller must not overwrite
+    //      newer authority even when the driver happens to be AVAILABLE again;
+    //   4. state legality (DSI-001): only AVAILABLE can be taken.
+    public void Reserve(Guid tripId, Guid reservationId, int expectedVersion)
     {
         if (tripId == Guid.Empty || reservationId == Guid.Empty)
         {
             throw new DriverDomainException(DriverErrors.InvalidIdentity, "tripId/reservationId must not be empty.");
+        }
+
+        if (expectedVersion < 1)
+        {
+            throw new DriverDomainException(DriverErrors.IllegalTransition, "expectedVersion must be >= 1.");
+        }
+
+        if (Status == DriverStatus.Reserved
+            && ReservedTripId == tripId && ReservationId == reservationId)
+        {
+            return; // same-reservation idempotent replay (DSI-005): no new effect.
+        }
+
+        if (Version != expectedVersion)
+        {
+            throw new DriverDomainException(
+                DriverErrors.StaleVersion,
+                $"Reserve fenced: expected version {expectedVersion}, current version {Version}.");
         }
 
         switch (Status)
@@ -161,11 +187,6 @@ public sealed class Driver
                 Touch();
                 break;
             case DriverStatus.Reserved:
-                if (ReservedTripId == tripId && ReservationId == reservationId)
-                {
-                    break; // same-reservation idempotent replay (DSI-005)
-                }
-
                 throw new DriverDomainException(
                     DriverErrors.DriverNotAvailable,
                     "Driver already reserved for another trip/reservation.");
