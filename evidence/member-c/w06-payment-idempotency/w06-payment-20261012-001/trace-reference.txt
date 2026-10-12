@@ -1,0 +1,1 @@
+Distributed trace collection is not wired for the payment concurrency proof (local Testcontainers run, no OTLP exporter asserted). N/A with reason: correctness is proven by the authoritative DB oracle (1 row + 1 effect) and canonical caller convergence, not by trace sampling.

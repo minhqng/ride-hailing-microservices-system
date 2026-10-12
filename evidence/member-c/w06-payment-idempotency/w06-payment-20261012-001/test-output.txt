@@ -1,0 +1,12 @@
+dotnet test PaymentConcurrencyTests (CON-03 only), Release, real Testcontainers PostgreSQL 18.6
+Result: Passed! - Failed: 0, Passed: 9, Skipped: 0, Total: 9
+
+CON-03 type=Authorize; N=100; key=a4e119ec-08e6-44a0-9c57-c086d16adfe4; rows=1; providerEffects=1; canonical callers=100; p50=2032.31ms; p95=2039.99ms
+CON-03 type=Authorize; N=10; key=a5ebd8e4-6b1c-4d26-a2c6-2a9ae10ff834; rows=1; providerEffects=1; canonical callers=10; p50=2020.19ms; p95=2021.53ms
+CON-03 type=Authorize; N=50; key=20725e4a-07b4-455f-8389-d0e2074ad260; rows=1; providerEffects=1; canonical callers=50; p50=2021.97ms; p95=2026.18ms
+CON-03 type=Capture; N=100; key=8ed482e8-9eae-4612-b0f9-e69cb43c7d13; rows=1; providerEffects=1; canonical callers=100; p50=2030.99ms; p95=2037.64ms
+CON-03 type=Capture; N=10; key=96dc7004-ca60-499b-96e4-42983ce2335f; rows=1; providerEffects=1; canonical callers=10; p50=2032.79ms; p95=2035.65ms
+CON-03 type=Capture; N=50; key=7119d55e-9dd1-4c27-8cdf-a6c98da56620; rows=1; providerEffects=1; canonical callers=50; p50=2076.04ms; p95=2077.13ms
+CON-03 type=Void; N=100; key=e756f495-e968-4327-9423-a451b302081a; rows=1; providerEffects=1; canonical callers=100; p50=2025.37ms; p95=2028.58ms
+CON-03 type=Void; N=10; key=91ccdae9-ad46-4c21-9463-4ee511d53fbc; rows=1; providerEffects=1; canonical callers=10; p50=2025.34ms; p95=2026.77ms
+CON-03 type=Void; N=50; key=a7eef409-38b0-421d-869f-111eba2b8baa; rows=1; providerEffects=1; canonical callers=50; p50=2028.83ms; p95=2032.67ms
