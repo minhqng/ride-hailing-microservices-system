@@ -57,7 +57,12 @@ public sealed class RecordDriverAcceptedHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Exact acceptance replay is already current (DSI-008): no mutation,
+        // so skip the write and keep Version/UpdatedAt stable.
+        if (!outcome.IsReplay)
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _log.LogInformation(
             "DriverAccepted {TripId} state {State} replay {IsReplay}.",

@@ -53,7 +53,11 @@ public sealed class StartMatchingHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Round-1 replay is already current: no mutation, skip the write.
+        if (!outcome.IsReplay)
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _log.LogInformation(
             "StartMatching {TripId} state {State} round {MatchingRound} replay {IsReplay}.",

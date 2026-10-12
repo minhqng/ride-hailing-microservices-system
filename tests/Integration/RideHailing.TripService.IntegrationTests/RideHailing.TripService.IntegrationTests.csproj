@@ -24,6 +24,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Trip\RideHailing.TripService\RideHailing.TripService.csproj" />
+    <!-- A-W06-07 agreement fixture only: the test seam may inspect both owned
+         databases. Production services never reference each other. The alias
+         keeps DriverService's top-level Program from colliding with Trip's. -->
+    <ProjectReference Include="..\..\..\src\Services\Driver\RideHailing.DriverService\RideHailing.DriverService.csproj">
+      <Aliases>DriverSvc</Aliases>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

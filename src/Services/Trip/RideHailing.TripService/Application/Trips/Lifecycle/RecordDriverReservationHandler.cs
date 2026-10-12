@@ -1,4 +1,4 @@
-// Driver-reservation system intake (A-W05-03).
+// Driver-reservation system intake (A-W05-03, A-W06 replay fencing).
 //
 // Applies an authoritative-shaped Driver reservation result to the Trip's
 // assignment reference. Trip never decides reservation success: the caller
@@ -59,7 +59,13 @@ public sealed class RecordDriverReservationHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Same authoritative reservation replay performs no mutation (DSI-008):
+        // skip the write so Version/UpdatedAt stay untouched and a losing
+        // concurrent writer can never turn a replay into an overwrite.
+        if (!outcome.IsReplay)
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _log.LogInformation(
             "DriverReserved {TripId} state {State} driver {DriverId} reservation {ReservationId} round {MatchingRound} replay {IsReplay}.",
