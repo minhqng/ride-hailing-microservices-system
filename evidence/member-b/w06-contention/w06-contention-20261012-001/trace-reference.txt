@@ -1,0 +1,1 @@
+Distributed trace collection is not wired for the reservation contention proof (local Testcontainers run, no OTLP exporter asserted). N/A with reason: correctness is proven by the authoritative DB oracle (one winner, N-1 conflicts, zero errors) with Barrier-synchronized genuine overlap, not by trace sampling.
