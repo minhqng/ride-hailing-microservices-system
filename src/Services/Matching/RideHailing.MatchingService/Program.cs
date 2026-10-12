@@ -135,7 +135,6 @@ app.MapRideReadiness();
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "matching-service", environment = env.EnvironmentName }));
 
-<<<<<<< HEAD
 MatchingEndpoints.Map(app);
 
 // Best-effort baseline ensure (idempotent SQL). Service still boots if PG is down.
