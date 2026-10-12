@@ -59,7 +59,11 @@ public sealed class StartTripHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Start replay is already IN_PROGRESS: no mutation, skip the write.
+        if (!outcome.IsReplay)
+        {
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _log.LogInformation(
             "StartTrip {TripId} state {State} replay {IsReplay}.",
