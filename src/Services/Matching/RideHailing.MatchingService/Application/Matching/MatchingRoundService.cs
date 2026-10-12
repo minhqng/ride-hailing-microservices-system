@@ -1,6 +1,7 @@
 // B-W05-05/06/07/08: round coordinator — the deterministic pipeline.
-// load-or-create round → discover → eligibility filter → rank → persist
-// snapshot + READY attempt ledger → ordered result.
+// load-or-create round → frozen-sequence replay if decided → discover →
+// eligibility filter → rank → persist snapshot + READY attempt ledger →
+// ordered result.
 // Authority model: Redis is a hint (re-validated here), Driver reserve (W6)
 // is the only assignment authority. This slice never reserves, never sets
 // terminal round states (NO_DRIVER needs W9 Outbox): empty candidates yield
@@ -45,6 +46,11 @@ public sealed record ComputeRoundResult(
 
 public sealed class MatchingRoundService
 {
+    private static readonly JsonSerializerOptions SnapshotJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly MatchingRepository _repo;
     private readonly CandidateDiscovery _discovery;
     private readonly MatchingMetrics _metrics;
@@ -93,6 +99,43 @@ public sealed class MatchingRoundService
             // W5 never creates such rows itself; this guards foreign/W6 rows.
             throw new InvalidOperationException(
                 "Matching round has unresolved attempts; reconcile before requesting new candidates.");
+        }
+
+        if (round.SnapshotHash is not null && round.SnapshotJson is not null)
+        {
+            var stored = JsonSerializer.Deserialize<List<StoredSnapshotEntry>>(
+                round.SnapshotJson, SnapshotJsonOptions);
+            if (stored is null)
+            {
+                throw new InvalidOperationException(
+                    "Matching round has an unreadable candidate snapshot.");
+            }
+
+            if (stored.Count > 0)
+            {
+                // Frozen-sequence replay (Doc 02 §12.7): the round's logical
+                // candidate order and attempt identities were decided by the
+                // first compute. Redelivery replays them verbatim — Redis is
+                // a hint re-checked only by the reserve/reconcile path against
+                // Driver authority, never by minting a replacement sequence
+                // here. Conclusively REJECTED drivers are advanced past
+                // (§12.5); anything else stays put even if the Redis hint no
+                // longer lists it, so no READY identity is ever orphaned from
+                // its snapshot. No discovery runs, nothing is stored.
+                var replay = stored
+                    .Where(e => !rejected.Contains(e.DriverId))
+                    .Select(e => new RoundCandidate(e.Ordinal, e.DriverId, e.ReservationId, e.DistanceKm))
+                    .ToList();
+                return new ComputeRoundResult(
+                    request.TripId, request.MatchingRound, "PROCESSING",
+                    replay,
+                    new ComputeRoundMetrics(0, 0, 0, 0, 0),
+                    Degraded: false);
+            }
+
+            // An empty stored snapshot decided nothing (no identities minted),
+            // so late arrivals may still complete the round's initial decision
+            // below. The first non-empty result freezes the sequence.
         }
 
         var sw = Stopwatch.StartNew();
@@ -208,6 +251,17 @@ public sealed class MatchingRoundService
                 sw.Elapsed.TotalMilliseconds),
             Degraded: false);
     }
+
+    /// <summary>
+    /// Stored snapshot entry for frozen-sequence replay. Extra persisted
+    /// fields (score, version, capturedAt) are ignored on replay; order,
+    /// identity and distance are the replay contract.
+    /// </summary>
+    private sealed record StoredSnapshotEntry(
+        int Ordinal,
+        Guid DriverId,
+        Guid ReservationId,
+        double DistanceKm);
 
     /// <summary>
     /// Inserts one READY attempt, converging with concurrent duplicate computes:
