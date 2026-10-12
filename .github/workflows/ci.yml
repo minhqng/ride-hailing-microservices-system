@@ -15,7 +15,12 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet restore RideHailing.Distributed.slnx
       - run: dotnet build RideHailing.Distributed.slnx -c Release --no-restore
-      - run: dotnet test RideHailing.Distributed.slnx -c Release --no-build
+      - run: dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory TestResults
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tests-${{ github.run_id }}-${{ github.run_attempt }}
+          path: TestResults
   compose-config:
     name: compose-config
     runs-on: ubuntu-latest
