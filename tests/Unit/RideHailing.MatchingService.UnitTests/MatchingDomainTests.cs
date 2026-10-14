@@ -146,7 +146,7 @@ public sealed class MatchingRoundTests
     [Fact]
     public void Create_Starts_Processing_S0()
     {
-        var round = new MatchingRound(Guid.NewGuid(), 1, Guid.NewGuid(), "v1");
+        var round = new MatchingRound(Guid.NewGuid(), 1, "01K8EXAMPLEMESSAGE", "v1");
         Assert.Equal(MatchingRoundStatus.Processing, round.Status);
         Assert.Equal("S0", round.CurrentStage);
         Assert.Equal(0, round.NextAttemptOrdinal);
@@ -158,20 +158,21 @@ public sealed class MatchingRoundTests
     [InlineData(-1)]
     public void Create_Rejects_NonPositive_Round(int round)
     {
-        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.NewGuid(), round, Guid.NewGuid(), "v1"));
+        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.NewGuid(), round, "01K8EXAMPLEMESSAGE", "v1"));
     }
 
     [Fact]
     public void Create_Rejects_Empty_Identities()
     {
-        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.Empty, 1, Guid.NewGuid(), "v1"));
-        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.NewGuid(), 1, Guid.Empty, "v1"));
+        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.Empty, 1, "01K8EXAMPLEMESSAGE", "v1"));
+        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.NewGuid(), 1, "", "v1"));
+        Assert.Throws<ArgumentException>(() => new MatchingRound(Guid.NewGuid(), 1, "   ", "v1"));
     }
 
     [Fact]
     public void AttachSnapshot_Stores_All_Fields()
     {
-        var round = new MatchingRound(Guid.NewGuid(), 2, Guid.NewGuid(), "v1");
+        var round = new MatchingRound(Guid.NewGuid(), 2, "ride-requested-event-42", "v1");
         round.AttachSnapshot("abc", "[1]", 1, 3);
         Assert.Equal("abc", round.CandidateSnapshotHash);
         Assert.Equal("[1]", round.CandidateSnapshotJson);

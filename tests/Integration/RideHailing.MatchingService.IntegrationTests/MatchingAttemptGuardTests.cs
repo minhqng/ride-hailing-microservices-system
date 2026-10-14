@@ -37,7 +37,7 @@ public sealed class MatchingAttemptGuardTests
             await ExecuteAsync(conn,
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@t, 1, @m, 'PROCESSING')",
-                ("t", (object)trip), ("m", Guid.NewGuid()));
+                ("t", (object)trip), ("m", (object)Guid.NewGuid().ToString("D")));
             await ExecuteAsync(conn,
                 "INSERT INTO matching_attempts (trip_id, matching_round, ordinal, driver_id, reservation_id, state) " +
                 "VALUES (@t, 1, 0, @d, @r, @s)",
@@ -66,7 +66,7 @@ public sealed class MatchingAttemptGuardTests
             await ExecuteAsync(conn,
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@t, 1, @m, 'PROCESSING')",
-                ("t", (object)trip), ("m", Guid.NewGuid()));
+                ("t", (object)trip), ("m", (object)Guid.NewGuid().ToString("D")));
             var ex = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(conn,
                 "INSERT INTO matching_attempts (trip_id, matching_round, ordinal, driver_id, reservation_id, state) " +
                 "VALUES (@t, 1, 0, @d, @r, @s)",
@@ -83,7 +83,7 @@ public sealed class MatchingAttemptGuardTests
     [Fact]
     public async Task Duplicate_Input_Message_Id_Rejected()
     {
-        var message = Guid.NewGuid();
+        var message = Guid.NewGuid().ToString("D");
         var first = Guid.NewGuid();
         var second = Guid.NewGuid();
         await using var conn = new NpgsqlConnection(_db.ConnectionString);
@@ -93,11 +93,11 @@ public sealed class MatchingAttemptGuardTests
             await ExecuteAsync(conn,
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@t, 1, @m, 'PROCESSING')",
-                ("t", (object)first), ("m", message));
+                ("t", (object)first), ("m", (object)message));
             var ex = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(conn,
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@t, 1, @m, 'PROCESSING')",
-                ("t", (object)second), ("m", message)));
+                ("t", (object)second), ("m", (object)message)));
             Assert.Equal("23505", ex.SqlState);
         }
         finally
@@ -120,7 +120,7 @@ public sealed class MatchingAttemptGuardTests
             await ExecuteAsync(conn,
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@t, 1, @m, 'PROCESSING')",
-                ("t", (object)trip), ("m", Guid.NewGuid()));
+                ("t", (object)trip), ("m", (object)Guid.NewGuid().ToString("D")));
             await ExecuteAsync(conn,
                 "INSERT INTO matching_attempts (trip_id, matching_round, ordinal, driver_id, reservation_id, state) " +
                 "VALUES (@t, 1, 0, @d, @r, 'READY')",
