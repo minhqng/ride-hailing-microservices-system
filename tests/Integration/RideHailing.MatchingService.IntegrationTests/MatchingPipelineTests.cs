@@ -343,7 +343,7 @@ public sealed class MatchingPipelineTests : IAsyncLifetime
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status, cancel_requested) " +
                 "VALUES (@t, 1, @m, @s, @c)", conn);
             cmd.Parameters.AddWithValue("t", trip);
-            cmd.Parameters.AddWithValue("m", Guid.NewGuid());
+            cmd.Parameters.AddWithValue("m", Guid.NewGuid().ToString("D"));
             cmd.Parameters.AddWithValue("s", status);
             cmd.Parameters.AddWithValue("c", cancel);
             await cmd.ExecuteNonQueryAsync();

@@ -94,12 +94,12 @@ public class BrokerConsumeTests
         await channel.BasicPublishAsync(exchange, routingKey, mandatory: true, props, body);
     }
 
-    private async Task<byte[]> RideRequestedBytesAsync(Guid trip, int round, Guid messageId, string? extra = null)
+    private async Task<byte[]> RideRequestedBytesAsync(Guid trip, int round, string messageId, string? extra = null)
     {
         var payload = JsonDocument.Parse(
-            $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":{round},\"inputMessageId\":\"{messageId:N}\"{extra ?? string.Empty}}}").RootElement;
+            $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":{round}{extra ?? string.Empty}}}").RootElement;
         var envelope = MessageEnvelope<JsonElement>.Create(
-            "RideRequestedV1", Guid.NewGuid().ToString("N"), payload);
+            "RideRequestedV1", Guid.NewGuid().ToString("N"), payload, messageId: messageId);
         return JsonSerializer.SerializeToUtf8Bytes(envelope, Json);
     }
 
@@ -126,7 +126,7 @@ public class BrokerConsumeTests
     public async Task Round_Create_Via_Broker_Acks_And_Drains()
     {
         var trip = Guid.NewGuid();
-        var msg = Guid.NewGuid();
+        var msg = Guid.NewGuid().ToString("N");
         await PublishAsync("ride.events", "trip.ride-requested.v1",
             await RideRequestedBytesAsync(trip, 1, msg));
 
@@ -157,7 +157,7 @@ public class BrokerConsumeTests
         // concurrently from several publishers + sequential redelivery; the
         // durable ledger converges to exactly one round, no new identities.
         var trip = Guid.NewGuid();
-        var msg = Guid.NewGuid();
+        var msg = Guid.NewGuid().ToString("N");
         var body = await RideRequestedBytesAsync(trip, 2, msg);
         await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
             PublishAsync("ride.events", "trip.ride-requested.v1", body)));
@@ -189,7 +189,7 @@ public class BrokerConsumeTests
         var trip = Guid.NewGuid();
         var real = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
         var calls = 0;
-        var body = await RideRequestedBytesAsync(trip, 3, Guid.NewGuid());
+        var body = await RideRequestedBytesAsync(trip, 3, Guid.NewGuid().ToString("N"));
         await PublishAsync("ride.events", "trip.ride-requested.v1", body);
 
         using var cts = new CancellationTokenSource();
@@ -234,7 +234,7 @@ public class BrokerConsumeTests
 
         var trip = Guid.NewGuid();
         await PublishAsync("ride.events", "trip.ride-requested.v1",
-            await RideRequestedBytesAsync(trip, 4, Guid.NewGuid()));
+            await RideRequestedBytesAsync(trip, 4, Guid.NewGuid().ToString("N")));
 
         using var cts = new CancellationTokenSource();
         var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
@@ -266,7 +266,7 @@ public class BrokerConsumeTests
 
         var trip = Guid.NewGuid();
         await PublishAsync("ride.events", "trip.ride-requested.v1",
-            await RideRequestedBytesAsync(trip, 7, Guid.NewGuid()));
+            await RideRequestedBytesAsync(trip, 7, Guid.NewGuid().ToString("N")));
 
         using var cts = new CancellationTokenSource();
         var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
@@ -319,7 +319,7 @@ public class BrokerConsumeTests
         // Order matters: queue depth can read transient 0 while a requeue is
         // in flight, so first prove both handler calls happened (redelivery
         // flowed), then prove the queue drained (third sighting dropped).
-        var body = await RideRequestedBytesAsync(Guid.NewGuid(), 5, Guid.NewGuid());
+        var body = await RideRequestedBytesAsync(Guid.NewGuid(), 5, Guid.NewGuid().ToString("N"));
         await PublishAsync("ride.events", "trip.ride-requested.v1", body);
 
         var calls = 0;
@@ -462,7 +462,7 @@ public class BrokerConsumeTests
         var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
         var headers = new Dictionary<string, object?>();
         RideHailing.Messaging.Contracts.TraceHeaderPropagation.Inject(producer.Context, headers);
-        var body = await RideRequestedBytesAsync(Guid.NewGuid(), 6, Guid.NewGuid());
+        var body = await RideRequestedBytesAsync(Guid.NewGuid(), 6, Guid.NewGuid().ToString("N"));
         await handler.HandleAsync(
             new BrokerDelivery("trip.ride-requested.v1", body, headers, 0, false),
             CancellationToken.None);

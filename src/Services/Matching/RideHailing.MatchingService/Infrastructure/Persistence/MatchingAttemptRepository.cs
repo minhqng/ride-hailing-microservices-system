@@ -53,12 +53,23 @@ public sealed class MatchingAttemptRepository
     }
 
     /// <summary>
-    /// Ensures the round row exists (PROCESSING). On PK/unique conflict
-    /// (duplicate trigger, DSR-009 spirit) converges to the existing row.
+    /// Ensures the round row exists (PROCESSING). On PK conflict
+    /// (duplicate trigger, DSR-009 spirit) converges to the existing row
+    /// WITHOUT overwriting its stored input_message_id: the durable
+    /// primary identity is (tripId, matchingRound) and the first writer's
+    /// envelope MessageId wins. A UNIQUE(input_message_id) conflict (same
+    /// envelope identity reused for a different round) is a permanent
+    /// identity conflict: fail loud so the broker path drops it instead of
+    /// ACKing a second effect or hot-looping transiently.
     /// </summary>
     public async Task<MatchingRoundRow> EnsureRoundAsync(
-        Guid tripId, int round, Guid inputMessageId, CancellationToken ct = default)
+        Guid tripId, int round, string inputMessageId, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(inputMessageId))
+        {
+            throw new ArgumentException("inputMessageId must not be empty.", nameof(inputMessageId));
+        }
+
         const string Insert = """
             INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status)
             VALUES (@trip, @round, @msg, 'PROCESSING');
@@ -77,6 +88,13 @@ public sealed class MatchingAttemptRepository
             && string.Equals(ex.ConstraintName, "matching_rounds_pkey", StringComparison.Ordinal))
         {
             // Duplicate trigger converged: the durable row already exists.
+            // Stored input_message_id is intentionally left untouched.
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
+            && string.Equals(ex.ConstraintName, "ux_matching_rounds_input_message_id", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Input message '{inputMessageId}' is already assigned to a different matching round.", ex);
         }
 
         return (await LoadRoundAsync(tripId, round, ct))!;

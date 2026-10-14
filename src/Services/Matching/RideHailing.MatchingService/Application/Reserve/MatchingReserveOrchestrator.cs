@@ -95,7 +95,7 @@ public sealed class MatchingReserveOrchestrator
         Guid tripId,
         int round,
         IReadOnlyList<Guid> candidates,
-        Guid inputMessageId,
+        string inputMessageId,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -181,7 +181,11 @@ public sealed class MatchingReserveOrchestrator
     {
         // Public entry: the round row must exist first (FK). Fresh message
         // ids converge on PK conflict, so duplicate workers share the round.
-        await _attempts.EnsureRoundAsync(tripId, round, Guid.NewGuid(), ct);
+        // Legacy/internal seam (not the W8 broker path): no envelope identity
+        // is available here, so a locally generated placeholder is used. It
+        // is stored verbatim as TEXT, never overwrites an existing round's
+        // saved broker identity, and is distinct from envelope.MessageId.
+        await _attempts.EnsureRoundAsync(tripId, round, Guid.NewGuid().ToString("D"), ct);
         if (await _attempts.HasOtherUnresolvedAsync(tripId, round, ordinal, driverId, ct))
         {
             return new AttemptResult(AttemptOutcome.Blocked, Guid.Empty, "UNRESOLVED_ATTEMPT");

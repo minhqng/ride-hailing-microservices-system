@@ -16,7 +16,7 @@ public sealed class MatchingRepository
     }
 
     public sealed record RoundRow(
-        Guid TripId, int Round, Guid InputMessageId, string Status,
+        Guid TripId, int Round, string InputMessageId, string Status,
         string Stage, bool CancelRequested, string RankingConfigVersion,
         string? SnapshotHash, string? SnapshotJson, int CandidateCount, int NextAttemptOrdinal);
 
@@ -43,7 +43,7 @@ public sealed class MatchingRepository
         }
 
         return new RoundRow(
-            reader.GetGuid(0), reader.GetInt32(1), reader.GetGuid(2),
+            reader.GetGuid(0), reader.GetInt32(1), reader.GetString(2),
             reader.GetString(3), reader.GetString(4), reader.GetBoolean(5),
             reader.GetString(6),
             reader.IsDBNull(7) ? null : reader.GetString(7),
@@ -52,7 +52,7 @@ public sealed class MatchingRepository
     }
 
     public async Task InsertRoundAsync(
-        Guid tripId, int round, Guid inputMessageId, string rankingConfigVersion,
+        Guid tripId, int round, string inputMessageId, string rankingConfigVersion,
         CancellationToken ct = default)
     {
         const string Sql = """

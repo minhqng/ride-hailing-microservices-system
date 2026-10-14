@@ -33,6 +33,7 @@ public sealed class MatchingMigrationRepairTests
 
             var legacyOpen = Guid.NewGuid();
             var legacySearching = Guid.NewGuid();
+            // Pre-004 UUID schema (001 only): inserts MUST use Guid values here.
             await ExecuteAsync(conn,
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@a, 1, @ma, 'OPEN'), (@b, 1, @mb, 'SEARCHING')",

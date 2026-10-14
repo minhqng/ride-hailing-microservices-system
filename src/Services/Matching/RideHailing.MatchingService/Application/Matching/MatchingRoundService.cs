@@ -366,13 +366,25 @@ public sealed class MatchingRoundService
 
         try
         {
+            // W5 internal/demo seam (not the W8 broker path): no envelope
+            // exists here, so a locally generated placeholder is stored as
+            // TEXT. It is distinct from the real broker envelope.MessageId
+            // and never overwrites an existing round's saved identity: PK
+            // convergence below reuses the winner verbatim.
             await _repo.InsertRoundAsync(
-                request.TripId, request.MatchingRound, Guid.NewGuid(),
+                request.TripId, request.MatchingRound, Guid.NewGuid().ToString("D"),
                 policy.RankingConfigVersion, ct);
         }
-        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
+            && string.Equals(ex.ConstraintName, "matching_rounds_pkey", StringComparison.Ordinal))
         {
             // Lost a concurrent create race: reuse the winner (idempotent trigger).
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
+            && string.Equals(ex.ConstraintName, "ux_matching_rounds_input_message_id", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Input message identity is already assigned to a different matching round.", ex);
         }
 
         var round = await _repo.LoadRoundAsync(request.TripId, request.MatchingRound, ct);
