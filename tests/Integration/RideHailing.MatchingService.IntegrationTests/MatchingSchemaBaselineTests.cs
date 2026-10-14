@@ -41,7 +41,7 @@ public class MatchingSchemaBaselineTests
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
                 "VALUES (@t, 1, @m, @s)", conn);
             cmd.Parameters.AddWithValue("t", trip);
-            cmd.Parameters.AddWithValue("m", Guid.NewGuid());
+            cmd.Parameters.AddWithValue("m", Guid.NewGuid().ToString("D"));
             cmd.Parameters.AddWithValue("s", status);
             await cmd.ExecuteNonQueryAsync();
         }
@@ -65,7 +65,7 @@ public class MatchingSchemaBaselineTests
             "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
             "VALUES (@t, 1, @m, @s)", conn);
         cmd.Parameters.AddWithValue("t", Guid.NewGuid());
-        cmd.Parameters.AddWithValue("m", Guid.NewGuid());
+        cmd.Parameters.AddWithValue("m", Guid.NewGuid().ToString("D"));
         cmd.Parameters.AddWithValue("s", status);
         var ex = await Assert.ThrowsAsync<PostgresException>(() => cmd.ExecuteNonQueryAsync());
         Assert.Equal("23514", ex.SqlState);
@@ -91,7 +91,7 @@ public class MatchingSchemaBaselineTests
                 "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id) " +
                 "VALUES (@t, 1, @m)", conn);
             insert.Parameters.AddWithValue("t", trip);
-            insert.Parameters.AddWithValue("m", Guid.NewGuid());
+            insert.Parameters.AddWithValue("m", Guid.NewGuid().ToString("D"));
             await insert.ExecuteNonQueryAsync();
 
             await using var check = new NpgsqlCommand(

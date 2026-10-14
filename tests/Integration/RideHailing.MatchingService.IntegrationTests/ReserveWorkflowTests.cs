@@ -121,7 +121,7 @@ public class ReserveWorkflowTests
         };
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [d1, d2, d3], Guid.NewGuid());
+            trip, 1, [d1, d2, d3], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Reserved, result.Outcome);
         Assert.Equal(d2, result.DriverId);
@@ -162,7 +162,7 @@ public class ReserveWorkflowTests
         };
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [d1, d2], Guid.NewGuid());
+            trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.BlockedOnUnknown, result.Outcome);
         Assert.DoesNotContain(stub.Calls, c => c.Contains(d2.ToString("N"), StringComparison.Ordinal));
@@ -187,7 +187,7 @@ public class ReserveWorkflowTests
         };
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [Guid.NewGuid(), Guid.NewGuid()], Guid.NewGuid());
+            trip, 1, [Guid.NewGuid(), Guid.NewGuid()], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Exhausted, result.Outcome);
         var round = await Attempts().LoadRoundAsync(trip, 1);
@@ -211,8 +211,8 @@ public class ReserveWorkflowTests
         };
         var orch = Orchestrator(stub);
 
-        var first = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
-        var second = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var first = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
+        var second = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Reserved, first.Outcome);
         Assert.Equal(RoundOutcome.Reserved, second.Outcome);
@@ -280,7 +280,7 @@ public class ReserveWorkflowTests
         var orch = Orchestrator(stub);
         var d2 = Guid.NewGuid();
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 1, [driverId, d2], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [driverId, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
 
         var attempt = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
@@ -321,7 +321,7 @@ public class ReserveWorkflowTests
         };
         var orch = Orchestrator(stub, maxReconcile: 3);
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
 
         var terminal = await orch.ReconcileAsync(trip, 1, 0);
@@ -365,7 +365,7 @@ public class ReserveWorkflowTests
                 ReservationReconcileOutcome.NotFound,
             }, wire);
 
-            var blocked = await orch.ExecuteRoundAsync(trip, roundNo, [d], Guid.NewGuid());
+            var blocked = await orch.ExecuteRoundAsync(trip, roundNo, [d], Guid.NewGuid().ToString("D"));
             Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
             var resolved = await orch.ReconcileAsync(trip, roundNo, 0);
             Assert.Equal(AttemptOutcome.Rejected, resolved.Outcome);
@@ -399,12 +399,12 @@ public class ReserveWorkflowTests
             Task.Run(async () =>
             {
                 barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-                return await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+                return await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
             }),
             Task.Run(async () =>
             {
                 barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-                return await orch.ExecuteRoundAsync(trip, 1, [other], Guid.NewGuid());
+                return await orch.ExecuteRoundAsync(trip, 1, [other], Guid.NewGuid().ToString("D"));
             }));
 
         var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
@@ -451,7 +451,7 @@ public class ReserveWorkflowTests
         // PostgresException, never silent convergence to a wrong row.
         var trip = NewTrip();
         var repo = Attempts();
-        await repo.EnsureRoundAsync(trip, 1, Guid.NewGuid());
+        await repo.EnsureRoundAsync(trip, 1, Guid.NewGuid().ToString("D"));
         var r = Guid.NewGuid();
         var first = await repo.EnsureInflightAttemptAsync(trip, 1, 0, Guid.NewGuid(), r);
         Assert.True(first.Inserted);
@@ -481,7 +481,7 @@ public class ReserveWorkflowTests
         var runs = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
         {
             barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-            return await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+            return await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         })));
 
         Assert.All(runs, r => Assert.Equal(RoundOutcome.Reserved, r.Outcome));
@@ -506,14 +506,14 @@ public class ReserveWorkflowTests
         };
 
         var first = Orchestrator(stub);
-        var blocked = await first.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var blocked = await first.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         var persistedR = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
 
         // Round-level resume converges the same way: the guard sees the
         // unresolved attempt and blocks without new effects.
         var second = Orchestrator(stub);
-        var roundResume = await second.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var roundResume = await second.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, roundResume.Outcome);
         Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
 
@@ -543,7 +543,7 @@ public class ReserveWorkflowTests
             },
         };
 
-        var result = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var result = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Reserved, result.Outcome);
         Assert.Equal(2, seen.Count);
@@ -572,7 +572,7 @@ public class ReserveWorkflowTests
         };
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [d1, d2], Guid.NewGuid());
+            trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.BlockedOnUnknown, result.Outcome);
         Assert.Equal("RESERVE_CONTENTION", result.Code);
@@ -595,12 +595,12 @@ public class ReserveWorkflowTests
             "VALUES (@trip, 1, @msg, 'CANCELLED')", conn))
         {
             cmd.Parameters.AddWithValue("trip", trip);
-            cmd.Parameters.AddWithValue("msg", Guid.NewGuid());
+            cmd.Parameters.AddWithValue("msg", Guid.NewGuid().ToString("D"));
             await cmd.ExecuteNonQueryAsync();
         }
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [Guid.NewGuid()], Guid.NewGuid());
+            trip, 1, [Guid.NewGuid()], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Refused, result.Outcome);
         Assert.Empty(stub.Calls);
@@ -625,7 +625,7 @@ public class ReserveWorkflowTests
         };
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [missing, next], Guid.NewGuid());
+            trip, 1, [missing, next], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Reserved, result.Outcome);
         Assert.Equal(next, result.DriverId);
@@ -660,13 +660,13 @@ public class ReserveWorkflowTests
             },
         };
 
-        var first = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var first = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, first.Outcome);
         var persistedR = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
 
         phase = 1;
         var callsBefore = stub.Calls.Count;
-        var second = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var second = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, second.Outcome);
         Assert.Equal("PRIOR_AMBIGUITY", second.Code);
 
@@ -694,7 +694,7 @@ public class ReserveWorkflowTests
             OnReserve = (_, _) => throw new TimeoutException("injected response loss"),
         };
 
-        var blocked = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var blocked = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         var persistedR = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
 
@@ -703,7 +703,7 @@ public class ReserveWorkflowTests
             OnVersion = (_, _) => Task.FromResult<DriverVersionRead?>(null),
             OnReserve = (_, _) => throw new InvalidOperationException("must not be called after ambiguity"),
         };
-        var result = await Orchestrator(restarted).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var result = await Orchestrator(restarted).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.BlockedOnUnknown, result.Outcome);
         var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
@@ -732,7 +732,7 @@ public class ReserveWorkflowTests
         };
         var orch = Orchestrator(stub, maxReconcile: 2);
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         var terminal = await orch.ReconcileAsync(trip, 1, 0);
         Assert.Equal(AttemptOutcome.NeedsReview, terminal.Outcome);
@@ -756,7 +756,7 @@ public class ReserveWorkflowTests
         };
         var orch = Orchestrator(stub);
 
-        var won = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var won = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.Reserved, won.Outcome);
         var winnerR = won.ReservationId;
         Assert.NotNull(winnerR);
@@ -778,7 +778,7 @@ public class ReserveWorkflowTests
             OnReserve = (_, _) => throw new InvalidOperationException("must not call Driver"),
             OnQuery = (_, _, _) => throw new InvalidOperationException("must not call Driver"),
         };
-        var healed = await Orchestrator(silent).ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var healed = await Orchestrator(silent).ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
 
         Assert.Equal(RoundOutcome.Reserved, healed.Outcome);
         Assert.Equal(winnerR, healed.ReservationId);
@@ -803,7 +803,7 @@ public class ReserveWorkflowTests
                 new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, 8)),
         };
         var orch = Orchestrator(stub);
-        var won = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var won = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.Reserved, won.Outcome);
 
         await using (var conn = new Npgsql.NpgsqlConnection(_matching.ConnectionString))
@@ -829,12 +829,12 @@ public class ReserveWorkflowTests
             Task.Run(async () =>
             {
                 barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-                return await repairer.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+                return await repairer.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
             }),
             Task.Run(async () =>
             {
                 barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-                return await repairer.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+                return await repairer.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
             }));
 
         Assert.All(runs, r => Assert.Equal(RoundOutcome.Reserved, r.Outcome));
@@ -857,7 +857,7 @@ public class ReserveWorkflowTests
         };
         var orch = Orchestrator(stub);
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 7, [d1], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 7, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         Assert.Equal(
             MatchingRoundStatuses.Processing,
@@ -868,7 +868,7 @@ public class ReserveWorkflowTests
             OnReserve = (_, _) => Task.FromResult(
                 new DriverReserveResult(DriverReserveOutcomeKind.Rejected, "DRIVER_NOT_AVAILABLE", null)),
         };
-        var exhausted = await Orchestrator(rejecting).ExecuteRoundAsync(trip, 8, [d1], Guid.NewGuid());
+        var exhausted = await Orchestrator(rejecting).ExecuteRoundAsync(trip, 8, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.Exhausted, exhausted.Outcome);
         Assert.Equal(
             MatchingRoundStatuses.Processing,
@@ -898,7 +898,7 @@ public class ReserveWorkflowTests
         };
         var orch = Orchestrator(stub);
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
 
         var reconciling = Task.Run(() => orch.ReconcileAsync(trip, 1, 0));
@@ -983,11 +983,11 @@ public class ReserveWorkflowTests
         var stub = new StubDriverClient();
         var orch = Orchestrator(stub);
 
-        var reserved = await orch.ExecuteRoundAsync(trip, 1, [Guid.NewGuid()], Guid.NewGuid());
+        var reserved = await orch.ExecuteRoundAsync(trip, 1, [Guid.NewGuid()], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.Reserved, reserved.Outcome);
         var callsAfterFirst = stub.Calls.Count;
 
-        var replay = await orch.ExecuteRoundAsync(trip, 1, [Guid.NewGuid()], Guid.NewGuid());
+        var replay = await orch.ExecuteRoundAsync(trip, 1, [Guid.NewGuid()], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.Reserved, replay.Outcome);
         Assert.Equal(reserved.ReservationId, replay.ReservationId);
         Assert.Equal(callsAfterFirst, stub.Calls.Count);

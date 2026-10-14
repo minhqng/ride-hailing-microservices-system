@@ -68,16 +68,34 @@ public class BrokerDecisionsTests
     public void RideRequested_Payload_Requires_Identity_Fields()
     {
         var trip = Guid.NewGuid();
-        var msg = Guid.NewGuid();
+        const string messageId = "01K8EXAMPLEMESSAGE";
         var good = RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>.Create(
             "RideRequestedV1",
             Guid.NewGuid().ToString("N"),
             System.Text.Json.JsonDocument.Parse(
-                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":2,\"inputMessageId\":\"{msg:N}\",\"futureField\":1}}").RootElement);
+                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":2,\"futureField\":1}}").RootElement,
+            messageId: messageId);
         var (t, round, m) = RideRequestedHandler.ReadPayload(good);
         Assert.Equal(trip, t);
         Assert.Equal(2, round);
-        Assert.Equal(msg, m);
+        Assert.Equal(messageId, m);
+    }
+
+    [Fact]
+    public void RideRequested_Payload_Ignores_Extra_InputMessageId_Field()
+    {
+        // A payload-embedded inputMessageId is NOT required and, if present,
+        // is ignored: the envelope MessageId wins verbatim.
+        var trip = Guid.NewGuid();
+        const string envelopeId = "ride-requested-event-42";
+        var env = RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>.Create(
+            "RideRequestedV1",
+            Guid.NewGuid().ToString("N"),
+            System.Text.Json.JsonDocument.Parse(
+                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":1,\"inputMessageId\":\"{Guid.NewGuid():N}\"}}").RootElement,
+            messageId: envelopeId);
+        var (_, _, m) = RideRequestedHandler.ReadPayload(env);
+        Assert.Equal(envelopeId, m);
     }
 
     [Fact]
@@ -86,18 +104,28 @@ public class BrokerDecisionsTests
         static System.Text.Json.JsonElement Obj(string json) =>
             System.Text.Json.JsonDocument.Parse(json).RootElement;
         static RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement> Env(
-            System.Text.Json.JsonElement payload) =>
+            System.Text.Json.JsonElement payload,
+            string messageId = "01K8EXAMPLEMESSAGE") =>
             RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>.Create(
-                "RideRequestedV1", Guid.NewGuid().ToString("N"), payload);
+                "RideRequestedV1", Guid.NewGuid().ToString("N"), payload, messageId: messageId);
 
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
-            Env(Obj("{\"tripId\":\"00000000-0000-0000-0000-000000000000\",\"matchingRound\":1,\"inputMessageId\":\"" + Guid.NewGuid().ToString("N") + "\"}"))));
+            Env(Obj("{\"tripId\":\"00000000-0000-0000-0000-000000000000\",\"matchingRound\":1}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
-            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":0,\"inputMessageId\":\"" + Guid.NewGuid().ToString("N") + "\"}"))));
+            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":0}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
             Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\"}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
             Env(System.Text.Json.JsonDocument.Parse("[1,2]").RootElement)));
+        // Invalid/missing envelope messageId is rejected even with a valid payload.
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
+            new RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>(
+                "", "RideRequestedV1", 1, DateTimeOffset.UtcNow, Guid.NewGuid().ToString("N"), null,
+                Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1}"))));
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
+            new RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>(
+                "   ", "RideRequestedV1", 1, DateTimeOffset.UtcNow, Guid.NewGuid().ToString("N"), null,
+                Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1}"))));
     }
 
     [Fact]
