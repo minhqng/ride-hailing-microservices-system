@@ -4,9 +4,12 @@
 // a new candidate sequence, never new reservation IDs (orchestrator owns
 // attempts; this handler performs NO reserve calls — candidates arrive via a
 // future pipeline, and reserve execution stays in W7-tested code paths).
-// Minimal payload contract (B-documented, open coordination with A, the
-// producer): tripId + matchingRound + inputMessageId, all required; unknown
-// extra fields are ignored (forward-compatible tolerant reader).
+// Contract (A payload unchanged, C envelope authoritative): tripId +
+// matchingRound come from the payload; the input message identity comes from
+// envelope.MessageId verbatim (opaque string, never parsed as GUID, never
+// transformed). Unknown extra payload fields are ignored (forward-compatible
+// tolerant reader); a payload-embedded inputMessageId is NOT required and,
+// if present, is ignored.
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -52,9 +55,14 @@ public sealed class RideRequestedHandler
     public static MessageEnvelope<JsonElement> ParseEnvelope(byte[] body) =>
         BrokerEnvelope.Parse(body);
 
-    public static (Guid TripId, int MatchingRound, Guid InputMessageId) ReadPayload(
+    public static (Guid TripId, int MatchingRound, string InputMessageId) ReadPayload(
         MessageEnvelope<JsonElement> envelope)
     {
+        if (string.IsNullOrWhiteSpace(envelope.MessageId))
+        {
+            throw new ArgumentException("RideRequestedV1 requires a non-empty envelope messageId.");
+        }
+
         var payload = envelope.Payload;
         if (payload.ValueKind != JsonValueKind.Object)
         {
@@ -73,13 +81,10 @@ public sealed class RideRequestedHandler
             throw new ArgumentException("RideRequestedV1 requires matchingRound >= 1.");
         }
 
-        if (!payload.TryGetProperty("inputMessageId", out var msgEl) || msgEl.ValueKind != JsonValueKind.String
-            || !Guid.TryParse(msgEl.GetString(), out var inputMessageId) || inputMessageId == Guid.Empty)
-        {
-            throw new ArgumentException("RideRequestedV1 requires a non-empty inputMessageId.");
-        }
-
-        return (tripId, matchingRound, inputMessageId);
+        // The input message identity is the envelope's MessageId preserved
+        // byte-for-byte (decoded .NET string). No parsing, trimming, casing,
+        // hashing, or UUID derivation: opaque string identity.
+        return (tripId, matchingRound, envelope.MessageId);
     }
 
     private static Activity? StartActivity(IDictionary<string, object?> headers)

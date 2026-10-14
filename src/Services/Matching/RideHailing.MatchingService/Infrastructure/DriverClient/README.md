@@ -71,11 +71,16 @@ C-owned; B consumes the frozen shape and owns only its endpoint mapping.
 - **Envelope:** shared `MessageEnvelope` (V1, validated) + trace headers.
   ACK happens only after the durable local effect commits.
 - **Consumed — `RideRequestedV1`** (`trip.ride-requested.v1`, producer: Trip
-  Outbox, A-owned): minimal fields `tripId` + `matchingRound` + `inputMessageId`
-  (all required; unknown extras ignored). Same `(tripId, matchingRound)`
+  Outbox, A-owned): payload fields `tripId` + `matchingRound` (A's five-field
+  shape unchanged); the input message identity is `envelope.messageId`
+  verbatim (opaque TEXT, never parsed as GUID, never transformed). Unknown
+  extra payload fields ignored; a payload-embedded `inputMessageId` is NOT
+  required and, if present, is ignored. Same `(tripId, matchingRound)`
   resumes the same round — never a new candidate sequence, never reserve
   execution from broker input. Duplicate/concurrent/crash-before-ACK delivery
-  converges on the round PK.
+  converges on the round PK; stored `input_message_id` is never overwritten
+  on replay while UNIQUE(input_message_id) rejects one identity for two
+  rounds.
 - **Consumed — Driver state/location** (`driver.*.v1`, producer: Driver, B-owned):
   state `{driverId, status, version}` and location
   `{driverId, longitude, latitude, sessionId, sequenceNo, capturedAt}` feed the
@@ -98,7 +103,8 @@ C-owned; B consumes the frozen shape and owns only its endpoint mapping.
 ### Open broker questions for A/C
 
 - [ ] A: confirm `RideRequestedV1` producer payload carries
-  `tripId`/`matchingRound`/`inputMessageId` (names + requiredness) and the
+  `tripId`/`matchingRound` (A's five-field shape unchanged; identity travels
+  as `envelope.messageId`, not a payload field) and the
   `trip.ride-requested.v1` routing key.
 - [ ] C: converge B's interim consume/publish glue onto the platform
   consumer/publisher base (same exchanges/queues/envelope/ACK discipline);
