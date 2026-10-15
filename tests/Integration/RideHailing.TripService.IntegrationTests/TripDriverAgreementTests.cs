@@ -152,6 +152,68 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
         Assert.Equal(reservationId, driver.ReservationId);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CancelAndReserve_ExactCleanupConverges_AndOldReleaseCannotFreeNewReservation(bool cancelFirst)
+    {
+        // Controlled component choreography, not a broker/production worker:
+        // both real databases and Driver's domain guard are the oracles.
+        var driverRepo = new DriverPersistence.DriverRepository(_driverConnectionString);
+        var driverId = await SeedAvailableDriverAsync(driverRepo);
+        var rider = Guid.NewGuid();
+        var tripId = await CreateMatchingTripAsync(rider, "w7-agree-" + Guid.NewGuid().ToString("N"));
+        var reservation = Guid.NewGuid();
+        async Task CancelAsync()
+        {
+            await using var db = new TripDbContext(TripOptions());
+            Assert.True((await new CancelRideHandler(db, new FixedTimeProvider(ActionAt), NullLogger<CancelRideHandler>.Instance)
+                .HandleAsync(tripId, rider)).IsSuccess);
+        }
+        if (cancelFirst) await CancelAsync();
+        var before = (await driverRepo.LoadAsync(driverId))!;
+        Assert.Equal(DriverPersistence.ReserveOutcome.Won,
+            (await driverRepo.TryReserveAsync(driverId, tripId, reservation, before.Version)).Outcome);
+        await using (var db = new TripDbContext(TripOptions()))
+            Assert.True((await new RecordDriverReservationHandler(db, new FixedTimeProvider(ActionAt),
+                NullLogger<RecordDriverReservationHandler>.Instance).HandleAsync(tripId, driverId, reservation, 1)).IsSuccess);
+        if (!cancelFirst) await CancelAsync();
+
+        TripCleanupIntent intent;
+        await using (var db = new TripDbContext(TripOptions()))
+        {
+            var cancelled = await db.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
+            Assert.Equal(TripState.Cancelled, cancelled.State);
+            intent = Assert.Single(cancelled.CleanupIntents, i => i.Kind == TripCleanupKind.ReleaseReservation);
+            Assert.Null(intent.CompletedAt);
+        }
+        var held = (await driverRepo.LoadAsync(driverId))!;
+        Assert.Equal(intent.TripId, held.ReservedTripId);
+        Assert.Equal(intent.ReservationId, held.ReservationId);
+        // Fault/restart window: durable intent was recovered through a new
+        // context while Driver was still protected by the old reservation.
+        held.Release(intent.TripId, intent.ReservationId!.Value);
+        await driverRepo.SaveAsync(held);
+        await using (var db = new TripDbContext(TripOptions()))
+            Assert.True((await new ConfirmTripCleanupHandler(db, new FixedTimeProvider(ActionAt))
+                .HandleAsync(tripId, intent.Key, CleanupAuthorityResult.Released)).IsSuccess);
+
+        var newTrip = Guid.NewGuid();
+        var newReservation = Guid.NewGuid();
+        var available = (await driverRepo.LoadAsync(driverId))!;
+        Assert.Equal(DriverPersistence.ReserveOutcome.Won,
+            (await driverRepo.TryReserveAsync(driverId, newTrip, newReservation, available.Version)).Outcome);
+        var newer = (await driverRepo.LoadAsync(driverId))!;
+        Assert.Throws<DriverDomain.DriverDomainException>(() => newer.Release(intent.TripId, intent.ReservationId.Value));
+        var finalDriver = (await driverRepo.LoadAsync(driverId))!;
+        Assert.Equal(newReservation, finalDriver.ReservationId);
+        Assert.Equal(newTrip, finalDriver.ReservedTripId);
+        await using var verify = new TripDbContext(TripOptions());
+        var finalTrip = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
+        Assert.Equal(TripState.Cancelled, finalTrip.State);
+        Assert.NotNull(finalTrip.CleanupIntents.Single(i => i.Key == intent.Key).CompletedAt);
+    }
+
     [Fact]
     public async Task Loser_Reference_Cannot_Overwrite_Agreement()
     {
