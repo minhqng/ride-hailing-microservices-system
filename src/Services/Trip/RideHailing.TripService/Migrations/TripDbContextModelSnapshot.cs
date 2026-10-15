@@ -152,14 +152,14 @@ namespace RideHailing.TripService.Migrations
                     b.Property<string>("Scope")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
-                        .UseCollation("C")
-                        .HasColumnName("scope");
+                        .HasColumnName("scope")
+                        .UseCollation("C");
 
                     b.Property<string>("Key")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
-                        .UseCollation("C")
-                        .HasColumnName("key");
+                        .HasColumnName("key")
+                        .UseCollation("C");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -181,6 +181,64 @@ namespace RideHailing.TripService.Migrations
                     b.HasIndex("ResourceId");
 
                     b.ToTable("request_idempotency", (string)null);
+                });
+
+            modelBuilder.Entity("RideHailing.TripService.Domain.Trips.Trip", b =>
+                {
+                    b.OwnsMany("RideHailing.TripService.Domain.Trips.TripCleanupIntent", "CleanupIntents", b1 =>
+                        {
+                            b1.Property<Guid>("TripId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("trip_id");
+
+                            b1.Property<string>("Key")
+                                .HasMaxLength(80)
+                                .HasColumnType("character varying(80)")
+                                .HasColumnName("key");
+
+                            b1.Property<DateTimeOffset?>("CompletedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("completed_at");
+
+                            b1.Property<DateTimeOffset>("CreatedAt")
+                                .HasColumnType("timestamp with time zone")
+                                .HasColumnName("created_at");
+
+                            b1.Property<Guid?>("DriverId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("driver_id");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("character varying(32)")
+                                .HasColumnName("kind");
+
+                            b1.Property<int>("MatchingRound")
+                                .HasColumnType("integer")
+                                .HasColumnName("matching_round");
+
+                            b1.Property<Guid?>("ReservationId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("reservation_id");
+
+                            b1.HasKey("TripId", "Key");
+
+                            b1.HasIndex("CreatedAt")
+                                .HasFilter("completed_at IS NULL");
+
+                            b1.ToTable("trip_cleanup_intents", null, t =>
+                                {
+                                    t.HasCheckConstraint("CK_cleanup_identity", "(kind = 'ReleaseReservation' AND driver_id IS NOT NULL\n AND driver_id <> '00000000-0000-0000-0000-000000000000'::uuid\n AND reservation_id IS NOT NULL\n AND reservation_id <> '00000000-0000-0000-0000-000000000000'::uuid\n AND key = 'release:' || reservation_id::text)\nOR (kind = 'CancelMatching' AND driver_id IS NULL AND reservation_id IS NULL\n    AND key = 'matching:' || matching_round::text)\nOR (kind = 'ReconcilePayment' AND driver_id IS NULL AND reservation_id IS NULL AND key = 'payment')");
+
+                                    t.HasCheckConstraint("CK_cleanup_round", "matching_round >= 1");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("TripId");
+                        });
+
+                    b.Navigation("CleanupIntents");
                 });
 
             modelBuilder.Entity("RideHailing.TripService.Infrastructure.Persistence.RequestIdempotencyRecord", b =>

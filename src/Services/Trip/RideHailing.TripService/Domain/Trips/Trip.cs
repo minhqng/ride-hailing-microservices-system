@@ -38,6 +38,9 @@ namespace RideHailing.TripService.Domain.Trips;
 /// </summary>
 public sealed class Trip
 {
+    private readonly List<TripCleanupIntent> _cleanupIntents = [];
+    public IReadOnlyCollection<TripCleanupIntent> CleanupIntents => _cleanupIntents.AsReadOnly();
+
     /// <summary>One logical ride; stable for the ride lifetime. Immutable.</summary>
     public Guid TripId { get; private set; }
 
@@ -564,6 +567,7 @@ public sealed class Trip
                 $"Trip {TripId:D} is DRIVER_ACCEPTED without a current assignment; persisted state violates Trip invariants.");
         }
 
+        AddCancellationCleanup(now);
         Commit(TripState.Cancelled, now);
         return TripOutcome.Success(
             compensation: TripCompensation.ReleaseReservation | TripCompensation.CancelMatching);
@@ -741,6 +745,7 @@ public sealed class Trip
                     compensation |= TripCompensation.ReleaseReservation;
                 }
 
+                AddCancellationCleanup(now);
                 Commit(TripState.Cancelled, now);
                 return TripOutcome.Success(compensation: compensation);
             case TripState.Created:
@@ -754,6 +759,81 @@ public sealed class Trip
                     TripErrorCode.IllegalTransition,
                     $"Cancel is not a legal transition from {State.ToCanonicalName()}.");
         }
+    }
+
+    // Cleanup progress shares the aggregate OCC fence, but never changes its
+    // terminal business state or current assignment reference.
+    public TripOutcome RecordCancelledReservation(Guid driverId, Guid reservationId,
+        int matchingRound, DateTimeOffset now)
+    {
+        if (State != TripState.Cancelled) return Illegal(nameof(RecordCancelledReservation), TripState.Cancelled);
+        if (driverId == Guid.Empty || reservationId == Guid.Empty || now == default)
+            return TripOutcome.Fail(TripErrorCode.AssignmentRequired, "Late reservation requires exact identities and timestamp.");
+        // An old round can still own a leaked reservation; a future/unopened
+        // round is not evidence of this Trip's matching attempt.
+        if (matchingRound < 1 || matchingRound > CurrentMatchingRound)
+            return StaleRound(nameof(RecordCancelledReservation), matchingRound);
+        var known = _cleanupIntents.SingleOrDefault(i => i.ReservationId == reservationId);
+        if ((known is not null && (known.DriverId != driverId || known.MatchingRound != matchingRound)) ||
+            (Assignment?.ReservationId == reservationId &&
+                (Assignment.DriverId != driverId || Assignment.MatchingRound != matchingRound)))
+            return TripOutcome.Fail(TripErrorCode.AssignmentIdentityMismatch, "Reservation identity contradicts existing cleanup evidence.");
+        var added = AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReleaseReservation,
+            matchingRound, now, driverId, reservationId));
+        if (added) Commit(State, now);
+        return TripOutcome.Success(isReplay: !added, compensation: TripCompensation.ReleaseReservation);
+    }
+
+    public TripOutcome RecordCancelledPaymentAuthorization(DateTimeOffset now)
+    {
+        if (State != TripState.Cancelled) return Illegal(nameof(RecordCancelledPaymentAuthorization), TripState.Cancelled);
+        if (now == default) throw new ArgumentException("A timestamp is required.", nameof(now));
+        var added = AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReconcilePayment,
+            CurrentMatchingRound, now));
+        if (added) Commit(State, now);
+        return TripOutcome.Success(isReplay: !added, compensation: TripCompensation.ReconcilePayment);
+    }
+
+    /// <summary>Trusted workflow calls only after conclusive authority evidence;
+    /// UNKNOWN, dispatch or timeout must never complete an obligation.</summary>
+    public TripOutcome ConfirmCleanup(string key, DateTimeOffset now)
+    {
+        if (State != TripState.Cancelled) return Illegal(nameof(ConfirmCleanup), TripState.Cancelled);
+        if (now == default) throw new ArgumentException("A timestamp is required.", nameof(now));
+        var intent = _cleanupIntents.SingleOrDefault(i => i.Key == key);
+        if (intent is null) return TripOutcome.Fail(TripErrorCode.StaleIdentity, "Cleanup identity is not owned by this Trip.");
+        if (intent.CompletedAt is not null) return TripOutcome.Success(isReplay: true);
+        intent.Complete(now);
+        Commit(State, now);
+        return TripOutcome.Success();
+    }
+
+    private void AddCancellationCleanup(DateTimeOffset now)
+    {
+        if (CurrentMatchingRound >= 1)
+            AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.CancelMatching, CurrentMatchingRound, now));
+        if (Assignment is not null)
+        {
+            AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReleaseReservation,
+                Assignment.MatchingRound, now, Assignment.DriverId, Assignment.ReservationId));
+            // Authorization can be in flight at cancellation. Reconcile first;
+            // this is not an invented Payment operation key or a direct void.
+            AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReconcilePayment, CurrentMatchingRound, now));
+        }
+    }
+
+    private bool AddCleanup(TripCleanupIntent intent)
+    {
+        var existing = _cleanupIntents.SingleOrDefault(i => i.Key == intent.Key);
+        if (existing is not null)
+        {
+            if (existing.DriverId != intent.DriverId || existing.ReservationId != intent.ReservationId ||
+                existing.MatchingRound != intent.MatchingRound)
+                throw new InvalidOperationException("Contradictory cleanup identity; refusing to overwrite.");
+            return false;
+        }
+        _cleanupIntents.Add(intent);
+        return true;
     }
 
     private static bool RequiresAssignment(TripState state) =>
