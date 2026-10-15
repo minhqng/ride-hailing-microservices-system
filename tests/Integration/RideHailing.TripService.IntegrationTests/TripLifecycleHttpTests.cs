@@ -234,7 +234,7 @@ public sealed class TripLifecycleHttpTests : IDisposable
     }
 
     [Fact]
-    public async Task CancelRide_FromMatching_Transitions_AndSecondCancelIsTerminal()
+    public async Task CancelRide_FromMatching_Transitions_AndSecondCancelReplaysTerminalState()
     {
         var rider = Guid.NewGuid().ToString("D");
         var tripId = await CreateRideAsync(rider, "http-cancel-" + Guid.NewGuid().ToString("N"));
@@ -256,9 +256,14 @@ public sealed class TripLifecycleHttpTests : IDisposable
         using (var again = await _client.SendAsync(
             Request(HttpMethod.Post, $"/trips/{tripId:D}/cancel", rider, "Rider")))
         {
-            Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
-            Assert.Equal("TERMINAL_STATE", await ProblemCodeAsync(again));
+            Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+            var body = await again.Content.ReadFromJsonAsync<CancelRideResponse>();
+            Assert.Equal("CANCELLED", body!.Status);
         }
+        var replayed = await ReloadAsync(tripId);
+        Assert.Equal(persisted.Version, replayed.Version);
+        Assert.Equal(persisted.UpdatedAt, replayed.UpdatedAt);
+        Assert.Single(replayed.CleanupIntents);
     }
 
     [Fact]
