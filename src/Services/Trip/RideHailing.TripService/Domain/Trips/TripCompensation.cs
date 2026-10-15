@@ -31,4 +31,6 @@ public enum TripCompensation
     /// produces no further assignment effects for this Trip.
     /// </summary>
     CancelMatching = 2,
+    /// <summary>Recover authorization/Saga lineage and decide exact void or no effect.</summary>
+    ReconcilePayment = 4,
 }

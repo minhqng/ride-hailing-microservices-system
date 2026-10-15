@@ -49,7 +49,9 @@ public sealed class MarkPaymentAuthorizedHandler
             return TripLifecycleResult.NotFound();
         }
 
-        var outcome = trip.MarkPaymentAuthorized(_time.GetUtcNow());
+        var outcome = trip.State == TripState.Cancelled
+            ? trip.RecordCancelledPaymentAuthorization(_time.GetUtcNow())
+            : trip.MarkPaymentAuthorized(_time.GetUtcNow());
         if (!outcome.IsSuccess)
         {
             return TripLifecycleResult.Fail(trip, outcome);

@@ -4,12 +4,13 @@
 // rider-scoped CancelRideHandler, and maps the application outcome to HTTP.
 // No assignment/round inspection, no cleanup orchestration and no policy
 // invention live here: unfrozen CREATED/READY_TO_START cancellation stays a
-// 409 with an explicit policy code, terminal rows stay 409 terminal, and the
-// future cleanup requirement travels on the domain result for the workflow
-// layer, not on this response.
+// 409 with an explicit policy code. An already CANCELLED ride replays 200;
+// other terminal states reject cancellation. Cleanup obligations are saved
+// atomically with cancellation and are not exposed on this response.
 
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Domain.Trips;
+using RideHailing.TripService.Infrastructure.Persistence;
 
 namespace RideHailing.TripService.Api;
 
@@ -47,9 +48,17 @@ public static class CancelRideEndpoint
                 extensions: new Dictionary<string, object?> { ["code"] = "FORBIDDEN" });
         }
 
-        var result = await handler
-            .HandleAsync(tripId, riderId, cancellationToken)
-            .ConfigureAwait(false);
+        TripLifecycleResult result;
+        try
+        {
+            result = await handler.HandleAsync(tripId, riderId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (TripConcurrencyConflictException)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict,
+                title: "Trip changed concurrently. Reload its current state before retrying cancellation.",
+                extensions: new Dictionary<string, object?> { ["code"] = "CONCURRENCY_CONFLICT" });
+        }
 
         if (result.IsNotFound)
         {

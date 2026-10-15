@@ -4,9 +4,8 @@
 // missing and not-owned share NotFound per SEC-03). Loads the Trip, calls
 // the single aggregate Cancel operation with the deterministic clock,
 // persists the authoritative terminal result, maps the domain outcome
-// including the future cleanup requirement. Compensation is REPRESENTED
-// here (carried on the result for the future workflow layer), never
-// executed: no broker dispatch, no Driver release orchestration, no Saga.
+// including durable cleanup intents saved atomically with cancellation.
+// External dispatch and authority reconciliation belong to the workflow adapter.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -49,6 +48,9 @@ public sealed class CancelRideHandler
         {
             return TripLifecycleResult.NotFound();
         }
+
+        if (trip.State == TripState.Cancelled)
+            return TripLifecycleResult.Success(trip, isReplay: true, TripCompensation.None);
 
         var outcome = trip.Cancel(_time.GetUtcNow());
         if (!outcome.IsSuccess)

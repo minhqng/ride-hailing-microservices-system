@@ -39,6 +39,7 @@ builder.Services.AddDbContext<TripDbContext>(options => options.UseNpgsql(postgr
 builder.Services.AddScoped<CreateRideHandler>();
 builder.Services.AddScoped<StartMatchingHandler>();
 builder.Services.AddScoped<CancelRideHandler>();
+builder.Services.AddScoped<ConfirmTripCleanupHandler>();
 builder.Services.AddScoped<RecordDriverReservationHandler>();
 builder.Services.AddScoped<RecordDriverAcceptedHandler>();
 builder.Services.AddScoped<RecordDriverRejectedHandler>();

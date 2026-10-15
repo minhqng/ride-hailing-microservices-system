@@ -28,6 +28,37 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
     {
         builder.ToTable("trips");
 
+        builder.OwnsMany(t => t.CleanupIntents, cleanup =>
+        {
+            cleanup.ToTable("trip_cleanup_intents", table =>
+            {
+                table.HasCheckConstraint("CK_cleanup_round", "matching_round >= 1");
+                table.HasCheckConstraint("CK_cleanup_identity", """
+                    (kind = 'ReleaseReservation' AND driver_id IS NOT NULL
+                     AND driver_id <> '00000000-0000-0000-0000-000000000000'::uuid
+                     AND reservation_id IS NOT NULL
+                     AND reservation_id <> '00000000-0000-0000-0000-000000000000'::uuid
+                     AND key = 'release:' || reservation_id::text)
+                    OR (kind = 'CancelMatching' AND driver_id IS NULL AND reservation_id IS NULL
+                        AND key = 'matching:' || matching_round::text)
+                    OR (kind = 'ReconcilePayment' AND driver_id IS NULL AND reservation_id IS NULL AND key = 'payment')
+                    """);
+            });
+            cleanup.WithOwner().HasForeignKey(i => i.TripId);
+            cleanup.HasKey(i => new { i.TripId, i.Key });
+            cleanup.Property(i => i.TripId).HasColumnName("trip_id");
+            cleanup.Property(i => i.Key).HasColumnName("key").HasMaxLength(80).ValueGeneratedNever();
+            cleanup.Property(i => i.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(32);
+            cleanup.Property(i => i.DriverId).HasColumnName("driver_id");
+            cleanup.Property(i => i.ReservationId).HasColumnName("reservation_id");
+            cleanup.Property(i => i.MatchingRound).HasColumnName("matching_round");
+            cleanup.Property(i => i.CreatedAt).HasColumnName("created_at");
+            cleanup.Property(i => i.CompletedAt).HasColumnName("completed_at");
+            cleanup.HasIndex(i => i.CreatedAt).HasFilter("completed_at IS NULL");
+        });
+        builder.Navigation(t => t.CleanupIntents).HasField("_cleanupIntents")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.HasKey(e => e.TripId);
         builder.Property(e => e.TripId)
             .HasColumnName("trip_id")
