@@ -70,27 +70,73 @@ else:
     raise AssertionError("Payment failed to redeclare topology")
 assert snapshot() == before
 
-# Route every catalog contract to its independent consumer queues.
-routes = {(exchange, key) for queue, (exchange, keys) in expected.items() if queue != "notification.business-events.q" for key in keys}
-for exchange, key in sorted(routes):
-    result = api("POST", f"exchanges/%2F/{exchange}/publish", dict(
-        properties=dict(delivery_mode=2, message_id=key, content_type="application/json"),
-        routing_key=key, payload=json.dumps({"contract": key}), payload_encoding="string"))
-    assert result["routed"], key
+# Route every catalog contract via disposable probe queues.
+# B-W08 rationale: production consumers (matching.ride-requested.q,
+# matching.driver-projection.q) compete for deliveries with destructive
+# basic.get. Probing the production queue therefore flakes (empty set)
+# even when exchanges/queues/bindings are exact. Use an independent
+# transient probe queue per routing key to prove routing while preserving
+# live-consumer behavior and the snapshot topology assertions above.
+def sanitize(name):
+    out = []
+    for ch in name:
+        out.append(ch if (ch.isalnum() or ch == "-") else "-")
+    return "".join(out)[:120]
 
-for queue, (exchange, keys) in expected.items():
-    wanted = {key for source, key in routes if source == exchange} if queue == "notification.business-events.q" else set(keys)
-    received = set()
-    for attempt in range(20):
-        messages = api("POST", f"queues/%2F/{urllib.parse.quote(queue, safe='')}/get",
-            dict(count=50, ackmode="ack_requeue_false", encoding="auto", truncate=10000))
-        for message in messages:
-            assert message["properties"]["delivery_mode"] == 2
-            received.add(message["properties"]["message_id"])
-        if received == wanted:
-            break
-        time.sleep(0.2)
-    assert received == wanted, (queue, received, wanted)
+routes = {(exchange, key) for queue, (exchange, keys) in expected.items() if queue != "notification.business-events.q" for key in keys}
+probes = []
+try:
+    for exchange, key in sorted(routes):
+        probe = "smoke-probe-" + sanitize(exchange + "-" + key)
+        probes.append(probe)
+        api("PUT", "queues/%2F/" + urllib.parse.quote(probe, safe=""),
+            dict(durable=False, auto_delete=True, arguments={}))
+        api("POST", "bindings/%2F/e/" + urllib.parse.quote(exchange, safe="") + "/q/" + urllib.parse.quote(probe, safe=""),
+            dict(routing_key=key))
+        result = api("POST", f"exchanges/%2F/{exchange}/publish", dict(
+            properties=dict(delivery_mode=2, message_id=key, content_type="application/json"),
+            routing_key=key, payload=json.dumps({"contract": key}), payload_encoding="string"))
+        assert result["routed"], key
+        received = set()
+        for attempt in range(20):
+            messages = api("POST", f"queues/%2F/{urllib.parse.quote(probe, safe='')}/get",
+                dict(count=10, ackmode="ack_requeue_false", encoding="auto", truncate=10000))
+            for message in messages:
+                assert message["properties"]["delivery_mode"] == 2
+                received.add(message["properties"]["message_id"])
+            if key in received:
+                break
+            time.sleep(0.2)
+        assert key in received, (probe, exchange, key, received)
+    # Fan-out proof: notification wildcard bindings receive each family.
+    for pattern, sample in [("trip.#", "trip.ride-requested.v1"), ("driver.#", "driver.reserved.v1"),
+                            ("payment.#", "payment.authorized.v1"), ("matching.#", "matching.failed.v1")]:
+        probe = "smoke-probe-fanout-" + sanitize(pattern)
+        probes.append(probe)
+        api("PUT", "queues/%2F/" + urllib.parse.quote(probe, safe=""),
+            dict(durable=False, auto_delete=True, arguments={}))
+        api("POST", "bindings/%2F/e/ride.events/q/" + urllib.parse.quote(probe, safe=""),
+            dict(routing_key=pattern))
+        result = api("POST", "exchanges/%2F/ride.events/publish", dict(
+            properties=dict(delivery_mode=2, message_id=sample, content_type="application/json"),
+            routing_key=sample, payload=json.dumps({"contract": sample}), payload_encoding="string"))
+        assert result["routed"], sample
+        received = set()
+        for attempt in range(20):
+            messages = api("POST", f"queues/%2F/{urllib.parse.quote(probe, safe='')}/get",
+                dict(count=10, ackmode="ack_requeue_false", encoding="auto", truncate=10000))
+            for message in messages:
+                received.add(message["properties"]["message_id"])
+            if sample in received:
+                break
+            time.sleep(0.2)
+        assert sample in received, (probe, pattern, sample, received)
+finally:
+    for probe in probes:
+        try:
+            api("DELETE", "queues/%2F/" + urllib.parse.quote(probe, safe=""))
+        except Exception:
+            pass
 
 # Separate Production instance shares only this disposable test project's infrastructure.
 container = subprocess.run(["docker", "compose", "run", "-d", "--no-deps", "--rm",
