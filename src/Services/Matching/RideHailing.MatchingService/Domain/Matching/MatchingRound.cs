@@ -18,7 +18,7 @@ public sealed class MatchingRound
 {
     public Guid TripId { get; }
     public int Round { get; }
-    public Guid InputMessageId { get; }
+    public string InputMessageId { get; }
     public MatchingRoundStatus Status { get; }
     public string CurrentStage { get; }
     public string RankingConfigVersion { get; }
@@ -27,7 +27,7 @@ public sealed class MatchingRound
     public int CandidateCount { get; private set; }
     public int NextAttemptOrdinal { get; private set; }
 
-    public MatchingRound(Guid tripId, int round, Guid inputMessageId, string rankingConfigVersion)
+    public MatchingRound(Guid tripId, int round, string inputMessageId, string rankingConfigVersion)
     {
         if (tripId == Guid.Empty)
         {
@@ -39,7 +39,7 @@ public sealed class MatchingRound
             throw new ArgumentException("matchingRound must be >= 1.", nameof(round));
         }
 
-        if (inputMessageId == Guid.Empty)
+        if (string.IsNullOrWhiteSpace(inputMessageId))
         {
             throw new ArgumentException("inputMessageId must not be empty.", nameof(inputMessageId));
         }

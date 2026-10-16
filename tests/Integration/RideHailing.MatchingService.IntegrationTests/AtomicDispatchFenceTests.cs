@@ -138,7 +138,7 @@ public sealed class AtomicDispatchFenceTests
             OnQuery = async (id, rid, ct) => MapResult(await driverRepo.QueryReservationAsync(id, rid, ct)),
         };
 
-        var blocked = await Orchestrator(lossy).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var blocked = await Orchestrator(lossy).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         var attempt = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
         Assert.Equal(MatchingAttemptStates.Unknown, attempt.State);

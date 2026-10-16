@@ -60,6 +60,57 @@ double-reserve). The client throws; `NOT_FOUND` arrives only as a 200 outcome.
 - [ ] C: attempt-timeout/total-deadline budgets vs `02 §20` (operational
   tuning, not frozen; W7 uses bounded counts).
 
+## Broker seam (B-W08)
+
+Consumed (Matching) and produced (Driver) broker contracts. Shared platform
+primitives (exchanges/queues/envelope/topology/retry-DLQ mechanics) are
+C-owned; B consumes the frozen shape and owns only its endpoint mapping.
+
+- **Topology:** frozen `RideTopology` (`ride.events` topic; `matching.ride-requested.q`,
+  `matching.driver-projection.q` quorum). B declares idempotently, never redefines.
+- **Envelope:** shared `MessageEnvelope` (V1, validated) + trace headers.
+  ACK happens only after the durable local effect commits.
+- **Consumed — `RideRequestedV1`** (`trip.ride-requested.v1`, producer: Trip
+  Outbox, A-owned): payload fields `tripId` + `matchingRound` (A's five-field
+  shape unchanged); the input message identity is `envelope.messageId`
+  verbatim (opaque TEXT, never parsed as GUID, never transformed). Unknown
+  extra payload fields ignored; a payload-embedded `inputMessageId` is NOT
+  required and, if present, is ignored. Same `(tripId, matchingRound)`
+  resumes the same round — never a new candidate sequence, never reserve
+  execution from broker input. Duplicate/concurrent/crash-before-ACK delivery
+  converges on the round PK; stored `input_message_id` is never overwritten
+  on replay while UNIQUE(input_message_id) rejects one identity for two
+  rounds.
+- **Consumed — Driver state/location** (`driver.*.v1`, producer: Driver, B-owned):
+  state `{driverId, status, version}` and location
+  `{driverId, longitude, latitude, sessionId, sequenceNo, capturedAt}` feed the
+  derived Redis projection only (version/freshness/GEO guards stay in the W4 Lua).
+  Degraded results requeue boundedly; unknown routing keys are poison (drop loud).
+- **Produced — Driver authoritative events** (best-effort after commit, W9
+  Outbox closes the dual-write gap; failure never fails the committed domain op):
+  `driver.reserved.v1`, `driver.reservation-released.v1`, `driver.available.v1`,
+  `driver.offline.v1` with `{driverId, status, version, tripId?, reservationId?}`,
+  and `driver.location-accepted.v1` with the accepted sample. Payload wire form
+  is explicit camelCase; messageId is deterministic per logical effect
+  (win/replay/recovery republish the same identity).
+- **Bounds:** transient requeue bounded by the broker acquisition count
+  (`x-acquired-count`, RabbitMQ 4.x quorum; headerless redelivery fails closed);
+  1 MiB body cap; validated queue/prefetch/retry config; broker outage retries
+  with backoff without killing the host.
+- **NOT in W8:** Outbox/Inbox, `MatchingFailedV1`/`NO_DRIVER` publication,
+  Saga compensation, DLQ/error-store arrival (C/W9 scope).
+
+### Open broker questions for A/C
+
+- [ ] A: confirm `RideRequestedV1` producer payload carries
+  `tripId`/`matchingRound` (A's five-field shape unchanged; identity travels
+  as `envelope.messageId`, not a payload field) and the
+  `trip.ride-requested.v1` routing key.
+- [ ] C: converge B's interim consume/publish glue onto the platform
+  consumer/publisher base (same exchanges/queues/envelope/ACK discipline);
+  confirm DLQ/error-store arrival story for W9.
+- [ ] C: broker-enforced maximum message size (B drops >1 MiB on consume).
+
 ## What this is NOT
 
 Not reserve behavior, not UNKNOWN classification, not retry policy — W6/W7.

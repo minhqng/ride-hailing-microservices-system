@@ -2,6 +2,7 @@
 // Domain never knows HTTP. Invalid* -> 400, conflicts/stale -> 409.
 using Microsoft.Extensions.Options;
 using RideHailing.DriverService.Application.Location;
+using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
 
@@ -63,6 +64,7 @@ public static class DriverEndpoints
             Guid id,
             StateVersionRequest req,
             DriverRepository repo,
+            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (id == Guid.Empty || req.ExpectedVersion < 1)
@@ -77,6 +79,18 @@ public static class DriverEndpoints
             try
             {
                 var result = await repo.TryGoOnlineAsync(id, req.ExpectedVersion, ct);
+                var published = DriverEventMapper.ForOnlineResult(id, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
+
                 return DriverStateResults.ToHttpResult(result, "online");
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -93,6 +107,7 @@ public static class DriverEndpoints
             Guid id,
             StateVersionRequest req,
             DriverRepository repo,
+            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (id == Guid.Empty || req.ExpectedVersion < 1)
@@ -107,6 +122,18 @@ public static class DriverEndpoints
             try
             {
                 var result = await repo.TryGoOfflineAsync(id, req.ExpectedVersion, ct);
+                var published = DriverEventMapper.ForOfflineResult(id, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
+
                 return DriverStateResults.ToHttpResult(result, "offline");
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -128,6 +155,7 @@ public static class DriverEndpoints
             Guid id,
             ReleaseDriverRequest req,
             DriverRepository repo,
+            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (id == Guid.Empty || req.TripId == Guid.Empty || req.ReservationId == Guid.Empty)
@@ -142,6 +170,18 @@ public static class DriverEndpoints
             try
             {
                 var result = await repo.TryReleaseAsync(id, req.TripId, req.ReservationId, ct);
+                var published = DriverEventMapper.ForReleaseResult(id, req.TripId, req.ReservationId, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
+
                 return DriverStateResults.ToHttpResult(result, "released");
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -198,6 +238,7 @@ public static class DriverEndpoints
             Guid id,
             ReserveDriverRequest req,
             DriverRepository repo,
+            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (req.TripId == Guid.Empty || req.ReservationId == Guid.Empty || req.ExpectedVersion < 1
@@ -214,6 +255,18 @@ public static class DriverEndpoints
             {
                 var result = await repo.TryReserveAsync(
                     id, req.TripId, req.ReservationId, req.ExpectedVersion, ct);
+                var published = DriverEventMapper.ForReserveResult(id, req.TripId, req.ReservationId, result);
+                if (published is not null)
+                {
+                    await publisher.PublishStateAsync(
+                        published.MessageType,
+                        published.RoutingKey,
+                        published.Payload,
+                        published.Version,
+                        id,
+                        ct: ct);
+                }
+
                 return DriverReserveResults.ToHttpResult(result);
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -228,11 +281,13 @@ public static class DriverEndpoints
             }
         });
 
-        app.MapPost("/drivers/{id:guid}/location", (
+        app.MapPost("/drivers/{id:guid}/location", async (
             Guid id,
             LocationRequest req,
             LocationAcceptor acceptor,
-            IOptions<LocationIngressOptions> ingressOptions) =>
+            DriverEventPublisher publisher,
+            IOptions<LocationIngressOptions> ingressOptions,
+            CancellationToken ct) =>
         {
             LocationSample sample;
             try
@@ -249,6 +304,18 @@ public static class DriverEndpoints
                     });
                 }
 
+                // Best-effort location fact (P0 documented path: no
+                // relational dual-write, so no Outbox requirement). The
+                // projection Lua re-validates ordering; duplicates converge.
+                await publisher.PublishLocationAsync(
+                    new DriverLocationEventPayload(
+                        id,
+                        result.Current.Longitude,
+                        result.Current.Latitude,
+                        result.Current.DeviceSessionId,
+                        result.Current.SequenceNo,
+                        result.Current.CapturedAt),
+                    ct: ct);
                 return Results.Accepted(value: new { accepted = result.Current });
             }
             catch (DriverDomainException ex)
