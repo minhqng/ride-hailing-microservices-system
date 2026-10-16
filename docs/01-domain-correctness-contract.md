@@ -2200,8 +2200,13 @@ treat reserve as successful
 ### AVAILABLE / NOT_COMMITTED
 
 ```text
-attempt conclusively failed/not committed
-next candidate may be considered
+conclusive only with fencing: the Driver version Vx returned with the query
+must exceed every dispatched fence for R (Vx > max_dispatched_version).
+Otherwise an earlier Reserve(R) may still commit later (pre-lock: it has not
+yet acquired the row lock; pre-commit: it holds the lock uncommitted while
+the query sees last-committed AVAILABLE) and the attempt must remain UNKNOWN;
+next candidate must NOT be considered until fenced proof or visible review
+(DSI-017/031). Legacy rows without fence provenance stay UNKNOWN.
 ```
 
 ### RESERVED_BY_OTHER

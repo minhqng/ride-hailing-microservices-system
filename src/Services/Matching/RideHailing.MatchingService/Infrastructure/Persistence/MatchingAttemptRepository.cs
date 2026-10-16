@@ -33,7 +33,8 @@ public sealed record MatchingAttemptRow(
     Guid DriverId,
     Guid ReservationId,
     string State,
-    string? LastErrorCode);
+    string? LastErrorCode,
+    int? MaxDispatchedVersion);
 
 public sealed record MatchingRoundRow(
     Guid TripId,
@@ -157,7 +158,7 @@ public sealed class MatchingAttemptRepository
             await cmd.ExecuteNonQueryAsync(ct);
             return (true, new MatchingAttemptRow(
                 tripId, round, ordinal, driverId, reservationId,
-                MatchingAttemptStates.InFlight, null));
+                MatchingAttemptStates.InFlight, null, null));
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
             && string.Equals(ex.ConstraintName, "matching_attempts_pkey", StringComparison.Ordinal))
@@ -173,7 +174,7 @@ public sealed class MatchingAttemptRepository
         Guid tripId, int round, int ordinal, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code
+            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code, max_dispatched_version
             FROM matching_attempts
             WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal;
             """;
@@ -196,7 +197,7 @@ public sealed class MatchingAttemptRepository
         Guid tripId, int round, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code
+            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code, max_dispatched_version
             FROM matching_attempts
             WHERE trip_id = @trip AND matching_round = @round
             ORDER BY ordinal;
@@ -291,8 +292,38 @@ public sealed class MatchingAttemptRepository
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
+    /// <summary>
+    /// Write-ahead fence record: persists the Driver version about to be used
+    /// for a Reserve(R) dispatch BEFORE the remote call is sent. Uses
+    /// GREATEST so concurrent duplicate workers converge to the maximum ever
+    /// dispatched (safe: Vx &gt; max proves all outstanding stale; Vx &lt;= max
+    /// stays UNKNOWN, possibly conservative but never unsafe). Persistence
+    /// failure must prevent dispatch (caller returns UNKNOWN without calling).
+    /// NULL means legacy row without provenance: never safe to advance on AVAILABLE.
+    /// </summary>
+    public async Task RecordDispatchAsync(
+        Guid tripId, int round, int ordinal, int dispatchedVersion,
+        CancellationToken ct = default)
+    {
+        const string Sql = """
+            UPDATE matching_attempts
+            SET max_dispatched_version = GREATEST(COALESCE(max_dispatched_version, 0), @v),
+                updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal;
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        cmd.Parameters.AddWithValue("ordinal", ordinal);
+        cmd.Parameters.AddWithValue("v", dispatchedVersion);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
     private static MatchingAttemptRow ReadAttempt(NpgsqlDataReader reader) => new(
         reader.GetGuid(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetGuid(3),
         reader.GetGuid(4), reader.GetString(5),
-        reader.IsDBNull(6) ? null : reader.GetString(6));
+        reader.IsDBNull(6) ? null : reader.GetString(6),
+        reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetInt32(7) : null);
 }

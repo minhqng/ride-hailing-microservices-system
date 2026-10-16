@@ -93,7 +93,7 @@ public sealed class HttpDriverClient : IDriverClient
             root.GetProperty("status").GetString() ?? "UNKNOWN");
     }
 
-    public async Task<ReservationReconcileOutcome> GetReservationAsync(
+    public async Task<ReservationReconcileResult> GetReservationAsync(
         Guid driverId,
         Guid reservationId,
         CancellationToken cancellationToken = default)
@@ -112,7 +112,7 @@ public sealed class HttpDriverClient : IDriverClient
 
         var body = await response.Content
             .ReadFromJsonAsync<ReconcileBody>(cancellationToken);
-        return (body?.Outcome) switch
+        var outcome = (body?.Outcome) switch
         {
             "OWNED_BY_THIS_RESERVATION" => ReservationReconcileOutcome.OwnedByThisReservation,
             "NOT_COMMITTED_OR_AVAILABLE" => ReservationReconcileOutcome.NotCommittedOrAvailable,
@@ -123,9 +123,10 @@ public sealed class HttpDriverClient : IDriverClient
             _ => throw new InvalidOperationException(
                 $"Unknown reconcile outcome '{body?.Outcome}': Driver contract drift."),
         };
+        return new ReservationReconcileResult(outcome, body?.Version);
     }
 
     private sealed record ReserveSuccessBody(int? Version);
     private sealed record ConflictBody(string? Code);
-    private sealed record ReconcileBody(string? Outcome);
+    private sealed record ReconcileBody(string? Outcome, int? Version);
 }

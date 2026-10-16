@@ -59,7 +59,7 @@ public class ReserveWorkflowTests
     {
         public readonly List<string> Calls = new();
         public Func<DriverReserveRequest, CancellationToken, Task<DriverReserveResult>>? OnReserve;
-        public Func<Guid, Guid, CancellationToken, Task<ReservationReconcileOutcome>>? OnQuery;
+        public Func<Guid, Guid, CancellationToken, Task<ReservationReconcileResult>>? OnQuery;
         public Func<Guid, CancellationToken, Task<DriverVersionRead?>>? OnVersion;
         public int VersionToReturn = 3;
         public string StatusToReturn = "AVAILABLE";
@@ -86,7 +86,7 @@ public class ReserveWorkflowTests
             return Task.FromResult(new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, VersionToReturn + 1));
         }
 
-        public Task<ReservationReconcileOutcome> GetReservationAsync(Guid driverId, Guid reservationId, CancellationToken ct = default)
+        public Task<ReservationReconcileResult> GetReservationAsync(Guid driverId, Guid reservationId, CancellationToken ct = default)
         {
             Calls.Add($"query:{driverId:N}:{reservationId:N}");
             if (OnQuery is not null)
@@ -94,7 +94,7 @@ public class ReserveWorkflowTests
                 return OnQuery(driverId, reservationId, ct);
             }
 
-            return Task.FromResult(ReservationReconcileOutcome.NotCommittedOrAvailable);
+            return Task.FromResult(new ReservationReconcileResult(ReservationReconcileOutcome.NotCommittedOrAvailable, VersionToReturn));
         }
     }
 
@@ -261,7 +261,7 @@ public class ReserveWorkflowTests
             OnQuery = async (id, rid, ct) =>
             {
                 var q = await driverRepo.QueryReservationAsync(id, rid, ct);
-                return q.Outcome switch
+                var outcome = q.Outcome switch
                 {
                     RideHailing.DriverService.Infrastructure.Persistence.ReservationQueryOutcome.OwnedByThisReservation
                         => ReservationReconcileOutcome.OwnedByThisReservation,
@@ -275,6 +275,7 @@ public class ReserveWorkflowTests
                         => ReservationReconcileOutcome.OnTrip,
                     _ => ReservationReconcileOutcome.NotFound,
                 };
+                return new ReservationReconcileResult(outcome, q.Version);
             },
         };
         var orch = Orchestrator(stub);
@@ -340,20 +341,23 @@ public class ReserveWorkflowTests
     {
 
         var trip = NewTrip();
-        foreach (var (wire, code) in new[]
+        foreach (var (wire, code, version) in new[]
                  {
-                     (ReservationReconcileOutcome.NotCommittedOrAvailable, "NOT_COMMITTED_OR_AVAILABLE"),
-                     (ReservationReconcileOutcome.ReservedByOther, "RESERVED_BY_OTHER"),
-                     (ReservationReconcileOutcome.Offline, "OFFLINE"),
-                     (ReservationReconcileOutcome.OnTrip, "ON_TRIP"),
-                     (ReservationReconcileOutcome.NotFound, "NOT_FOUND"),
+                     // AVAILABLE is conclusive only with fencing: the stub
+                     // version-read uses VersionToReturn=3, so max=3 is persisted
+                     // before the timeout; query Vx=99 proves all fences stale.
+                     (ReservationReconcileOutcome.NotCommittedOrAvailable, "NOT_COMMITTED_OR_AVAILABLE", (int?)99),
+                     (ReservationReconcileOutcome.ReservedByOther, "RESERVED_BY_OTHER", (int?)3),
+                     (ReservationReconcileOutcome.Offline, "OFFLINE", (int?)3),
+                     (ReservationReconcileOutcome.OnTrip, "ON_TRIP", (int?)3),
+                     (ReservationReconcileOutcome.NotFound, "NOT_FOUND", (int?)null),
                  })
         {
             var d = Guid.NewGuid();
             var stub = new StubDriverClient
             {
                 OnReserve = (_, _) => throw new TimeoutException("injected loss"),
-                OnQuery = (_, _, _) => Task.FromResult(wire),
+                OnQuery = (_, _, _) => Task.FromResult(new ReservationReconcileResult(wire, version)),
             };
             var orch = Orchestrator(stub);
             var roundNo = 10 + Array.IndexOf(new[]
@@ -893,7 +897,7 @@ public class ReserveWorkflowTests
             {
                 entered.SetResult();
                 await gate.Task;
-                return ReservationReconcileOutcome.OwnedByThisReservation;
+                return new ReservationReconcileResult(ReservationReconcileOutcome.OwnedByThisReservation, 5);
             },
         };
         var orch = Orchestrator(stub);

@@ -41,3 +41,14 @@ public enum ReservationReconcileOutcome
     OnTrip,
     NotFound,
 }
+
+/// <summary>
+/// Authoritative Driver reconcile answer with fencing version.
+/// Outcome is the domain truth; DriverVersion is the current Driver version
+/// from the same SELECT (null only for NotFound/missing). Matching must not
+/// treat NotCommittedOrAvailable as conclusive unless DriverVersion is
+/// greater than every dispatched fence (see max_dispatched_version).
+/// </summary>
+public sealed record ReservationReconcileResult(
+    ReservationReconcileOutcome Outcome,
+    int? DriverVersion);
