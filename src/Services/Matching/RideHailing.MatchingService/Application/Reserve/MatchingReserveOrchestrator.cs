@@ -16,10 +16,18 @@
 // when the Driver version Vx exceeds every dispatched fence (Vx > max):
 // versions only increase, the row lock serializes writers, so any future R
 // read sees >= Vx > its fence and fails StaleVersion. Otherwise stay UNKNOWN.
-// ReservedByOther/Offline/OnTrip/NotFound are conclusive without version:
-// any future R read sees incompatible state or missing row (no DELETE in
-// production; lock exclusion proves R is not holding) and cannot commit.
-// Legacy rows without fence provenance (NULL) stay UNKNOWN on AVAILABLE.
+// Incompatible states (ReservedByOther/Offline/OnTrip) conclude only when
+// Vx covers every durable fence (Vx >= max): bare incompatibility is not
+// durable proof (a later release can restore AVAILABLE), and a concurrent
+// worker may fence after our snapshot. Both predicates are evaluated
+// ATOMICALLY against the durable row at the UPDATE's linearization point
+// (READ COMMITTED re-evaluates WHERE on the latest committed row), never from
+// a cached application object — exactly one of concurrent dispatch-fence and
+// negative-conclusion wins. Dispatch itself is authorized by the same row
+// (TryRecordDispatchAsync: eligible attempt state + PROCESSING round); a
+// denied worker never sends. Legacy rows without fence provenance (NULL) stay
+// UNKNOWN on AVAILABLE/incompatible. NotFound carries no version and needs no
+// fence: no dispatch is possible without a version read.
 //
 // What this never does: generic identity-changing retry (same R always,
 // Doc 02 §19.3), candidate advance on UNKNOWN (R-11), NO_DRIVER terminal
@@ -286,24 +294,78 @@ public sealed class MatchingReserveOrchestrator
                     // so any future R read sees >= Vx > its fence -> StaleVersion.
                     // Otherwise poll again; exhaustion becomes visible review.
                     // Legacy rows without fence provenance (NULL) stay UNKNOWN.
+                    //
+                    // ATOMICITY (two-worker fence): the cached comparison below
+                    // is only a fast path. The conclusion itself re-validates
+                    // Vx against the DURABLE max at its linearization point
+                    // (TryConcludeFencedAvailableAsync): a concurrent dispatch
+                    // that recorded a newer fence first defeats the predicate,
+                    // so a stale worker can never conclude from an old cache.
                     if (row.MaxDispatchedVersion.HasValue
                         && truth.DriverVersion.HasValue
                         && truth.DriverVersion.Value > row.MaxDispatchedVersion.Value)
                     {
                         var fencedCode = ToOutcomeCode(truth.Outcome);
-                        var fenced = await TryConcludeAsync(
-                            tripId, round, ordinal,
-                            [MatchingAttemptStates.Unknown], MatchingAttemptStates.Rejected,
-                            fencedCode, ct);
-                        return fenced
-                            ?? new AttemptResult(AttemptOutcome.Rejected, row.ReservationId, fencedCode);
+                        if (await _attempts.TryConcludeFencedAvailableAsync(
+                            tripId, round, ordinal, truth.DriverVersion.Value, fencedCode, ct))
+                        {
+                            return new AttemptResult(AttemptOutcome.Rejected, row.ReservationId, fencedCode);
+                        }
+
+                        // Lost to a concurrent fence (or a stale cache): report
+                        // durable truth, never our snapshot. A terminal row
+                        // converges; otherwise re-poll with a FRESH fence.
+                        var freshAvailable = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
+                        var mappedAvailable = await MapDurableTerminalAsync(tripId, round, freshAvailable, ct);
+                        if (mappedAvailable is not null)
+                        {
+                            return mappedAvailable;
+                        }
+
+                        row = freshAvailable ?? row;
                     }
 
                     continue;
                 case ReservationReconcileOutcome.ReservedByOther:
                 case ReservationReconcileOutcome.Offline:
                 case ReservationReconcileOutcome.OnTrip:
+                    // Fenced like AVAILABLE (see repository): bare state
+                    // incompatibility alone is not durable proof — a later
+                    // release can restore AVAILABLE and a concurrent worker
+                    // may record a newer fence after our snapshot. Conclude
+                    // only when Vx covers every durable fence (Vx >= max);
+                    // a concurrent newer fence defeats the predicate instead.
+                    // Legacy NULL fences stay UNKNOWN (bounded review).
+                    if (row.MaxDispatchedVersion.HasValue
+                        && truth.DriverVersion.HasValue
+                        && truth.DriverVersion.Value >= row.MaxDispatchedVersion.Value)
+                    {
+                        var incompatibleCode = ToOutcomeCode(truth.Outcome);
+                        if (await _attempts.TryConcludeFencedIncompatibleAsync(
+                            tripId, round, ordinal, truth.DriverVersion.Value, incompatibleCode, ct))
+                        {
+                            return new AttemptResult(AttemptOutcome.Rejected, row.ReservationId, incompatibleCode);
+                        }
+
+                        var freshIncompatible = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
+                        var mappedIncompatible = await MapDurableTerminalAsync(tripId, round, freshIncompatible, ct);
+                        if (mappedIncompatible is not null)
+                        {
+                            return mappedIncompatible;
+                        }
+
+                        row = freshIncompatible ?? row;
+                    }
+
+                    continue;
                 case ReservationReconcileOutcome.NotFound:
+                    // No version accompanies NotFound, so no fence comparison
+                    // applies — and none is needed: every dispatch is preceded
+                    // by a successful version read, so while the row is missing
+                    // no worker can record a new fence or send (the null-read
+                    // path never dispatches). Under no-DELETE there is also no
+                    // outstanding committable effect to protect. Dispatch after
+                    // this conclusion is still fenced by TryRecordDispatchAsync.
                     var code = ToOutcomeCode(truth.Outcome);
                     var rejected = await TryConcludeAsync(
                         tripId, round, ordinal,
@@ -386,18 +448,31 @@ public sealed class MatchingReserveOrchestrator
             DriverReserveResult call;
             try
             {
-                // Write-ahead fence: persist the version we are about to use
-                // BEFORE the remote call can be sent. If this write fails, do
-                // NOT dispatch (an undocumented outstanding fence would break
-                // later AVAILABLE fencing). Crash between fence write and
-                // dispatch only over-approximates max (conservative UNKNOWN).
+                // Write-ahead fence + dispatch authorization: persist the version
+                // we are about to use BEFORE the remote call can be sent. A
+                // zero-row authorization (attempt or round became ineligible
+                // after our read) must NEVER dispatch: fail closed and report
+                // durable truth instead. Crash between fence write and dispatch
+                // only over-approximates max (conservative UNKNOWN).
+                bool authorized;
                 try
                 {
-                    await _attempts.RecordDispatchAsync(tripId, round, ordinal, observed.Version, ct);
+                    authorized = await _attempts.TryRecordDispatchAsync(
+                        tripId, round, ordinal, observed.Version, ct);
                 }
                 catch (Exception fenceEx) when (!ct.IsCancellationRequested || fenceEx is not OperationCanceledException)
                 {
                     return new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "DISPATCH_FENCE_FAILED");
+                }
+
+                if (!authorized)
+                {
+                    var denied = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
+                    return await MapDurableTerminalAsync(tripId, round, denied, ct)
+                        ?? new AttemptResult(
+                            AttemptOutcome.Unknown,
+                            denied?.ReservationId ?? row.ReservationId,
+                            "DISPATCH_FENCE_DENIED");
                 }
 
                 call = await _driver.ReserveAsync(
@@ -473,6 +548,34 @@ public sealed class MatchingReserveOrchestrator
         // Unreachable: the loop above always returns (reserved / rejected /
         // contention-unknown). Kept as a fail-safe, never silent.
         throw new InvalidOperationException("Reserve attempt loop fell through without a terminal outcome.");
+    }
+
+    /// <summary>
+    /// Maps the DURABLE attempt row to a terminal result when it already
+    /// settled (duplicate-worker convergence): a stale worker reports what
+    /// actually won instead of its own obsolete observation. Returns null
+    /// when the row is still unresolved (caller stays UNKNOWN / re-polls).
+    /// A durably RESERVED row also converges the round mark (idempotent).
+    /// </summary>
+    private async Task<AttemptResult?> MapDurableTerminalAsync(
+        Guid tripId,
+        int round,
+        MatchingAttemptRow? fresh,
+        CancellationToken ct)
+    {
+        if (fresh is not null && fresh.State == MatchingAttemptStates.Reserved)
+        {
+            await _attempts.TryMarkRoundReservedAsync(
+                tripId, round, fresh.DriverId, fresh.ReservationId, ct);
+            return new AttemptResult(AttemptOutcome.Reserved, fresh.ReservationId, null);
+        }
+
+        if (fresh is not null && fresh.State == MatchingAttemptStates.Rejected)
+        {
+            return new AttemptResult(AttemptOutcome.Rejected, fresh.ReservationId, fresh.LastErrorCode);
+        }
+
+        return null;
     }
 
     /// <summary>
