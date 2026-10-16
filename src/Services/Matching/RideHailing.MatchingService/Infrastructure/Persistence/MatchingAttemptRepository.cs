@@ -293,23 +293,47 @@ public sealed class MatchingAttemptRepository
     }
 
     /// <summary>
-    /// Write-ahead fence record: persists the Driver version about to be used
-    /// for a Reserve(R) dispatch BEFORE the remote call is sent. Uses
-    /// GREATEST so concurrent duplicate workers converge to the maximum ever
-    /// dispatched (safe: Vx &gt; max proves all outstanding stale; Vx &lt;= max
-    /// stays UNKNOWN, possibly conservative but never unsafe). Persistence
-    /// failure must prevent dispatch (caller returns UNKNOWN without calling).
-    /// NULL means legacy row without provenance: never safe to advance on AVAILABLE.
+    /// Dispatch authorization + write-ahead fence record, atomically guarded
+    /// (S1: authorized dispatch). Persists the Driver version about to be used
+    /// for a Reserve(R) dispatch BEFORE the remote call is sent, and returns
+    /// whether the caller may send. Uses GREATEST so concurrent duplicate
+    /// workers converge to the maximum ever dispatched.
+    ///
+    /// Authorization is a single UPDATE predicate evaluated at the statement's
+    /// linearization point (READ COMMITTED re-evaluates WHERE on the latest
+    /// committed row after waiting on a concurrent updater):
+    ///   - the attempt row itself must still be dispatch-eligible
+    ///     (READY/IN_FLIGHT/UNKNOWN: never REJECTED/RESERVED);
+    ///   - the round must still be PROCESSING (a settled round takes no new
+    ///     effects; replay converges on durable rows instead).
+    /// A zero-row update is NOT authorization: the caller must fail closed
+    /// (no remote send) and re-read durable truth. Persistence failure also
+    /// prevents dispatch (an undocumented outstanding fence would break later
+    /// AVAILABLE fencing). Crash between fence write and dispatch only
+    /// over-approximates max (conservative UNKNOWN).
+    /// NULL means legacy row without provenance: a fresh fence still dominates
+    /// it (version reads are monotonic), but no negative conclusion may use a
+    /// NULL fence (see the fenced conclude methods).
     /// </summary>
-    public async Task RecordDispatchAsync(
+    /// <returns>True when the fence was recorded and dispatch is authorized.</returns>
+    public async Task<bool> TryRecordDispatchAsync(
         Guid tripId, int round, int ordinal, int dispatchedVersion,
         CancellationToken ct = default)
     {
+        if (dispatchedVersion < 1)
+        {
+            throw new ArgumentException("dispatchedVersion must be >= 1.", nameof(dispatchedVersion));
+        }
+
         const string Sql = """
-            UPDATE matching_attempts
-            SET max_dispatched_version = GREATEST(COALESCE(max_dispatched_version, 0), @v),
+            UPDATE matching_attempts AS a
+            SET max_dispatched_version = GREATEST(COALESCE(a.max_dispatched_version, 0), @v),
                 updated_at = now()
-            WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal;
+            WHERE a.trip_id = @trip AND a.matching_round = @round AND a.ordinal = @ordinal
+              AND a.state IN ('READY', 'IN_FLIGHT', 'UNKNOWN')
+              AND EXISTS (
+                  SELECT 1 FROM matching_rounds AS r
+                  WHERE r.trip_id = @trip AND r.matching_round = @round AND r.status = 'PROCESSING');
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -318,7 +342,96 @@ public sealed class MatchingAttemptRepository
         cmd.Parameters.AddWithValue("round", round);
         cmd.Parameters.AddWithValue("ordinal", ordinal);
         cmd.Parameters.AddWithValue("v", dispatchedVersion);
-        await cmd.ExecuteNonQueryAsync(ct);
+        return await cmd.ExecuteNonQueryAsync(ct) == 1;
+    }
+
+    /// <summary>
+    /// Atomic version-fenced negative conclusion for an AVAILABLE observation
+    /// (S2: atomic negative finality). Concludes UNKNOWN -&gt; REJECTED only
+    /// when the observed Driver version Vx exceeds EVERY durably dispatched
+    /// fence (Vx &gt; max at this statement's linearization point): versions
+    /// only increase and the Driver row lock serializes writers, so any
+    /// outstanding or future R(V) has V &lt;= max &lt; Vx and fails StaleVersion.
+    /// A concurrent dispatch-fence commit wins first instead: the re-evaluated
+    /// predicate (Vx &gt; new max) fails and this returns false — the caller
+    /// must stay unresolved, never conclude from its cached fence.
+    /// NULL fence (legacy, no trustworthy provenance) never concludes.
+    /// </summary>
+    /// <returns>True when this call durably concluded the attempt.</returns>
+    public async Task<bool> TryConcludeFencedAvailableAsync(
+        Guid tripId, int round, int ordinal, int observedVersion, string? errorCode,
+        CancellationToken ct = default)
+    {
+        if (observedVersion < 1)
+        {
+            throw new ArgumentException("observedVersion must be >= 1.", nameof(observedVersion));
+        }
+
+        const string Sql = """
+            UPDATE matching_attempts SET state = 'REJECTED', last_error_code = @err,
+                updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal
+              AND state = 'UNKNOWN'
+              AND max_dispatched_version IS NOT NULL
+              AND @vx > max_dispatched_version;
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        cmd.Parameters.AddWithValue("ordinal", ordinal);
+        cmd.Parameters.AddWithValue("vx", observedVersion);
+        cmd.Parameters.AddWithValue("err", (object?)errorCode ?? DBNull.Value);
+        return await cmd.ExecuteNonQueryAsync(ct) == 1;
+    }
+
+    /// <summary>
+    /// Atomic version-fenced negative conclusion for an incompatible-state
+    /// observation (ReservedByOther/Offline/OnTrip, S2). Concludes
+    /// UNKNOWN -&gt; REJECTED only when the observed version Vx covers every
+    /// durably dispatched fence (Vx &gt;= max at linearization): every state
+    /// change bumps the Driver version, so each outstanding R(V) with
+    /// V &lt;= max &lt;= Vx either is already stale (future versions only
+    /// grow past Vx) or would meet an unchanged incompatible state (same
+    /// version implies no effective mutation since the observation) and
+    /// conflict. A concurrent newer fence defeats the predicate (fail closed).
+    /// Bare state incompatibility alone is NOT durable proof (a later release
+    /// can restore AVAILABLE), so the fence comparison is load-bearing here
+    /// just as for AVAILABLE — only the strictness differs (AVAILABLE needs
+    /// strict &gt; because R(Vx) itself could still commit pre-lock).
+    /// NULL fence never concludes. NotFound (no version) is handled by the
+    /// caller: no dispatch is possible without a version read, so a missing
+    /// row cannot hide an outstanding committable effect (no DELETE in
+    /// production) and needs no fence comparison.
+    /// </summary>
+    /// <returns>True when this call durably concluded the attempt.</returns>
+    public async Task<bool> TryConcludeFencedIncompatibleAsync(
+        Guid tripId, int round, int ordinal, int observedVersion, string? errorCode,
+        CancellationToken ct = default)
+    {
+        if (observedVersion < 1)
+        {
+            throw new ArgumentException("observedVersion must be >= 1.", nameof(observedVersion));
+        }
+
+        const string Sql = """
+            UPDATE matching_attempts SET state = 'REJECTED', last_error_code = @err,
+                updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal
+              AND state = 'UNKNOWN'
+              AND max_dispatched_version IS NOT NULL
+              AND @vx >= max_dispatched_version;
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        cmd.Parameters.AddWithValue("ordinal", ordinal);
+        cmd.Parameters.AddWithValue("vx", observedVersion);
+        cmd.Parameters.AddWithValue("err", (object?)errorCode ?? DBNull.Value);
+        return await cmd.ExecuteNonQueryAsync(ct) == 1;
     }
 
     private static MatchingAttemptRow ReadAttempt(NpgsqlDataReader reader) => new(
