@@ -35,11 +35,9 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 envelope.MessageId.Length > 256 || envelope.CorrelationId.Length > 256)
                 throw new ArgumentException("Unsupported envelope");
             tripId = RequiredGuid(envelope.Payload, "tripId");
+            ValidateAuthorityMetadata(envelope);
             json = JsonSerializer.Serialize(envelope);
-            using var document = JsonDocument.Parse(json);
-            using var stream = new MemoryStream();
-            using (var writer = new Utf8JsonWriter(stream)) WriteCanonical(writer, document.RootElement);
-            fingerprint = Convert.ToHexString(SHA256.HashData(stream.ToArray()));
+            fingerprint = SemanticFingerprint(envelope);
         }
         catch (Exception ex) when (ex is ArgumentException or JsonException or InvalidOperationException)
         { throw new DeliveryFailureException(FailureKind.Poison, "INVALID_TRIP_MESSAGE"); }
@@ -63,7 +61,12 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 x => x.Consumer == consumer && x.MessageId == envelope.MessageId, token);
             if (inserted == 0)
             {
-                if (receipt.Fingerprint != fingerprint)
+                // Compare semantic content, not diagnostic correlation or publish
+                // timestamps. Read retained content also supports pre-hardening
+                // receipts whose fingerprint covered the entire envelope.
+                var original = JsonSerializer.Deserialize<MessageEnvelope<JsonElement>>(receipt.EnvelopeJson)
+                    ?? throw new InvalidOperationException("Stored message evidence is missing.");
+                if (SemanticFingerprint(original) != fingerprint)
                     throw new DeliveryFailureException(FailureKind.Poison, "MESSAGE_ID_CONTENT_CONFLICT");
                 await transaction.CommitAsync(token);
                 log.LogInformation("Trip message replay {MessageId} correlation {CorrelationId} result {Disposition}",
@@ -74,11 +77,13 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
             var trip = await db.Trips.SingleOrDefaultAsync(x => x.TripId == tripId, token);
             if (trip is null)
             {
-                // May be out of order. Canonical bounded retries eventually transfer
-                // to the error queue. Do not permanently consume a not-yet-known Trip.
-                throw new DeliveryFailureException(FailureKind.Transient, "TRIP_NOT_FOUND");
+                // C's error envelope retains identity metadata, not the original
+                // payload. Preserve out-of-order evidence locally for explicit
+                // reconciliation instead of discarding it after bounded retries.
+                receipt.Disposition = "PendingWorkflow";
+                receipt.Reason = "TRIP_NOT_FOUND";
             }
-            Apply(trip, envelope, receipt, now);
+            else Apply(trip, envelope, receipt, now);
             await db.SaveChangesAsync(token);
             await transaction.CommitAsync(token);
             log.LogInformation("Trip message {MessageId} correlation {CorrelationId} trip {TripId} result {Disposition} reason {Reason}",
@@ -86,6 +91,14 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         }
         catch (TripConcurrencyConflictException)
         { throw new DeliveryFailureException(FailureKind.Transient, "TRIP_CONCURRENCY_CONFLICT"); }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "PK_trip_cleanup_intents" })
+        {
+            // Distinct deliveries can concurrently discover the same obligation.
+            // Rollback and reload lets the domain compare the winner's identity;
+            // never treat arbitrary unique violations as replay success.
+            throw new DeliveryFailureException(FailureKind.Transient, "TRIP_CLEANUP_CONCURRENT");
+        }
         catch (Exception ex) when (ex is NpgsqlException { IsTransient: true } ||
             ex is DbUpdateException { InnerException: NpgsqlException { IsTransient: true } })
         {
@@ -127,8 +140,8 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                         return;
                     }
                     var round = RequiredRound(e.Payload);
-                    outcome = trip.State == TripState.Cancelled
-                        ? trip.RecordCancelledReservation(driverId, reservationId, round, now)
+                    outcome = trip.State is TripState.Cancelled or TripState.MatchFailed
+                        ? trip.RecordPreStartTerminalReservation(driverId, reservationId, round, now)
                         : trip.ApplyDriverReserved(driverId, reservationId, round, now);
                 }
                 else if (e.MessageType == "DriverReservationReleasedV1")
@@ -162,12 +175,53 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         return id;
     }
 
+    private static void ValidateAuthorityMetadata(MessageEnvelope<JsonElement> envelope)
+    {
+        if (!envelope.MessageType.StartsWith("Driver", StringComparison.Ordinal)) return;
+        var driverId = RequiredGuid(envelope.Payload, "driverId");
+        _ = RequiredGuid(envelope.Payload, "reservationId");
+        // Optional metadata may be absent in the minimal intake contract, but
+        // supplied contradictory authority facts must never change business state.
+        if (envelope.AggregateType is not null &&
+            (!string.Equals(envelope.AggregateType, "Driver", StringComparison.OrdinalIgnoreCase) ||
+             !Guid.TryParse(envelope.AggregateId, out var aggregateId) || aggregateId != driverId))
+            throw new ArgumentException("Driver aggregate identity mismatch");
+        if (envelope.Payload.TryGetProperty("status", out var status))
+        {
+            var expected = envelope.MessageType switch
+            {
+                "DriverReservedV1" => "RESERVED",
+                "DriverTripStartedV1" => "ON_TRIP",
+                _ => "AVAILABLE"
+            };
+            if (status.ValueKind != JsonValueKind.String || status.GetString() != expected)
+                throw new ArgumentException("Driver event/state mismatch");
+        }
+        if (envelope.Payload.TryGetProperty("version", out var version) &&
+            (version.ValueKind != JsonValueKind.Number || !version.TryGetInt64(out var value) || value < 0 ||
+             (envelope.AggregateVersion.HasValue && value != envelope.AggregateVersion.Value)))
+            throw new ArgumentException("Driver version mismatch");
+    }
+
     private static int RequiredRound(JsonElement payload)
     {
         if (!payload.TryGetProperty("matchingRound", out var value) ||
             value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var round) || round < 1)
             throw new ArgumentException("Missing positive matchingRound");
         return round;
+    }
+
+    private static string SemanticFingerprint(MessageEnvelope<JsonElement> envelope)
+    {
+        var semantic = JsonSerializer.SerializeToElement(new
+        {
+            envelope.MessageType, envelope.SchemaVersion, envelope.Payload,
+            envelope.AggregateType, envelope.AggregateId, envelope.AggregateVersion,
+            envelope.SagaId, envelope.OperationKey
+        });
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream)) WriteCanonical(writer, semantic);
+        return Convert.ToHexString(SHA256.HashData(stream.ToArray()));
     }
 
     private static void WriteCanonical(Utf8JsonWriter writer, JsonElement element)
