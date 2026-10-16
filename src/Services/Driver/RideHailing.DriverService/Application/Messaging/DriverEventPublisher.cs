@@ -89,9 +89,11 @@ public sealed class DriverEventPublisher : IAsyncDisposable
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(_options.PublishTimeoutSeconds));
-        await _gate.WaitAsync(timeout.Token);
+        var acquired = false;
         try
         {
+            await _gate.WaitAsync(timeout.Token);
+            acquired = true;
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(DriverEventPublisher));
@@ -112,12 +114,12 @@ public sealed class DriverEventPublisher : IAsyncDisposable
             _logger.LogWarning(
                 ex, "Driver event publish failed (type={Type}, route={Route}); domain effect stands.",
                 envelope.MessageType, routingKey);
-            await ResetAsync();
+            if (acquired) await ResetAsync();
             return false;
         }
         finally
         {
-            _gate.Release();
+            if (acquired) _gate.Release();
         }
     }
 
@@ -143,7 +145,7 @@ public sealed class DriverEventPublisher : IAsyncDisposable
                 UserName = _options.Username,
                 Password = _options.Password,
                 ClientProvidedName = "driver-service/event-publisher",
-                AutomaticRecoveryEnabled = true,
+                AutomaticRecoveryEnabled = false,
             };
             _connection = await factory.CreateConnectionAsync(ct);
             await RideTopology.DeclareAsync(_connection, ct);
