@@ -42,6 +42,7 @@ public static class TripMessagingRegistration
         var enabled = config.GetValue<bool>("TripMessaging:Enabled");
         services.AddSingleton(new TripMessagingSettings(enabled));
         services.AddScoped<TripRideRequestedPublisher>();
+        services.AddSingleton<TripDatabaseReadiness>();
         services.AddHealthChecks().AddCheck<TripDatabaseReadiness>("trip-database", tags: ["ready"]);
         if (!enabled) return services;
 
