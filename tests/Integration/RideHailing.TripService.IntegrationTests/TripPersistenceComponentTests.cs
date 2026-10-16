@@ -63,6 +63,8 @@ public sealed class TripPersistenceComponentTests
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
+        await using var scope = factory.Services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<TripDbContext>().Database.MigrateAsync();
 
         var response = await client.GetAsync("/health/ready");
         response.EnsureSuccessStatusCode();

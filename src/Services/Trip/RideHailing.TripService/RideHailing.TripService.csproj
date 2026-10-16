@@ -14,6 +14,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <ProjectReference Include="../../../BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+    <ProjectReference Include="../../../BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
   </ItemGroup>
 
   <!-- Persistence reconstitution path is internal; tests arrange

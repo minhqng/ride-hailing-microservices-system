@@ -11,6 +11,7 @@
 // repository, no blind retry.
 
 using Microsoft.EntityFrameworkCore;
+using RideHailing.TripService.Integration.Messaging;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence.Configurations;
 
@@ -29,6 +30,7 @@ public sealed class TripDbContext : DbContext
 
     /// <summary>Authoritative W3 Trip aggregate set.</summary>
     public DbSet<Trip> Trips => Set<Trip>();
+    public DbSet<TripMessageReceipt> MessageReceipts => Set<TripMessageReceipt>();
 
     /// <summary>W4 request-idempotency bookkeeping set (not a domain aggregate).</summary>
     public DbSet<RequestIdempotencyRecord> RequestIdempotency => Set<RequestIdempotencyRecord>();
@@ -36,6 +38,7 @@ public sealed class TripDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new TripConfiguration());
+        modelBuilder.ApplyConfiguration(new TripMessageReceiptConfiguration());
         modelBuilder.ApplyConfiguration(new RequestIdempotencyConfiguration());
     }
 
