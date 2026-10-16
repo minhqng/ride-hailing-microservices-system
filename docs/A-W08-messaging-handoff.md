@@ -14,7 +14,8 @@ No B-W8 implementation was merged into this branch.
    `RabbitMq__Username`, `RabbitMq__Password`, optional port/vhost. In compose,
    set `TRIP_MESSAGING_ENABLED=true` before starting Trip.
 3. Read `/health/ready`: requires an up-to-date owned database and all three
-   consumer connections when messaging is enabled. `/health/live` stays process-only.
+   consumer connections when messaging is enabled. Workers also wait for the
+   owned schema before registering broker consumers. `/health/live` stays process-only.
 4. Authenticated `POST /trips` persists creation, opens MATCHING and publishes
    `RideRequestedV1` on `ride.events / trip.ride-requested.v1`.
    Existing authentication requirements remain: production must receive a
@@ -44,7 +45,11 @@ authority routes to the owning service; a messageType string is not authenticati
 
 Dedup identity is (queue/consumer, messageId). The insert claim, Trip change and
 receipt disposition commit together. Concurrent duplicate claims serialize in
-PostgreSQL. Same ID with different canonical content fails visibly. A new ID
+PostgreSQL. Same ID with different canonical business content fails visibly.
+Correlation/causation and publish timestamps are excluded from the semantic
+fingerprint; retained original envelopes make legacy receipts compatible.
+Supplied Driver aggregate identity, status and version must agree with the event.
+A new ID
 still passes all domain guards. Stale or contradictory facts retain their full
 envelope with NeedsReview, without changing Trip. Payment envelopes remain
 PendingWorkflow until Saga can prove operation lineage; tripId alone never
@@ -54,7 +59,11 @@ ACK follows durable completion (including an explicit review obligation).
 Malformed input uses C's poison/error path. Known transient local DB failures
 use C's bounded retries. Connection/transfer failure causes supervised disposal
 and reconnect; unacknowledged deliveries can return. No remote business calls
-occur inside the receipt transaction.
+occur inside the receipt transaction. Events for an unknown Trip are retained as
+PendingWorkflow / TRIP_NOT_FOUND, with their full envelope, before ACK. They need
+explicit reconciliation; replay of the same message does not silently apply them.
+Late reservations for MATCH_FAILED also create exact cleanup and cannot reopen
+the Trip; matching release evidence completes that obligation.
 
 ## Inspect pending work
 
