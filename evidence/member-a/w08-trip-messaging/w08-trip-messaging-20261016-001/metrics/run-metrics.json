@@ -1,0 +1,17 @@
+{
+  "runId": "w08-trip-messaging-20261016-001",
+  "memberTests": 393,
+  "memberPassed": 393,
+  "memberFailed": 0,
+  "memberTestSeconds": 16.88,
+  "ciTotals": {
+    "passed": 851,
+    "failed": 0,
+    "notExecuted": 1
+  },
+  "providers": {
+    "postgres": "18.6",
+    "rabbitmq": "4.3.6-management",
+    "redis": "8.10.2"
+  }
+}

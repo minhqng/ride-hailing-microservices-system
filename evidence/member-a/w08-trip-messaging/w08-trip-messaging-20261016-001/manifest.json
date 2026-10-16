@@ -1,0 +1,59 @@
+{
+  "runId": "w08-trip-messaging-20261016-001",
+  "scenario": "member-a/w08-trip-messaging",
+  "memberScope": "TripService Integration (126) + TripService Unit (267) on CI run 38912031301",
+  "sourceState": {
+    "codeCommit": "708803fa68f428e6753fc430dab9af266ac926db",
+    "tree": "d68bf1f6acc80373444643c93723510c81c2c300",
+    "worktreeState": "clean (evidence-only addition)"
+  },
+  "ci": {
+    "run": "38912031301",
+    "url": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/38912031301",
+    "jobs": {
+      "build-test": "success",
+      "compose-config": "success",
+      "platform-smoke": "success"
+    },
+    "artifacts": [
+      "tests-38912031301-1",
+      "platform-smoke-38912031301-1"
+    ]
+  },
+  "environment": {
+    "postgres": "18.6 (Testcontainers + compose)",
+    "rabbitmq": "4.3.6-management (Testcontainers + compose)",
+    "redis": "8.10.2",
+    "dotnet": "10.0.x (Linux CI)",
+    "build": "Release"
+  },
+  "result": "PASS",
+  "memberSuites": {
+    "TripService.IntegrationTests": {
+      "total": 126,
+      "passed": 126
+    },
+    "TripService.UnitTests": {
+      "total": 267,
+      "passed": 267
+    }
+  },
+  "ciTotals": {
+    "passed": 851,
+    "failed": 0,
+    "notExecuted": [
+      "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState"
+    ]
+  },
+  "keyTests": [
+    "TripW08MessagingTests: stable RideRequestedV1 publish bytes + MessageId (A-W08-01/04)",
+    "TripW08MessagingTests: commit-before-ACK redelivery converges, no reapply (A-W08-04/05/09)",
+    "TripW08MessagingTests: FailureBeforeCommit rolls back receipt+effect (A-W08-08)",
+    "TripW08MessagingTests: concurrent same-id replay once; stale round fenced; terminal monotonicity (A-W08-02/05/08)",
+    "TripW08MessagingTests: unmigrated-DB readiness gate 503, zero consumers, post-migrate drain (A-W08-10 freshness+upgrade)",
+    "TripW08 migration 20261015161047_W08_TripMessageReceipts additive; W07 rows preserved (A-W08-10)"
+  ],
+  "w09w10Boundary": "Payment skeleton parks PendingWorkflow/NeedsReview; full Outbox (A-W09) and Saga/capture (A-W10) deferred.",
+  "provenanceNote": "Leader-curated by the W08 integration engineer from exact-tree CI run 38912031301 artifacts; NOT member-authored. Manifest names the immutable code commit so there is no circular self-reference.",
+  "startedAtUtc": "2026-10-16T13:58:31Z"
+}

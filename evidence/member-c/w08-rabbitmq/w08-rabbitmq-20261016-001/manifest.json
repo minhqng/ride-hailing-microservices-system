@@ -1,0 +1,62 @@
+{
+  "runId": "w08-rabbitmq-20261016-001",
+  "scenario": "member-c/w08-rabbitmq",
+  "memberScope": "Platform Integration (38) + PaymentService Integration (26) + PaymentService Unit (25) on CI run 38912031301",
+  "sourceState": {
+    "codeCommit": "708803fa68f428e6753fc430dab9af266ac926db",
+    "tree": "d68bf1f6acc80373444643c93723510c81c2c300",
+    "worktreeState": "clean (evidence-only addition)"
+  },
+  "ci": {
+    "run": "38912031301",
+    "url": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/38912031301",
+    "jobs": {
+      "build-test": "success",
+      "compose-config": "success",
+      "platform-smoke": "success"
+    },
+    "artifacts": [
+      "tests-38912031301-1",
+      "platform-smoke-38912031301-1"
+    ]
+  },
+  "environment": {
+    "postgres": "18.6 (Testcontainers + compose)",
+    "rabbitmq": "4.3.6-management (Testcontainers + compose)",
+    "redis": "8.10.2",
+    "dotnet": "10.0.x (Linux CI)",
+    "build": "Release"
+  },
+  "result": "PASS",
+  "memberSuites": {
+    "PaymentService.IntegrationTests": {
+      "total": 26,
+      "passed": 26
+    },
+    "PaymentService.UnitTests": {
+      "total": 25,
+      "passed": 25
+    },
+    "Platform.IntegrationTests": {
+      "total": 38,
+      "passed": 38
+    }
+  },
+  "ciTotals": {
+    "passed": 851,
+    "failed": 0,
+    "notExecuted": [
+      "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState"
+    ]
+  },
+  "keyTests": [
+    "RabbitBackboneTests.ConfirmDoesNotMeanConsumerAck: confirm succeeds with no consumer (C-W08-09)",
+    "RabbitBackboneTests commit-before-ACK redelivery proof; poison/exhausted to deadletter/quarantine with delivery-limit 20 (C-W08-04/08)",
+    "RabbitBackboneTests.ConnectionLossFailsPublication + topology redeclaration; trace TraceId equality producer->consumer (C-W08-07/10)",
+    "Topology smoke (platform-smoke job): quorum queues + .dead queues + fan-out probe routes, restart snapshot identical (C-W08-08)",
+    "Payment integration/unit suites green: TIMEOUT_AFTER_EFFECT + same-key recovery regression (C platform scope)"
+  ],
+  "w09w10Boundary": "Transactional Outbox/Inbox relay (C-W09) and Payment capture/publication (C-W10-06/07) deferred; W08 producers are best-effort-after-commit.",
+  "provenanceNote": "Leader-curated by the W08 integration engineer from exact-tree CI run 38912031301 artifacts; NOT member-authored. Manifest names the immutable code commit so there is no circular self-reference.",
+  "startedAtUtc": "2026-10-16T13:58:31Z"
+}

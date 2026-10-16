@@ -1,0 +1,68 @@
+{
+  "runId": "w08-rabbit-integration-20261016-001",
+  "scenario": "member-b/w08-rabbit-integration",
+  "memberScope": "MatchingService Integration (111) + MatchingService Unit (98) + DriverService Integration (56) + DriverService Unit (104) on CI run 38912031301",
+  "sourceState": {
+    "codeCommit": "708803fa68f428e6753fc430dab9af266ac926db",
+    "tree": "d68bf1f6acc80373444643c93723510c81c2c300",
+    "worktreeState": "clean (evidence-only addition)"
+  },
+  "ci": {
+    "run": "38912031301",
+    "url": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/38912031301",
+    "jobs": {
+      "build-test": "success",
+      "compose-config": "success",
+      "platform-smoke": "success"
+    },
+    "artifacts": [
+      "tests-38912031301-1",
+      "platform-smoke-38912031301-1"
+    ]
+  },
+  "environment": {
+    "postgres": "18.6 (Testcontainers + compose)",
+    "rabbitmq": "4.3.6-management (Testcontainers + compose)",
+    "redis": "8.10.2",
+    "dotnet": "10.0.x (Linux CI)",
+    "build": "Release"
+  },
+  "result": "PASS",
+  "memberSuites": {
+    "DriverService.IntegrationTests": {
+      "total": 56,
+      "passed": 56
+    },
+    "DriverService.UnitTests": {
+      "total": 104,
+      "passed": 104
+    },
+    "MatchingService.IntegrationTests": {
+      "total": 111,
+      "passed": 111
+    },
+    "MatchingService.UnitTests": {
+      "total": 98,
+      "passed": 98
+    }
+  },
+  "ciTotals": {
+    "passed": 851,
+    "failed": 0,
+    "notExecuted": [
+      "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState"
+    ]
+  },
+  "keyTests": [
+    "BrokerConsumeTests.Commit_Before_ACK_Crash_Redelivers_And_Converges: own-message redelivery + one PROCESSING round + zero attempts (REL-06 closure, B-W08-02/07)",
+    "BrokerConsumeTests.Duplicate_Deliveries_Converge_To_One_Round incl. 2-consumer race (CON-06, B-W08-07)",
+    "RideRequestedEnvelopeIdentityTests: opaque string MessageId verbatim incl. non-UUID; first-writer wins; cross-trip conflict fail-loud (B-W08-01/02)",
+    "MatchingInputMessageIdMigrationTests: fresh TEXT + W07 uuid::text upgrade preserve + idempotent re-apply (B-W08-02)",
+    "DriverEventPublishTests: Available/Offline/Reserved/Released/LocationAccepted best-effort-after-commit with deterministic per-effect identity incl. replay same-id (B-W08-05)",
+    "DriverProjectionHandler matrix: routing-key dispatch, version fencing, UNKNOWN no-advance preserved (B-W08-03/04)",
+    "AtomicDispatchFenceTests + ReserveWorkflowTests W07 fence suites green (regression)"
+  ],
+  "w09w10Boundary": "MatchingFailedV1 atomic publication is W09 (B-W09-03); DriverTripStarted/Completed transitions+publication are W10 (B-W10-01/02/03).",
+  "provenanceNote": "Leader-curated by the W08 integration engineer from exact-tree CI run 38912031301 artifacts; NOT member-authored. Manifest names the immutable code commit so there is no circular self-reference.",
+  "startedAtUtc": "2026-10-16T13:58:31Z"
+}
