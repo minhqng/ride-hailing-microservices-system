@@ -16,9 +16,16 @@ def api(method, path, data=None):
     req = urllib.request.Request("http://localhost:15672/api/" + path, method=method,
         headers={"Authorization": "Basic " + credentials, "Content-Type": "application/json"},
         data=None if data is None else json.dumps(data).encode())
-    with urllib.request.urlopen(req, timeout=10) as response:
-        raw = response.read()
-        return json.loads(raw) if raw else None
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            raw = response.read()
+            return json.loads(raw) if raw else None
+    except urllib.error.HTTPError as e:
+        try:
+            body = e.read().decode(errors="replace")
+        except Exception:
+            body = "<unreadable>"
+        raise AssertionError(f"RabbitMQ API {method} {path} -> HTTP {e.code}: {body}")
 
 
 expected = {
@@ -90,7 +97,7 @@ try:
         probe = "smoke-probe-" + sanitize(exchange + "-" + key)
         probes.append(probe)
         api("PUT", "queues/%2F/" + urllib.parse.quote(probe, safe=""),
-            dict(durable=False, auto_delete=True, arguments={}))
+            dict(durable=False, auto_delete=False, arguments={}))
         api("POST", "bindings/%2F/e/" + urllib.parse.quote(exchange, safe="") + "/q/" + urllib.parse.quote(probe, safe=""),
             dict(routing_key=key))
         result = api("POST", f"exchanges/%2F/{exchange}/publish", dict(
@@ -114,7 +121,7 @@ try:
         probe = "smoke-probe-fanout-" + sanitize(pattern)
         probes.append(probe)
         api("PUT", "queues/%2F/" + urllib.parse.quote(probe, safe=""),
-            dict(durable=False, auto_delete=True, arguments={}))
+            dict(durable=False, auto_delete=False, arguments={}))
         api("POST", "bindings/%2F/e/ride.events/q/" + urllib.parse.quote(probe, safe=""),
             dict(routing_key=pattern))
         result = api("POST", "exchanges/%2F/ride.events/publish", dict(
