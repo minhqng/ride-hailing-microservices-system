@@ -142,7 +142,7 @@ public sealed class ReconciliationRaceTests
         };
         var orch = Orchestrator(stub);
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         var r1 = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
         Assert.NotEqual(Guid.Empty, r1);
@@ -246,7 +246,7 @@ public sealed class ReconciliationRaceTests
         };
         var orch = Orchestrator(stub);
 
-        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid());
+        var blocked = await orch.ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         Assert.True(v0 >= 1);
 
