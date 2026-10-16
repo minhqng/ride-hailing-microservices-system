@@ -1,0 +1,12 @@
+{
+  "runId": "w08-rabbitmq-20261016-001",
+  "ciRun": "38912031301",
+  "assertions": [
+    "0 failed across member suites (see test-output.txt)",
+    "authoritative final-state assertions live in the test cases listed in manifest.keyTests",
+    "no duplicate authoritative effect: exactly-one-round / receipt-PK / dedup-hit oracles green on real providers"
+  ],
+  "skips": [
+    "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState (pre-existing env-gated skip, unrelated to member suites)"
+  ]
+}
