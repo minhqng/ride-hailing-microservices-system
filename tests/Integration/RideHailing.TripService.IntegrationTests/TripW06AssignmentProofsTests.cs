@@ -283,7 +283,7 @@ public sealed class TripW06AssignmentProofsTests
                 .HandleAsync(tripId, lateDriver, lateReservation, 1);
         }
 
-        // W7 accepts only the cleanup obligation; terminal business state
+        // W7/W8 accepts only the cleanup obligation; terminal business state
         // and the absence of an assignment remain unchanged (DSL-002).
         Assert.True(late.IsSuccess);
 

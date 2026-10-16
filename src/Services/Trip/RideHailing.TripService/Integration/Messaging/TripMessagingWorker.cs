@@ -1,11 +1,13 @@
 using RabbitMQ.Client;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Messaging.Topology;
 
 namespace RideHailing.TripService.Integration.Messaging;
 
 public sealed class TripMessagingWorker(ConnectionFactory factory, ConfirmedPublisher publisher,
-    IServiceScopeFactory scopes, TripMessagingReadiness readiness, ILogger<TripMessagingWorker> log) : BackgroundService
+    IServiceScopeFactory scopes, TripMessagingReadiness readiness, TripDatabaseReadiness databaseReadiness,
+    ILogger<TripMessagingWorker> log) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -14,6 +16,15 @@ public sealed class TripMessagingWorker(ConnectionFactory factory, ConfirmedPubl
             var consumers = new List<ManualAckConsumer>();
             try
             {
+                // Readiness alone does not stop broker deliveries. Never register
+                // consumers against an absent/outdated receipt schema.
+                var database = await databaseReadiness.CheckHealthAsync(new HealthCheckContext(), stoppingToken);
+                if (database.Status != HealthStatus.Healthy)
+                {
+                    log.LogWarning("Trip consumers waiting for owned database migrations/readiness.");
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    continue;
+                }
                 await using (var connection = await factory.CreateConnectionAsync(stoppingToken))
                     await RideTopology.DeclareAsync(connection, stoppingToken);
                 foreach (var subscription in TripMessageHandler.Subscriptions)

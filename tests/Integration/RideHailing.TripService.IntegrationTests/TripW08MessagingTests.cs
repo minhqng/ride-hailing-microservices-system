@@ -84,6 +84,160 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             (e, token) => Deliver(queue, e, token), prefetch: 1);
 
     [Fact]
+    public async Task Worker_DoesNotConsumeUntilReceiptSchemaIsReady()
+    {
+        var name = "w8_unmigrated_" + Guid.NewGuid().ToString("N");
+        await using var admin = new NpgsqlConnection(postgres.ConnectionString);
+        await admin.OpenAsync();
+        await using (var create = new NpgsqlCommand($"CREATE DATABASE \"{name}\"", admin))
+            await create.ExecuteNonQueryAsync();
+        var cs = new NpgsqlConnectionStringBuilder(postgres.ConnectionString) { Database = name, Pooling = false }.ToString();
+        try
+        {
+            using var app = new TripApplicationFactory(cs).WithWebHostBuilder(builder =>
+            {
+                builder.UseSetting("TripMessaging:Enabled", "true");
+                builder.UseSetting("RabbitMq:Host", rabbit.Factory.HostName);
+                builder.UseSetting("RabbitMq:Port", rabbit.Factory.Port.ToString());
+                builder.UseSetting("RabbitMq:Username", rabbit.Factory.UserName);
+                builder.UseSetting("RabbitMq:Password", rabbit.Factory.Password);
+            });
+            using var client = app.CreateClient();
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.GetAsync("/health/ready")).StatusCode);
+            await using var connection = await rabbit.Factory.CreateConnectionAsync();
+            await using var channel = await connection.CreateChannelAsync();
+            Assert.Equal(0u, await channel.ConsumerCountAsync(DriverQueue));
+            var e = MessageEnvelope<JsonElement>.Create("DriverReservedV1", Guid.NewGuid().ToString(),
+                JsonSerializer.SerializeToElement(new { tripId = Guid.NewGuid(), driverId = Guid.NewGuid(),
+                    reservationId = Guid.NewGuid(), matchingRound = 1 }));
+            await using var publisher = new ConfirmedPublisher(rabbit.Factory);
+            await publisher.PublishAsync(RideTopology.EventsExchange, "driver.reserved.v1", e);
+            Assert.Equal(1u, await channel.MessageCountAsync(DriverQueue));
+            await using var db = new TripDbContext(new DbContextOptionsBuilder<TripDbContext>().UseNpgsql(cs).Options);
+            await db.Database.MigrateAsync();
+            await Eventually(async () => (await client.GetAsync("/health/ready")).IsSuccessStatusCode);
+            await Eventually(() => db.MessageReceipts.AnyAsync(r => r.MessageId == e.MessageId));
+            await Eventually(async () => await channel.MessageCountAsync(DriverQueue) == 0);
+            Assert.Equal("TRIP_NOT_FOUND", (await db.MessageReceipts.SingleAsync(r => r.MessageId == e.MessageId)).Reason);
+        }
+        finally
+        {
+            await using var drop = new NpgsqlCommand($"DROP DATABASE \"{name}\" WITH (FORCE)", admin);
+            await drop.ExecuteNonQueryAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DriverRepublish_WithNewDiagnosticMetadata_ReplaysLegacyReceipt()
+    {
+        var trip = await Seed();
+        var driver = Guid.NewGuid();
+        var e = MessageEnvelope<JsonElement>.Create("DriverReservedV1", trip.TripId.ToString(),
+            JsonSerializer.SerializeToElement(new { tripId = trip.TripId, driverId = driver,
+                reservationId = Guid.NewGuid(), matchingRound = 1, status = "RESERVED", version = 2 }),
+            aggregateType: "driver", aggregateId: driver.ToString("N"), aggregateVersion: 2);
+        await Deliver(DriverQueue, e);
+        // Old deployed rows used a hash of the full envelope. Evidence remains
+        // authoritative across an upgrade without rewriting/deleting receipts.
+        await using (var legacy = Db())
+        {
+            var receipt = await legacy.MessageReceipts.SingleAsync(r => r.MessageId == e.MessageId);
+            receipt.Fingerprint = new string('0', 64);
+            await legacy.SaveChangesAsync();
+        }
+        await Deliver(DriverQueue, e with { CorrelationId = Guid.NewGuid().ToString(),
+            CausationId = "republished", OccurredAt = e.OccurredAt.AddMinutes(1) });
+        await using var db = Db();
+        Assert.Equal(trip.Version + 1, (await db.Trips.SingleAsync(t => t.TripId == trip.TripId)).Version);
+        Assert.Equal(1, await db.MessageReceipts.CountAsync(r => r.MessageId == e.MessageId));
+    }
+
+    [Fact]
+    public async Task TerminalReplay_DoesNotRequireBroker_AndStillChecksOwnership()
+    {
+        var trip = await Seed(cancel: true);
+        await using var db = Db();
+        await using var services = new ServiceCollection()
+            .AddSingleton(new TripMessagingReadiness()).BuildServiceProvider();
+        var publisher = new TripRideRequestedPublisher(db, new TripMessagingSettings(true), services,
+            TimeProvider.System, NullLogger<TripRideRequestedPublisher>.Instance);
+        Assert.True(await publisher.PublishForOwnedRideAsync(trip.TripId, trip.RiderId, default));
+        Assert.False(await publisher.PublishForOwnedRideAsync(trip.TripId, Guid.NewGuid(), default));
+        var current = await db.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        Assert.Equal(trip.Version, current.Version);
+        Assert.Equal(TripState.Cancelled, current.State);
+    }
+
+    [Fact]
+    public async Task UnknownTrip_BrokerDeliveryRetainsOriginalPayloadBeforeAck()
+    {
+        await using (var setup = Db()) await setup.Database.MigrateAsync();
+        var trip = Trip.Create(Guid.NewGuid(), Guid.NewGuid(), new(10.7, 106.6), new(10.8, 106.7),
+            new("VND", 50000m, "w8-review", Now), Now);
+        var e = Reserved(trip);
+        await using var publisher = new ConfirmedPublisher(rabbit.Factory);
+        await using var consumer = await Consumer(publisher);
+        await publisher.PublishAsync(RideTopology.EventsExchange, "driver.reserved.v1", e);
+        await publisher.PublishAsync(RideTopology.EventsExchange, "driver.reserved.v1", e);
+        await Eventually(() => Task.FromResult(consumer.AcknowledgedCount == 2));
+        await using var db = Db();
+        Assert.False(await db.Trips.AnyAsync(t => t.TripId == trip.TripId));
+        var receipt = Assert.Single(await db.MessageReceipts.Where(r => r.TripId == trip.TripId).ToListAsync());
+        Assert.Equal("PendingWorkflow", receipt.Disposition);
+        Assert.Equal("TRIP_NOT_FOUND", receipt.Reason);
+        using var stored = JsonDocument.Parse(receipt.EnvelopeJson);
+        Assert.Equal(e.Payload.GetProperty("reservationId").GetGuid(),
+            stored.RootElement.GetProperty("payload").GetProperty("reservationId").GetGuid());
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("aggregate")]
+    [InlineData("version")]
+    public async Task ContradictoryDriverMetadata_IsRejectedBeforeReceiptOrEffect(string conflict)
+    {
+        var trip = await Seed();
+        var driver = Guid.NewGuid();
+        var e = MessageEnvelope<JsonElement>.Create("DriverReservedV1", trip.TripId.ToString(),
+            JsonSerializer.SerializeToElement(new
+            {
+                tripId = trip.TripId, driverId = driver, reservationId = Guid.NewGuid(), matchingRound = 1,
+                status = conflict == "status" ? "AVAILABLE" : "RESERVED", version = 5
+            }), aggregateType: "Driver", aggregateId: (conflict == "aggregate" ? Guid.NewGuid() : driver).ToString(),
+            aggregateVersion: conflict == "version" ? 6 : 5);
+        var error = await Assert.ThrowsAsync<DeliveryFailureException>(() => Deliver(DriverQueue, e));
+        Assert.Equal(FailureKind.Poison, error.Kind);
+        await using var db = Db();
+        Assert.False(await db.MessageReceipts.AnyAsync(r => r.MessageId == e.MessageId));
+        Assert.Equal(trip.Version, (await db.Trips.SingleAsync(t => t.TripId == trip.TripId)).Version);
+    }
+
+    [Fact]
+    public async Task MatchFailed_LateReservationThenExactRelease_ConvergesThroughBroker()
+    {
+        var trip = await Seed();
+        await using (var db = Db())
+        {
+            var saved = await db.Trips.SingleAsync(t => t.TripId == trip.TripId);
+            Assert.True(saved.MarkMatchingFailed(1, Now).IsSuccess);
+            await db.SaveChangesAsync();
+        }
+        var reserved = Reserved(trip);
+        await using var publisher = new ConfirmedPublisher(rabbit.Factory);
+        await using var consumer = await Consumer(publisher);
+        await publisher.PublishAsync(RideTopology.EventsExchange, "driver.reserved.v1", reserved);
+        await Eventually(() => Task.FromResult(consumer.AcknowledgedCount == 1));
+        var released = reserved with { MessageId = Guid.NewGuid().ToString(), MessageType = "DriverReservationReleasedV1" };
+        await publisher.PublishAsync(RideTopology.EventsExchange, "driver.reservation-released.v1", released);
+        await Eventually(() => Task.FromResult(consumer.AcknowledgedCount == 2));
+        await using var final = Db();
+        var tripAfter = await final.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        Assert.Equal(TripState.MatchFailed, tripAfter.State);
+        Assert.Null(tripAfter.Assignment);
+        Assert.NotNull(Assert.Single(tripAfter.CleanupIntents).CompletedAt);
+    }
+
+    [Fact]
     public async Task HttpCreate_PublishesStableRideRequested_AndMatchingStyleCommitPrecedesAck()
     {
         await using (var db = Db())
@@ -287,6 +441,47 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
     {
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data,
             InterceptionResult<int> result, CancellationToken token = default) => throw new IOException("Injected before commit");
+    }
+
+    private sealed class TwoWriterBarrier : SaveChangesInterceptor
+    {
+        private int arrived;
+        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data,
+            InterceptionResult<int> result, CancellationToken token = default)
+        {
+            if (Interlocked.Increment(ref arrived) == 2) release.TrySetResult();
+            await release.Task.WaitAsync(TimeSpan.FromSeconds(15), token);
+            return result;
+        }
+    }
+
+    [Fact]
+    public async Task ConcurrentLateReservationMessages_RetryLosingTransaction_WithOneCleanup()
+    {
+        var trip = await Seed(cancel: true);
+        var first = Reserved(trip);
+        var second = first with { MessageId = Guid.NewGuid().ToString() };
+        var barrier = new TwoWriterBarrier();
+        async Task<Exception?> Attempt(MessageEnvelope<JsonElement> e)
+        {
+            await using var db = Db(barrier);
+            return await Record.ExceptionAsync(() =>
+                new TripMessageHandler(db, TimeProvider.System, NullLogger<TripMessageHandler>.Instance)
+                    .HandleAsync(DriverQueue, e, default));
+        }
+        var errors = await Task.WhenAll(Attempt(first), Attempt(second));
+        Assert.Single(errors, e => e is null);
+        var conflict = Assert.IsType<DeliveryFailureException>(Assert.Single(errors, e => e is not null));
+        Assert.Equal(FailureKind.Transient, conflict.Kind);
+        await Deliver(DriverQueue, first);
+        await Deliver(DriverQueue, second);
+        await using var verify = Db();
+        var saved = await verify.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        Assert.Equal(TripState.Cancelled, saved.State);
+        Assert.Single(saved.CleanupIntents, i => i.Kind == TripCleanupKind.ReleaseReservation);
+        Assert.Equal(trip.Version + 1, saved.Version);
+        Assert.Equal(2, await verify.MessageReceipts.CountAsync(r => r.TripId == trip.TripId));
     }
 
     [Fact]

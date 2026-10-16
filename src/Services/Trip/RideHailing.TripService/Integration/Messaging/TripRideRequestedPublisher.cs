@@ -15,7 +15,6 @@ public sealed class TripRideRequestedPublisher(TripDbContext db, TripMessagingSe
     public async Task<bool> PublishForOwnedRideAsync(Guid tripId, Guid riderId, CancellationToken token)
     {
         if (!settings.Enabled) return true;
-        if (!services.GetRequiredService<TripMessagingReadiness>().Ready) return false;
         try
         {
             // CreateRide has already committed. Reload on both new requests and
@@ -23,6 +22,10 @@ public sealed class TripRideRequestedPublisher(TripDbContext db, TripMessagingSe
             db.ChangeTracker.Clear();
             var trip = await db.Trips.SingleOrDefaultAsync(t => t.TripId == tripId, token);
             if (trip is null || trip.RiderId != riderId) return false;
+            // No broker work remains on an already progressed ride. Its HTTP
+            // idempotent replay must not depend on broker availability.
+            if (trip.State is not (TripState.Created or TripState.Matching)) return true;
+            if (!services.GetRequiredService<TripMessagingReadiness>().Ready) return false;
             if (trip.State == TripState.Created)
             {
                 var outcome = trip.StartMatching(time.GetUtcNow());
