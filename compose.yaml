@@ -44,12 +44,15 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
-    volumes: [rabbitdata:/var/lib/rabbitmq]
+    volumes:
+      - rabbitdata:/var/lib/rabbitmq
+      - ./deploy/rabbitmq/reliability.json:/etc/rabbitmq/ride-reliability.json:ro
+      - ./deploy/rabbitmq/health-ready.sh:/etc/rabbitmq/ride-health-ready.sh:ro
     ports: ["5672:5672", "15672:15672"]
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      test: ["CMD", "sh", "/etc/rabbitmq/ride-health-ready.sh"]
       interval: 10s
-      timeout: 5s
+      timeout: 15s
       retries: 20
     networks: [ride-net]
 

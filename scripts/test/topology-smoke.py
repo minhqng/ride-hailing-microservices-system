@@ -36,13 +36,23 @@ expected = {
 
 def snapshot():
     exchanges = {x["name"]: (x["type"], x["durable"], x["auto_delete"]) for x in api("GET", "exchanges/%2F") if x["name"].startswith("ride.")}
-    assert exchanges == {"ride.commands": ("topic", True, False), "ride.events": ("topic", True, False)}
+    assert exchanges == {"ride.commands": ("topic", True, False), "ride.events": ("topic", True, False), "ride.deadletter": ("topic", True, False), "ride.quarantine": ("fanout", True, False)}
     queues = {q["name"]: (q["durable"], q["auto_delete"], q["exclusive"], q["arguments"]) for q in api("GET", "queues/%2F")}
-    assert set(queues) == set(expected)
-    for declaration in queues.values():
-        assert declaration == (True, False, False, {"x-queue-type": "quorum"})
+    assert set(queues) == set(expected) | {q + ".dead" for q in expected} | {"ride.quarantine.q"}
+    for name, declaration in queues.items():
+        arguments = {"x-queue-type": "quorum"}
+        if name == "ride.quarantine.q":
+            arguments["x-delivery-limit"] = -1
+        assert declaration == (True, False, False, arguments)
+    for queue in api("GET", "queues/%2F"):
+        if queue["name"] in expected:
+            policy = queue["effective_policy_definition"]
+            assert policy["delivery-limit"] == 20
+            assert policy["dead-letter-exchange"] == "ride.quarantine"
+            assert policy["dead-letter-strategy"] == "at-least-once"
+            assert policy["overflow"] == "reject-publish"
     bindings = {(b["source"], b["destination"], b["routing_key"]) for b in api("GET", "bindings/%2F") if b["source"].startswith("ride.")}
-    assert bindings == {(exchange, queue, key) for queue, (exchange, keys) in expected.items() for key in keys}
+    assert bindings == {(exchange, queue, key) for queue, (exchange, keys) in expected.items() for key in keys} | {("ride.deadletter", q + ".dead", q) for q in expected} | {("ride.quarantine", "ride.quarantine.q", "")}
     return exchanges, queues, bindings
 
 
