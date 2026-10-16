@@ -275,21 +275,27 @@ public sealed class TripW06AssignmentProofsTests
         Assert.Equal(TripState.MatchFailed, before.State);
 
         TripLifecycleResult late;
+        var lateDriver = Guid.NewGuid();
+        var lateReservation = Guid.NewGuid();
         await using (var db = Db())
         {
             late = await new RecordDriverReservationHandler(db, Clock(), NullLogger<RecordDriverReservationHandler>.Instance)
-                .HandleAsync(tripId, Guid.NewGuid(), Guid.NewGuid(), 1);
+                .HandleAsync(tripId, lateDriver, lateReservation, 1);
         }
 
-        Assert.False(late.IsSuccess);
-        Assert.Equal(TripErrorCode.TerminalState, late.ErrorCode);
+        // W7 accepts only the cleanup obligation; terminal business state
+        // and the absence of an assignment remain unchanged (DSL-002).
+        Assert.True(late.IsSuccess);
 
         await using var verify = Db();
         var after = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
         Assert.Equal(TripState.MatchFailed, after.State);
         Assert.Null(after.Assignment);
         Assert.Equal(1, after.CurrentMatchingRound);
-        Assert.Equal(before.Version, after.Version);
-        Assert.Equal(before.UpdatedAt, after.UpdatedAt);
+        Assert.Equal(before.Version + 1, after.Version);
+        var cleanup = Assert.Single(after.CleanupIntents);
+        Assert.Equal(lateDriver, cleanup.DriverId);
+        Assert.Equal(lateReservation, cleanup.ReservationId);
+        Assert.Null(cleanup.CompletedAt);
     }
 }

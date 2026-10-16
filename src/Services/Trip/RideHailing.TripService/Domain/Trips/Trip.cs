@@ -767,6 +767,16 @@ public sealed class Trip
         int matchingRound, DateTimeOffset now)
     {
         if (State != TripState.Cancelled) return Illegal(nameof(RecordCancelledReservation), TripState.Cancelled);
+        return RecordPreStartTerminalReservation(driverId, reservationId, matchingRound, now);
+    }
+
+    /// <summary>DSL-002 covers failed as well as cancelled pre-start rides.
+    /// A late authority fact creates exact cleanup, never a new assignment.</summary>
+    public TripOutcome RecordPreStartTerminalReservation(Guid driverId, Guid reservationId,
+        int matchingRound, DateTimeOffset now)
+    {
+        if (State is not (TripState.Cancelled or TripState.MatchFailed))
+            return TripOutcome.Fail(TripErrorCode.IllegalTransition, "Cleanup requires a pre-start terminal Trip.");
         if (driverId == Guid.Empty || reservationId == Guid.Empty || now == default)
             return TripOutcome.Fail(TripErrorCode.AssignmentRequired, "Late reservation requires exact identities and timestamp.");
         // An old round can still own a leaked reservation; a future/unopened
@@ -798,7 +808,8 @@ public sealed class Trip
     /// UNKNOWN, dispatch or timeout must never complete an obligation.</summary>
     public TripOutcome ConfirmCleanup(string key, DateTimeOffset now)
     {
-        if (State != TripState.Cancelled) return Illegal(nameof(ConfirmCleanup), TripState.Cancelled);
+        if (State is not (TripState.Cancelled or TripState.MatchFailed))
+            return Illegal(nameof(ConfirmCleanup), TripState.Cancelled);
         if (now == default) throw new ArgumentException("A timestamp is required.", nameof(now));
         var intent = _cleanupIntents.SingleOrDefault(i => i.Key == key);
         if (intent is null) return TripOutcome.Fail(TripErrorCode.StaleIdentity, "Cleanup identity is not owned by this Trip.");
