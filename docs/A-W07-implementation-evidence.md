@@ -14,6 +14,10 @@ Prior execution in this workspace: Trip unit suite 260 passed; Trip integration 
 
 Subsequent Release compilation including those two additional cases succeeded with zero warnings/errors. The additional cases have NOT been executed. Raw TRX files remain local in ignored TestResults directories.
 
+Follow-up on the A-W8 stack: all 117 Trip integration tests (including both
+cancel/reserve agreement cases) and all 260 Trip unit tests passed. See
+A-W08-verification.md for the final source anchor and execution scope.
+
 ## Boundaries and handoff
 
 The agreement fixture uses Driver domain Release plus repository persistence in controlled schedules. It does not demonstrate a deployed B-W07 release adapter or background recovery worker. Production dispatch/retry and Payment operation lineage remain dependent on the later workflow/Outbox/Saga work. Pending obligations survive a restart but require that worker to converge; full DSL-002 runtime liveness is not claimed.
