@@ -53,8 +53,8 @@ public sealed class RecordDriverReservationHandler
             return TripLifecycleResult.NotFound();
         }
 
-        var outcome = trip.State == TripState.Cancelled
-            ? trip.RecordCancelledReservation(driverId, reservationId, matchingRound, _time.GetUtcNow())
+        var outcome = trip.State is TripState.Cancelled or TripState.MatchFailed
+            ? trip.RecordPreStartTerminalReservation(driverId, reservationId, matchingRound, _time.GetUtcNow())
             : trip.ApplyDriverReserved(driverId, reservationId, matchingRound, _time.GetUtcNow());
         if (!outcome.IsSuccess)
         {
