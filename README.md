@@ -153,7 +153,7 @@ Branches: `main`, `feature/<issue>-<name>`, `fix/<issue>-<name>`, `experiment/<i
 
 Implemented on this branch: compose core/obs profiles, per-service DB roles, bounded readiness, OTel traces/metrics, CI smoke definitions, Payment durable simulator, RabbitMQ confirms/manual ACK, Driver reservation foundation, Trip lifecycle/assignment fencing, durable cancellation cleanup and Trip atomic consumer receipts.
 
-Verified locally for A-W7/W8: **260 unit tests + 117 integration tests passed**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo. See [verification evidence](docs/A-W08-verification.md).
+Verified locally after A-W7/W8 hardening: **268 unit tests + 126 integration tests passed**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo. See [hardening review](docs/A-W07-W08-hardening-review.md) and [original verification evidence](docs/A-W08-verification.md).
 
 Next: B/A event-contract alignment, human peer review, Trip Saga persistence,
 Outbox relay, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
