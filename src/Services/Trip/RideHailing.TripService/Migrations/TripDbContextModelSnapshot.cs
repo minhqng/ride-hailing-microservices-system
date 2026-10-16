@@ -183,6 +183,70 @@ namespace RideHailing.TripService.Migrations
                     b.ToTable("request_idempotency", (string)null);
                 });
 
+            modelBuilder.Entity("RideHailing.TripService.Integration.Messaging.TripMessageReceipt", b =>
+                {
+                    b.Property<string>("Consumer")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("consumer");
+
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("Disposition")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("disposition");
+
+                    b.Property<string>("EnvelopeJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("envelope_json");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("message_type");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.HasKey("Consumer", "MessageId");
+
+                    b.HasIndex("TripId");
+
+                    b.HasIndex("Disposition", "RecordedAt");
+
+                    b.ToTable("trip_message_receipts", (string)null);
+                });
+
             modelBuilder.Entity("RideHailing.TripService.Domain.Trips.Trip", b =>
                 {
                     b.OwnsMany("RideHailing.TripService.Domain.Trips.TripCleanupIntent", "CleanupIntents", b1 =>

@@ -13,6 +13,7 @@ using System.Security.Claims;
 using Microsoft.Extensions.Primitives;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Domain.Trips;
+using RideHailing.TripService.Integration.Messaging;
 
 namespace RideHailing.TripService.Api;
 
@@ -31,6 +32,7 @@ public static class CreateRideEndpoint
         HttpContext context,
         CreateRideRequest? request,
         CreateRideHandler handler,
+        TripRideRequestedPublisher publisher,
         CancellationToken cancellationToken)
     {
         if (!RiderIdentity.TryExtractRiderId(context.User, out var riderId))
@@ -85,6 +87,16 @@ public static class CreateRideEndpoint
 
         if (result.IsSuccess)
         {
+            if (!await publisher.PublishForOwnedRideAsync(result.TripId, riderId, cancellationToken))
+            {
+                context.Response.Headers.RetryAfter = "5";
+                return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: "Ride saved; matching publication is unconfirmed. Retry with the same Idempotency-Key and body.",
+                    extensions: new Dictionary<string, object?>
+                    {
+                        ["code"] = "MATCHING_PUBLICATION_PENDING", ["tripId"] = result.TripId
+                    });
+            }
             var body = new CreateRideResponse { TripId = result.TripId };
             return result.IsReplay
                 ? Results.Ok(body)

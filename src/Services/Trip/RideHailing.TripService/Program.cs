@@ -4,6 +4,7 @@ using RideHailing.TripService.Api;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
 
 // Bootstrap skeleton for RideHailing.TripService (Trip service).
 // Owns: see src/Services/Trip/RideHailing.TripService/README.md.
@@ -49,11 +50,19 @@ builder.Services.AddScoped<MarkMatchingFailedHandler>();
 builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddTripMessaging(builder.Configuration);
 
 var app = builder.Build();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "trip-service" }));
-app.MapRideReadiness();
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = (context, report) => context.Response.WriteAsJsonAsync(new
+    {
+        status = report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy ? "Ready" : "NotReady",
+        dependencies = report.Entries.ToDictionary(e => e.Key, e => e.Value.Status.ToString())
+    })
+});
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "trip-service", environment = env.EnvironmentName }));
 
