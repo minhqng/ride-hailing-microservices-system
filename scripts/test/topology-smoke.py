@@ -72,7 +72,7 @@ assert snapshot() == before
 # matching.driver-projection.q) compete for deliveries with destructive
 # basic.get. Probing the production queue therefore flakes (empty set)
 # even when exchanges/queues/bindings are exact. Use an independent
-# transient probe queue per routing key to prove routing while preserving
+# durable auto-delete probe queue per routing key (RabbitMQ 4.x forbids transient_nonexcl_queues by default) to prove routing while preserving
 # live-consumer behavior and the snapshot topology assertions above.
 def sanitize(name):
     out = []
@@ -87,7 +87,7 @@ try:
         probe = "smoke-probe-" + sanitize(exchange + "-" + key)
         probes.append(probe)
         api("PUT", "queues/%2F/" + urllib.parse.quote(probe, safe=""),
-            dict(durable=False, auto_delete=False, arguments={}))
+            dict(durable=True, auto_delete=True, arguments={}))
         api("POST", "bindings/%2F/e/" + urllib.parse.quote(exchange, safe="") + "/q/" + urllib.parse.quote(probe, safe=""),
             dict(routing_key=key))
         result = api("POST", f"exchanges/%2F/{exchange}/publish", dict(
@@ -111,7 +111,7 @@ try:
         probe = "smoke-probe-fanout-" + sanitize(pattern)
         probes.append(probe)
         api("PUT", "queues/%2F/" + urllib.parse.quote(probe, safe=""),
-            dict(durable=False, auto_delete=False, arguments={}))
+            dict(durable=True, auto_delete=True, arguments={}))
         api("POST", "bindings/%2F/e/ride.events/q/" + urllib.parse.quote(probe, safe=""),
             dict(routing_key=pattern))
         result = api("POST", "exchanges/%2F/ride.events/publish", dict(
