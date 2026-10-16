@@ -148,6 +148,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ServiceInstanceId: ${TRIP_INSTANCE_ID:-trip-local}
       TripMessaging__Enabled: ${TRIP_MESSAGING_ENABLED:-false}
+      TripDatabase__AutoMigrate: ${TRIP_AUTO_MIGRATE:-true}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw}
       RabbitMq__Host: rabbitmq

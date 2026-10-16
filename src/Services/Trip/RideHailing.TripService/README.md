@@ -8,7 +8,11 @@
   supervises three manual-ACK consumers. Trip effects and durable receipts share
   one PostgreSQL transaction; replay and domain guards are separate defenses.
 - Apply migrations before enabling `TripMessaging__Enabled=true` (compose:
-  `TRIP_MESSAGING_ENABLED=true`). Supply `RabbitMq__Host`, `RabbitMq__Username`,
+  `TRIP_MESSAGING_ENABLED=true`). Compose local/CI sets
+  `TripDatabase__AutoMigrate=true` (`TRIP_AUTO_MIGRATE`) so the service applies
+  EF migrations at startup before `/health/ready` (zero pending migrations)
+  is probed; production sets it false and migrates via an external job.
+  Supply `RabbitMq__Host`, `RabbitMq__Username`,
   `RabbitMq__Password`; optional `RabbitMq__Port` and `RabbitMq__VirtualHost`.
   Readiness checks migrations and, when enabled, consumer connectivity.
 - See [W8 runbook and boundaries](../../../../docs/A-W08-messaging-handoff.md).
