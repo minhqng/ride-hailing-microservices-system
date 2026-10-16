@@ -186,20 +186,29 @@ public class BrokerConsumeTests
     {
         // Handler commits the round then throws before the loop can ACK
         // (crash-before-ACK): redelivery converges on the durable row.
+        // The oracle is durable state (exactly one PROCESSING round, no
+        // attempts), not an exact handler-invocation count: at-least-once
+        // transport may redeliver, and the shared broker queue may carry
+        // other tests' messages during parallel runs.
         var trip = Guid.NewGuid();
         var real = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
-        var calls = 0;
+        var ownDeliveries = 0;
         var body = await RideRequestedBytesAsync(trip, 3, Guid.NewGuid().ToString("N"));
         await PublishAsync("ride.events", "trip.ride-requested.v1", body);
 
         using var cts = new CancellationTokenSource();
         async Task<HandlerOutcome> Flaky(BrokerDelivery d, CancellationToken ct)
         {
-            calls++;
-            if (calls == 1)
+            // Byte-identical body match: the broker returns redeliveries
+            // unchanged, so this counts only this test's own message even
+            // when the shared queue carries other tests' traffic.
+            if (d.Body.SequenceEqual(body))
             {
-                await real.HandleAsync(d, ct);
-                throw new TimeoutException("crash before ACK");
+                if (Interlocked.Increment(ref ownDeliveries) == 1)
+                {
+                    await real.HandleAsync(d, ct);
+                    throw new TimeoutException("crash before ACK");
+                }
             }
 
             return await real.HandleAsync(d, ct);
@@ -208,14 +217,19 @@ public class BrokerConsumeTests
         var run = BrokerConsume.RunAsync(
             Factory(), "matching.ride-requested.q", 8, 3, Flaky,
             new TestLogger<BrokerConsumeTests>(), cts.Token);
-        await PollUntilAsync(async () => calls >= 2, "redelivery after crash");
+        await PollUntilAsync(async () => Volatile.Read(ref ownDeliveries) >= 2, "redelivery after crash");
         await PollUntilAsync(async () =>
             await QueueDepthAsync("matching.ride-requested.q") == 0, "drain after redelivery");
         cts.Cancel();
         await run.WaitAsync(TimeSpan.FromSeconds(30));
 
-        Assert.Equal(2, calls);
-        Assert.NotNull(await Rounds().LoadRoundAsync(trip, 3));
+        // Authoritative-effect oracle: the crash committed exactly one durable
+        // round, and the redelivery converged on it without new attempts.
+        Assert.True(Volatile.Read(ref ownDeliveries) >= 2, "crashed message must be redelivered at least once");
+        var round = await Rounds().LoadRoundAsync(trip, 3);
+        Assert.NotNull(round);
+        Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
+        Assert.Empty(await Rounds().LoadAttemptsAsync(trip, 3));
     }
 
     [Fact]
