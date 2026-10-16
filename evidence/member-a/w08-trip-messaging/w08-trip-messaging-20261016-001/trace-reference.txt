@@ -1,0 +1,4 @@
+# Trace evidence pointers (run w08-trip-messaging-20261016-001)
+# W3C traceparent/tracestate asserted producer->consumer in real-broker tests;
+# see manifest.keyTests and test-output.txt for the exact passing cases.
+# Full OTel spans live in CI TRX stdout attachments and compose Jaeger (observability stack).
