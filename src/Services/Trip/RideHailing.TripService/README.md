@@ -15,7 +15,6 @@
   Supply `RabbitMq__Host`, `RabbitMq__Username`,
   `RabbitMq__Password`; optional `RabbitMq__Port` and `RabbitMq__VirtualHost`.
   Readiness checks migrations and, when enabled, consumer connectivity.
-- See [W8 runbook and boundaries](../../../../docs/A-W08-messaging-handoff.md).
   Outbox, Saga, automatic cleanup dispatch and Payment lineage resolution remain
   later work. The historical week-by-week notes below describe their own scope.
 
