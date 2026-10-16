@@ -3,20 +3,23 @@
 //
 // One round, one candidate at a time, always decided on durable state:
 //   persist IN_FLIGHT (write-ahead identity, Doc 02 §12.4) → read Driver
-//   version → reserve with same R (retry same R on STALE_VERSION, bounded) →
-//   Reserved (round follows) / Rejected (next driver) / Unknown (STOP, no
-//   advance) → reconcile same R (bounded; exhaustion is a visible terminal,
-//   never silent) → advance only on conclusive outcomes.
+//   version → persist max-dispatched fence BEFORE remote call → reserve with
+//   same R (retry same R on STALE_VERSION, bounded) → Reserved (round follows)
+//   / Rejected (next driver) / Unknown (STOP, no advance) → reconcile same R
+//   with version fencing (bounded; exhaustion is a visible terminal, never
+//   silent) → advance only on conclusive outcomes.
 //
-// Residual accepted race (inherent to timeout-based reconcile, no primitive
-// in 00–03 closes it): a reconcile read and a still-running original call
-// can interleave so a conclusive REJECTED is decided just before the late
-// commit lands. Mitigation stack, in order: caller cancellation propagates
-// to the server (W6 ct-threading aborts slow calls, making post-timeout
-// commits unlikely); reconcile happens only after the call observably
-// finished client-side; Trip-side single-assignment fencing (A) is the
-// ultimate backstop with compensating release of the loser. Never papered
-// over: every genuinely ambiguous signal stays UNKNOWN + bounded.
+// Fencing rule (DSI-031, Doc 01 §19 clarified): current AVAILABLE alone never
+// proves an earlier R cannot commit later (pre-lock and pre-commit races:
+// query sees last-committed AVAILABLE while R holds the row lock uncommitted
+// or has not yet acquired it, then R commits). AVAILABLE is conclusive only
+// when the Driver version Vx exceeds every dispatched fence (Vx > max):
+// versions only increase, the row lock serializes writers, so any future R
+// read sees >= Vx > its fence and fails StaleVersion. Otherwise stay UNKNOWN.
+// ReservedByOther/Offline/OnTrip/NotFound are conclusive without version:
+// any future R read sees incompatible state or missing row (no DELETE in
+// production; lock exclusion proves R is not holding) and cannot commit.
+// Legacy rows without fence provenance (NULL) stay UNKNOWN on AVAILABLE.
 //
 // What this never does: generic identity-changing retry (same R always,
 // Doc 02 §19.3), candidate advance on UNKNOWN (R-11), NO_DRIVER terminal
@@ -235,15 +238,17 @@ public sealed class MatchingReserveOrchestrator
 
         if (row.State is MatchingAttemptStates.Ready or MatchingAttemptStates.InFlight)
         {
-            // Never called (e.g. crash before HTTP): safe to call now, the
-            // row already carries the stable identity for the attempt.
+            // Possibly dispatched but crashed before recording the outcome
+            // (IN_FLIGHT is write-ahead identity, not proof of never-called).
+            // Resume with the SAME reservation identity; same-R replay on the
+            // Driver is idempotent, never a new logical attempt (DSI-018).
             return await CallReserveAsync(tripId, round, ordinal, row, ct);
         }
 
         // UNKNOWN: poll authoritative truth with the same R.
         for (var i = 0; i < _maxReconcileAttempts; i++)
         {
-            ReservationReconcileOutcome truth;
+            ReservationReconcileResult truth;
             try
             {
                 truth = await _driver.GetReservationAsync(row.DriverId, row.ReservationId, ct);
@@ -253,7 +258,7 @@ public sealed class MatchingReserveOrchestrator
                 continue;
             }
 
-            switch (truth)
+            switch (truth.Outcome)
             {
                 case ReservationReconcileOutcome.OwnedByThisReservation:
                     var concluded = await TryConcludeAsync(
@@ -272,11 +277,34 @@ public sealed class MatchingReserveOrchestrator
                     return concluded
                         ?? new AttemptResult(AttemptOutcome.Reserved, row.ReservationId, null);
                 case ReservationReconcileOutcome.NotCommittedOrAvailable:
+                    // Fail-closed fencing: current AVAILABLE alone never proves
+                    // an earlier R cannot commit later (pre-lock: R has not yet
+                    // acquired the row lock; pre-commit: R holds the lock
+                    // uncommitted while the query sees last-committed AVAILABLE).
+                    // Conclusive only when Vx exceeds every dispatched fence:
+                    // versions only increase and the row lock serializes writers,
+                    // so any future R read sees >= Vx > its fence -> StaleVersion.
+                    // Otherwise poll again; exhaustion becomes visible review.
+                    // Legacy rows without fence provenance (NULL) stay UNKNOWN.
+                    if (row.MaxDispatchedVersion.HasValue
+                        && truth.DriverVersion.HasValue
+                        && truth.DriverVersion.Value > row.MaxDispatchedVersion.Value)
+                    {
+                        var fencedCode = ToOutcomeCode(truth.Outcome);
+                        var fenced = await TryConcludeAsync(
+                            tripId, round, ordinal,
+                            [MatchingAttemptStates.Unknown], MatchingAttemptStates.Rejected,
+                            fencedCode, ct);
+                        return fenced
+                            ?? new AttemptResult(AttemptOutcome.Rejected, row.ReservationId, fencedCode);
+                    }
+
+                    continue;
                 case ReservationReconcileOutcome.ReservedByOther:
                 case ReservationReconcileOutcome.Offline:
                 case ReservationReconcileOutcome.OnTrip:
                 case ReservationReconcileOutcome.NotFound:
-                    var code = ToOutcomeCode(truth);
+                    var code = ToOutcomeCode(truth.Outcome);
                     var rejected = await TryConcludeAsync(
                         tripId, round, ordinal,
                         [MatchingAttemptStates.Unknown], MatchingAttemptStates.Rejected,
@@ -358,6 +386,20 @@ public sealed class MatchingReserveOrchestrator
             DriverReserveResult call;
             try
             {
+                // Write-ahead fence: persist the version we are about to use
+                // BEFORE the remote call can be sent. If this write fails, do
+                // NOT dispatch (an undocumented outstanding fence would break
+                // later AVAILABLE fencing). Crash between fence write and
+                // dispatch only over-approximates max (conservative UNKNOWN).
+                try
+                {
+                    await _attempts.RecordDispatchAsync(tripId, round, ordinal, observed.Version, ct);
+                }
+                catch (Exception fenceEx) when (!ct.IsCancellationRequested || fenceEx is not OperationCanceledException)
+                {
+                    return new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "DISPATCH_FENCE_FAILED");
+                }
+
                 call = await _driver.ReserveAsync(
                     new DriverReserveRequest(row.DriverId, tripId, row.ReservationId, observed.Version), ct);
             }

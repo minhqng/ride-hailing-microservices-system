@@ -167,17 +167,33 @@ public class DriverClientMappingTests
         var res = Guid.NewGuid();
         var stub = new StubHandler
         {
-            Responder = _ => JsonResponse(HttpStatusCode.OK, new { outcome = wire }),
+            Responder = _ => JsonResponse(HttpStatusCode.OK, new { outcome = wire, version = 7 }),
         };
         var client = Client(stub, out var captured);
 
-        var outcome = await client.GetReservationAsync(driver, res);
+        var result = await client.GetReservationAsync(driver, res);
 
         Assert.Equal(HttpMethod.Get, captured.LastRequest!.Method);
         Assert.Equal(
             $"/internal/drivers/{driver:N}/reservations/{res:N}",
             captured.LastRequest.RequestUri!.AbsolutePath);
-        Assert.Equal(expected, outcome);
+        Assert.Equal(expected, result.Outcome);
+        Assert.Equal(7, result.DriverVersion);
+    }
+
+    [Fact]
+    public async Task Reconcile_Maps_Version_Null_For_NotFound()
+    {
+        var stub = new StubHandler
+        {
+            Responder = _ => JsonResponse(HttpStatusCode.OK, new { outcome = "NOT_FOUND", version = (int?)null }),
+        };
+        var client = Client(stub, out _);
+
+        var result = await client.GetReservationAsync(Guid.NewGuid(), Guid.NewGuid());
+
+        Assert.Equal(ReservationReconcileOutcome.NotFound, result.Outcome);
+        Assert.Null(result.DriverVersion);
     }
 
     [Fact]
