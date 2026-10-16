@@ -4,6 +4,7 @@ using RideHailing.TripService.Api;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
 
 // Bootstrap skeleton for RideHailing.TripService (Trip service).
 // Owns: see src/Services/Trip/RideHailing.TripService/README.md.
@@ -49,11 +50,47 @@ builder.Services.AddScoped<MarkMatchingFailedHandler>();
 builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddTripMessaging(builder.Configuration);
 
 var app = builder.Build();
 
+// (A-W08) Opt-in Trip auto-migrate for compose local/CI reproducibility.
+// Platform contract (C-owned): /health/ready requires zero pending Trip
+// migrations (see TripDatabaseReadiness). Fresh postgres volumes only create
+// roles/DBs (deploy/postgres/init), so without a migrate step readiness stays
+// 503 and platform-smoke times out on :8103. Compose sets
+// TripDatabase__AutoMigrate=true; production sets it false and runs
+// migrations via an external job. Default false = preserve the historic
+// "production never auto-migrates" rule.
+if (app.Configuration.GetValue<bool>("TripDatabase:AutoMigrate"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<TripDbContext>();
+    const int maxAttempts = 10;
+    for (var attempt = 1; ; attempt++)
+    {
+        try
+        {
+            await db.Database.MigrateAsync(app.Lifetime.ApplicationStopping);
+            break;
+        }
+        catch (Exception ex) when (attempt < maxAttempts && !app.Lifetime.ApplicationStopping.IsCancellationRequested)
+        {
+            app.Logger.LogWarning(ex, "Trip auto-migrate attempt {Attempt}/{Max} failed; retrying.", attempt, maxAttempts);
+            await Task.Delay(TimeSpan.FromSeconds(2), app.Lifetime.ApplicationStopping);
+        }
+    }
+}
+
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "trip-service" }));
-app.MapRideReadiness();
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = (context, report) => context.Response.WriteAsJsonAsync(new
+    {
+        status = report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy ? "Ready" : "NotReady",
+        dependencies = report.Entries.ToDictionary(e => e.Key, e => e.Value.Status.ToString())
+    })
+});
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "trip-service", environment = env.EnvironmentName }));
 
