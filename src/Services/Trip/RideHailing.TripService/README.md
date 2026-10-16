@@ -1,5 +1,20 @@
 # Trip / Booking Service — Owner A
 
+## Current W7–W8 additions
+
+- W7 cancellation stores exact cleanup obligations in the same transaction as
+  terminal state. Late outcomes never reopen cancelled trips.
+- W8 optionally publishes RideRequested through C's confirmed publisher and
+  supervises three manual-ACK consumers. Trip effects and durable receipts share
+  one PostgreSQL transaction; replay and domain guards are separate defenses.
+- Apply migrations before enabling `TripMessaging__Enabled=true` (compose:
+  `TRIP_MESSAGING_ENABLED=true`). Supply `RabbitMq__Host`, `RabbitMq__Username`,
+  `RabbitMq__Password`; optional `RabbitMq__Port` and `RabbitMq__VirtualHost`.
+  Readiness checks migrations and, when enabled, consumer connectivity.
+- See [W8 runbook and boundaries](../../../../docs/A-W08-messaging-handoff.md).
+  Outbox, Saga, automatic cleanup dispatch and Payment lineage resolution remain
+  later work. The historical week-by-week notes below describe their own scope.
+
 - Owner: A (reviewer B, backup C)
 - Authority: ride lifecycle, FareSnapshot, assignment reference, Saga state, cancellation. Does NOT decide Driver reservability.
 - DB: `trip_db` (role `trip_app`)
