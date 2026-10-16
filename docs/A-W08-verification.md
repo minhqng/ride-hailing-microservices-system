@@ -1,5 +1,9 @@
 # A-W7/W8 verification
 
+Latest follow-up: [W7–W8 hardening review](A-W07-W08-hardening-review.md),
+source `9f892db`: 268 unit and 126 integration tests passed. The original
+verification below is retained as historical evidence for `04368d8`.
+
 Recorded 2026-10-16 (Asia/Saigon). Runtime/test source anchor: `04368d8`.
 README update: `65d22c9`. Subsequent evidence-only commits do not change runtime code.
 Base: `ed14b19` on `MemC-W8-Distributed`, with A-W7 `1dffb26`.
