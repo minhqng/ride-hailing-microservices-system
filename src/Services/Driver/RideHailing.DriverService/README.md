@@ -6,7 +6,7 @@
 - Deps: `ConnectionStrings__Postgres`, `RabbitMq__Host`
 - Read: Docs 00 §3-4/§7-8, 01 §4-5, 02 §12-13, 05B
 
-## Implemented (W2+W3)
+## Implemented (W2–W8)
 
 - W2: `Infrastructure/Persistence/Migrations/001_driver_baseline.sql`
   (`drivers`, `vehicles`, idempotent), PG/ownership fixtures.
@@ -39,6 +39,17 @@
   UNKNOWN), CON-02 barrier proof (exactly one of OFFLINE/RESERVED wins),
   CON-04 sequence proof (late stale release cannot free the newer owner).
 
+- W8: authoritative event publication `Application/Messaging/DriverEventPublisher`
+  (confirms + mandatory routing, serialized gate, deterministic per-effect
+  `messageId`), `DriverEventContracts/DriverEventMapper` (`DriverReservedV1`,
+  `DriverAvailableV1`, `DriverOfflineV1`, `DriverReservationReleasedV1`,
+  `DriverLocationAcceptedV1` on the frozen `RideTopology` routes). Publication
+  is post-commit best-effort; Outbox atomicity remains W9.
+
 ## NOT implemented (later weeks)
 
-- W8+: RabbitMQ/Outbox.
+- W9: Outbox-atomic event publication (currently post-commit best-effort),
+  inbound `driver.commands.q` consumer (release/mark-trip-started/completed —
+  no production path to `ON_TRIP` yet), and `matchingRound` on
+  `DriverReservedV1` (Trip parks events without it as
+  `NeedsReview:RESERVATION_ROUND_REQUIRED`).
