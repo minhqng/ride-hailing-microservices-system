@@ -58,9 +58,9 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 
 **Workflows:** Trip→Matching `RideRequested` (async), Matching→Driver `ReserveDriver` (sync + UNKNOWN handling), Trip→Payment (async Saga), events→Notification (async). Outbox for dual-write gap, persisted Saga/MatchingRound for crash-resume.
 
-Implemented on this A-W7/W8 branch: PG-guarded Driver reservation foundation, Trip lifecycle and single-assignment fencing, durable cancellation cleanup, opt-in Trip publication/consumption with atomic receipt dedup, Payment durable simulator, and C's RabbitMQ runtime. Planned: Trip persisted Saga, Outbox relay and automatic cleanup dispatch. This branch is stacked on `MemC-W8-Distributed`; it does not imply these changes are merged into main.
+Implemented on main through W08: PG-guarded Driver reservation foundation, Trip lifecycle and single-assignment fencing, durable cancellation cleanup, opt-in Trip publication/consumption with atomic receipt dedup, Payment durable simulator, and the RabbitMQ runtime (publisher confirms, manual ACK, dedup). Planned: Trip persisted Saga, Outbox relay and automatic cleanup dispatch.
 
-B's current DriverReservedV1 lacks matchingRound: A retains these deliveries for review rather than guessing. Payment outcomes remain a durable skeleton awaiting Saga operation lineage.
+Open contract item: published `DriverReservedV1` payloads still omit `matchingRound`; Trip conservatively parks such deliveries as `NeedsReview:RESERVATION_ROUND_REQUIRED` until the Driver event carries the round. Payment outcomes remain a durable simulator skeleton awaiting Saga operation lineage.
 
 ## 4. Prerequisites
 
@@ -151,10 +151,10 @@ Branches: `main`, `feature/<issue>-<name>`, `fix/<issue>-<name>`, `experiment/<i
 
 ## 10. Status & roadmap
 
-Implemented on this branch: compose core/obs profiles, per-service DB roles, bounded readiness, OTel traces/metrics, CI smoke definitions, Payment durable simulator, RabbitMQ confirms/manual ACK, Driver reservation foundation, Trip lifecycle/assignment fencing, durable cancellation cleanup and Trip atomic consumer receipts.
+Implemented on main through W08: compose core/obs profiles, per-service DB roles, bounded readiness, OTel traces/metrics, CI smoke definitions, Payment durable simulator, RabbitMQ confirms/manual ACK, Driver reservation foundation, Trip lifecycle/assignment fencing, durable cancellation cleanup and Trip atomic consumer receipts.
 
-Verified locally after A-W7/W8 hardening: **268 unit tests + 126 integration tests passed**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo.
+Verified on main (CI run 38912031301, reproduced locally on identical tree): **851 tests passed, 0 failed, 1 env-gated skip**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo.
 
-Next: B/A event-contract alignment, human peer review, Trip Saga persistence,
+Next: `DriverReservedV1` matchingRound alignment, human peer review, Trip Saga persistence,
 Outbox relay, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
 and the end-to-end authenticated Trip/Saga flow.
