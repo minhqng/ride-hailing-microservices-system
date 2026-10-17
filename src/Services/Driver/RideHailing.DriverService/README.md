@@ -46,10 +46,19 @@
   `DriverLocationAcceptedV1` on the frozen `RideTopology` routes). Publication
   is post-commit best-effort; Outbox atomicity remains W9.
 
+- W8 round-lineage hardening (this branch): `DriverReservedV1` carries
+  `matchingRound` (Doc 02 §21.3) from durable provenance — `reserved_round`
+  and `ReservationRound` on the aggregate, recorded at the reserve win,
+  replayed on restart, and cleared together with the reservation refs on
+  release / trip start. The round arrives with the Matching reserve request
+  and is unknown-omitted on the wire (`[JsonIgnore(WhenWritingNull)]`), so
+  Trip's presence gate still parks genuinely legacy payloads as
+  `NeedsReview:RESERVATION_ROUND_REQUIRED` while verified events flow.
+
 ## NOT implemented (later weeks)
 
 - W9: Outbox-atomic event publication (currently post-commit best-effort),
   inbound `driver.commands.q` consumer (release/mark-trip-started/completed —
-  no production path to `ON_TRIP` yet), and `matchingRound` on
-  `DriverReservedV1` (Trip parks events without it as
-  `NeedsReview:RESERVATION_ROUND_REQUIRED`).
+  no production path to `ON_TRIP` yet).`matchingRound` on `DriverReservedV1`
+  has landed on this branch (see W8 hardening above); Trip's park path stays
+  conservatism for payloads that omit the field.
