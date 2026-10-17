@@ -60,7 +60,7 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 
 Implemented on main through W08: PG-guarded Driver reservation foundation, Trip lifecycle and single-assignment fencing, durable cancellation cleanup, opt-in Trip publication/consumption with atomic receipt dedup, Payment durable simulator, and the RabbitMQ runtime (publisher confirms, manual ACK, dedup). Planned: Trip persisted Saga, Outbox relay and automatic cleanup dispatch.
 
-Open contract item: published `DriverReservedV1` payloads still omit `matchingRound`; Trip conservatively parks such deliveries as `NeedsReview:RESERVATION_ROUND_REQUIRED` until the Driver event carries the round. Payment outcomes remain a durable simulator skeleton awaiting Saga operation lineage.
+Closed on this branch (W08 round-lineage hardening): `DriverReservedV1` now carries `matchingRound` from durable Driver-side provenance — a `reserved_round` column recorded on the reserve win, preserved across restart/replay, and cleared with the reservation refs on release/trip start. The round rides the Matching→Driver reserve request and the Driver→Trip event, so Trip no longer parks verified deliveries solely for a missing round; the `NeedsReview:RESERVATION_ROUND_REQUIRED` path remains only for legacy/deploy-skew payloads that omit the field. Payment outcomes remain a durable simulator skeleton awaiting Saga operation lineage.
 
 ## 4. Prerequisites
 
@@ -155,6 +155,7 @@ Implemented on main through W08: compose core/obs profiles, per-service DB roles
 
 Verified on main (CI run 38912031301, reproduced locally on identical tree): **851 tests passed, 0 failed, 1 env-gated skip**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo.
 
-Next: `DriverReservedV1` matchingRound alignment, human peer review, Trip Saga persistence,
+Next: human peer review, Trip Saga persistence,
 Outbox relay, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
-and the end-to-end authenticated Trip/Saga flow.
+and the end-to-end authenticated Trip/Saga flow. (`DriverReservedV1` matchingRound
+alignment has landed on this branch; see §3.)
