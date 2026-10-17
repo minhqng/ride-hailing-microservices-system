@@ -101,7 +101,7 @@ public sealed class AtomicDispatchFenceTests
     private static async Task<DriverReserveResult> RealReserveAsync(
         DriverRepository repo, DriverReserveRequest req, CancellationToken ct = default)
     {
-        var outcome = await repo.TryReserveAsync(req.DriverId, req.TripId, req.ReservationId, req.ExpectedVersion, ct);
+        var outcome = await repo.TryReserveAsync(req.DriverId, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
         return outcome.Outcome switch
         {
             ReserveOutcome.Won => new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, outcome.Driver?.Version),

@@ -246,7 +246,7 @@ public class ReserveWorkflowTests
             {
                 var loaded = await driverRepo.LoadAsync(req.DriverId, ct);
                 var outcome = await driverRepo.TryReserveAsync(
-                    req.DriverId, req.TripId, req.ReservationId, req.ExpectedVersion, ct);
+                    req.DriverId, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
                 if (outcome.Outcome == RideHailing.DriverService.Infrastructure.Persistence.ReserveOutcome.Won
                     || outcome.Outcome == RideHailing.DriverService.Infrastructure.Persistence.ReserveOutcome.Replayed)
                 {

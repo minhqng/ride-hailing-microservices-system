@@ -6,11 +6,17 @@
 // reconciles with the same reservationId. This client never retries.
 namespace RideHailing.MatchingService.Infrastructure.DriverClient;
 
-/// <summary>Reserve request: one guarded reservation attempt for one driver.
+/// <summary>
+/// Reserve request: one guarded reservation attempt for one driver.
 /// ExpectedVersion is the caller-observed Driver version (read-then-attempt
 /// OCC dance); a stale fence value yields STALE_VERSION, never an overwrite.
+/// MatchingRound is the durable generation the attempt belongs to; Driver
+/// records it with the reservation so DriverReservedV1 can carry the SAME
+/// generation across replay/restart (Doc 02 §21.3). It is required here
+/// because Matching only ever reserves from a durable (tripId, round) row —
+/// there is no context in which a reserve may be sent without one.
 /// </summary>
-public sealed record DriverReserveRequest(Guid DriverId, Guid TripId, Guid ReservationId, int ExpectedVersion);
+public sealed record DriverReserveRequest(Guid DriverId, Guid TripId, Guid ReservationId, int ExpectedVersion, int MatchingRound);
 
 public enum DriverReserveOutcomeKind
 {

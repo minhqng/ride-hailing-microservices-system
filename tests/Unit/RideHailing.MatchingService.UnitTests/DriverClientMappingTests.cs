@@ -68,7 +68,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out var captured);
 
-        var result = await client.ReserveAsync(new(driver, trip, res, 3));
+        var result = await client.ReserveAsync(new(driver, trip, res, 3, MatchingRound: 5));
 
         Assert.Equal(HttpMethod.Post, captured.LastRequest!.Method);
         Assert.Equal($"/drivers/{driver:N}/reserve", captured.LastRequest.RequestUri!.AbsolutePath);
@@ -76,6 +76,9 @@ public class DriverClientMappingTests
         Assert.Equal(trip.ToString(), body.GetProperty("tripId").GetString());
         Assert.Equal(res.ToString(), body.GetProperty("reservationId").GetString());
         Assert.Equal(3, body.GetProperty("expectedVersion").GetInt32());
+        // W09: the durable round rides the wire (Doc 02 §21.3) — Driver stores
+        // it on the win so restart/replay publication carries the SAME round.
+        Assert.Equal(5, body.GetProperty("matchingRound").GetInt32());
         Assert.Equal(DriverReserveOutcomeKind.Reserved, result.Kind);
         Assert.Equal(7, result.DriverVersion);
     }
@@ -89,7 +92,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1));
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2));
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("DRIVER_NOT_AVAILABLE", result.Code);
@@ -105,7 +108,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1));
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2));
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("RATE_LIMITED_TRY_LATER", result.Code);
@@ -120,7 +123,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1));
+        var result = await client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2));
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("DRIVER_NOT_FOUND", result.Code);
@@ -137,7 +140,7 @@ public class DriverClientMappingTests
 
         // Never a business answer: caller classifies UNKNOWN (W6/W7).
         await Assert.ThrowsAsync<HttpRequestException>(
-            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1)));
+            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2)));
     }
 
     [Fact]
@@ -151,7 +154,7 @@ public class DriverClientMappingTests
 
         // Timeout ≠ failure: must propagate so the caller reconciles same id.
         await Assert.ThrowsAsync<TaskCanceledException>(
-            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1)));
+            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2)));
     }
 
     [Theory]
