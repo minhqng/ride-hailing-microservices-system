@@ -9,9 +9,15 @@
 
 ### Reserve — `POST drivers/{driverId}/reserve`
 
-Body: `{ "tripId": "<uuid>", "reservationId": "<uuid>", "expectedVersion": <int> }`
+Body: `{ "tripId": "<uuid>", "reservationId": "<uuid>", "expectedVersion": <int>, "matchingRound": <int> }`
 (caller-observed version; stale fence yields `STALE_VERSION`, never overwrite).
 `reservationId` is stable per logical attempt across retry/reconcile/restart.
+`matchingRound` is the caller's durable matching generation for this attempt:
+Driver records it with the reservation (write-once at the win) so
+`DriverReservedV1` can carry the SAME generation across replay/restart.
+Absent `matchingRound` is tolerated on the wire for deploy skew and is
+treated as unknown provenance (no backfill, no fabricated generation);
+a non-positive value is a 400, never a normalized or ignored field.
 
 | HTTP | Meaning | Client maps to |
 |---|---|---|
@@ -89,10 +95,15 @@ C-owned; B consumes the frozen shape and owns only its endpoint mapping.
 - **Produced — Driver authoritative events** (best-effort after commit, W9
   Outbox closes the dual-write gap; failure never fails the committed domain op):
   `driver.reserved.v1`, `driver.reservation-released.v1`, `driver.available.v1`,
-  `driver.offline.v1` with `{driverId, status, version, tripId?, reservationId?}`,
-  and `driver.location-accepted.v1` with the accepted sample. Payload wire form
-  is explicit camelCase; messageId is deterministic per logical effect
-  (win/replay/recovery republish the same identity).
+  `driver.offline.v1` with `{driverId, status, version, tripId?, reservationId?,
+  matchingRound?}`, and `driver.location-accepted.v1` with the accepted sample.
+  `matchingRound` appears only on reservation-carrying facts where Driver
+  recorded a generation with the reserve (W08 lineage: `driver.reserved.v1`
+  from a hardened caller); it is omitted — never null — when the reservation
+  predates durable provenance, and Trip parks such reserved events as
+  `NeedsReview:RESERVATION_ROUND_REQUIRED` instead of inferring a round.
+  Payload wire form is explicit camelCase; messageId is deterministic per
+  logical effect (win/replay/recovery republish the same identity).
 - **Bounds:** transient requeue bounded by the broker acquisition count
   (`x-acquired-count`, RabbitMQ 4.x quorum; headerless redelivery fails closed);
   1 MiB body cap; validated queue/prefetch/retry config; broker outage retries

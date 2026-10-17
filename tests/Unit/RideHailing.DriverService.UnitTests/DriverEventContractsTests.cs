@@ -48,7 +48,7 @@ public class DriverEventContractsTests
         // consumer reads camelCase. Attributes (not ambient options) pin the
         // wire form, so this fails without a broker if the contract drifts.
         var stateBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
-            new DriverStateEventPayload(Guid.NewGuid(), "RESERVED", 4, Guid.NewGuid(), Guid.NewGuid()));
+            new DriverStateEventPayload(Guid.NewGuid(), "RESERVED", 4, Guid.NewGuid(), Guid.NewGuid(), null));
         using var state = System.Text.Json.JsonDocument.Parse(stateBytes);
         foreach (var name in new[] { "driverId", "status", "version", "tripId", "reservationId" })
         {
@@ -62,5 +62,31 @@ public class DriverEventContractsTests
         {
             Assert.True(loc.RootElement.TryGetProperty(name, out _), $"missing payload field '{name}'");
         }
+    }
+
+    [Fact]
+    public void MatchingRound_Is_Present_With_CamelCase_When_Recorded()
+    {
+        // Trip's gate reads the FIELD PRESENCE (TryGetProperty) before the
+        // value: a recorded generation must reach the wire as an actual
+        // property, not as a null it would classify as malformed.
+        var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+            new DriverStateEventPayload(Guid.NewGuid(), "RESERVED", 4, Guid.NewGuid(), Guid.NewGuid(), 3));
+        using var doc = System.Text.Json.JsonDocument.Parse(bytes);
+        Assert.True(doc.RootElement.TryGetProperty("matchingRound", out var round));
+        Assert.Equal(3, round.GetInt32());
+    }
+
+    [Fact]
+    public void MatchingRound_Is_Omitted_When_Provenance_Unknown()
+    {
+        // An unknown generation omits the property entirely: writing an
+        // explicit null would flip Trip's review path into a poison
+        // classification, so the omission IS the wire form for "no provenance".
+        var bytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(
+            new DriverStateEventPayload(Guid.NewGuid(), "RESERVED", 4, Guid.NewGuid(), Guid.NewGuid(), null));
+        using var doc = System.Text.Json.JsonDocument.Parse(bytes);
+        Assert.False(doc.RootElement.TryGetProperty("matchingRound", out _),
+            "matchingRound must be omitted, not null, when genesis is unknown");
     }
 }
