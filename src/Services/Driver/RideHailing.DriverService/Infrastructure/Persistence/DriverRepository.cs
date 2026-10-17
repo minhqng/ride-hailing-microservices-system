@@ -30,8 +30,8 @@ public sealed class DriverRepository
     public async Task SaveAsync(Driver driver, CancellationToken ct = default)
     {
         const string Sql = """
-            INSERT INTO drivers (driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, updated_at)
-            VALUES (@id, @user, @status, @version, @reservedTrip, @reservation, @activeTrip, @vehicle, @updated)
+            INSERT INTO drivers (driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, updated_at, reserved_round)
+            VALUES (@id, @user, @status, @version, @reservedTrip, @reservation, @activeTrip, @vehicle, @updated, @round)
             ON CONFLICT (driver_id) DO UPDATE SET
                 status = EXCLUDED.status,
                 version = EXCLUDED.version,
@@ -39,7 +39,8 @@ public sealed class DriverRepository
                 reservation_id = EXCLUDED.reservation_id,
                 active_trip_id = EXCLUDED.active_trip_id,
                 vehicle_id = EXCLUDED.vehicle_id,
-                updated_at = EXCLUDED.updated_at;
+                updated_at = EXCLUDED.updated_at,
+                reserved_round = EXCLUDED.reserved_round;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -53,6 +54,7 @@ public sealed class DriverRepository
         cmd.Parameters.AddWithValue("activeTrip", (object?)driver.ActiveTripId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("vehicle", (object?)driver.VehicleId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("updated", driver.UpdatedAt.UtcDateTime);
+        cmd.Parameters.AddWithValue("round", (object?)driver.ReservationRound ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
@@ -66,8 +68,8 @@ public sealed class DriverRepository
     public async Task<bool> TryInsertAsync(Driver driver, CancellationToken ct = default)
     {
         const string Sql = """
-            INSERT INTO drivers (driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, updated_at)
-            VALUES (@id, @user, @status, @version, @reservedTrip, @reservation, @activeTrip, @vehicle, @updated);
+            INSERT INTO drivers (driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, updated_at, reserved_round)
+            VALUES (@id, @user, @status, @version, @reservedTrip, @reservation, @activeTrip, @vehicle, @updated, @round);
             """;
         try
         {
@@ -83,6 +85,7 @@ public sealed class DriverRepository
             cmd.Parameters.AddWithValue("activeTrip", (object?)driver.ActiveTripId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("vehicle", (object?)driver.VehicleId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("updated", driver.UpdatedAt.UtcDateTime);
+            cmd.Parameters.AddWithValue("round", (object?)driver.ReservationRound ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync(ct);
             return true;
         }
@@ -95,7 +98,7 @@ public sealed class DriverRepository
     public async Task<Driver?> LoadAsync(Guid driverId, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at
+            SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at, reserved_round
             FROM drivers WHERE driver_id = @id;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -108,13 +111,7 @@ public sealed class DriverRepository
             return null;
         }
 
-        return Driver.Rehydrate(
-            reader.GetGuid(0), reader.GetGuid(1), FromDb(reader.GetString(2)), reader.GetInt32(3),
-            reader.IsDBNull(4) ? null : reader.GetGuid(4),
-            reader.IsDBNull(5) ? null : reader.GetGuid(5),
-            reader.IsDBNull(6) ? null : reader.GetGuid(6),
-            reader.IsDBNull(7) ? null : reader.GetGuid(7),
-            new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)));
+        return RehydrateFromReader(reader);
     }
 
     /// <summary>
@@ -127,9 +124,12 @@ public sealed class DriverRepository
     /// and foreign reservations conflict without mutating.
     /// A cross-row reservation_id collision (caller reused R on another driver)
     /// is backstopped by ux_drivers_reservation_id and reported as conflict.
+    /// matchingRound (W08 hardening): provenance for DriverReservedV1 — recorded
+    /// on the win so restart/replay publication carries the SAME generation.
     /// </summary>
     public async Task<ReserveResult> TryReserveAsync(
         Guid driverId, Guid tripId, Guid reservationId, int expectedVersion,
+        int? matchingRound = null,
         CancellationToken ct = default)
     {
         if (driverId == Guid.Empty || tripId == Guid.Empty || reservationId == Guid.Empty)
@@ -142,13 +142,18 @@ public sealed class DriverRepository
             throw new ArgumentException("expectedVersion must be >= 1.");
         }
 
+        if (matchingRound < 1)
+        {
+            throw new ArgumentException("matchingRound must be >= 1 when supplied.");
+        }
+
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         try
         {
             const string SelectForUpdate = """
-                SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at
+                SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at, reserved_round
                 FROM drivers WHERE driver_id = @id FOR UPDATE;
                 """;
             Driver? current;
@@ -162,13 +167,7 @@ public sealed class DriverRepository
                 }
                 else
                 {
-                    current = Driver.Rehydrate(
-                        reader.GetGuid(0), reader.GetGuid(1), FromDb(reader.GetString(2)), reader.GetInt32(3),
-                        reader.IsDBNull(4) ? null : reader.GetGuid(4),
-                        reader.IsDBNull(5) ? null : reader.GetGuid(5),
-                        reader.IsDBNull(6) ? null : reader.GetGuid(6),
-                        reader.IsDBNull(7) ? null : reader.GetGuid(7),
-                        new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)));
+                    current = RehydrateFromReader(reader);
                 }
             }
 
@@ -186,7 +185,7 @@ public sealed class DriverRepository
 
             try
             {
-                current.Reserve(tripId, reservationId, expectedVersion);
+                current.Reserve(tripId, reservationId, expectedVersion, matchingRound);
             }
             catch (DriverDomainException ex)
             {
@@ -202,7 +201,8 @@ public sealed class DriverRepository
                     reservation_id = @reservation,
                     active_trip_id = @activeTrip,
                     vehicle_id = @vehicle,
-                    updated_at = @updated
+                    updated_at = @updated,
+                    reserved_round = @round
                 WHERE driver_id = @id;
                 """;
             await using (var upd = new NpgsqlCommand(Update, conn, tx))
@@ -215,14 +215,22 @@ public sealed class DriverRepository
                 upd.Parameters.AddWithValue("activeTrip", (object?)current.ActiveTripId ?? DBNull.Value);
                 upd.Parameters.AddWithValue("vehicle", (object?)current.VehicleId ?? DBNull.Value);
                 upd.Parameters.AddWithValue("updated", current.UpdatedAt.UtcDateTime);
+                upd.Parameters.AddWithValue("round", (object?)current.ReservationRound ?? DBNull.Value);
                 await upd.ExecuteNonQueryAsync(ct);
             }
 
             await tx.CommitAsync(ct);
             return replayed ? ReserveResult.Replayed(current) : ReserveResult.Won(current);
         }
-        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
+            && string.Equals(ex.ConstraintName, "ux_drivers_reservation_id", StringComparison.Ordinal))
         {
+            // Backstop for the documented cross-row reservation collision: the
+            // caller reused one reservationId on two drivers, so exactly one
+            // identity table row may hold it. NARROW on purpose (W08 hardening):
+            // any OTHER unique violation is a system anomaly, not a domain
+            // conflict — masking it here would let Matching advance the
+            // candidate on a fabricated rejection instead of staying UNKNOWN.
             // Best-effort: the failed UPDATE may still be active on this
             // connection, and the connector may already be broken. Either way
             // the single statement failed atomically (our row is unmodified)
@@ -436,7 +444,7 @@ public sealed class DriverRepository
         NpgsqlConnection conn, NpgsqlTransaction tx, Guid driverId, CancellationToken ct)
     {
         const string Sql = """
-            SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at
+            SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at, reserved_round
             FROM drivers WHERE driver_id = @id FOR UPDATE;
             """;
         await using var sel = new NpgsqlCommand(Sql, conn, tx);
@@ -447,10 +455,21 @@ public sealed class DriverRepository
             return null;
         }
 
+        return RehydrateFromReader(reader);
+    }
+
+    /// <summary>
+    /// Single rehydration point for every drivers-table read shape: the
+    /// reserved_round provenance column travels with the row so the published
+    /// event generation stays stable across restart (W08 matchingRound lineage).
+    /// </summary>
+    private static Driver RehydrateFromReader(NpgsqlDataReader reader)
+    {
         return Driver.Rehydrate(
             reader.GetGuid(0), reader.GetGuid(1), FromDb(reader.GetString(2)), reader.GetInt32(3),
             reader.IsDBNull(4) ? null : reader.GetGuid(4),
             reader.IsDBNull(5) ? null : reader.GetGuid(5),
+            reader.IsDBNull(10) ? null : reader.GetInt32(10),
             reader.IsDBNull(6) ? null : reader.GetGuid(6),
             reader.IsDBNull(7) ? null : reader.GetGuid(7),
             new DateTimeOffset(DateTime.SpecifyKind(reader.GetDateTime(9), DateTimeKind.Utc)));
@@ -467,7 +486,8 @@ public sealed class DriverRepository
                 reservation_id = @reservation,
                 active_trip_id = @activeTrip,
                 vehicle_id = @vehicle,
-                updated_at = @updated
+                updated_at = @updated,
+                reserved_round = @round
             WHERE driver_id = @id;
             """;
         await using var upd = new NpgsqlCommand(Sql, conn, tx);
@@ -479,6 +499,7 @@ public sealed class DriverRepository
         upd.Parameters.AddWithValue("activeTrip", (object?)driver.ActiveTripId ?? DBNull.Value);
         upd.Parameters.AddWithValue("vehicle", (object?)driver.VehicleId ?? DBNull.Value);
         upd.Parameters.AddWithValue("updated", driver.UpdatedAt.UtcDateTime);
+        upd.Parameters.AddWithValue("round", (object?)driver.ReservationRound ?? DBNull.Value);
         await upd.ExecuteNonQueryAsync(ct);
     }
 

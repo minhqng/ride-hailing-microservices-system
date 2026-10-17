@@ -30,13 +30,20 @@ public static class DriverEventRoutes
 }
 
 /// <summary>Authoritative Driver state fact (status + aggregate version).
-/// tripId/reservationId present only when the state carries them.</summary>
+/// tripId/reservationId present only when the state carries them.
+/// matchingRound is the matching generation that produced a reservation
+/// identity (RESERVED wins/replays). Absence of the FIELD means "generation
+/// unknown" (historical row without provenance) — Trip consumers park such
+/// events for review and never infer a round; producers omit the property
+/// rather than write null so Trip's presence check stays meaningful.</summary>
 public sealed record DriverStateEventPayload(
     [property: JsonPropertyName("driverId")] Guid DriverId,
     [property: JsonPropertyName("status")] string Status,
     [property: JsonPropertyName("version")] long Version,
     [property: JsonPropertyName("tripId")] Guid? TripId,
-    [property: JsonPropertyName("reservationId")] Guid? ReservationId);
+    [property: JsonPropertyName("reservationId")] Guid? ReservationId,
+    [property: JsonPropertyName("matchingRound")]
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? MatchingRound);
 
 /// <summary>Accepted location sample fact (freshness already validated by
 /// the ingress path; the projection Lua re-validates ordering).</summary>

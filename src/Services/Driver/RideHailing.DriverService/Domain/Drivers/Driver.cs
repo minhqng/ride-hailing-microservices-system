@@ -12,13 +12,24 @@ public sealed class Driver
     public int Version { get; private set; }
     public Guid? ReservedTripId { get; private set; }
     public Guid? ReservationId { get; private set; }
+    /// <summary>
+    /// Matching generation that produced the current reservation identity
+    /// (provenance for DriverReservedV1.matchingRound). Write-once at
+    /// the winning reserve; cleared with the reservation refs on release and
+    /// trip start. Historical rows may legitimately carry NULL — provenance
+    /// that predates this column is unknown and is never fabricated; their
+    /// events omit matchingRound (payload omission means "round unknown",
+    /// which Trip parks for review).
+    /// </summary>
+    public int? ReservationRound { get; private set; }
     public Guid? ActiveTripId { get; private set; }
     public Guid? VehicleId { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
     private Driver(
         Guid driverId, Guid userId, DriverStatus status, int version,
-        Guid? reservedTripId, Guid? reservationId, Guid? activeTripId, Guid? vehicleId,
+        Guid? reservedTripId, Guid? reservationId, int? reservationRound,
+        Guid? activeTripId, Guid? vehicleId,
         DateTimeOffset updatedAt)
     {
         DriverId = driverId;
@@ -27,6 +38,7 @@ public sealed class Driver
         Version = version;
         ReservedTripId = reservedTripId;
         ReservationId = reservationId;
+        ReservationRound = reservationRound;
         ActiveTripId = activeTripId;
         VehicleId = vehicleId;
         UpdatedAt = updatedAt;
@@ -50,13 +62,14 @@ public sealed class Driver
             throw new DriverDomainException(DriverErrors.InvalidIdentity, "vehicleId must not be empty.");
         }
 
-        return new Driver(driverId, userId, DriverStatus.Offline, 1, null, null, null, vehicleId, DateTimeOffset.UtcNow);
+        return new Driver(driverId, userId, DriverStatus.Offline, 1, null, null, null, null, vehicleId, DateTimeOffset.UtcNow);
     }
 
     // Rehydration from persistence. Same coherence rules as live transitions (DSI-002).
     public static Driver Rehydrate(
         Guid driverId, Guid userId, DriverStatus status, int version,
-        Guid? reservedTripId, Guid? reservationId, Guid? activeTripId, Guid? vehicleId,
+        Guid? reservedTripId, Guid? reservationId, int? reservationRound,
+        Guid? activeTripId, Guid? vehicleId,
         DateTimeOffset updatedAt)
     {
         if (driverId == Guid.Empty)
@@ -82,8 +95,13 @@ public sealed class Driver
             throw new DriverDomainException(DriverErrors.IllegalTransition, "version must be >= 1.");
         }
 
+        if (reservationRound < 1)
+        {
+            throw new DriverDomainException(DriverErrors.IllegalTransition, "reservationRound must be >= 1 when present.");
+        }
+
         return new Driver(driverId, userId, status, version,
-            reservedTripId, reservationId, activeTripId, vehicleId, updatedAt);
+            reservedTripId, reservationId, reservationRound, activeTripId, vehicleId, updatedAt);
     }
 
     public void AttachVehicle(Guid vehicleId)
@@ -191,7 +209,17 @@ public sealed class Driver
     //   3. expected-version fence (DSI-003): a stale caller must not overwrite
     //      newer authority even when the driver happens to be AVAILABLE again;
     //   4. state legality (DSI-001): only AVAILABLE can be taken.
-    public void Reserve(Guid tripId, Guid reservationId, int expectedVersion)
+    // matchingRound (W08 hardening): the matching generation that produced this
+    // reservation identity, recorded with the win and published as
+    // DriverReservedV1.matchingRound (Doc 02 §21.3). Write-once wins: a replay
+    // never overwrites or backfills the recorded generation, so one logical
+    // reservation publishes ONE stable round across restart/replay/heal (a
+    // backfilled legacy row would change the event content under the same
+    // deterministic messageId and poison Trip's content-conflict guard).
+    // A null round means the caller supplies no provenance: it stays null and
+    // the event omits the field (Trip parks it for review) — never guessed
+    // from mutable state, never defaulted to 1, never traded during replay.
+    public void Reserve(Guid tripId, Guid reservationId, int expectedVersion, int? matchingRound = null)
     {
         if (tripId == Guid.Empty || reservationId == Guid.Empty)
         {
@@ -203,10 +231,17 @@ public sealed class Driver
             throw new DriverDomainException(DriverErrors.IllegalTransition, "expectedVersion must be >= 1.");
         }
 
+        if (matchingRound < 1)
+        {
+            throw new DriverDomainException(
+                DriverErrors.IllegalTransition,
+                "matchingRound must be a positive generation when supplied.");
+        }
+
         if (Status == DriverStatus.Reserved
             && ReservedTripId == tripId && ReservationId == reservationId)
         {
-            return; // same-reservation idempotent replay (DSI-005): no new effect.
+            return; // same-reservation idempotent replay (DSI-005): no new effect, provenance holds.
         }
 
         if (Version != expectedVersion)
@@ -222,6 +257,7 @@ public sealed class Driver
                 Status = DriverStatus.Reserved;
                 ReservedTripId = tripId;
                 ReservationId = reservationId;
+                ReservationRound = matchingRound;
                 Touch();
                 break;
             case DriverStatus.Reserved:
@@ -279,6 +315,7 @@ public sealed class Driver
         Status = DriverStatus.Available;
         ReservedTripId = null;
         ReservationId = null;
+        ReservationRound = null;
         Touch();
     }
 
@@ -307,6 +344,7 @@ public sealed class Driver
         ActiveTripId = tripId;
         ReservedTripId = null;
         ReservationId = null;
+        ReservationRound = null;
         Touch();
     }
 
@@ -337,12 +375,16 @@ public sealed class Driver
     }
 
     // DSI-002: state/reservation coherence. Never persist AVAILABLE+reservationId etc.
+    // The reservation round (W08 provenance) follows the same lifecycle: only
+    // RESERVED may carry it (NULL allowed for historical rows); AVAILABLE,
+    // OFFLINE and ON_TRIP must have cleared it together with the refs.
     private void AssertCoherence()
     {
         switch (Status)
         {
             case DriverStatus.Available:
-                if (ReservedTripId != null || ReservationId != null || ActiveTripId != null)
+                if (ReservedTripId != null || ReservationId != null || ActiveTripId != null
+                    || ReservationRound != null)
                 {
                     throw new DriverDomainException(
                         DriverErrors.IllegalTransition,
@@ -351,7 +393,8 @@ public sealed class Driver
 
                 break;
             case DriverStatus.Offline:
-                if (ReservedTripId != null || ReservationId != null || ActiveTripId != null)
+                if (ReservedTripId != null || ReservationId != null || ActiveTripId != null
+                    || ReservationRound != null)
                 {
                     throw new DriverDomainException(
                         DriverErrors.IllegalTransition,
@@ -369,7 +412,8 @@ public sealed class Driver
 
                 break;
             case DriverStatus.OnTrip:
-                if (ActiveTripId == null || ReservedTripId != null || ReservationId != null)
+                if (ActiveTripId == null || ReservedTripId != null || ReservationId != null
+                    || ReservationRound != null)
                 {
                     throw new DriverDomainException(
                         DriverErrors.IllegalTransition,

@@ -25,10 +25,12 @@ public static class DriverEventMapper
         {
             ReserveOutcome.Won => Event(
                 driverId, DriverEventTypes.Reserved, DriverEventRoutes.Reserved,
-                "RESERVED", result.Driver!.Version, tripId, reservationId),
+                "RESERVED", result.Driver!.Version, tripId, reservationId,
+                result.Driver!.ReservationRound),
             ReserveOutcome.Replayed => Event(
                 driverId, DriverEventTypes.Reserved, DriverEventRoutes.Reserved,
-                "RESERVED", result.Driver!.Version, tripId, reservationId),
+                "RESERVED", result.Driver!.Version, tripId, reservationId,
+                result.Driver!.ReservationRound),
             _ => null,
         };
 
@@ -66,8 +68,8 @@ public static class DriverEventMapper
 
     private static DriverEventToPublish Event(
         Guid driverId, string type, string route, string status, int version,
-        Guid? tripId, Guid? reservationId) =>
+        Guid? tripId, Guid? reservationId, int? matchingRound = null) =>
         new(type, route,
-            new DriverStateEventPayload(driverId, status, version, tripId, reservationId),
+            new DriverStateEventPayload(driverId, status, version, tripId, reservationId, matchingRound),
             version);
 }

@@ -39,7 +39,7 @@ public class DriverStateTests
         var ex = Assert.Throws<DriverDomainException>(() => Driver.Rehydrate(
             emptyDriver ? Guid.Empty : Guid.NewGuid(),
             emptyUser ? Guid.Empty : Guid.NewGuid(),
-            DriverStatus.Offline, 1, null, null, null, null, DateTimeOffset.UtcNow));
+            DriverStatus.Offline, 1, null, null, null, null, null, DateTimeOffset.UtcNow));
         Assert.Equal(DriverErrors.InvalidIdentity, ex.Code);
     }
 
@@ -84,6 +84,7 @@ public class DriverStateTests
             Guid.NewGuid(), Guid.NewGuid(), DriverStatus.Reserved, 2,
             emptyTrip ? Guid.Empty : Guid.NewGuid(),
             emptyReservation ? Guid.Empty : Guid.NewGuid(),
+            null,
             emptyActive ? Guid.Empty : null,
             emptyVehicle ? Guid.Empty : null,
             DateTimeOffset.UtcNow));
@@ -333,6 +334,6 @@ public class DriverStateTests
         // AVAILABLE must not carry reservation refs (DSI-002).
         Assert.Throws<DriverDomainException>(() => Driver.Rehydrate(
             Guid.NewGuid(), Guid.NewGuid(), DriverStatus.Available, 1,
-            Guid.NewGuid(), Guid.NewGuid(), null, null, DateTimeOffset.UtcNow));
+            Guid.NewGuid(), Guid.NewGuid(), null, null, null, DateTimeOffset.UtcNow));
     }
 }

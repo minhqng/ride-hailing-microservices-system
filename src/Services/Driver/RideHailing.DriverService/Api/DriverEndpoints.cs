@@ -251,10 +251,21 @@ public static class DriverEndpoints
                 });
             }
 
+            if (req.MatchingRound is < 1)
+            {
+                // Corrupt provenance is rejected, never silently dropped: an
+                // event generation is load-bearing for Trip's gate (Doc 02 §21.3).
+                return Results.BadRequest(new
+                {
+                    code = DriverErrors.InvalidRequest,
+                    message = "matchingRound must be >= 1 when supplied.",
+                });
+            }
+
             try
             {
                 var result = await repo.TryReserveAsync(
-                    id, req.TripId, req.ReservationId, req.ExpectedVersion, ct);
+                    id, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
                 var published = DriverEventMapper.ForReserveResult(id, req.TripId, req.ReservationId, result);
                 if (published is not null)
                 {
@@ -347,7 +358,15 @@ public static class DriverEndpoints
 
     public sealed record CreateDriverRequest(Guid? DriverId, Guid UserId, Guid? VehicleId);
 
-    public sealed record ReserveDriverRequest(Guid TripId, Guid ReservationId, int ExpectedVersion);
+    /// <summary>
+    /// B-W06-01 reserve body. matchingRound is the caller's matching
+    /// generation for this reservation identity; it is tolerated as absent
+    /// (deploy skew / historical callers) and recorded only when supplied, so
+    /// a W08-era caller still completes while a W08-hardened caller gives
+    /// DriverReservedV1 its generation. Corrupt (non-positive) values are
+    /// rejected, never normalized.
+    /// </summary>
+    public sealed record ReserveDriverRequest(Guid TripId, Guid ReservationId, int ExpectedVersion, int? MatchingRound);
 
     public sealed record StateVersionRequest(int ExpectedVersion);
 

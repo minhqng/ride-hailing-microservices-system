@@ -31,6 +31,7 @@ public sealed class HttpDriverClient : IDriverClient
                 tripId = request.TripId,
                 reservationId = request.ReservationId,
                 expectedVersion = request.ExpectedVersion,
+                matchingRound = request.MatchingRound,
             },
             cancellationToken);
 

@@ -37,6 +37,58 @@ public class DriverEventMapperTests
     }
 
     [Fact]
+    public void Reserve_Events_Carry_Recorded_Generation_When_Provenance_Exists()
+    {
+        var d = ReservedDriverWithRound(out var t, out var r, out var round);
+        var won = DriverEventMapper.ForReserveResult(
+            d.DriverId, t, r, ReserveResult.Won(d));
+        var replayed = DriverEventMapper.ForReserveResult(
+            d.DriverId, t, r, ReserveResult.Replayed(d));
+        Assert.Equal(round, won!.Payload.MatchingRound);
+        Assert.Equal(round, replayed!.Payload.MatchingRound);
+    }
+
+    [Fact]
+    public void Reserve_Events_Carry_Unknown_Generation_As_Absent_Field()
+    {
+        // Historical row without provenance (deploy skew): the generation is
+        // unknown, so the payload property is omitted — never null and never
+        // a guessed number.
+        var d = ReservedDriver(out var t, out var r);
+        var won = DriverEventMapper.ForReserveResult(
+            d.DriverId, t, r, ReserveResult.Won(d));
+        Assert.NotNull(won);
+        Assert.Null(won!.Payload.MatchingRound);
+    }
+
+    [Fact]
+    public void Non_Reservation_Events_Never_Carry_A_Generation()
+    {
+        var d = ReservedDriver(out var t, out var r);
+        d.Release(t, r);
+        var released = DriverEventMapper.ForReleaseResult(
+            d.DriverId, t, r, DriverMutationResult.Applied(d));
+        Assert.NotNull(released);
+        Assert.Null(released!.Payload.MatchingRound);
+
+        d.GoOnline(d.Version);
+        var online = DriverEventMapper.ForOnlineResult(d.DriverId, DriverMutationResult.Unchanged(d));
+        Assert.NotNull(online);
+        Assert.Null(online!.Payload.MatchingRound);
+    }
+
+    private static Driver ReservedDriverWithRound(out Guid trip, out Guid reservation, out int round)
+    {
+        var d = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
+        d.GoOnline(d.Version);
+        trip = Guid.NewGuid();
+        reservation = Guid.NewGuid();
+        round = 3;
+        d.Reserve(trip, reservation, d.Version, round);
+        return d;
+    }
+
+    [Fact]
     public void Reserve_Conflict_And_NotFound_Emit_Nothing()
     {
         var id = Guid.NewGuid();

@@ -411,6 +411,13 @@ public sealed class MatchingReserveOrchestrator
         MatchingAttemptRow row,
         CancellationToken ct)
     {
+        if (round < 1)
+        {
+            // The round is the generation published as DriverReservedV1
+            // matchingRound; only provenance from a durable (tripId, round) row
+            // may cross this seam, never a defaulted or invented number.
+            throw new ArgumentException("round must be >= 1.", nameof(round));
+        }
         // F1 gate: once this logical attempt is durably UNKNOWN, a later bare
         // 404 (proxy/wrong-route/deleted-row) must NOT become conclusive
         // proof of no-effect. Only a fresh attempt (never ambiguous) may
@@ -480,7 +487,8 @@ public sealed class MatchingReserveOrchestrator
                 }
 
                 call = await _driver.ReserveAsync(
-                    new DriverReserveRequest(row.DriverId, tripId, row.ReservationId, observed.Version), ct);
+                    new DriverReserveRequest(
+                        row.DriverId, tripId, row.ReservationId, observed.Version, round), ct);
             }
             catch (Exception ex) when (IsTransport(ex, ct))
             {

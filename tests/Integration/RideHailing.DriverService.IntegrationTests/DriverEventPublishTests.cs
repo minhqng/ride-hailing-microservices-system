@@ -165,7 +165,7 @@ public class DriverEventPublishTests
         var trip = Guid.NewGuid();
         var reservation = Guid.NewGuid();
 
-        var won = await repo.TryReserveAsync(driver.DriverId, trip, reservation, start.Version);
+        var won = await repo.TryReserveAsync(driver.DriverId, trip, reservation, start.Version, 3);
         Assert.Equal(ReserveOutcome.Won, won.Outcome);
         var mapped = DriverEventMapper.ForReserveResult(
             driver.DriverId, trip, reservation, won);
@@ -185,13 +185,17 @@ public class DriverEventPublishTests
         Assert.Equal("RESERVED", Prop(envelope, "payload", "status"));
         Assert.Equal(trip, Guid.Parse(Prop(envelope, "payload", "tripId")));
         Assert.Equal(reservation, Guid.Parse(Prop(envelope, "payload", "reservationId")));
+        // W08 matchingRound lineage: the recorded generation rides the wire so
+        // Trip's current-generation gate can apply the fact (Doc 02 §21.3).
+        Assert.Equal(3, envelope.GetProperty("payload").GetProperty("matchingRound").GetInt32());
         Assert.Equal("driver", Prop(envelope, "aggregateType"));
         Assert.Equal(driver.DriverId.ToString("N"), Prop(envelope, "aggregateId"));
         Assert.False(string.IsNullOrWhiteSpace(Prop(envelope, "correlationId")));
         var firstId = Prop(envelope, "messageId");
 
-        // Same-effect replay republishes the SAME identity (idempotent producer).
-        var replayed = await repo.TryReserveAsync(driver.DriverId, trip, reservation, start.Version + 1);
+        // Same-effect replay republishes the SAME identity (idempotent producer),
+        // and the generation is equally stable (restart/replay can never flip it).
+        var replayed = await repo.TryReserveAsync(driver.DriverId, trip, reservation, start.Version + 1, 9);
         Assert.Equal(ReserveOutcome.Replayed, replayed.Outcome);
         var mappedReplay = DriverEventMapper.ForReserveResult(
             driver.DriverId, trip, reservation, replayed);
@@ -200,6 +204,7 @@ public class DriverEventPublishTests
             mappedReplay.Version, driver.DriverId));
         var second = await ConsumeOneAsync(queue);
         Assert.Equal(firstId, Prop(second.Envelope, "messageId"));
+        Assert.Equal(3, second.Envelope.GetProperty("payload").GetProperty("matchingRound").GetInt32());
     }
 
     [Fact]

@@ -131,8 +131,11 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 var reservationId = RequiredGuid(e.Payload, "reservationId");
                 if (e.MessageType == "DriverReservedV1")
                 {
-                    // B-W8 currently omits matchingRound. Keep evidence for review,
-                    // never guess a round from mutable Trip state.
+                    // Driver carries matchingRound when it holds durable
+                    // generation provenance for the reservation identity
+                    // (W08 lineage). Events may still omit it from historical
+                    // rows; park those for review — never guess a round from
+                    // mutable Trip state.
                     if (!e.Payload.TryGetProperty("matchingRound", out _))
                     {
                         receipt.Disposition = "NeedsReview";
