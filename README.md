@@ -41,7 +41,7 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 
 - .NET 10 (`net10.0`, SDK `10.0.100` via `global.json`), ASP.NET Core minimal APIs
 - PostgreSQL 18 (per-service logical DB + isolated role), Redis 8 GEO, RabbitMQ 4 quorum queues
-- BuildingBlocks: `RideHailing.Contracts` (shared contract foundation), `RideHailing.Messaging` (`MessageEnvelope<T>`, W3C trace, `ConfirmedPublisher`, `ManualAckConsumer`), `RideHailing.Observability` (OTel)
+- BuildingBlocks: `RideHailing.Contracts` (shared contract foundation), `RideHailing.Messaging` (`MessageEnvelope<T>`, W3C trace, `ConfirmedPublisher`, `ManualAckConsumer`, shared Outbox and `processed_messages` dedup primitives), `RideHailing.Observability` (OTel)
 - Docker Compose (DNS discovery: `postgres`, `redis`, `rabbitmq`, `identity`, `driver`, `trip`, `matching`, `payment`), xUnit Unit/Integration/System tests
 
 ## 3. Distributed guarantees (what makes this distributed)
@@ -114,7 +114,8 @@ curl http://localhost:8103/health/ready
 Messaging is disabled by default. When enabled, readiness includes migrations and
 broker consumers. Authenticated POST /trips publishes RideRequested; a 503
 MATCHING_PUBLICATION_PENDING means the ride was saved and the caller should retry
-the same Idempotency-Key/body. W8 still has a DB/publish gap until the W9 Outbox.
+the same Idempotency-Key/body. W8 still has a DB/publish gap until the Trip
+producer adopts the shared transactional Outbox.
 The production authenticated client flow depends on shared Identity/Gateway integration.
 
 ## 6. Common commands
@@ -153,9 +154,11 @@ Branches: `main`, `feature/<issue>-<name>`, `fix/<issue>-<name>`, `experiment/<i
 
 Implemented on main through W08: compose core/obs profiles, per-service DB roles, bounded readiness, OTel traces/metrics, CI smoke definitions, Payment durable simulator, RabbitMQ confirms/manual ACK, Driver reservation foundation, Trip lifecycle/assignment fencing, durable cancellation cleanup and Trip atomic consumer receipts.
 
+This W9 branch adds shared transactional Outbox and durable processed-message dedup primitives, low-cardinality metrics, and PostgreSQL/RabbitMQ integration harnesses. The Trip and Payment business producers/consumers still need to adopt these primitives in their scheduled work.
+
 Verified on main (CI run 38912031301, reproduced locally on identical tree): **851 tests passed, 0 failed, 1 env-gated skip**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo.
 
 Next: human peer review, Trip Saga persistence,
-Outbox relay, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
+production Outbox adoption and relay hosting, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
 and the end-to-end authenticated Trip/Saga flow. (`DriverReservedV1` matchingRound
 alignment has landed on this branch; see §3.)
