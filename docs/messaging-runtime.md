@@ -1,6 +1,6 @@
 # W8 RabbitMQ backbone
 
-`ConfirmedPublisher` maintains a connection/channel and serializes channel use. Publisher confirmation tracking is enabled and all sends are mandatory/persistent. Await publication before marking local acceptance; NACK, unroutable return, timeout and connection failure are visible exceptions. No automatic resend and no in-memory promise of durable buffering. A later explicit call can reconnect. The W9 Outbox must preserve the same messageId across uncertain publication.
+`ConfirmedPublisher` maintains a connection/channel and serializes channel use. Publisher confirmation tracking is enabled and all sends are mandatory/persistent. Await publication before marking local acceptance; NACK, unroutable return, timeout and connection failure are visible exceptions. No automatic resend and no in-memory promise of durable buffering. A later explicit call can reconnect. The Outbox preserves the same messageId across uncertain publication.
 
 `ManualAckConsumer.StartAsync` accepts an explicit queue, supported message types and a handler returning Task. Return from the handler **only after the local transaction commits**. The consumer validates V1 payloads/identities, extracts W3C context, bounds prefetch (1–256) and ACKs individually after durable handling. Separate publisher/consumer channels are used.
 
@@ -8,7 +8,7 @@ Transient failures must be expressed as `DeliveryFailureException(FailureKind.Tr
 
 ## Lifecycle integration
 
-Create ConnectionFactory with explicit configured host/port/credentials, an instance-specific ClientProvidedName and AutomaticRecoveryEnabled=false. Keep publisher and consumer objects alive for the host lifetime. Declare RideTopology before consumption. Register the `RideHailing.Messaging` ActivitySource with OTel (platform bootstrap does this).
+Create ConnectionFactory with explicit configured host/port/credentials, an instance-specific ClientProvidedName and AutomaticRecoveryEnabled=false. Keep publisher and consumer objects alive for the host lifetime. Declare RideTopology before consumption. Register the `RideHailing.Messaging` ActivitySource and meter with OTel (platform bootstrap does both).
 
 ```csharp
 await using var publisher = new ConfirmedPublisher(factory);
@@ -18,7 +18,21 @@ await using var consumer = await ManualAckConsumer.StartAsync(factory, publisher
 await consumer.Completion.WaitAsync(stoppingToken);
 ```
 
-Broker cancellation (including queue deletion), channel shutdown and failed retry/error transfer fault `Completion` and stop further handling. The host must observe Completion, dispose on failure/shutdown, and restart with bounded backoff. Failed initial connect fails startup. Closed consumer connections release unacknowledged work for redelivery. Handler cancellation may occur after commit; W9 processed-message dedup must make repeated durable effects harmless. This library does not claim exactly-once delivery or implement A/B business handlers.
+Broker cancellation (including queue deletion), channel shutdown and failed retry/error transfer fault `Completion` and stop further handling. The host must observe Completion, dispose on failure/shutdown, and restart with bounded backoff. Failed initial connect fails startup. Closed consumer connections release unacknowledged work for redelivery. Handler cancellation may occur after commit; processed-message dedup makes repeated durable effects harmless. This library does not claim exactly-once delivery or implement A/B business handlers.
+
+## W9 Outbox and processed-message dedup
+
+`RideHailing.Messaging` now ships the shared W9 durability primitives. They operate only on the connection/data source passed by the owning service; no API opens or shares another service's database transaction.
+
+`ProcessedMessageStore.EnsureSchemaAsync` creates `processed_messages` (`PRIMARY KEY (consumer_scope, message_id)`). `TryMarkAsync` inserts the marker inside the caller's existing transaction; `ExecuteOnceAsync` opens one local transaction, inserts the marker, applies the business effect and commits, or rolls back both. A duplicate delivery commits as a no-op and returns `Duplicate`; the caller ACKs after the handler returns. `consumer_scope` isolates unrelated consumers.
+
+`NpgsqlOutboxStore.EnsureSchemaAsync` creates `outbox_messages` (`status` = `PENDING | PUBLISHED | FAILED_VISIBLE`). `EnqueueAsync` inserts the semantic intent in the same local transaction as the business state. `ClaimBatchAsync` runs a short `SELECT ... FOR UPDATE SKIP LOCKED`/`UPDATE` transaction with `claimed_by`/`claimed_at` and a lease; the relay then calls `IOutboxPublisher.PublishAsync` (confirmed/mandatory/persistent) **outside** any database transaction and only afterwards calls `MarkPublishedAsync`. Publish failure increments `attempt_count` and sets `next_attempt_at`, or moves the row to visible terminal failure after `MaxAttempts`. Same `messageId` is retained across uncertain publication and relay restart.
+
+`OutboxRelay.RunOnceAsync` is the deterministic unit: claim, optional test seam `BeforePublish`, publish, optional test seam `AfterPublishBeforeMark`, mark. Production leaves both seams null; they exist for REL-05/REL-18 fault proofs. `OutboxRelayOptions` bounds batch size, claim lease, poll interval and attempts.
+
+Metrics use the `RideHailing.Messaging` meter (registered by `PlatformBootstrap`): `outbox.claim`, `outbox.publish.attempts`, `outbox.publish{outcome=accepted|failed}`, `outbox.mark{outcome}`, `outbox.confirm.duration`, `outbox.pending`, `outbox.oldest_pending.age`, `outbox.failed_visible`, and `dedup.processed{outcome=applied|duplicate}`. Only bounded outcome values are tag dimensions; message/correlation/aggregate identities are never metric dimensions.
+
+Tests: `OutboxMessageTests`, `OutboxRelayUnitTests`, `MessagingMetricsTests` (pure ordering/identity/metrics proofs); `W9DedupTests` (real PostgreSQL: marker/effect atomicity, rollback, concurrent duplicates, commit-before-ACK redelivery dedup) and `W9OutboxRelayTests` (real PostgreSQL + RabbitMQ: confirmed publish then mark, REL-05 lost mark republish with one effect, REL-18 restart reclaim, disjoint multi-relay claims).
 
 Reference: [RabbitMQ .NET client guide](https://www.rabbitmq.com/client-libraries/dotnet-api-guide). Confirms cover publisher-to-broker responsibility; consumer ACK is independent. Real tests: RabbitBackboneTests (confirm before any consumer; persisted commit before ACK; mandatory return; trace/ACK ordering; poison/retry exhaustion; connection loss and explicit reconnect).
 

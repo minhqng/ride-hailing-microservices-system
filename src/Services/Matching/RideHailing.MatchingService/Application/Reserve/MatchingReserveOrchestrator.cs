@@ -126,7 +126,8 @@ public sealed class MatchingReserveOrchestrator
             var driverId = candidates[ordinal];
             if (await _attempts.HasOtherUnresolvedAsync(tripId, round, ordinal, driverId, ct))
             {
-                return new RoundReserveResult(RoundOutcome.BlockedOnUnknown, null, null, null);
+                return new RoundReserveResult(
+                    RoundOutcome.BlockedOnUnknown, null, null, "UNRESOLVED_ATTEMPT");
             }
 
             var attempt = await ExecuteAttemptAsync(tripId, round, ordinal, driverId, ct);
