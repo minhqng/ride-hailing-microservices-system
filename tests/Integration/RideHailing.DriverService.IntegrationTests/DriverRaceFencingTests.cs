@@ -18,7 +18,7 @@ public class DriverRaceFencingTests
         _db = db;
     }
 
-    private DriverRepository Repo() => new(_db.ConnectionString);
+    private DriverRepository Repo() => _db.CreateRepository();
 
     // Fixtures fail loud at collection init (no skip path on this base):
     // reaching a test body proves the database is real.

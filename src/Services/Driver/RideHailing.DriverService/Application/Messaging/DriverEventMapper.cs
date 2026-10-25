@@ -1,11 +1,10 @@
-// B-W08-05: pure mapping from Driver mutation outcomes to the events that
-// must be published (unit-tested without a broker). Rules:
-//   - win/applied effect → the event for the new state;
-//   - idempotent replay/noop → the SAME event (deterministic identity makes
-//     it converge downstream; also heals a prior publish loss);
-//   - conflict/miss → nothing (no effect happened).
-// The publisher sends whatever this returns; best-effort delivery stays in
-// the publisher/endpoint layer, never in this mapping.
+// B-W08-05: pure mapping from Driver mutation outcomes to canonical events.
+// W9 split the two concerns:
+//   - For*Effect methods map only a COMMITTED state change; the repository
+//     records that event as an Outbox intent in the same transaction.
+//   - For*Result methods preserve the W8 compatibility contract (win/applied
+//     and idempotent replay/noop yield the same event for read-only consumers);
+//     they are not used to create a second W9 intent for a no-op.
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
 
@@ -19,18 +18,41 @@ public sealed record DriverEventToPublish(
 
 public static class DriverEventMapper
 {
+    // Committed-effect mappings used by the persistence layer when it records
+    // the durable Outbox intent in the SAME transaction as the Driver row.
+    // Only an actually applied effect is passed here: an idempotent replay or
+    // no-op has no new authoritative state, so W9 records no new event for it.
+    public static DriverEventToPublish ForReservedEffect(
+        Driver driver, Guid tripId, Guid reservationId) =>
+        Event(
+            driver.DriverId, DriverEventTypes.Reserved, DriverEventRoutes.Reserved,
+            "RESERVED", driver.Version, tripId, reservationId, driver.ReservationRound);
+
+    public static DriverEventToPublish ForReleasedEffect(
+        Driver driver, Guid tripId, Guid reservationId) =>
+        Event(
+            driver.DriverId, DriverEventTypes.ReservationReleased, DriverEventRoutes.ReservationReleased,
+            "AVAILABLE", driver.Version, tripId, reservationId);
+
+    public static DriverEventToPublish ForAvailableEffect(Driver driver) =>
+        Event(
+            driver.DriverId, DriverEventTypes.Available, DriverEventRoutes.Available,
+            "AVAILABLE", driver.Version, null, null);
+
+    public static DriverEventToPublish ForOfflineEffect(Driver driver) =>
+        Event(
+            driver.DriverId, DriverEventTypes.Offline, DriverEventRoutes.Offline,
+            "OFFLINE", driver.Version, null, null);
+
+    // W8 outcome mapping retained for compatibility tests and read-only
+    // consumers. W9 persistence uses the committed-effect methods above, so a
+    // Replayed/Unchanged outcome never creates a second logical Outbox row.
     public static DriverEventToPublish? ForReserveResult(
         Guid driverId, Guid tripId, Guid reservationId, ReserveResult result) =>
         result.Outcome switch
         {
-            ReserveOutcome.Won => Event(
-                driverId, DriverEventTypes.Reserved, DriverEventRoutes.Reserved,
-                "RESERVED", result.Driver!.Version, tripId, reservationId,
-                result.Driver!.ReservationRound),
-            ReserveOutcome.Replayed => Event(
-                driverId, DriverEventTypes.Reserved, DriverEventRoutes.Reserved,
-                "RESERVED", result.Driver!.Version, tripId, reservationId,
-                result.Driver!.ReservationRound),
+            ReserveOutcome.Won => ForReservedEffect(result.Driver!, tripId, reservationId),
+            ReserveOutcome.Replayed => ForReservedEffect(result.Driver!, tripId, reservationId),
             _ => null,
         };
 
@@ -38,31 +60,22 @@ public static class DriverEventMapper
         Guid driverId, Guid tripId, Guid reservationId, DriverMutationResult result) =>
         result.Outcome switch
         {
-            DriverMutationOutcome.Applied => Event(
-                driverId,
-                DriverEventTypes.ReservationReleased, DriverEventRoutes.ReservationReleased,
-                "AVAILABLE", result.Driver!.Version, tripId, reservationId),
-            DriverMutationOutcome.Unchanged => Event(
-                driverId, DriverEventTypes.Available, DriverEventRoutes.Available,
-                "AVAILABLE", result.Driver!.Version, null, null),
+            DriverMutationOutcome.Applied => ForReleasedEffect(result.Driver!, tripId, reservationId),
+            DriverMutationOutcome.Unchanged => ForAvailableEffect(result.Driver!),
             _ => null,
         };
 
     public static DriverEventToPublish? ForOnlineResult(Guid driverId, DriverMutationResult result) =>
         result.Outcome switch
         {
-            DriverMutationOutcome.Applied or DriverMutationOutcome.Unchanged => Event(
-                driverId, DriverEventTypes.Available, DriverEventRoutes.Available,
-                "AVAILABLE", result.Driver!.Version, null, null),
+            DriverMutationOutcome.Applied or DriverMutationOutcome.Unchanged => ForAvailableEffect(result.Driver!),
             _ => null,
         };
 
     public static DriverEventToPublish? ForOfflineResult(Guid driverId, DriverMutationResult result) =>
         result.Outcome switch
         {
-            DriverMutationOutcome.Applied or DriverMutationOutcome.Unchanged => Event(
-                driverId, DriverEventTypes.Offline, DriverEventRoutes.Offline,
-                "OFFLINE", result.Driver!.Version, null, null),
+            DriverMutationOutcome.Applied or DriverMutationOutcome.Unchanged => ForOfflineEffect(result.Driver!),
             _ => null,
         };
 

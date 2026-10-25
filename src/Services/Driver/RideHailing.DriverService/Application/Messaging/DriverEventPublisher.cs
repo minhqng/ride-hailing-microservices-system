@@ -1,11 +1,11 @@
-// B-W08-05: Driver authoritative event publisher (Outbox-CAPABLE, not
-// Outbox-atomic — the dual-write gap is explicit and closes in W9).
-// Best-effort by contract: publishes AFTER the DB commit; failure never
-// fails the already-committed domain operation (failing a successful reserve
-// over a telemetry-shaped event would fabricate failure). Every publish uses
-// publisher confirms (mandatory route), the shared envelope + trace headers,
-// and a deterministic per-effect messageId so retries/replays/recovery
-// republish the SAME identity. Returns false (logged) instead of throwing.
+// B-W08-05: best-effort publisher for the DriverLocationAcceptedV1 sample
+// fact only. P0 explicitly allows this non-relational path without Outbox
+// (Doc 02 §12); the projection Lua re-validates ordering and duplicates
+// converge. B-W09 removed the authoritative state publish path: Driver
+// available/offline/reserved/released events are now recorded in the Driver
+// Outbox in the same transaction as the row and published by C's shared relay.
+// Returns false (logged) instead of throwing; the caller never treats a
+// location publish as authoritative business state.
 // Long-lived serialized channel (same shape as the platform publisher
 // contract); interim B-owned glue converging onto C's publisher base.
 using System.Diagnostics;
@@ -33,28 +33,6 @@ public sealed class DriverEventPublisher : IAsyncDisposable
     {
         _options = options.Value;
         _logger = logger;
-    }
-
-    public async Task<bool> PublishStateAsync(
-        string messageType,
-        string routingKey,
-        DriverStateEventPayload payload,
-        int version,
-        Guid driverId,
-        string? correlationId = null,
-        CancellationToken ct = default)
-    {
-        var messageId = DriverEventMessageIds.ForDriverEffect(
-            driverId, payload.ReservationId, version, payload.Status);
-        var envelope = MessageEnvelope<DriverStateEventPayload>.Create(
-            messageType,
-            correlationId ?? Guid.NewGuid().ToString("N"),
-            payload,
-            aggregateType: "driver",
-            aggregateId: driverId.ToString("N"),
-            aggregateVersion: version,
-            messageId: messageId);
-        return await PublishAsync(DriverEventRoutes.EventsExchange, routingKey, envelope, ct);
     }
 
     public async Task<bool> PublishLocationAsync(
@@ -108,9 +86,10 @@ public sealed class DriverEventPublisher : IAsyncDisposable
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            // Best-effort: the domain commit already happened; losing the
-            // event is the documented W8 dual-write residual (W9 Outbox).
-            // Caller cancellation still propagates (no conclusive claim).
+            // Best-effort location fact only: P0 documents this path as
+            // non-authoritative, so a lost sample is a projection freshness
+            // issue, never a lost Driver state transition. Caller cancellation
+            // still propagates (no conclusive claim).
             _logger.LogWarning(
                 ex, "Driver event publish failed (type={Type}, route={Route}); domain effect stands.",
                 envelope.MessageType, routingKey);

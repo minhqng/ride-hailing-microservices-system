@@ -7,7 +7,9 @@
 // explicit env is verified now, otherwise a disposable container starts;
 // any failure throws during collection init, never skips.
 using Npgsql;
+using RideHailing.DriverService.Infrastructure.Outbox;
 using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.Messaging.Outbox;
 using Testcontainers.PostgreSql;
 
 namespace RideHailing.MatchingService.IntegrationTests;
@@ -23,6 +25,17 @@ public sealed class DriverTestDatabase : IAsyncLifetime
 
     public string ConnectionString { get; private set; } = "";
 
+    public NpgsqlDataSource DataSource { get; private set; } = null!;
+
+    public NpgsqlOutboxStore OutboxStore { get; private set; } = null!;
+
+    /// <summary>
+    /// Production-shaped Driver repository over the shared pool. W9 requires a
+    /// data source + shared Outbox store; there is no connection-string-only
+    /// construction path anymore.
+    /// </summary>
+    public DriverRepository CreateRepository() => new(DataSource, OutboxStore);
+
     public async Task InitializeAsync()
     {
         var env = Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES");
@@ -32,6 +45,7 @@ public sealed class DriverTestDatabase : IAsyncLifetime
             await probe.OpenAsync();
             ConnectionString = env;
             await ApplyAsync(env);
+            CreateDataSource();
             return;
         }
 
@@ -44,10 +58,22 @@ public sealed class DriverTestDatabase : IAsyncLifetime
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
         await ApplyAsync(ConnectionString);
+        CreateDataSource();
+    }
+
+    private void CreateDataSource()
+    {
+        DataSource = NpgsqlDataSource.Create(ConnectionString);
+        OutboxStore = new NpgsqlOutboxStore(DataSource);
     }
 
     public async Task DisposeAsync()
     {
+        if (DataSource is not null)
+        {
+            await DataSource.DisposeAsync();
+        }
+
         if (_container is not null)
         {
             await _container.DisposeAsync();
@@ -60,6 +86,9 @@ public sealed class DriverTestDatabase : IAsyncLifetime
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(DriverSqlBaseline.Load(), conn);
         await cmd.ExecuteNonQueryAsync();
+
+        // W9: apply C's canonical shared Outbox schema to driver_db.
+        await DriverOutboxSchema.EnsureAsync(connectionString);
     }
 
     internal static string FixContainerHost(string connectionString)

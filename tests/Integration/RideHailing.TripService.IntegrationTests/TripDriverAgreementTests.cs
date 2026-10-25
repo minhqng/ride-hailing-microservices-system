@@ -14,9 +14,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using DriverDomain = DriverSvc::RideHailing.DriverService.Domain.Drivers;
+using DriverOutboxSchema = DriverSvc::RideHailing.DriverService.Infrastructure.Outbox.DriverOutboxSchema;
 using DriverPersistence = DriverSvc::RideHailing.DriverService.Infrastructure.Persistence;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Application.Trips.Lifecycle;
+using RideHailing.Messaging.Outbox;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -29,6 +31,8 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     private readonly TripPostgresFixture _tripFixture;
     private PostgreSqlContainer? _driverContainer;
     private string _driverConnectionString = "";
+    private NpgsqlDataSource _driverDataSource = null!;
+    private NpgsqlOutboxStore _driverOutboxStore = null!;
 
     public TripDriverAgreementTests(TripPostgresFixture tripFixture)
     {
@@ -46,15 +50,30 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
         await _driverContainer.StartAsync();
         _driverConnectionString = _driverContainer.GetConnectionString();
         await ApplyDriverMigrationsAsync(_driverConnectionString);
+        _driverDataSource = NpgsqlDataSource.Create(_driverConnectionString);
+        _driverOutboxStore = new NpgsqlOutboxStore(_driverDataSource);
     }
 
     public async Task DisposeAsync()
     {
+        if (_driverDataSource is not null)
+        {
+            await _driverDataSource.DisposeAsync();
+        }
+
         if (_driverContainer is not null)
         {
             await _driverContainer.DisposeAsync();
         }
     }
+
+    /// <summary>
+    /// W9 production-shaped Driver repository: Driver and its Outbox intent
+    /// share one transaction, so the cross-service agreement fixture also
+    /// exercises the real atomic write path.
+    /// </summary>
+    private DriverPersistence.DriverRepository CreateDriverRepository() =>
+        new(_driverDataSource, _driverOutboxStore);
 
     private static async Task ApplyDriverMigrationsAsync(string connectionString)
     {
@@ -75,6 +94,9 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
             await using var cmd = new NpgsqlCommand(await File.ReadAllTextAsync(file), conn);
             await cmd.ExecuteNonQueryAsync();
         }
+
+        // C-owned shared Outbox schema, applied from its canonical embedded DDL.
+        await DriverOutboxSchema.EnsureAsync(connectionString);
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
@@ -119,7 +141,7 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     [Fact]
     public async Task Winner_Reference_Agrees_Across_Services()
     {
-        var driverRepo = new DriverPersistence.DriverRepository(_driverConnectionString);
+        var driverRepo = CreateDriverRepository();
         var driverId = await SeedAvailableDriverAsync(driverRepo);
         var start = await driverRepo.LoadAsync(driverId);
         Assert.NotNull(start);
@@ -159,7 +181,7 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     {
         // Controlled component choreography, not a broker/production worker:
         // both real databases and Driver's domain guard are the oracles.
-        var driverRepo = new DriverPersistence.DriverRepository(_driverConnectionString);
+        var driverRepo = CreateDriverRepository();
         var driverId = await SeedAvailableDriverAsync(driverRepo);
         var rider = Guid.NewGuid();
         var tripId = await CreateMatchingTripAsync(rider, "w7-agree-" + Guid.NewGuid().ToString("N"));
@@ -190,10 +212,13 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
         var held = (await driverRepo.LoadAsync(driverId))!;
         Assert.Equal(intent.TripId, held.ReservedTripId);
         Assert.Equal(intent.ReservationId, held.ReservationId);
-        // Fault/restart window: durable intent was recovered through a new
-        // context while Driver was still protected by the old reservation.
-        held.Release(intent.TripId, intent.ReservationId!.Value);
-        await driverRepo.SaveAsync(held);
+        // Fault/restart window: the durable cleanup intent is recovered through
+        // a new context while Driver is still protected by the old reservation.
+        // W9: use the real guarded release so the Driver row and its Outbox
+        // intent commit atomically (never a test-only unrecorded state change).
+        Assert.Equal(DriverPersistence.DriverMutationOutcome.Applied,
+            (await driverRepo.TryReleaseAsync(
+                driverId, intent.TripId, intent.ReservationId!.Value)).Outcome);
         await using (var db = new TripDbContext(TripOptions()))
             Assert.True((await new ConfirmTripCleanupHandler(db, new FixedTimeProvider(ActionAt))
                 .HandleAsync(tripId, intent.Key, CleanupAuthorityResult.Released)).IsSuccess);
@@ -217,7 +242,7 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     [Fact]
     public async Task Loser_Reference_Cannot_Overwrite_Agreement()
     {
-        var driverRepo = new DriverPersistence.DriverRepository(_driverConnectionString);
+        var driverRepo = CreateDriverRepository();
         var driverId = await SeedAvailableDriverAsync(driverRepo);
         var start = await driverRepo.LoadAsync(driverId);
         Assert.NotNull(start);
@@ -259,7 +284,7 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     [Fact]
     public async Task Replay_Keeps_Agreement_Without_Second_Effect()
     {
-        var driverRepo = new DriverPersistence.DriverRepository(_driverConnectionString);
+        var driverRepo = CreateDriverRepository();
         var driverId = await SeedAvailableDriverAsync(driverRepo);
         var start = await driverRepo.LoadAsync(driverId);
         Assert.NotNull(start);

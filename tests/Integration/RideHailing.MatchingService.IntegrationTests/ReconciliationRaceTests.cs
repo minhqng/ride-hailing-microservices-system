@@ -35,7 +35,7 @@ public sealed class ReconciliationRaceTests
 
     private async Task<Guid> SeedAvailableDriverAsync()
     {
-        var repo = new DriverRepository(_drivers.ConnectionString);
+        var repo = _drivers.CreateRepository();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
         driver.GoOnline(driver.Version);
         Assert.True(await repo.TryInsertAsync(driver));
@@ -105,7 +105,7 @@ public sealed class ReconciliationRaceTests
         var trip = NewTrip();
         var d1 = await SeedAvailableDriverAsync();
         var d2 = await SeedAvailableDriverAsync();
-        var driverRepo = new DriverRepository(_drivers.ConnectionString);
+        var driverRepo = _drivers.CreateRepository();
 
         // Capture the fencing version observed for R1 (real Driver version).
         int observedV = 0;
@@ -214,7 +214,7 @@ public sealed class ReconciliationRaceTests
         var trip = NewTrip();
         var d1 = await SeedAvailableDriverAsync();
         var d2 = await SeedAvailableDriverAsync();
-        var driverRepo = new DriverRepository(_drivers.ConnectionString);
+        var driverRepo = _drivers.CreateRepository();
 
         int v0 = 0;
         var stub = new StubDriverClient

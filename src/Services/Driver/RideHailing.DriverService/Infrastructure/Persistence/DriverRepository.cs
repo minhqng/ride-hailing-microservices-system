@@ -1,22 +1,27 @@
 // B-W03-07: Npgsql raw repository (chốt ③). Plain upsert/load; no OCC yet (W6).
+// B-W09-02: every authoritative Try* mutation records its required Driver
+// event through C's shared Outbox store on the SAME connection/transaction.
 using Npgsql;
 using RideHailing.DriverService.Domain.Drivers;
+using RideHailing.DriverService.Infrastructure.Outbox;
+using RideHailing.Messaging.Outbox;
 
 namespace RideHailing.DriverService.Infrastructure.Persistence;
 
 public sealed class DriverRepository
 {
-    private readonly string _connectionString;
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly DriverOutboxWriter _outbox;
 
-    public DriverRepository(string connectionString)
+    public DriverRepository(NpgsqlDataSource dataSource, NpgsqlOutboxStore outboxStore)
     {
-        _connectionString = connectionString;
+        _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
+        _outbox = new DriverOutboxWriter(outboxStore);
     }
 
     public async Task EnsureTablesAsync(CancellationToken ct = default)
     {
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand(DriverSqlBaseline.Load(), conn);
         await cmd.ExecuteNonQueryAsync(ct);
     }
@@ -42,8 +47,7 @@ public sealed class DriverRepository
                 updated_at = EXCLUDED.updated_at,
                 reserved_round = EXCLUDED.reserved_round;
             """;
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand(Sql, conn);
         cmd.Parameters.AddWithValue("id", driver.DriverId);
         cmd.Parameters.AddWithValue("user", driver.UserId);
@@ -73,8 +77,7 @@ public sealed class DriverRepository
             """;
         try
         {
-            await using var conn = new NpgsqlConnection(_connectionString);
-            await conn.OpenAsync(ct);
+            await using var conn = await _dataSource.OpenConnectionAsync(ct);
             await using var cmd = new NpgsqlCommand(Sql, conn);
             cmd.Parameters.AddWithValue("id", driver.DriverId);
             cmd.Parameters.AddWithValue("user", driver.UserId);
@@ -101,8 +104,7 @@ public sealed class DriverRepository
             SELECT driver_id, user_id, status, version, reserved_trip_id, reservation_id, active_trip_id, vehicle_id, created_at, updated_at, reserved_round
             FROM drivers WHERE driver_id = @id;
             """;
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand(Sql, conn);
         cmd.Parameters.AddWithValue("id", driverId);
         await using var reader = await cmd.ExecuteReaderAsync(ct);
@@ -147,8 +149,7 @@ public sealed class DriverRepository
             throw new ArgumentException("matchingRound must be >= 1 when supplied.");
         }
 
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         try
         {
@@ -193,30 +194,15 @@ public sealed class DriverRepository
                 return ReserveResult.Conflict(ex.Code, ex.Message);
             }
 
-            const string Update = """
-                UPDATE drivers SET
-                    status = @status,
-                    version = @version,
-                    reserved_trip_id = @reservedTrip,
-                    reservation_id = @reservation,
-                    active_trip_id = @activeTrip,
-                    vehicle_id = @vehicle,
-                    updated_at = @updated,
-                    reserved_round = @round
-                WHERE driver_id = @id;
-                """;
-            await using (var upd = new NpgsqlCommand(Update, conn, tx))
+            if (!replayed)
             {
-                upd.Parameters.AddWithValue("id", current.DriverId);
-                upd.Parameters.AddWithValue("status", ToDb(current.Status));
-                upd.Parameters.AddWithValue("version", current.Version);
-                upd.Parameters.AddWithValue("reservedTrip", (object?)current.ReservedTripId ?? DBNull.Value);
-                upd.Parameters.AddWithValue("reservation", (object?)current.ReservationId ?? DBNull.Value);
-                upd.Parameters.AddWithValue("activeTrip", (object?)current.ActiveTripId ?? DBNull.Value);
-                upd.Parameters.AddWithValue("vehicle", (object?)current.VehicleId ?? DBNull.Value);
-                upd.Parameters.AddWithValue("updated", current.UpdatedAt.UtcDateTime);
-                upd.Parameters.AddWithValue("round", (object?)current.ReservationRound ?? DBNull.Value);
-                await upd.ExecuteNonQueryAsync(ct);
+                await StoreAsync(conn, tx, current, ct);
+
+                // Durable intent travels with the winning reserve in THIS
+                // transaction. A failure here rolls back the Driver row too,
+                // so there is no committed reservation without its event.
+                await _outbox.EnqueueReservedAsync(
+                    conn, tx, current, tripId, reservationId, ct);
             }
 
             await tx.CommitAsync(ct);
@@ -269,8 +255,7 @@ public sealed class DriverRepository
             throw new ArgumentException("driverId/tripId/reservationId must not be empty.");
         }
 
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
         if (current is null)
@@ -293,7 +278,12 @@ public sealed class DriverRepository
             return DriverMutationResult.Conflict(ex.Code, ex.Message);
         }
 
-        await StoreAsync(conn, tx, current, ct);
+        if (effected)
+        {
+            await StoreAsync(conn, tx, current, ct);
+            await _outbox.EnqueueReleasedAsync(conn, tx, current, tripId, reservationId, ct);
+        }
+
         await tx.CommitAsync(ct);
         return effected
             ? DriverMutationResult.Applied(current)
@@ -319,8 +309,7 @@ public sealed class DriverRepository
             throw new ArgumentException("expectedVersion must be >= 1.");
         }
 
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
         if (current is null)
@@ -340,7 +329,12 @@ public sealed class DriverRepository
             return DriverMutationResult.Conflict(ex.Code, ex.Message);
         }
 
-        await StoreAsync(conn, tx, current, ct);
+        if (!already)
+        {
+            await StoreAsync(conn, tx, current, ct);
+            await _outbox.EnqueueOfflineAsync(conn, tx, current, ct);
+        }
+
         await tx.CommitAsync(ct);
         return already
             ? DriverMutationResult.Unchanged(current)
@@ -366,8 +360,7 @@ public sealed class DriverRepository
             throw new ArgumentException("expectedVersion must be >= 1.");
         }
 
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
         var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
         if (current is null)
@@ -387,7 +380,12 @@ public sealed class DriverRepository
             return DriverMutationResult.Conflict(ex.Code, ex.Message);
         }
 
-        await StoreAsync(conn, tx, current, ct);
+        if (!already)
+        {
+            await StoreAsync(conn, tx, current, ct);
+            await _outbox.EnqueueAvailableAsync(conn, tx, current, ct);
+        }
+
         await tx.CommitAsync(ct);
         return already
             ? DriverMutationResult.Unchanged(current)
@@ -408,8 +406,7 @@ public sealed class DriverRepository
             throw new ArgumentException("driverId/reservationId must not be empty.");
         }
 
-        await using var conn = new NpgsqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
         const string Sql = """
             SELECT status, version, reserved_trip_id, reservation_id
             FROM drivers WHERE driver_id = @id;
