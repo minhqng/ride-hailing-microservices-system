@@ -66,6 +66,9 @@ public sealed class OutboxRelay(
             if (options.AfterPublishBeforeMark is not null)
                 await options.AfterPublishBeforeMark(message, token);
 
+            await RideHailing.Messaging.FaultPoints.Current.HitAsync(
+                RideHailing.Messaging.FaultPointNames.OutboxAfterPublishBeforeMark, token);
+
             var marked = await store.MarkPublishedAsync(message.MessageId, clock.GetUtcNow(), token);
             MessagingMetrics.RecordMark(marked);
         }

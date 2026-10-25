@@ -4,8 +4,10 @@ namespace RideHailing.PaymentService.Infrastructure;
 
 public sealed class ProviderResponseLostException : TimeoutException;
 
-public sealed class PaymentSimulator(ProviderLedger? provider = null)
+public sealed class PaymentSimulator(ProviderLedger? provider = null, RideHailing.Messaging.IFaultPoint? faultPoint = null)
 {
+    private readonly RideHailing.Messaging.IFaultPoint faultPoint = faultPoint ?? RideHailing.Messaging.FaultPoints.Current;
+
     public async Task<PaymentOperation> ExecuteAsync(
         PaymentOperation operation,
         PaymentSimulatorMode mode,
@@ -25,6 +27,7 @@ public sealed class PaymentSimulator(ProviderLedger? provider = null)
         if (provider is not null && mode is PaymentSimulatorMode.Success or PaymentSimulatorMode.SlowSuccess or PaymentSimulatorMode.TimeoutAfterEffect)
         {
             var effectId = await provider.CommitEffectAsync(operation, cancellationToken);
+            await faultPoint.HitAsync(RideHailing.Messaging.FaultPointNames.PaymentAfterProviderEffectBeforeResponse, cancellationToken);
             if (mode != PaymentSimulatorMode.TimeoutAfterEffect)
                 return operation.Reconcile(effectId, DateTimeOffset.UtcNow);
         }
