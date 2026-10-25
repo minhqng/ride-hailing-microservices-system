@@ -1,4 +1,4 @@
-// B-W08-03/04: Driver state/location events → derived Redis projection.
+// B-W08-03/04: Driver state/location events -> derived Redis projection.
 // The W4 atomic function owns all guard semantics (version/freshness/GEO);
 // this handler only maps broker events to updater intents. Degraded updater
 // results become bounded redelivery (transient/degraded), never silent
@@ -42,13 +42,14 @@ public sealed class DriverProjectionHandler
             throw new ArgumentException("Driver message type does not match routing key.");
         if (expectedStatus is not null && ReadState(envelope.Payload).DerivedStatus != expectedStatus)
             throw new ArgumentException("Driver state does not match event type.");
+        var receipt = ProjectionReceipt.ForEnvelope(envelope);
         ProjectionResult result = delivery.RoutingKey switch
         {
             "driver.available.v1" or "driver.offline.v1" or "driver.reserved.v1"
                 or "driver.reservation-released.v1" or "driver.trip-started.v1" or "driver.trip-completed.v1"
-                => await _updater.ApplyStateAsync(ReadState(envelope.Payload)),
+                => await _updater.ApplyStateAsync(ReadState(envelope.Payload), receipt),
             "driver.location-accepted.v1"
-                => await _updater.ApplyLocationAsync(ReadLocation(envelope.Payload)),
+                => await _updater.ApplyLocationAsync(ReadLocation(envelope.Payload), receipt),
             _ => throw new ArgumentException($"Unsupported routing key '{delivery.RoutingKey}'."),
         };
 

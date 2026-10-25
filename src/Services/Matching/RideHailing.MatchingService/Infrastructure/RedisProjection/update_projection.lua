@@ -68,6 +68,8 @@ end
 redis.register_function('driver_projection_update', function(keys, args)
   local hash = keys[1]
   local geo = keys[2]
+  local receipt = keys[3]
+  local fingerprint = args[9]
   local member = args[1]
   -- state section
   local status = args[2]
@@ -81,6 +83,18 @@ redis.register_function('driver_projection_update', function(keys, args)
 
   if (not keytype_ok(hash, {'hash'})) or (not keytype_ok(geo, {'zset'})) then
     return {'keytype-error', 'keytype-error', 'keytype-error'}
+  end
+
+  -- Verify the receipt before any projection write. Redis serializes this
+  -- check, projection/GEO effects and receipt storage in the same FCALL.
+  if fingerprint and fingerprint ~= '' then
+    if not keytype_ok(receipt, {'string'}) then
+      return {'keytype-error', 'keytype-error', 'keytype-error'}
+    end
+    local previous = redis.call('GET', receipt)
+    if previous and previous ~= fingerprint then
+      return {'content-conflict', 'content-conflict', 'removed'}
+    end
   end
 
   local state = 'skipped'
@@ -170,5 +184,8 @@ redis.register_function('driver_projection_update', function(keys, args)
     redis.call('ZREM', geo, member)
   end
 
+  if fingerprint and fingerprint ~= '' then
+    redis.call('SET', receipt, fingerprint)
+  end
   return {state, loc, geoRes}
 end)

@@ -39,7 +39,7 @@ public sealed class RedisProjectionUpdater
         await db.ExecuteAsync("FUNCTION", "LOAD", "REPLACE", lua);
     }
 
-    public Task<ProjectionResult> ApplyStateAsync(DriverStateProjectionUpdate update)
+    public Task<ProjectionResult> ApplyStateAsync(DriverStateProjectionUpdate update, ProjectionReceipt? receipt = null)
     {
         if (string.IsNullOrWhiteSpace(update.DerivedStatus))
         {
@@ -48,10 +48,10 @@ public sealed class RedisProjectionUpdater
 
         return CallAsync(update.DriverId,
             update.DerivedStatus, update.AggregateVersion.ToString(),
-            "", "", "", "", "");
+            "", "", "", "", "", receipt);
     }
 
-    public Task<ProjectionResult> ApplyLocationAsync(LocationProjectionUpdate update)
+    public Task<ProjectionResult> ApplyLocationAsync(LocationProjectionUpdate update, ProjectionReceipt? receipt = null)
     {
         if (string.IsNullOrWhiteSpace(update.SessionId))
         {
@@ -69,17 +69,17 @@ public sealed class RedisProjectionUpdater
             update.Latitude.ToString("R", CultureInfo.InvariantCulture),
             update.SessionId,
             update.SequenceNo.ToString(CultureInfo.InvariantCulture),
-            update.CapturedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture));
+            update.CapturedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture), receipt);
     }
 
     private async Task<ProjectionResult> CallAsync(
         Guid driverId,
         string status, string version,
-        string lon, string lat, string session, string seq, string capturedAt)
+        string lon, string lat, string session, string seq, string capturedAt, ProjectionReceipt? receipt)
     {
         try
         {
-            return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt)
+            return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt, receipt)
                 .ConfigureAwait(false);
         }
         catch (RedisServerException ex) when (IsFunctionMissing(ex))
@@ -98,7 +98,7 @@ public sealed class RedisProjectionUpdater
 
             try
             {
-                return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt)
+                return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt, receipt)
                     .ConfigureAwait(false);
             }
             catch (Exception retry) when (IsDegradation(retry))
@@ -115,14 +115,15 @@ public sealed class RedisProjectionUpdater
     private async Task<ProjectionResult> InvokeAsync(
         Guid driverId,
         string status, string version,
-        string lon, string lat, string session, string seq, string capturedAt)
+        string lon, string lat, string session, string seq, string capturedAt, ProjectionReceipt? receipt)
     {
         var db = _mux.GetDatabase();
-        var raw = await db.ExecuteAsync("FCALL", _functionName, 2,
+        var raw = await db.ExecuteAsync("FCALL", _functionName, 3,
             RedisProjectionKeys.ProjectionKey(driverId),
             RedisProjectionKeys.GeoKey,
+            receipt?.Key ?? "driver:projection:receipt:unused",
             RedisProjectionKeys.Member(driverId),
-            status, version, lon, lat, session, seq, capturedAt);
+            status, version, lon, lat, session, seq, capturedAt, receipt?.Fingerprint ?? "");
         // Explicit protocol validation: a foreign library registered under our
         // function name may return a non-array or a short array. That is a
         // clean Degraded (no proven effect), detected here rather than via
@@ -137,6 +138,11 @@ public sealed class RedisProjectionUpdater
         if (res.Length != 3)
         {
             return ProjectionResult.DegradedResult();
+        }
+
+        if (string.Equals((string?)res[0], "content-conflict", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("MESSAGE_ID_CONTENT_CONFLICT");
         }
 
         return new ProjectionResult(
