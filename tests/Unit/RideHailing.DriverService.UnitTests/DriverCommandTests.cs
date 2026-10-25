@@ -18,6 +18,19 @@ public sealed class DriverCommandTests
         Assert.Throws<ArgumentException>(() => DriverCommand.Parse(Envelope(json)));
 
     [Fact]
+    public void ReleaseRequiresPositiveIntegerRound()
+    {
+        var json = $$"""{"driverId":"{{Guid.NewGuid()}}","tripId":"{{Guid.NewGuid()}}","reservationId":"{{Guid.NewGuid()}}"}""";
+        var release = Envelope(json) with { MessageType = DriverCommand.Release };
+        foreach (var value in new[] { "", ",\"matchingRound\":null", ",\"matchingRound\":0",
+            ",\"matchingRound\":-1", ",\"matchingRound\":1.5", ",\"matchingRound\":\"1\"",
+            ",\"matchingRound\":2147483648" })
+            Assert.Throws<ArgumentException>(() => DriverCommand.Parse(release with
+            { Payload = JsonSerializer.Deserialize<JsonElement>(json[..^1] + value + "}") })
+                .ValidateForExecution(DriverCommand.Release));
+    }
+
+    [Fact]
     public void FingerprintIsOrderIndependentAndDetectsSemanticChanges()
     {
         var driver = Guid.NewGuid(); var trip = Guid.NewGuid(); var reservation = Guid.NewGuid();

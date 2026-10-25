@@ -26,7 +26,7 @@ public sealed class RabbitMqDatabase : IAsyncLifetime
 
         _container = new RabbitMqBuilder("rabbitmq:4.3.6-management")
             .WithImage("rabbitmq:4.3.6-management")
-            .WithAutoRemove(true)
+            .WithAutoRemove(false)
             .Build();
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
@@ -38,6 +38,14 @@ public sealed class RabbitMqDatabase : IAsyncLifetime
         {
             await _container.DisposeAsync();
         }
+    }
+
+    public async Task RestartOwnedAsync()
+    {
+        if (_container is null) throw new InvalidOperationException("Restart proof requires a disposable fixture-owned broker.");
+        await _container.StopAsync();
+        await _container.StartAsync();
+        ConnectionString = FixContainerHost(_container.GetConnectionString());
     }
 
     internal static string FixContainerHost(string connectionString)

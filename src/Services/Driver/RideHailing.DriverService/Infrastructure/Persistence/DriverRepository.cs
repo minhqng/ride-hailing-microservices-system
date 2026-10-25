@@ -280,7 +280,8 @@ public sealed partial class DriverRepository
     private async Task<DriverMutationResult> ReleaseInTransactionAsync(
         NpgsqlConnection conn, NpgsqlTransaction tx, Guid driverId, Guid tripId,
         Guid reservationId, CancellationToken ct,
-        RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>? command = null)
+        RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>? command = null,
+        int? matchingRound = null)
     {
         var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
         if (current is null)
@@ -291,6 +292,22 @@ public sealed partial class DriverRepository
         var effected = current.Status == DriverStatus.Reserved
             && current.ReservedTripId == tripId
             && current.ReservationId == reservationId;
+
+        // Broker compensation needs current, durable four-field provenance.
+        // Availability alone cannot confirm an exact cleanup obligation. Exact
+        // command redelivery has already returned its committed receipt above.
+        if (command is not null)
+        {
+            if (current.Status != DriverStatus.Reserved)
+                return DriverMutationResult.Conflict("RELEASE_PROVENANCE_REQUIRED",
+                    "No current reservation proves this compensation; reconcile the authoritative event.");
+            if (effected && current.ReservationRound is null)
+                return DriverMutationResult.Conflict("RESERVATION_ROUND_REQUIRED",
+                    "Legacy reservation has no matching generation provenance.");
+            if (effected && current.ReservationRound != matchingRound)
+                return DriverMutationResult.Conflict("RESERVATION_ROUND_MISMATCH",
+                    "Release generation does not match the current reservation.");
+        }
 
         try
         {

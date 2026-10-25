@@ -3,7 +3,7 @@
 //   1. DRIVER_TEST_POSTGRES explicitly set => verify now; any failure throws loud.
 //   2. Otherwise disposable Testcontainers PostgreSQL (postgres:18.6, same seed
 //      as compose); any start/apply failure throws loud ( Ryuk disabled; cleanup
-//      is explicit via AutoRemove + DisposeAsync).
+//      is explicit via DisposeAsync; the owned container also supports restart proofs).
 // Applies ALL migration scripts in filename order (001, 002, ...).
 using Npgsql;
 using RideHailing.DriverService.Infrastructure.Outbox;
@@ -55,7 +55,7 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             .WithDatabase("driver_db")
             .WithUsername("driver_app")
             .WithPassword("driver_dev_pw")
-            .WithAutoRemove(true)
+            .WithAutoRemove(false)
             .Build();
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
@@ -92,6 +92,16 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
     }
 
     public Task ReapplyScriptsAsync() => ApplyScriptsAsync(ConnectionString);
+
+    public async Task RestartOwnedAsync()
+    {
+        if (_container is null) throw new InvalidOperationException("Restart proof requires a disposable fixture-owned database.");
+        await DataSource.DisposeAsync();
+        await _container.StopAsync();
+        await _container.StartAsync();
+        ConnectionString = FixContainerHost(_container.GetConnectionString());
+        CreateDataSource();
+    }
 
     /// <summary>
     /// Loads one migration script by filename for tests that must apply
