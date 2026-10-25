@@ -28,3 +28,12 @@ Thumbs.db
 
 # Docker
 .docker/
+
+# Local agent planning journals (AGENTS.md: transient, never PR content)
+/plans/
+
+# Regenerated evidence reproduction runs (curate summaries; keep raw runs local)
+evidence/**/outputs/repro-*/
+
+# CI/local smoke log written at repo root by platform-smoke
+platform-smoke.log
