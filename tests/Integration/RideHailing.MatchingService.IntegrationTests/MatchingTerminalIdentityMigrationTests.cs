@@ -77,6 +77,15 @@ public sealed class MatchingTerminalIdentityMigrationTests
                 Assert.Equal(false, await constraint.ExecuteScalarAsync());
             }
 
+            var terminalizer = new RideHailing.MatchingService.Application.Reserve.MatchingTerminalizer(
+                _db.DataSource, _db.OutboxStore);
+            var replay = await terminalizer.TryTerminalizeNoDriverAsync(legacyNoDriver, 1);
+            Assert.Equal(RideHailing.MatchingService.Application.Reserve.MatchingTerminalOutcome.NoDriver, replay.Outcome);
+            Assert.Equal(RideHailing.MatchingService.Application.Messaging.MatchingResultMessageIds.ForNoDriver(legacyNoDriver, 1), replay.ResultMessageId);
+            Assert.NotNull(await _db.OutboxStore.LoadAsync(replay.ResultMessageId!));
+            Assert.Equal(replay.ResultMessageId,
+                (await terminalizer.TryTerminalizeNoDriverAsync(legacyNoDriver, 1)).ResultMessageId);
+
             // New terminal writes must supply the identity.
             var missingIdentity = await Assert.ThrowsAsync<PostgresException>(() =>
                 ExecuteAsync(conn,

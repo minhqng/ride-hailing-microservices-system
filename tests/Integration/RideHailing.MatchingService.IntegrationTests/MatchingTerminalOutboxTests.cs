@@ -397,6 +397,37 @@ public sealed class MatchingTerminalOutboxTests
         Assert.Null(round.ResultMessageId);
     }
 
+    [Theory]
+    [InlineData("aggregate")]
+    [InlineData("version")]
+    [InlineData("saga")]
+    [InlineData("operation")]
+    public async Task MatchingIntent_ConflictingSemanticMetadata_RollsBackTerminal(string field)
+    {
+        var trip = NewTrip();
+        var input = await SeedRoundAsync(trip);
+        await SeedAttemptAsync(trip, 1, 0, MatchingAttemptStates.Rejected);
+        var identity = MatchingResultMessageIds.ForNoDriver(trip, 1);
+        var envelope = MessageEnvelope<MatchingFailedPayload>.Create(
+            MatchingEventTypes.MatchingFailed, input, new(trip, 1), messageId: identity,
+            aggregateType: field is "aggregate" or "version" ? "trip" : null,
+            aggregateId: field is "aggregate" or "version" ? trip.ToString() : null,
+            aggregateVersion: field == "version" ? 1 : null,
+            sagaId: field == "saga" ? "other-saga" : null,
+            operationKey: field == "operation" ? "other-operation" : null);
+        await using (var conn = await _matching.DataSource.OpenConnectionAsync())
+        await using (var tx = await conn.BeginTransactionAsync())
+        {
+            Assert.True(await _matching.OutboxStore.EnqueueAsync(conn, tx,
+                OutboxMessage.Create(envelope, MatchingEventRoutes.EventsExchange, MatchingEventRoutes.MatchingFailed)));
+            await tx.CommitAsync();
+        }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Terminalizer().TryTerminalizeNoDriverAsync(trip, 1));
+        var round = (await Attempts().LoadRoundAsync(trip, 1))!;
+        Assert.Equal(MatchingRoundStatuses.Processing, round.Status);
+        Assert.Null(round.ResultMessageId);
+    }
+
     [Fact]
     public async Task ConcurrentTerminalizers_ShareOneIdentityAndOneIntent()
     {

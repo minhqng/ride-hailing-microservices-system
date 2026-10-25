@@ -674,4 +674,53 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
         Assert.Equal(1,
             stored.RootElement.GetProperty("payload").GetProperty("matchingRound").GetInt32());
     }
+
+    [Theory]
+    [InlineData("DriverReservedV1")]
+    [InlineData("DriverReservationReleasedV1")]
+    [InlineData("MatchingFailedV1")]
+    public async Task W9PublicationReplay_OneEffect_ConflictingPayloadCannotReuseReceipt(string type)
+    {
+        var trip = await Seed(cancel: type == "DriverReservationReleasedV1");
+        var reserved = Reserved(trip);
+        if (type == "DriverReservationReleasedV1") await Deliver(DriverQueue, reserved);
+        var payload = type == "MatchingFailedV1"
+            ? JsonSerializer.SerializeToElement(new MatchingFailedPayload(trip.TripId, 1))
+            : JsonSerializer.SerializeToElement(new
+            {
+                tripId = trip.TripId,
+                driverId = reserved.Payload.GetProperty("driverId").GetGuid(),
+                reservationId = reserved.Payload.GetProperty("reservationId").GetGuid(),
+                matchingRound = 1, status = type == "DriverReservedV1" ? "RESERVED" : "AVAILABLE", version = 5
+            });
+        var envelope = MessageEnvelope<JsonElement>.Create(type, "w9-consumer-safety", payload);
+        var queue = type == "MatchingFailedV1" ? "trip.matching-outcome.q" : DriverQueue;
+        await Deliver(queue, envelope);
+        await using var firstDb = Db();
+        var first = await firstDb.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        var version = first.Version;
+        var state = first.State;
+        var cleanupCount = first.CleanupIntents.Count;
+        await Deliver(queue, envelope); // new DB scope after commit, before any caller ACK
+        var conflict = envelope with { Payload = type == "MatchingFailedV1"
+            ? JsonSerializer.SerializeToElement(new MatchingFailedPayload(trip.TripId, 2))
+            : JsonSerializer.SerializeToElement(new
+                { tripId = trip.TripId, driverId = Guid.NewGuid(), reservationId = Guid.NewGuid(), matchingRound = 1 }) };
+        Assert.Equal("MESSAGE_ID_CONTENT_CONFLICT",
+            (await Assert.ThrowsAsync<DeliveryFailureException>(() => Deliver(queue, conflict))).Code);
+        await using var finalDb = Db();
+        var final = await finalDb.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        Assert.Equal(version, final.Version);
+        Assert.Equal(state, final.State);
+        Assert.Equal(cleanupCount, final.CleanupIntents.Count);
+        Assert.Equal(first.Assignment?.DriverId, final.Assignment?.DriverId);
+        Assert.Equal(first.Assignment?.ReservationId, final.Assignment?.ReservationId);
+        Assert.Equal(1, await finalDb.MessageReceipts.CountAsync(r => r.Consumer == queue && r.MessageId == envelope.MessageId));
+        if (type == "DriverReservationReleasedV1")
+        {
+            Assert.Equal(TripState.Cancelled, final.State);
+            Assert.NotNull(Assert.Single(final.CleanupIntents,
+                intent => intent.Kind == TripCleanupKind.ReleaseReservation).CompletedAt);
+        }
+    }
 }
