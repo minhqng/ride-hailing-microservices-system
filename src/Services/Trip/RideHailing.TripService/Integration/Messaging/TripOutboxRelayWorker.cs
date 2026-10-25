@@ -3,31 +3,39 @@
 // A owns Trip semantic intent creation; C owns claim/publish/confirm/mark,
 // retry and backlog metrics. This worker only supplies the Trip-owned
 // lifetime: run C's relay one cycle at a time, and only while the Trip schema
-// is migrated and the broker/topology consumers are actually connected.
+// is migrated and the broker publish path is actually usable.
 //
-// Why check readiness every cycle: a single long-lived RunAsync would keep
-// claiming rows after the broker disappeared, burning the shared retry budget
-// and eventually moving a recoverable intent to FAILED_VISIBLE while the
-// business transition is perfectly valid. While the broker is unavailable the
-// correct state is a durable PENDING row, not a failed message.
+// Why gate publication at all: a cycle against an unreachable broker burns
+// the shared retry budget (attempt_count → MaxAttempts → FAILED_VISIBLE,
+// which claims never revisit) while the business transition is perfectly
+// valid. While the broker is unavailable the correct state is a durable
+// PENDING row, not a failed message.
 //
-// Topology: RideTopology is declared by TripMessagingWorker on every
-// connection. Publishing with mandatory=true before the exchange/queue exists
-// would be returned as unroutable, which the shared relay also counts as a
-// failed attempt.
+// Publication safety is NOT inbound consumer availability. The consumers and
+// the publisher hold independent connections, so a consumer-only fault (for
+// example a queue argument mismatch that keeps TripMessagingWorker in its
+// reconnect loop) must not stall outgoing delivery while the broker is
+// healthy. While the consumer readiness flag is down, the publish path is
+// therefore verified independently: open a connection and re-declare the
+// idempotent topology. That is exactly the precondition the publisher relies
+// on — durable exchanges declared first in RideTopology, so mandatory
+// publishes cannot be silently unroutable.
 //
 // The schema itself is created by EF migrations (TripDatabaseReadiness blocks
 // on pending migrations). This worker never calls EnsureSchemaAsync: one
 // migration authority per service database.
 
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using RabbitMQ.Client;
 using RideHailing.Messaging.Outbox;
+using RideHailing.Messaging.Topology;
 
 namespace RideHailing.TripService.Integration.Messaging;
 
 /// <summary>Runs the shared Outbox relay for the Trip-owned database.</summary>
 public sealed class TripOutboxRelayWorker(
     IServiceProvider services,
+    ConnectionFactory factory,
     TripDatabaseReadiness database,
     TripMessagingReadiness messaging,
     ILogger<TripOutboxRelayWorker> log) : BackgroundService
@@ -83,14 +91,33 @@ public sealed class TripOutboxRelayWorker(
             databaseReady = true;
         }
 
-        if (!messaging.Ready)
+        if (messaging.Ready) return true;
+
+        // Consumers disconnected: verify the publish path independently so a
+        // consumer-only fault cannot stall outgoing delivery, while a genuinely
+        // unreachable broker still blocks without burning publication attempts.
+        if (await BrokerPublishPathReadyAsync(token)) return true;
+
+        // Pending rows remain durable; this is not a publication attempt.
+        await DelayAsync(token);
+        return false;
+    }
+
+    private async Task<bool> BrokerPublishPathReadyAsync(CancellationToken token)
+    {
+        try
         {
-            // Pending rows remain durable; this is not a publication attempt.
-            await DelayAsync(token);
+            await using var connection = await factory.CreateConnectionAsync(token);
+            await RideTopology.DeclareAsync(connection, token);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.LogInformation(
+                "Trip Outbox relay publish path not ready ({ErrorType}); durable backlog waits.",
+                ex.GetType().Name);
             return false;
         }
-
-        return true;
     }
 
     private static async Task DelayAsync(CancellationToken token)

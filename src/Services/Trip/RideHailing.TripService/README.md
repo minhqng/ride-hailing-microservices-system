@@ -30,8 +30,11 @@
   Supply `RabbitMq__Host`, `RabbitMq__Username`,
   `RabbitMq__Password`; optional `RabbitMq__Port` and `RabbitMq__VirtualHost`.
   Readiness checks migrations and, when enabled, consumer connectivity. The
-  relay waits for both before claiming, so an unavailable broker leaves rows
-  pending instead of burning retry attempts into `FAILED_VISIBLE`.
+  relay gates on database readiness plus its own publish-path probe (broker
+  reachable and topology declared, verified independently while consumers are
+  disconnected), so an unavailable broker leaves rows pending instead of
+  burning retry attempts into `FAILED_VISIBLE`, while a consumer-only fault
+  cannot stall outgoing delivery.
   Saga and Payment lineage resolution remain later work. The historical
   week-by-week notes below describe their own scope.
 

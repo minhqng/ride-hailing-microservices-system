@@ -30,11 +30,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
+using RabbitMQ.Client;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Observability;
 using RideHailing.Messaging.Outbox;
+using RideHailing.Messaging.Reliability;
 using RideHailing.Messaging.Topology;
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Domain.Trips;
@@ -406,6 +409,49 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
             Assert.Equal(TripState.Created, saved.State);
             Assert.Equal(trip.Version, saved.Version);
             Assert.Single(await IntentsAsync(cs, trip.TripId));
+        }
+    }
+
+    [Fact]
+    public async Task IdentityCollisionWithForeignContract_IsADataFault_NotAReplayableRace()
+    {
+        var cs = await NewProbeAsync("trip_w09_collide");
+        var trip = await SeedCreatedAsync(cs);
+
+        // A row already occupies the deterministic RideRequested identity but
+        // carries a different message contract (corruption or a future builder
+        // collision). Matching the primary key alone must NOT license the
+        // "observe the winner" replay path: the save surfaces as a database
+        // fault instead of a concurrency conflict.
+        var template = NewTrip(trip.TripId, trip.RiderId);
+        template.StartMatching(Now);
+        var staged = TripOutboxIntents.RideRequested(template, Now);
+        var foreign = TripOutboxMessage.From(staged);
+        foreign.MessageType = "ReleaseDriverReservationV1";
+        foreign.Exchange = RideTopology.CommandsExchange;
+        foreign.RoutingKey = "driver.release-reservation.v1";
+        await using (var seed = Context(cs))
+        {
+            seed.OutboxMessages.Add(foreign);
+            await seed.SaveChangesAsync();
+        }
+
+        await using (var conflicting = Context(cs))
+        {
+            await Assert.ThrowsAsync<DbUpdateException>(() =>
+                new StartMatchingHandler(conflicting, new Clock(), NullLogger<StartMatchingHandler>.Instance)
+                    .HandleAsync(trip.TripId, trip.RiderId));
+        }
+
+        await using (var verify = Context(cs))
+        {
+            var saved = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == trip.TripId);
+            Assert.Equal(TripState.Created, saved.State);
+            Assert.Equal(trip.Version, saved.Version);
+            // The loser's staged row is gone; only the committed foreign row remains.
+            var survivor = Assert.Single(await IntentsAsync(cs, trip.TripId));
+            Assert.Equal(staged.MessageId, survivor.MessageId);
+            Assert.Equal("ReleaseDriverReservationV1", survivor.MessageType);
         }
     }
 
@@ -852,6 +898,197 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
             if (Interlocked.Increment(ref arrived) == 2) release.TrySetResult();
             await release.Task.WaitAsync(TimeSpan.FromSeconds(15), token);
             return result;
+        }
+    }
+}
+
+/// <summary>
+/// Relay liveness is independent of inbound consumer availability. With the
+/// consumer readiness flag held down, the relay must still publish through a
+/// healthy broker (its own publish-path probe passes), while an unreachable
+/// broker keeps rows PENDING with no attempt or claim burned.
+/// </summary>
+[Collection(TripPostgresCollection.Name)]
+public sealed class TripW09RelayReadinessTests(TripPostgresFixture fixture, TripRabbitFixture rabbit)
+    : IClassFixture<TripRabbitFixture>
+{
+    private static readonly DateTimeOffset Now = new(2026, 10, 25, 1, 0, 0, TimeSpan.Zero);
+
+    private sealed class Clock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    private static TripDbContext Context(string connectionString) =>
+        new(new DbContextOptionsBuilder<TripDbContext>().UseNpgsql(connectionString).Options);
+
+    private async Task<string> NewMigratedProbeAsync()
+    {
+        var name = $"trip_w09_gate_{Guid.NewGuid():N}";
+        var maintenance = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
+        {
+            Database = "postgres",
+        }.ToString();
+        await using (var db = Context(maintenance))
+        {
+            var connection = db.Database.GetDbConnection();
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"CREATE DATABASE \"{name}\"";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var connectionString = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
+        {
+            Database = name,
+        }.ToString();
+        await using (var db = Context(connectionString))
+        {
+            await db.Database.MigrateAsync();
+        }
+
+        return connectionString;
+    }
+
+    private static async Task<string> SeedPendingIntentAsync(string connectionString)
+    {
+        var trip = Trip.Create(Guid.NewGuid(), Guid.NewGuid(), new(10.7, 106.6), new(10.8, 106.7),
+            new("VND", 50000m, "w9", Now), Now);
+        trip.StartMatching(Now);
+        await using var db = Context(connectionString);
+        db.Trips.Add(trip);
+        db.OutboxMessages.Add(TripOutboxMessage.From(TripOutboxIntents.RideRequested(trip, Now)));
+        await db.SaveChangesAsync();
+        return TripOutboxIntents.RideRequestedMessageId(trip);
+    }
+
+    private static TripOutboxRelayWorker CreateWorker(
+        string connectionString, ConnectionFactory factory, TripMessagingReadiness messaging)
+    {
+        var dataSource = NpgsqlDataSource.Create(connectionString);
+        var services = new ServiceCollection()
+            .AddDbContext<TripDbContext>(options => options.UseNpgsql(dataSource))
+            .AddSingleton(dataSource)
+            .AddSingleton<IOutboxStore>(sp => new NpgsqlOutboxStore(sp.GetRequiredService<NpgsqlDataSource>()))
+            .AddSingleton(new ConfirmedPublisher(factory))
+            .AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>()
+            .AddSingleton(new OutboxRelayOptions
+            {
+                RelayId = $"relay-gate-proof:{Guid.NewGuid():N}",
+                BatchSize = 10,
+                ClaimLease = TimeSpan.Zero,
+                PollInterval = TimeSpan.FromMilliseconds(100),
+            })
+            .AddSingleton<OutboxRelay>()
+            .BuildServiceProvider();
+        var database = new TripDatabaseReadiness(services.GetRequiredService<IServiceScopeFactory>());
+        return new TripOutboxRelayWorker(services, factory, database, messaging,
+            NullLogger<TripOutboxRelayWorker>.Instance);
+    }
+
+    private static async Task RunUntilAsync(TripOutboxRelayWorker worker, Func<Task<bool>> done, TimeSpan timeout)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        await worker.StartAsync(cts.Token);
+        try
+        {
+            while (!await done())
+                await Task.Delay(50, cts.Token);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+        }
+    }
+
+    /// <summary>Runs the worker for a fixed window whose end is the oracle
+    /// (a blocked broker must burn nothing in that window).</summary>
+    private static async Task RunForAsync(TripOutboxRelayWorker worker, TimeSpan duration)
+    {
+        using var cts = new CancellationTokenSource(duration);
+        await worker.StartAsync(cts.Token);
+        try { await Task.Delay(duration, CancellationToken.None); }
+        finally { await worker.StopAsync(CancellationToken.None); }
+    }
+
+    [Fact]
+    public async Task BrokerUnreachable_WhileConsumersDisconnected_KeepsPendingWithoutAttemptOrClaim()
+    {
+        var cs = await NewMigratedProbeAsync();
+        var messageId = await SeedPendingIntentAsync(cs);
+
+        // No consumer will ever connect (readiness held down) and the broker
+        // address refuses connections: the only acceptable outcome is a
+        // durable PENDING row with no publication attempt or claim.
+        var unreachable = new ConnectionFactory
+        {
+            HostName = "127.0.0.1",
+            Port = 1,
+            AutomaticRecoveryEnabled = false,
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(2),
+        };
+        await RunForAsync(
+            CreateWorker(cs, unreachable, new TripMessagingReadiness()),
+            duration: TimeSpan.FromSeconds(5));
+
+        await using (var verify = Context(cs))
+        {
+            var row = await verify.OutboxMessages.AsNoTracking().SingleAsync(m => m.MessageId == messageId);
+            Assert.Equal("PENDING", row.Status);
+            // Claiming is the first durable side effect of a relay cycle; both
+            // staying untouched proves the blocked broker burned nothing.
+            Assert.Equal(0, row.AttemptCount);
+            Assert.Null(row.ClaimedBy);
+        }
+
+        // The same row still publishes once the publish path recovers.
+        var messaging = new TripMessagingReadiness();
+        await RunUntilAsync(
+            CreateWorker(cs, rabbit.Factory, messaging),
+            done: async () =>
+            {
+                await using var db = Context(cs);
+                return await db.OutboxMessages.AsNoTracking()
+                    .AnyAsync(m => m.MessageId == messageId && m.Status == "PUBLISHED");
+            },
+            timeout: TimeSpan.FromSeconds(30));
+
+        await using (var verify = Context(cs))
+        {
+            var row = await verify.OutboxMessages.AsNoTracking().SingleAsync(m => m.MessageId == messageId);
+            // PUBLISHED is only reachable after a broker publisher confirm, and
+            // a first-try success never increments the failure counter.
+            Assert.Equal("PUBLISHED", row.Status);
+            Assert.Equal(0, row.AttemptCount);
+            Assert.Null(row.ClaimedBy);
+        }
+    }
+
+    [Fact]
+    public async Task ConsumersDisconnected_BrokerHealthy_RelayStillPublishes()
+    {
+        var cs = await NewMigratedProbeAsync();
+        var messageId = await SeedPendingIntentAsync(cs);
+
+        // Inbound consumer readiness is permanently down (nobody ever sets
+        // Ready), yet the broker is healthy: the relay's independent
+        // publish-path probe must unblock outgoing delivery.
+        var messaging = new TripMessagingReadiness();
+        await RunUntilAsync(
+            CreateWorker(cs, rabbit.Factory, messaging),
+            done: async () =>
+            {
+                await using var db = Context(cs);
+                return await db.OutboxMessages.AsNoTracking()
+                    .AnyAsync(m => m.MessageId == messageId && m.Status == "PUBLISHED");
+            },
+            timeout: TimeSpan.FromSeconds(30));
+
+        await using (var verify = Context(cs))
+        {
+            var row = await verify.OutboxMessages.AsNoTracking().SingleAsync(m => m.MessageId == messageId);
+            Assert.Equal("PUBLISHED", row.Status);
+            Assert.Null(row.ClaimedBy);
         }
     }
 }
