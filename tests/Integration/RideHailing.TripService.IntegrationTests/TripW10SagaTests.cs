@@ -278,7 +278,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         Assert.Equal(RideSagaOperationKeys.Authorize(tripId), saga.AuthorizeOperationKey);
 
         var intents = await IntentsAsync(cs, tripId);
-        var authorize = Assert.Single(intents.Where(m => m.MessageType == "AuthorizePaymentV1"));
+        var authorize = Assert.Single(intents, m => m.MessageType == "AuthorizePaymentV1");
         Assert.Equal(TripSagaIntents.AuthorizePaymentMessageId(tripId), authorize.MessageId);
         Assert.Equal(RideSagaOperationKeys.Authorize(tripId), authorize.OperationKey);
         Assert.Equal(saga.SagaId.ToString("D"), authorize.SagaId);
@@ -365,7 +365,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         Assert.Equal("TRANSIENT_FAILURE", awaiting.LastErrorCode);
         Assert.Equal(saga.AuthorizeOperationKey, awaiting.AuthorizeOperationKey);
         Assert.Equal(TripState.DriverAccepted, (await TripAsync(cs, tripId)).State);
-        Assert.Empty((await IntentsAsync(cs, tripId)).Where(m => m.MessageType.Contains("Release")));
+        Assert.DoesNotContain(await IntentsAsync(cs, tripId), m => m.MessageType.Contains("Release"));
 
         // The terminal DECLINED fact then cancels the ride, persists the
         // compensation step and stages the EXACT release identity (REL-09).
@@ -381,17 +381,17 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         Assert.Equal(RideSagaStep.ReleasePending, compensating.CurrentStep);
 
         var intents = await IntentsAsync(cs, tripId);
-        var release = Assert.Single(intents.Where(m => m.MessageType == "ReleaseDriverReservationV1"));
+        var release = Assert.Single(intents, m => m.MessageType == "ReleaseDriverReservationV1");
         var releasePayload = JsonDocument.Parse(release.PayloadJson).RootElement;
         // Exact identity tuple — never a Driver id alone (DSI-033).
         Assert.Equal(tripId, releasePayload.GetProperty("tripId").GetGuid());
         Assert.Equal(DriverId, releasePayload.GetProperty("driverId").GetGuid());
         Assert.Equal(ReservationId, releasePayload.GetProperty("reservationId").GetGuid());
         Assert.Equal(1, releasePayload.GetProperty("matchingRound").GetInt32());
-        Assert.Single(intents.Where(m => m.MessageType == "CancelMatchingRoundV1"));
-        Assert.Single(intents.Where(m => m.MessageType == "AuthorizePaymentV1"));
+        Assert.Single(intents, m => m.MessageType == "CancelMatchingRoundV1");
+        Assert.Single(intents, m => m.MessageType == "AuthorizePaymentV1");
         // No capture/void was ever minted: compensation is release-only.
-        Assert.Empty(intents.Where(m => m.MessageType is "CapturePaymentV1" or "VoidPaymentAuthorizationV1"));
+        Assert.DoesNotContain(intents, m => m.MessageType is "CapturePaymentV1" or "VoidPaymentAuthorizationV1");
         // DECLINED is conclusive no-effect evidence: the reconcile obligation
         // is discharged in the same commit.
         Assert.All(trip.CleanupIntents.Where(i => i.Kind == TripCleanupKind.ReconcilePayment),
@@ -435,7 +435,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         var afterDecline = await SagaAsync(cs, tripId);
         Assert.Equal(RideSagaStep.ReleasePending, afterDecline.CurrentStep);
         Assert.Null(afterDecline.VoidOperationKey);
-        Assert.Empty((await IntentsAsync(cs, tripId)).Where(m => m.MessageType == "VoidPaymentAuthorizationV1"));
+        Assert.DoesNotContain(await IntentsAsync(cs, tripId), m => m.MessageType == "VoidPaymentAuthorizationV1");
         Assert.Equal(TripState.Cancelled, (await TripAsync(cs, tripId)).State);
     }
 
@@ -468,8 +468,8 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         Assert.Equal(RideSagaStatus.Compensating, voiding.Status);
         Assert.Equal(RideSagaStep.VoidPending, voiding.CurrentStep);
         Assert.Equal(RideSagaOperationKeys.Void(tripId), voiding.VoidOperationKey);
-        var voidIntent = Assert.Single((await IntentsAsync(cs, tripId))
-            .Where(m => m.MessageType == "VoidPaymentAuthorizationV1"));
+        var voidIntent = Assert.Single(await IntentsAsync(cs, tripId),
+            m => m.MessageType == "VoidPaymentAuthorizationV1");
         Assert.Equal(RideSagaOperationKeys.Void(tripId), voidIntent.OperationKey);
         Assert.Equal(saga.SagaId.ToString("D"), voidIntent.SagaId);
 
@@ -516,13 +516,13 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         }
 
         Assert.Equal(TripState.DriverAccepted, (await TripAsync(cs, tripId)).State);
-        Assert.Empty((await IntentsAsync(cs, tripId)).Where(m => m.MessageType == "MarkDriverTripStartedV1"));
+        Assert.DoesNotContain(await IntentsAsync(cs, tripId), m => m.MessageType == "MarkDriverTripStartedV1");
 
         await RideReadyAsync(cs, tripId, saga);
         var started = await RideStartedAsync(cs, tripId);
         Assert.Equal(RideSagaStep.Authorized, started.CurrentStep);
-        var markStarted = Assert.Single((await IntentsAsync(cs, tripId))
-            .Where(m => m.MessageType == "MarkDriverTripStartedV1"));
+        var markStarted = Assert.Single(await IntentsAsync(cs, tripId),
+            m => m.MessageType == "MarkDriverTripStartedV1");
         Assert.Equal($"trip:{tripId:N}:mark-started:{ReservationId:N}", markStarted.MessageId);
 
         // A duplicate start replays without a second command.
@@ -540,11 +540,11 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         Assert.Equal(RideSagaStep.CapturePending, capturing.CurrentStep);
         Assert.Equal(RideSagaOperationKeys.Capture(tripId), capturing.CaptureOperationKey);
         var intents = await IntentsAsync(cs, tripId);
-        var capture = Assert.Single(intents.Where(m => m.MessageType == "CapturePaymentV1"));
+        var capture = Assert.Single(intents, m => m.MessageType == "CapturePaymentV1");
         Assert.Equal(RideSagaOperationKeys.Capture(tripId), capture.OperationKey);
         Assert.Equal(saga.SagaId.ToString("D"), capture.SagaId);
         Assert.Equal("payment.capture.v1", capture.RoutingKey);
-        Assert.Single(intents.Where(m => m.MessageType == "MarkDriverTripCompletedV1"));
+        Assert.Single(intents, m => m.MessageType == "MarkDriverTripCompletedV1");
 
         // Driver's authoritative completion fact arrives late: agreement
         // confirmation only — never a second capture (one logical effect).
@@ -733,7 +733,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
             PaymentEnvelope("PaymentAuthorizedV1", tripId, saga.AuthorizeOperationKey, saga.SagaId.ToString("D")));
         Assert.Equal("Applied", authorized.Disposition);
         Assert.Equal(RideSagaStep.VoidPending, (await SagaAsync(cs, tripId)).CurrentStep);
-        Assert.Single((await IntentsAsync(cs, tripId)).Where(m => m.MessageType == "VoidPaymentAuthorizationV1"));
+        Assert.Single(await IntentsAsync(cs, tripId), m => m.MessageType == "VoidPaymentAuthorizationV1");
 
         // A review signal for the VOID key is likewise an observation only.
         var voidReview = await DeliverAsync(cs, "trip.payment-outcome.q",
