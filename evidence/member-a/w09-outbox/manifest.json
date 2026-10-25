@@ -11,9 +11,9 @@
   },
   "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
   "codeCommit": {
-    "sha": "20790f0f361af3501e4e08b30eb0aa781bcf2a0b",
-    "tree": "9820c0652a89c64c1cdb3b99758efcdfa3d07962",
-    "message": "fix(trip): gate outbox relay on its own publish path, not consumer readiness"
+    "sha": "6eb693a40bfb6b128cab22720034d05269b1234d",
+    "tree": "eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2",
+    "message": "test(trip): prove concurrent same-obligation discovery resolves as transient replay"
   },
   "initialCodeCommit": {
     "sha": "63f13a5544dd5b1caed357b62c3e60a188113ed4",
@@ -21,7 +21,8 @@
     "message": "feat(trip): add W9 transactional outbox for trip intents",
     "hardenedBy": [
       "d87c147 fix(trip): verify committed outbox winner before treating identity clash as concurrency",
-      "20790f0 fix(trip): gate outbox relay on its own publish path, not consumer readiness"
+      "20790f0 fix(trip): gate outbox relay on its own publish path, not consumer readiness",
+      "6eb693a test(trip): prove concurrent same-obligation discovery resolves as transient replay (test-only; production source identical to 20790f0)"
     ]
   },
   "provenanceModel": "reproduce.sh compares the git tree hash of every top-level path except evidence/ between HEAD and codeCommit; identical source is accepted, any drift aborts",
@@ -47,7 +48,7 @@
       "name": "solution-tests-release",
       "command": "dotnet test RideHailing.Distributed.slnx -c Release --no-build",
       "exitCode": 0,
-      "passed": 912,
+      "passed": 913,
       "failed": 0,
       "skipped": 1,
       "output": "outputs/solution-tests-release.txt"
@@ -56,7 +57,7 @@
       "name": "trip-w09-outbox",
       "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj -c Release --no-build --filter FullyQualifiedName~TripW09",
       "exitCode": 0,
-      "passed": 16,
+      "passed": 17,
       "failed": 0,
       "output": "outputs/w09-outbox-tests.txt"
     },
@@ -87,7 +88,7 @@
     "MatchingService.IntegrationTests": 112,
     "PaymentService.IntegrationTests": 26,
     "Platform.IntegrationTests": 60,
-    "TripService.IntegrationTests": 142,
+    "TripService.IntegrationTests": 143,
     "SystemTests": null
   },
   "skipped": [
@@ -98,6 +99,7 @@
     "rollbackRestoresBothHalves": true,
     "deterministicMessageIdAcrossRetryAndRestart": true,
     "outboxIdentityCollisionVerifiedAgainstCommittedWinnerContract": true,
+    "concurrentSameObligationDiscoveryThroughExplicitTransactionClassifiesTransient": true,
     "relayGatedOnPublishPathNotInboundConsumers": true,
     "brokerOutageBurnsNoAttempts": true,
     "rel04CrashBeforePublishRecovery": "simulated via shared OutboxRelayOptions.BeforePublish seam, then new relay instance",
