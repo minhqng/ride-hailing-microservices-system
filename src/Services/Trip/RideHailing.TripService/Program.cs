@@ -6,6 +6,7 @@ using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
+using RideHailing.TripService.Integration.Observability;
 
 // Bootstrap skeleton for RideHailing.TripService (Trip service).
 // Owns: see src/Services/Trip/RideHailing.TripService/README.md.
@@ -17,6 +18,13 @@ using RideHailing.TripService.Integration.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddRideTelemetry("trip-service");
+// A-W12-01/02: Trip domain spans and metrics ride the SAME OpenTelemetry
+// pipeline as the shared messaging instruments — one registry, no second
+// exporter. The meter is observed regardless of messaging enablement so
+// saga.active reflects durable workflow state even without a broker.
+builder.Services.AddOpenTelemetry()
+    .WithTracing(t => t.AddSource(TripDiagnostics.ActivitySourceName))
+    .WithMetrics(m => m.AddMeter(TripDiagnostics.MeterName));
 builder.Services.AddHealthChecks();
 
 // (A-W02-02) Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
@@ -64,6 +72,9 @@ builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddTripMessaging(builder.Configuration, builder.Environment);
+// A-W12-02: durable saga-backlog observation (saga.active{step}) runs in every
+// host: it only reads the Trip-owned database and never touches the broker.
+builder.Services.AddHostedService<TripMetricsObserver>();
 
 var app = builder.Build();
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Observability;
 
 namespace RideHailing.TripService.Integration.Messaging;
 
@@ -44,6 +46,18 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         catch (Exception ex) when (ex is ArgumentException or JsonException or InvalidOperationException)
         { throw new DeliveryFailureException(FailureKind.Poison, "INVALID_TRIP_MESSAGE"); }
 
+        // A-W12-01: one domain-decision span per applied authority fact. It
+        // nests under the shared "consume" transport span (different concern:
+        // domain decision, not delivery) and, via Activity.Current at intent
+        // creation, becomes the durable traceparent of every outgoing
+        // saga/cleanup intent this transaction stages — so compensation and
+        // capture dispatches stay correlated to the fact that caused them.
+        using var span = TripDiagnostics.Activities.StartActivity("RideHailing.Trip/ApplyAuthority");
+        span?.SetTag("messaging.message.id", envelope.MessageId);
+        span?.SetTag("messaging.correlation.id", envelope.CorrelationId);
+        span?.SetTag("messaging.message.type", envelope.MessageType);
+        span?.SetTag("trip.id", tripId.ToString());
+
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(token);
@@ -71,6 +85,9 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 if (SemanticFingerprint(original) != fingerprint)
                     throw new DeliveryFailureException(FailureKind.Poison, "MESSAGE_ID_CONTENT_CONFLICT");
                 await transaction.CommitAsync(token);
+                // Redelivery replay: no business transition happened, so no
+                // metric may claim one (A-W12-02 replay semantics).
+                span?.SetTag("ride.outcome", "receipt_replay");
                 log.LogInformation("Trip message replay {MessageId} correlation {CorrelationId} result {Disposition}",
                     envelope.MessageId, envelope.CorrelationId, receipt.Disposition);
                 return;
@@ -93,13 +110,26 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 // transaction.
                 var saga = await db.RideSagas.SingleOrDefaultAsync(s => s.TripId == tripId, token);
                 var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
+                var sagaStatusBefore = saga?.Status;
                 Apply(trip, saga, envelope, receipt, now);
                 TripOutboxWriter.EnqueueNewCleanup(db, trip, preexistingCleanup);
+                await db.SaveChangesAsync(token);
+                await transaction.CommitAsync(token);
+
+                // A-W12-02: post-commit observation only. The disposition was
+                // decided inside the committed transaction; a rollback above
+                // never reaches this point, so counters describe committed
+                // effects, never handler invocations.
+                ObserveCommittedOutcome(span, receipt, saga, sagaStatusBefore, trip);
+                return;
             }
+
             await db.SaveChangesAsync(token);
             await transaction.CommitAsync(token);
-            log.LogInformation("Trip message {MessageId} correlation {CorrelationId} trip {TripId} result {Disposition} reason {Reason}",
-                envelope.MessageId, envelope.CorrelationId, tripId, receipt.Disposition, receipt.Reason);
+            span?.SetTag("ride.outcome", "pending_workflow");
+            log.LogWarning(
+                "Trip message {MessageId} correlation {CorrelationId} references unknown trip {TripId}; parked for reconciliation.",
+                envelope.MessageId, envelope.CorrelationId, tripId);
         }
         catch (TripConcurrencyConflictException)
         { throw new DeliveryFailureException(FailureKind.Transient, "TRIP_CONCURRENCY_CONFLICT"); }
@@ -119,6 +149,71 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
             // the durable receipt and effect are indivisible. No remote call here.
             throw new DeliveryFailureException(FailureKind.Transient, "TRIP_DATABASE_TRANSIENT");
         }
+    }
+
+    /// <summary>
+    /// A-W12-01/02 post-commit observation: span tags, one structured log and
+    /// counters that describe only durable effects. Receipt dispositions map
+    /// to bounded outcome/reason vocabularies; saga counters fire once per
+    /// committed NEW status entry, so redelivery (receipt replay) and domain
+    /// replays (BusinessReplay) never inflate them.
+    /// </summary>
+    private void ObserveCommittedOutcome(
+        Activity? span, TripMessageReceipt receipt, RideSaga? saga, RideSagaStatus? sagaStatusBefore, Trip trip)
+    {
+        span?.SetTag("trip.state", trip.State.ToCanonicalName());
+        if (saga is not null)
+        {
+            span?.SetTag("saga.id", saga.SagaId.ToString());
+            span?.SetTag("saga.step", saga.CurrentStep.ToCanonicalName());
+        }
+
+        span?.SetTag("ride.outcome", receipt.Disposition switch
+        {
+            "Applied" => "applied",
+            "BusinessReplay" => "business_replay",
+            "NeedsReview" => "needs_review",
+            _ => receipt.Disposition,
+        });
+
+        if (receipt.Disposition == "NeedsReview")
+        {
+            TripDiagnostics.RecordTransitionRejected(RejectionReason(receipt.Reason));
+            log.LogWarning(
+                "Trip message {MessageId} correlation {CorrelationId} trip {TripId} rejected and parked for review: {Reason}.",
+                receipt.MessageId, receipt.CorrelationId, trip.TripId, receipt.Reason);
+        }
+        else
+        {
+            log.LogInformation("Trip message {MessageId} correlation {CorrelationId} trip {TripId} result {Disposition} reason {Reason}",
+                receipt.MessageId, receipt.CorrelationId, trip.TripId, receipt.Disposition, receipt.Reason);
+        }
+
+        if (saga is not null && sagaStatusBefore is { } before)
+        {
+            if (before != RideSagaStatus.Compensating && saga.Status == RideSagaStatus.Compensating)
+                TripDiagnostics.RecordSagaCompensation();
+            if (before != RideSagaStatus.RequiresReview && saga.Status == RideSagaStatus.RequiresReview)
+                TripDiagnostics.RecordSagaRequiresReview();
+        }
+    }
+
+    /// <summary>Maps a durable rejection reason to a bounded metric dimension.</summary>
+    private static string RejectionReason(string reason) =>
+        Enum.TryParse<TripErrorCode>(reason, out var code) && code != TripErrorCode.None
+            ? SnakeCase(code.ToString())
+            : TripDiagnostics.RejectionReasons.AuthorityRejected;
+
+    private static string SnakeCase(string value)
+    {
+        var builder = new System.Text.StringBuilder(value.Length + 8);
+        foreach (var ch in value)
+        {
+            if (char.IsUpper(ch) && builder.Length > 0) builder.Append('_');
+            builder.Append(char.ToLowerInvariant(ch));
+        }
+
+        return builder.ToString();
     }
 
     private void Apply(Trip trip, RideSaga? saga, MessageEnvelope<JsonElement> e, TripMessageReceipt receipt, DateTimeOffset now)

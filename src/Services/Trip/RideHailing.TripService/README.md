@@ -169,3 +169,88 @@
   `UseSetting`; they prove boot, /health/live, /health/ready, migration from
   empty DB, latest-migration history, and DbContext connectivity (component
   proof only — NOT least-privilege/cross-DB proof, which needs C bootstrap).
+
+## W12 observability, security hardening and the Trip-side core gate
+
+### What A instrumented (A-W12-01/02)
+
+- `Integration/Observability/TripDiagnostics.cs` is the single Trip-owned
+  ActivitySource (`RideHailing.Trip`) and meter (`RideHailing.Trip`), riding
+  the SAME OpenTelemetry pipeline as C's shared messaging instruments (one
+  registry; Program.cs just adds the source/meter). Domain spans:
+  `RideHailing.Trip/CreateRide`, `RideHailing.Trip/CancelRide` (HTTP
+  decisions) and `RideHailing.Trip/ApplyAuthority` (consumer-side authority
+  facts). The span context at intent-creation time becomes the durable
+  `traceparent` inside `outbox_messages.headers_json`, so every relayed
+  payment/release/cancel command stays a child of the decision that caused
+  it across process restarts and publication delay.
+- Metrics (dot names; a Prometheus exporter renders the Doc 05A §20.2
+  underscore forms): `trip.created`, `trip.cancelled`,
+  `trip.transition.rejected{reason}`, `saga.compensation`,
+  `saga.requires_review` are counters incremented ONLY after the owning
+  transaction commits — idempotent replays, create-race reconciliation and
+  redelivered receipts (durable receipt replay) never increment, and
+  infrastructure failures (OCC conflicts, broker outage) are not business
+  rejections. `saga.active{step}` is an ObservableGauge fed by
+  `TripMetricsObserver`, a background service that re-runs one indexed
+  GROUP BY over `ride_sagas` (default every 15 s; `TripMetrics:RefreshSeconds`),
+  so after a restart the gauge re-derives from durable state instead of a
+  lost in-memory count. Outbox backlog gauges (`outbox.pending`,
+  `outbox.oldest_pending.age`, `outbox.failed_visible`) stay C-owned shared
+  instruments refreshed by the shared relay from durable rows; Trip adds no
+  duplicate measurement.
+- Cardinality contract: only bounded vocabularies are dimensions
+  (`reason` from a fixed rejection-class set, `step` from the six canonical
+  saga steps). tripId/sagaId/reservationId/operationKey/messageId are span
+  and log fields, never labels. riderId, credentials and payloads never
+  appear in tags; W12 telemetry tests assert this on emitted signals.
+
+### How to verify A's mechanisms yourself (B/C handoff, A-W12-08)
+
+Reproduce commands (from the repo root; `dotnet` on PATH or the documented
+SDK location):
+
+```bash
+# Trip unit + full integration suites (real PostgreSQL + RabbitMQ via
+# Testcontainers): telemetry semantics, W3C propagation, authz negatives,
+# auditor execution and the W09–W11 fault proofs.
+dotnet test tests/Unit/RideHailing.TripService.UnitTests
+dotnet test tests/Integration/RideHailing.TripService.IntegrationTests
+
+# The one-command focused views:
+dotnet test tests/Integration/RideHailing.TripService.IntegrationTests \
+  --filter "FullyQualifiedName~TripW12"
+```
+
+Review checklist for B and C:
+
+1. Trip lifecycle: `Trip`/`TripStatePolicy` is the only state authority.
+   Terminal states never revive (DSI-010); `current_matching_round` fences
+   every reservation lineage (DSI-009/016, DB CHECK-enforced).
+2. Saga lineage: one `ride_sagas` row per trip (UNIQUE); steps
+   AUTHORIZE_PENDING → AUTHORIZED → CAPTURE_PENDING → CAPTURED, or
+   compensation RELEASE_PENDING/VOID_PENDING → COMPENSATED; operation keys
+   are frozen `{tripId:D}:authorize|capture|void:v1` (DSI-034, DB
+   CHECK-enforced) and never re-minted on retry.
+3. Outbox atomicity: every external obligation is staged by
+   `TripOutboxWriter` on the SAME DbContext/transaction as the business
+   transition (A-W09). There is no direct required publish after
+   SaveChanges anywhere in Trip.
+4. Relay/confirm/retry: the C-owned shared relay claims → publishes
+   (confirmed) → marks. Trip gates cycles on its own DB readiness and an
+   independent broker publish-path probe (`TripOutboxRelayWorker`).
+5. Restart recovery: a killed process leaves PENDING rows and a durable
+   saga; the relay republishes the same messageId and the saga resumes from
+   `step_version` (W11 process-kill proofs: `TripW11FaultProcessTests`).
+6. Compensation exactness: releases confirm against the exact
+   (driver, reservation, round) cleanup intent — `StaleIdentity` facts park
+   as NeedsReview and never mutate the Trip (`TripMessageHandler`).
+7. Auditor: `TripInvariantAuditor` (test project) runs read-only AUD-01..08
+   SQL; AUD-01/02/04 are NOT RUN without B's Driver database — that is an
+   honest dependency, not a green cell. Drive a scenario and print a report
+   from `TripW12InvariantAuditorTests`.
+8. Authorization: endpoints consume an already-authenticated principal;
+   401/403/404-ownership fail-closed behavior and no-outbox-effect on
+   rejection are proven in `TripW12AuthzNegativeTests` plus the W4/W5 HTTP
+   suites. End-to-end JWT issuance/validation is C/platform work
+   (SYSTEM_AUTH_PENDING).

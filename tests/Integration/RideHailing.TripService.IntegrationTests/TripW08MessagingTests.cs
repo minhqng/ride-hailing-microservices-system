@@ -340,6 +340,17 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
     public async Task BrokerOutage_CommitsMatchingWithDurableIntent_ThenRelayPublishesSameIdAfterRecovery()
     {
         await using (var db = Db()) await db.Database.MigrateAsync();
+        // The relay drains the SHARED collection database: pending outbox rows
+        // staged by other suites (W09 writer proofs) may publish into this
+        // class's broker during the test. The queue starts empty and the
+        // oracle below stays trip-scoped, so cross-suite residue cannot
+        // masquerade as (or mask) this ride's publication.
+        await using (var clean = await rabbit.Factory.CreateConnectionAsync())
+        await using (var cleanChannel = await clean.CreateChannelAsync())
+        {
+            await cleanChannel.QueuePurgeAsync("matching.ride-requested.q");
+        }
+
         using var app = new TripApplicationFactory(postgres.ConnectionString).WithWebHostBuilder(builder =>
         {
             builder.UseSetting("TripMessaging:Enabled", "true");
@@ -429,8 +440,10 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             Assert.Equal(1, await final.OutboxMessages.CountAsync(m => m.AggregateId == tripId.ToString("D")));
         }
 
-        // Exactly one publication reached the queue, carrying the same stable
-        // identity that was committed while the broker was down.
+        // Exactly one publication of THIS ride's stable identity reached the
+        // queue — the id committed while the broker was down, republished
+        // unchanged after recovery. Other pending rows from unrelated suites
+        // share the broker drain but never this trip's identity.
         await using var connection = await rabbit.Factory.CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
         var deliveredIds = new List<string>();
@@ -439,7 +452,8 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             deliveredIds.Add(delivery.BasicProperties.MessageId ?? "");
             await channel.BasicAckAsync(delivery.DeliveryTag, false);
         }
-        Assert.Equal(new[] { expectedMessageId }, deliveredIds);
+        Assert.Single(deliveredIds, id => id == expectedMessageId);
+        Assert.DoesNotContain(deliveredIds, id => id.StartsWith($"trip:{tripId:N}:") && id != expectedMessageId);
     }
 
     [Fact]
