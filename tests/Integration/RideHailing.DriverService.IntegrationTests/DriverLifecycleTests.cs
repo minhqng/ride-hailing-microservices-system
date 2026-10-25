@@ -14,7 +14,7 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
     internal static MessageEnvelope<JsonElement> Command(string type, Guid driver, Guid trip,
         Guid reservation, string? id = null) => MessageEnvelope<JsonElement>.Create(type,
             trip.ToString("N"), JsonSerializer.SerializeToElement(new
-            { driverId = driver, tripId = trip, reservationId = reservation }), messageId: id);
+            { driverId = driver, tripId = trip, reservationId = reservation, matchingRound = 1 }), messageId: id);
 
     private async Task<(Guid Driver, Guid Trip, Guid Reservation)> ReserveAsync()
     {

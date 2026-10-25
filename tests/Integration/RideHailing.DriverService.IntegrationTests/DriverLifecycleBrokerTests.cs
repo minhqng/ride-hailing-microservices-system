@@ -27,7 +27,7 @@ public sealed class DriverLifecycleBrokerTests(DriverPostgresDatabase db, Rabbit
         var trip = Guid.NewGuid();
         var reservation = Guid.NewGuid();
         Assert.Equal(ReserveOutcome.Won,
-            (await repo.TryReserveAsync(driver.DriverId, trip, reservation, driver.Version)).Outcome);
+            (await repo.TryReserveAsync(driver.DriverId, trip, reservation, driver.Version, matchingRound: 1)).Outcome);
         return (driver.DriverId, trip, reservation);
     }
 
