@@ -5,6 +5,16 @@ on:
   pull_request:
     branches: [main, 'MemC-*-Distributed']
 jobs:
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: scripts/test/hygiene-check.sh
   build-test:
     name: build-test
     runs-on: ubuntu-latest
