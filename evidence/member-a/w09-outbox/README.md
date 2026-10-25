@@ -16,19 +16,29 @@ output, and it is not a peer signoff. See [Caveats](#caveats).
 - Base: `7a0575a51a89ba32bd3017afd779355ed2da9576`
   (`origin/MemC-W9-Distributed`, PR #35 head)
 - Main lineage base: `ba5bb40615564ab022ddb0ff5e933bde93ee15a1`
-- **Code commit under test: `63f13a5544dd5b1caed357b62c3e60a188113ed4`**
-- Code tree: `6e4369c1d314d55821f9e00ae455b1e1ad64b1bc`
+- **Code commit under test: `20790f0f361af3501e4e08b30eb0aa781bcf2a0b`**
+  (tree `9820c0652a89c64c1cdb3b99758efcdfa3d07962`)
+- Initial implementation: `63f13a5544dd5b1caed357b62c3e60a188113ed4`,
+  hardened by `d87c147` (outbox identity winner verification) and
+  `20790f0` (relay publish-path gating).
 
 Verify the tree locally:
 
 ```bash
-git rev-parse 63f13a5544dd5b1caed357b62c3e60a188113ed4^{tree}
-# 6e4369c1d314d55821f9e00ae455b1e1ad64b1bc
+git rev-parse 20790f0f361af3501e4e08b30eb0aa781bcf2a0b^{tree}
+# 9820c0652a89c64c1cdb3b99758efcdfa3d07962
 ```
 
-All commands below were run in the worktree at that commit with no source
-changes relative to it. The evidence directory itself is the only addition
-after the runs.
+## Provenance model
+
+The evidence commits only add or edit files under `evidence/` on top of the
+verified code commit. `reproduce.sh` therefore accepts any checkout whose
+source is *provably identical* to the verified revision: it compares the git
+tree hash of every tracked top-level path (everything except `evidence/`)
+between `HEAD` and the verified code commit, and refuses to run (exit 2) on
+any drift or on a working tree that is dirty outside `evidence/`. Source
+provenance verification is never skipped; the run header records both the
+verified code commit and the actual `HEAD` it executed from.
 
 ## Environment
 
@@ -70,25 +80,34 @@ after the runs.
    `outbox_messages` with exactly C's column set, PK name, check-constraint
    names and partial indexes. The relay never calls `EnsureSchemaAsync` in the
    Trip host.
-7. **Readiness gating.** The relay loop re-checks migrations and broker/
-   consumer connectivity each cycle; while the broker is down rows stay
-   `PENDING` with `attempt_count = 0` instead of burning the shared retry
+7. **Readiness gating.** The relay loop re-checks migrations each cycle and
+   gates publication on its own publish-path probe. Consumer connectivity is
+   a different failure domain from publication safety: while the inbound
+   consumers are disconnected, the worker independently opens a connection and
+   re-declares the idempotent topology, so a consumer-only fault cannot stall
+   outgoing delivery; a genuinely unreachable broker still blocks with rows
+   `PENDING` and `attempt_count = 0` instead of burning the shared retry
    budget into `FAILED_VISIBLE`.
-8. **Second concurrency fence.** A deterministic `messageId` collision is
-   translated to `TripConcurrencyConflictException` inside
-   `TripDbContext.SaveChanges/SaveChangesAsync`, so a concurrent same-
-   transition writer reloads and observes the winner rather than returning a
-   500 or committing orphan state.
+8. **Second concurrency fence with winner verification.** A deterministic
+   `messageId` collision is translated to `TripConcurrencyConflictException`
+   inside `TripDbContext.SaveChanges/SaveChangesAsync` only after the
+   committed winner is read back and proven to carry the same message
+   contract (type/exchange/routing key) as the staged intent. A foreign or
+   corrupt row occupying a Trip intent identity surfaces as the original
+   database fault instead of being replayed as a lost race.
 
 ## Results (local, Release)
+
+Verified at code commit `20790f0` (see Provenance model above; the run logs
+live in `outputs/` and were produced by `reproduce.sh` at that source state).
 
 | Lane | Command | Result | Log |
 | --- | --- | --- | --- |
 | Solution build | `dotnet build RideHailing.Distributed.slnx -c Release --no-incremental` | **0 errors**, 1 pre-existing warning (`xUnit2029` in Driver integration tests, file not touched by this change) | `outputs/solution-build-release.txt` |
-| Full solution tests | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | **909 passed, 0 failed, 1 skipped** (exit 0) | `outputs/solution-tests-release.txt` |
+| Full solution tests | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | **912 passed, 0 failed, 1 skipped** (exit 0) | `outputs/solution-tests-release.txt` |
 | Trip unit | included above | **272 passed** | `outputs/solution-tests-release.txt` |
-| Trip integration | included above | **139 passed** | `outputs/solution-tests-release.txt` |
-| W09 Outbox proofs | `--filter FullyQualifiedName~TripW09OutboxTests` | **13 passed** | `outputs/w09-outbox-tests.txt` |
+| Trip integration | included above | **142 passed** | `outputs/solution-tests-release.txt` |
+| W09 Outbox proofs | `--filter FullyQualifiedName~TripW09` (outbox + relay-readiness classes) | **16 passed** | `outputs/w09-outbox-tests.txt` |
 | W08 messaging regressions | `--filter FullyQualifiedName~TripW08MessagingTests` | **18 passed** | `outputs/w08-messaging-tests.txt` |
 | W09 intent identity unit proofs | `--filter FullyQualifiedName~TripOutboxIntentTests` | **5 passed** | `outputs/w09-intent-unit-tests.txt` |
 
@@ -104,7 +123,7 @@ DriverService.IntegrationTests       60 passed
 MatchingService.IntegrationTests    112 passed
 PaymentService.IntegrationTests      26 passed
 Platform.IntegrationTests            60 passed
-TripService.IntegrationTests        139 passed
+TripService.IntegrationTests        142 passed
 SystemTests                         no tests discovered (solution-wide "no test available"; unchanged)
 ```
 
@@ -125,6 +144,9 @@ and continues with exit 0.
 | Concurrent same transition (OCC) | one winner with exactly one intent; loser observes committed state | Version fence + deterministic PK fence; replay appends nothing | `ConcurrentStartMatching_OneWinner_OneIntent_NoOrphan`, `DuplicateLogicalIntent_BlocksStateCommit_ThenLeavesOneRow` |
 | Broker unavailable at HTTP create | MATCHING + `PENDING` intent, HTTP 201 | broker restarted → relay publishes the same id; replay does not enqueue twice | `BrokerOutage_CommitsMatchingWithDurableIntent_ThenRelayPublishesSameIdAfterRecovery` |
 | Replay / stale / terminal transition | no new intent | handler replay flag + domain generation guards | `ReplayPaths_NeverAppendSecondIntent`, `RejectedAndStaleTransitions_AppendNoIntent` |
+| Foreign row under a deterministic intent identity | database fault, business state unchanged, no replay-as-race | winner readback compares type/exchange/routing before translating the duplicate key | `IdentityCollisionWithForeignContract_IsADataFault_NotAReplayableRace` |
+| Consumers disconnected, broker healthy | relay still publishes; no consumer-domain stall | independent publish-path probe (connect + re-declare topology) | `ConsumersDisconnected_BrokerHealthy_RelayStillPublishes` |
+| Broker unreachable, consumers disconnected | `PENDING`, `attempt_count = 0`, never claimed | probe fails → no relay cycle; recovery publishes afterwards | `BrokerUnreachable_WhileConsumersDisconnected_KeepsPendingWithoutAttemptOrClaim` |
 
 ## Observability
 
@@ -146,28 +168,31 @@ metric dimension.
 
 ## Reproduce
 
+From any checkout of the PR branch (no historical worktree or developer-home
+path is required):
+
 ```bash
-cd /tmp/opencode/w09-trip-outbox
-git checkout 63f13a5544dd5b1caed357b62c3e60a188113ed4
-# this environment keeps the SDK outside PATH:
-export PATH="$HOME/.dotnet-sdk:$PATH"
+git clone https://github.com/minhqng/ride-hailing-microservices-system
+cd ride-hailing-microservices-system
+git checkout feature/A-W09-trip-outbox   # or any PR head with identical source
 
-dotnet build RideHailing.Distributed.slnx -c Release --no-incremental
-dotnet test RideHailing.Distributed.slnx -c Release --no-build
-
-dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj \
-  -c Release --no-build --filter "FullyQualifiedName~TripW09OutboxTests"
-dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj \
-  -c Release --no-build --filter "FullyQualifiedName~TripW08MessagingTests"
-dotnet test tests/Unit/RideHailing.TripService.UnitTests/RideHailing.TripService.UnitTests.csproj \
-  -c Release --no-build --filter "FullyQualifiedName~TripOutboxIntentTests"
+evidence/member-a/w09-outbox/reproduce.sh
 ```
 
-Docker must be available: the integration fixtures start disposable
-`postgres:18.6` and `rabbitmq:4.3.6-management` containers.
+Requirements: Docker (the integration fixtures start disposable
+`postgres:18.6` and `rabbitmq:4.3.6-management` containers) and the .NET 10
+SDK resolvable as `dotnet` on `PATH`, at `$HOME/.dotnet-sdk/dotnet`, or via
+the `DOTNET` environment variable.
 
-`./reproduce.sh` runs the same lane and writes fresh logs to
-`outputs/repro-<timestamp>/`.
+The script verifies source equivalence with the verified code commit first
+(see Provenance model) and then runs, writing fresh logs to
+`outputs/repro-<timestamp>/` (gitignored): solution Release build, full
+solution tests, the `TripW09` integration proofs (outbox + relay readiness),
+the W08 messaging regressions, and the W09 intent identity unit proofs.
+
+The curated lane logs in `outputs/*.txt` were produced the same way at code
+commit `20790f0`; the historical first implementation run at `63f13a5`
+(909 passed) is superseded by this bundle.
 
 ## Caveats
 
@@ -181,6 +206,29 @@ Docker must be available: the integration fixtures start disposable
   Full process-kill automation is A-W11-02 and is not claimed here.
 - **Peer rerun (A-W09-09) is not performed in this evidence.** C/B rerun must
   be recorded separately; this directory must not be read as peer signoff.
+- **Accepted boundary — CreateRide → intake window.** `POST /trips` commits
+  the authoritative `CREATED` row (W4 idempotency anchor) and then
+  `TripRideRequestedIntake` commits `MATCHING + RideRequestedV1` in a second
+  local transaction. A crash between the two leaves a stranded `CREATED` ride
+  with no external obligation (no reservation, no driver, no message). This is
+  the pre-W09 workflow shape, unchanged by W09: recovery is the idempotent
+  HTTP replay (same `Idempotency-Key`), a durable local intake failure is
+  surfaced as 503 `MATCHING_INTENT_PENDING` with `Retry-After`, and a client
+  that received 2xx always has the intent committed (it is created before the
+  response is written). Doc 05A §17 scopes W09 atomicity at the
+  StartMatching+RideRequested pair; an automatic stranded-`CREATED` recovery
+  scanner is not a W09 obligation (W10 Saga / W11 recovery territory).
+- **Accepted boundary — cross-owner consumers.** `CancelMatchingRoundV1` and
+  `ReleaseDriverReservationV1` are new W9 wire obligations; no Matching or
+  Driver consumer for `matching.commands.q` / `driver.commands.q` exists yet
+  (B-side W9/W10 work). REL-05's consumer-effect-once proof here covers
+  Trip's own durable-receipt path (a Trip-consumed `DriverReservedV1`
+  delivered twice); downstream consumer idempotency for the two command types
+  must be proven by their owners and is not claimed here.
+- **Upgrade boundary.** Cleanup intents committed before W09 (pre-upgrade
+  trips) are intentionally not backfilled into the outbox; W08 never
+  published these commands, so no obligation regresses. Only obligations
+  added by transitions after the upgrade are enqueued.
 - The Trip service's existing W8 broker-outage HTTP test was rewritten to the
   W9 contract (commit-then-publish). Its old expectation (HTTP 503 while the
   broker is down) is intentionally obsolete: the create path must now succeed

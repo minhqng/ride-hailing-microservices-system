@@ -1,21 +1,21 @@
   Determining projects to restore...
   All projects are up-to-date for restore.
-  RideHailing.IdentityService.IntegrationTests -> /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.IdentityService.IntegrationTests/bin/Release/net10.0/RideHailing.IdentityService.IntegrationTests.dll
-  RideHailing.SystemTests -> /tmp/opencode/w09-trip-outbox/tests/System/RideHailing.SystemTests/bin/Release/net10.0/RideHailing.SystemTests.dll
-  RideHailing.Messaging -> /tmp/opencode/w09-trip-outbox/src/BuildingBlocks/RideHailing.Messaging/bin/Release/net10.0/RideHailing.Messaging.dll
   RideHailing.Observability -> /tmp/opencode/w09-trip-outbox/src/BuildingBlocks/RideHailing.Observability/bin/Release/net10.0/RideHailing.Observability.dll
+  RideHailing.SystemTests -> /tmp/opencode/w09-trip-outbox/tests/System/RideHailing.SystemTests/bin/Release/net10.0/RideHailing.SystemTests.dll
+  RideHailing.IdentityService.IntegrationTests -> /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.IdentityService.IntegrationTests/bin/Release/net10.0/RideHailing.IdentityService.IntegrationTests.dll
+  RideHailing.Messaging -> /tmp/opencode/w09-trip-outbox/src/BuildingBlocks/RideHailing.Messaging/bin/Release/net10.0/RideHailing.Messaging.dll
   RideHailing.NotificationWorker -> /tmp/opencode/w09-trip-outbox/src/Workers/Notification/RideHailing.NotificationWorker/bin/Release/net10.0/RideHailing.NotificationWorker.dll
   RideHailing.Gateway -> /tmp/opencode/w09-trip-outbox/src/Gateway/RideHailing.Gateway/bin/Release/net10.0/RideHailing.Gateway.dll
   RideHailing.IdentityService -> /tmp/opencode/w09-trip-outbox/src/Services/Identity/RideHailing.IdentityService/bin/Release/net10.0/RideHailing.IdentityService.dll
-  RideHailing.PaymentService -> /tmp/opencode/w09-trip-outbox/src/Services/Payment/RideHailing.PaymentService/bin/Release/net10.0/RideHailing.PaymentService.dll
-  RideHailing.Platform.IntegrationTests -> /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.Platform.IntegrationTests/bin/Release/net10.0/RideHailing.Platform.IntegrationTests.dll
-  RideHailing.DriverService -> /tmp/opencode/w09-trip-outbox/src/Services/Driver/RideHailing.DriverService/bin/Release/net10.0/RideHailing.DriverService.dll
   RideHailing.Contracts -> /tmp/opencode/w09-trip-outbox/src/BuildingBlocks/RideHailing.Contracts/bin/Release/net10.0/RideHailing.Contracts.dll
-  RideHailing.MatchingService -> /tmp/opencode/w09-trip-outbox/src/Services/Matching/RideHailing.MatchingService/bin/Release/net10.0/RideHailing.MatchingService.dll
-  RideHailing.TripService -> /tmp/opencode/w09-trip-outbox/src/Services/Trip/RideHailing.TripService/bin/Release/net10.0/RideHailing.TripService.dll
+  RideHailing.PaymentService -> /tmp/opencode/w09-trip-outbox/src/Services/Payment/RideHailing.PaymentService/bin/Release/net10.0/RideHailing.PaymentService.dll
+  RideHailing.DriverService -> /tmp/opencode/w09-trip-outbox/src/Services/Driver/RideHailing.DriverService/bin/Release/net10.0/RideHailing.DriverService.dll
+  RideHailing.Platform.IntegrationTests -> /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.Platform.IntegrationTests/bin/Release/net10.0/RideHailing.Platform.IntegrationTests.dll
   RideHailing.PaymentService.UnitTests -> /tmp/opencode/w09-trip-outbox/tests/Unit/RideHailing.PaymentService.UnitTests/bin/Release/net10.0/RideHailing.PaymentService.UnitTests.dll
   RideHailing.PaymentService.IntegrationTests -> /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.PaymentService.IntegrationTests/bin/Release/net10.0/RideHailing.PaymentService.IntegrationTests.dll
+  RideHailing.TripService -> /tmp/opencode/w09-trip-outbox/src/Services/Trip/RideHailing.TripService/bin/Release/net10.0/RideHailing.TripService.dll
   RideHailing.DriverService.UnitTests -> /tmp/opencode/w09-trip-outbox/tests/Unit/RideHailing.DriverService.UnitTests/bin/Release/net10.0/RideHailing.DriverService.UnitTests.dll
+  RideHailing.MatchingService -> /tmp/opencode/w09-trip-outbox/src/Services/Matching/RideHailing.MatchingService/bin/Release/net10.0/RideHailing.MatchingService.dll
 /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.DriverService.IntegrationTests/DriverReserveConcurrencyTests.cs(289,13): warning xUnit2029: Do not use Assert.Empty to check if a value does not exist in a collection. Use Assert.DoesNotContain instead. (https://xunit.net/xunit.analyzers/rules/xUnit2029) [/tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.DriverService.IntegrationTests/RideHailing.DriverService.IntegrationTests.csproj]
   RideHailing.DriverService.IntegrationTests -> /tmp/opencode/w09-trip-outbox/tests/Integration/RideHailing.DriverService.IntegrationTests/bin/Release/net10.0/RideHailing.DriverService.IntegrationTests.dll
   RideHailing.TripService.UnitTests -> /tmp/opencode/w09-trip-outbox/tests/Unit/RideHailing.TripService.UnitTests/bin/Release/net10.0/RideHailing.TripService.UnitTests.dll
@@ -29,4 +29,4 @@ Build succeeded.
     1 Warning(s)
     0 Error(s)
 
-Time Elapsed 00:00:02.10
+Time Elapsed 00:00:02.73
