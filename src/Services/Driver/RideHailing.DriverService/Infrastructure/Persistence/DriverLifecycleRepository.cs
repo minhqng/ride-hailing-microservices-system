@@ -60,18 +60,19 @@ public sealed partial class DriverRepository
             }
         }
 
+        command.ValidateForExecution(envelope.MessageType);
         DriverLifecycleResult result;
         if (envelope.MessageType == DriverCommand.Release)
         {
             var release = await ReleaseInTransactionAsync(conn, tx, command.DriverId,
-                command.TripId, command.ReservationId, ct, envelope);
+                command.TripId, command.ReservationId, ct, envelope, command.MatchingRound);
             result = release.Outcome switch
             {
                 DriverMutationOutcome.Applied => new("Applied", release.Driver!.Version,
                     DriverEventMessageIds.ForDriverEffect(command.DriverId, command.ReservationId,
                         release.Driver.Version, "AVAILABLE")),
                 DriverMutationOutcome.Unchanged => new("Replayed", release.Driver!.Version),
-                DriverMutationOutcome.DriverNotFound => new("NotFound"),
+                DriverMutationOutcome.DriverNotFound => new("NotFound", Reason: "DRIVER_NOT_FOUND"),
                 _ => new("Rejected", Reason: release.ConflictCode)
             };
         }

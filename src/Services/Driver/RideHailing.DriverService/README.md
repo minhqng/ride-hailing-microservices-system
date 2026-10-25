@@ -75,7 +75,7 @@ does not invent a missing historical intent; rollout/backfill or authority-based
 projection rebuild needs lead coordination. New W9 effects are covered by
 [W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
 
-## W10 Phase 1 lifecycle commands
+## W10 lifecycle and compensation commands
 
 The Driver host consumes `driver.commands.q` through C's `ManualAckConsumer`.
 `RabbitMq:CommandsEnabled` defaults to `true`; set the container environment
@@ -90,7 +90,20 @@ nonempty UUIDs `driverId`, `tripId`, `reservationId`:
 |---|---|---|
 | MarkDriverTripStartedV1 | ride.commands / driver.mark-trip-started.v1 | exact current RESERVED assignment |
 | MarkDriverTripCompletedV1 | ride.commands / driver.mark-trip-completed.v1 | current ON_TRIP plus recorded original reservation |
-| ReleaseDriverReservationV1 | ride.commands / driver.release-reservation.v1 | existing exact-token release / coherent AVAILABLE no-op |
+| ReleaseDriverReservationV1 | ride.commands / driver.release-reservation.v1 | exact current RESERVED driver/trip/reservation and matchingRound |
+
+New broker Release execution additionally requires a positive integer `matchingRound`, matching
+the generation recorded at the reserve win. A's `TripOutboxIntents.ReleaseReservation`
+emits this four-field contract. Wrong round is durably `Rejected` with
+`RESERVATION_ROUND_MISMATCH`; a legacy reservation without round is rejected with
+`RESERVATION_ROUND_REQUIRED`. No historical round is inferred or backfilled.
+An AVAILABLE/OFFLINE/ON_TRIP Driver yields `Rejected:RELEASE_PROVENANCE_REQUIRED`,
+never an unproven compensation success. Missing Driver is `NotFound:DRIVER_NOT_FOUND`.
+Exact command-message retries return their original durable receipt, even after
+new reservations. This includes identical committed Phase1 three-field receipts:
+receipt lookup precedes new-execution validation, with no new effect or guessed
+round. Unseen three-field commands are rejected. HTTP W7 Release retains its
+existing exact-token/no-op contract.
 
 Migration `005_driver_lifecycle.sql` adds `driver_lifecycle_effects` and
 `driver_command_receipts`. Lifecycle effects are append-only through the
@@ -115,6 +128,18 @@ active trace headers flow into the stored Outbox envelope. Historical replay
 returns its original version/event ID without touching the current Driver.
 No immediate publish follows the transaction.
 
-Full Payment-failure compensation and REL-09 remain Phase 2; A's actual W10
-command producer and human Driver–Trip agreement review are external gates.
-See [Phase 1 evidence](../../../../evidence/member-b/w10-lifecycle/README.md).
+Command ACK means the disposition committed. `Applied` means Driver changed and
+its authoritative release event is durable. Trip compensation is confirmed only
+when Trip consumes that exact Driver event and resolves its owned cleanup; ACK or
+Driver availability alone cannot prove this. A new message on an already released
+reservation requires reconciliation with the original event/receipt rather than
+guessing historical success. A/B operators inspect `driver_command_receipts`
+(`message_id`, `disposition`, `reason`, `event_message_id`) and pending/failed Outbox
+rows; A must keep rejected/missing/no-provenance cleanup unresolved for review.
+No automatic cross-service receipt reconciliation worker is supplied.
+
+B-owned compensation proof uses A's production Release builder, real PostgreSQL,
+RabbitMQ, exact Trip intake and actual broker/database restarts. Full REL-09 still
+requires C's Payment command/outcome path and combined A persisted-Saga validation;
+human A/C agreement review remains external. See
+[W10 evidence](../../../../evidence/member-b/w10-lifecycle/README.md).

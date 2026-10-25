@@ -6,7 +6,7 @@ namespace RideHailing.DriverService.Application.Messaging;
 
 public sealed record DriverCommand(
     Guid DriverId, Guid TripId, Guid ReservationId,
-    string Fingerprint)
+    string Fingerprint, int? MatchingRound = null)
 {
     public const string Queue = "driver.commands.q";
     public const string Start = "MarkDriverTripStartedV1";
@@ -23,6 +23,13 @@ public sealed record DriverCommand(
         var driver = Id(envelope.Payload, "driverId");
         var trip = Id(envelope.Payload, "tripId");
         var reservation = Id(envelope.Payload, "reservationId");
+        int? round = null;
+        if (envelope.MessageType == Release)
+        {
+            if (envelope.Payload.TryGetProperty("matchingRound", out var value)
+                && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var parsed) && parsed > 0)
+                round = parsed;
+        }
         var semantic = JsonSerializer.SerializeToElement(new
         {
             envelope.MessageType, envelope.SchemaVersion, envelope.Payload,
@@ -32,7 +39,15 @@ public sealed record DriverCommand(
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream)) WriteCanonical(writer, semantic);
         return new(driver, trip, reservation,
-            Convert.ToHexString(SHA256.HashData(stream.ToArray())));
+            Convert.ToHexString(SHA256.HashData(stream.ToArray())), round);
+    }
+
+    public void ValidateForExecution(string messageType)
+    {
+        // Already committed three-field receipts may have a three-field payload.
+        // Their exact semantic replay needs no new execution or guessed round.
+        if (messageType == Release && MatchingRound is null)
+            throw new ArgumentException("Release requires a positive integer matchingRound.");
     }
 
     private static Guid Id(JsonElement payload, string name)
