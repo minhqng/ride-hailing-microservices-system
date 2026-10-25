@@ -83,7 +83,15 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 receipt.Disposition = "PendingWorkflow";
                 receipt.Reason = "TRIP_NOT_FOUND";
             }
-            else Apply(trip, envelope, receipt, now);
+            else
+            {
+                // A late authority fact may create an exact cleanup obligation
+                // while the Trip stays terminal. The receipt, Trip effect and
+                // any outgoing intent commit in this one transaction.
+                var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
+                Apply(trip, envelope, receipt, now);
+                TripOutboxWriter.EnqueueNewCleanup(db, trip, preexistingCleanup);
+            }
             await db.SaveChangesAsync(token);
             await transaction.CommitAsync(token);
             log.LogInformation("Trip message {MessageId} correlation {CorrelationId} trip {TripId} result {Disposition} reason {Reason}",
@@ -92,7 +100,8 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         catch (TripConcurrencyConflictException)
         { throw new DeliveryFailureException(FailureKind.Transient, "TRIP_CONCURRENCY_CONFLICT"); }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "PK_trip_cleanup_intents" })
+            { SqlState: PostgresErrorCodes.UniqueViolation } pg &&
+            pg.ConstraintName is "PK_trip_cleanup_intents" or "outbox_messages_pk")
         {
             // Distinct deliveries can concurrently discover the same obligation.
             // Rollback and reload lets the domain compare the winner's identity;

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using RideHailing.Observability;
 using RideHailing.TripService.Api;
 using RideHailing.TripService.Application.Trips.CreateRide;
@@ -28,7 +29,19 @@ var postgresConnection = builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException(
         "Missing Trip PostgreSQL connection string 'ConnectionStrings:Postgres'. " +
         "Provide ConnectionStrings__Postgres (see compose.yaml / deploy/postgres/init).");
-builder.Services.AddDbContext<TripDbContext>(options => options.UseNpgsql(postgresConnection));
+
+// One pooled data source serves both EF and the C-owned Outbox store. The
+// relay must read the SAME Trip database that owns the transaction; sharing
+// the data source avoids a second credential/pool and guarantees identical
+// connection settings. EF does not dispose an externally supplied source.
+//
+// Creation is deferred to first use: readiness must be able to report
+// NotReady (503) for an unparsable owned-database configuration instead of
+// crashing the host during startup. Nothing resolves the context or the relay
+// before the readiness gates pass.
+builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(postgresConnection));
+builder.Services.AddDbContext<TripDbContext>((sp, options) =>
+    options.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>()));
 
 // W4-local application dependencies: scoped handler/DbContext per request,
 // single system clock, stateless deterministic fare policy needs no service.

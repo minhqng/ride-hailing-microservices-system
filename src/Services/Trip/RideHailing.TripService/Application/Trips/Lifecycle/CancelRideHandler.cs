@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
 
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
@@ -52,12 +53,20 @@ public sealed class CancelRideHandler
         if (trip.State == TripState.Cancelled)
             return TripLifecycleResult.Success(trip, isReplay: true, TripCompensation.None);
 
+        // Snapshot before Cancel so only the obligations added by this
+        // transition are staged; an upgrade/backfill is never silently
+        // republished as a new logical message.
+        var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
         var outcome = trip.Cancel(_time.GetUtcNow());
         if (!outcome.IsSuccess)
         {
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
+        // A-W09-02: CANCELLED + CancelMatchingRound/ReleaseDriverReservation
+        // intents commit atomically. ReconcilePayment remains Trip-durable for
+        // W10 and is not published here.
+        TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _log.LogInformation(

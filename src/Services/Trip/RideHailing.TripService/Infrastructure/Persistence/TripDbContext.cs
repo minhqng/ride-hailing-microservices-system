@@ -1,16 +1,19 @@
 // Trip-owned EF Core persistence (A-W02-02 foundation, A-W03-07 aggregate,
-// A-W04-02 request idempotency, A-W04-04 active-Rider defense).
+// A-W04-02 request idempotency, A-W04-04 active-Rider defense, A-W09-01
+// Trip-owned Outbox intent).
 //
-// SCOPE (W4): Trip aggregate plus Trip-local request-idempotency
-// bookkeeping. Transport DTOs in Api/ are NOT entities and MUST NOT be
-// mapped here. Driver/Matching/Payment/Saga/Outbox/Inbox tables belong to
-// later work. Version is the application-managed optimistic-concurrency
-// token: the domain advances it, persistence only compares the original
-// value. Concurrency failures are translated to
-// TripConcurrencyConflictException at this Trip-specific boundary; no generic
-// repository, no blind retry.
+// SCOPE: Trip aggregate, Trip-local request-idempotency bookkeeping, durable
+// message receipts and pending outgoing Outbox intents. Transport DTOs in
+// Api/ are NOT entities and MUST NOT be mapped here. Driver/Matching/Payment/
+// Saga/Inbox tables belong to their owning services. Version is the
+// application-managed optimistic-concurrency token: the domain advances it,
+// persistence only compares the original value. A deterministic Outbox
+// messageId is the second fence for the same logical transition. Concurrency
+// failures are translated to TripConcurrencyConflictException at this
+// Trip-specific boundary; no generic repository, no blind retry.
 
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using RideHailing.TripService.Integration.Messaging;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence.Configurations;
@@ -32,6 +35,12 @@ public sealed class TripDbContext : DbContext
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<TripMessageReceipt> MessageReceipts => Set<TripMessageReceipt>();
 
+    /// <summary>
+    /// W9 Trip-owned pending outgoing intents. Rows are appended atomically
+    /// with the business transition; the shared C-owned relay owns delivery.
+    /// </summary>
+    public DbSet<TripOutboxMessage> OutboxMessages => Set<TripOutboxMessage>();
+
     /// <summary>W4 request-idempotency bookkeeping set (not a domain aggregate).</summary>
     public DbSet<RequestIdempotencyRecord> RequestIdempotency => Set<RequestIdempotencyRecord>();
 
@@ -39,6 +48,7 @@ public sealed class TripDbContext : DbContext
     {
         modelBuilder.ApplyConfiguration(new TripConfiguration());
         modelBuilder.ApplyConfiguration(new TripMessageReceiptConfiguration());
+        modelBuilder.ApplyConfiguration(new TripOutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new RequestIdempotencyConfiguration());
     }
 
@@ -58,6 +68,14 @@ public sealed class TripDbContext : DbContext
 
             throw;
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "outbox_messages_pk",
+        } conflict)
+        {
+            throw TranslateOutboxIdentityConflict(ex, conflict);
+        }
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -76,6 +94,38 @@ public sealed class TripDbContext : DbContext
 
             throw;
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "outbox_messages_pk",
+        } conflict)
+        {
+            throw TranslateOutboxIdentityConflict(ex, conflict);
+        }
+    }
+
+    /// <summary>
+    /// A deterministic Outbox identity is the second concurrency fence for the
+    /// same logical transition: if the row already exists, another writer has
+    /// committed that transition. Report it like a Version conflict so callers
+    /// reread the winner instead of treating a lost race as a server fault.
+    /// </summary>
+    private static TripConcurrencyConflictException TranslateOutboxIdentityConflict(
+        DbUpdateException ex, PostgresException uniqueViolation)
+    {
+        var tripId = Guid.Empty;
+        foreach (var entry in ex.Entries)
+        {
+            if (entry.Entity is TripOutboxMessage message &&
+                Guid.TryParse(message.AggregateId, out var aggregateId))
+            {
+                tripId = aggregateId;
+                break;
+            }
+        }
+
+        return new TripConcurrencyConflictException(tripId, expectedVersion: null,
+            new InvalidOperationException("Outbox identity already committed by another writer.", uniqueViolation));
     }
 
     private static TripConcurrencyConflictException? TryTranslateConcurrencyConflict(DbUpdateConcurrencyException ex)

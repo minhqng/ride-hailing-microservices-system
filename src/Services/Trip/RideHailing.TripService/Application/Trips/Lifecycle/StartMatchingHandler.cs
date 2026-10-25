@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
 
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
@@ -53,9 +54,13 @@ public sealed class StartMatchingHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        // Round-1 replay is already current: no mutation, skip the write.
+        // Round-1 replay is already current: no mutation, no new intent.
         if (!outcome.IsReplay)
         {
+            // A-W09-02: MATCHING state and its RideRequested intent commit in
+            // one local transaction. A crash or broker outage after this
+            // commit leaves a pending row for the relay, never a lost message.
+            TripOutboxWriter.Enqueue(_db, TripOutboxIntents.RideRequested(trip, trip.UpdatedAt));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 

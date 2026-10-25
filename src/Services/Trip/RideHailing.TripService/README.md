@@ -1,12 +1,27 @@
 # Trip / Booking Service — Owner A
 
-## Current W7–W8 additions
+## Current W7–W9 additions
 
 - W7 cancellation stores exact cleanup obligations in the same transaction as
   terminal state. Late outcomes never reopen cancelled trips.
-- W8 optionally publishes RideRequested through C's confirmed publisher and
-  supervises three manual-ACK consumers. Trip effects and durable receipts share
-  one PostgreSQL transaction; replay and domain guards are separate defenses.
+- W8 supervises three manual-ACK consumers. Trip effects and durable receipts
+  share one PostgreSQL transaction; replay and domain guards are separate
+  defenses.
+- W9 replaces W8 direct publication with a transactional Outbox. Every
+  transition that requires an outgoing message (StartMatching →
+  `RideRequestedV1`; cancellation/late-terminal cleanup →
+  `CancelMatchingRoundV1` / `ReleaseDriverReservationV1`) appends a pending
+  `outbox_messages` row in the SAME EF `SaveChangesAsync` as the business
+  state. The create path no longer touches RabbitMQ: a broker outage or
+  process crash after commit leaves a durable pending intent, and the shared
+  C-owned relay claims/publishes/marks it with a deterministic `messageId`.
+  `CancelMatchingRoundV1`/`ReleaseDriverReservationV1` go to `ride.commands`;
+  `RideRequestedV1` goes to `ride.events`. Payment commands remain W10.
+- Trip owns only intent semantics and the `outbox_messages` EF mapping, which
+  mirrors C's shared schema (`001_outbox_messages.sql`) exactly. Claim,
+  publish-confirm, mark, retry and backlog metrics stay C-owned
+  (`outbox.pending`, `outbox.oldest_pending.age`, `outbox.failed_visible`).
+  EF migrations create the table; the relay never calls `EnsureSchemaAsync`.
 - Apply migrations before enabling `TripMessaging__Enabled=true` (compose:
   `TRIP_MESSAGING_ENABLED=true`). Compose local/CI sets
   `TripDatabase__AutoMigrate=true` (`TRIP_AUTO_MIGRATE`) so the service applies
@@ -14,9 +29,11 @@
   is probed; production sets it false and migrates via an external job.
   Supply `RabbitMq__Host`, `RabbitMq__Username`,
   `RabbitMq__Password`; optional `RabbitMq__Port` and `RabbitMq__VirtualHost`.
-  Readiness checks migrations and, when enabled, consumer connectivity.
-  Outbox, Saga, automatic cleanup dispatch and Payment lineage resolution remain
-  later work. The historical week-by-week notes below describe their own scope.
+  Readiness checks migrations and, when enabled, consumer connectivity. The
+  relay waits for both before claiming, so an unavailable broker leaves rows
+  pending instead of burning retry attempts into `FAILED_VISIBLE`.
+  Saga and Payment lineage resolution remain later work. The historical
+  week-by-week notes below describe their own scope.
 
 - Owner: A (reviewer B, backup C)
 - Authority: ride lifecycle, FareSnapshot, assignment reference, Saga state, cancellation. Does NOT decide Driver reservability.
