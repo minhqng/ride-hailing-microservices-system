@@ -6,16 +6,19 @@
   "branch": "feature/A-W10-trip-saga",
   "base": {
     "ref": "origin/feature/A-W09-trip-outbox",
-    "sha": "5f61cff4fc7a6dd1c178c7ffac3d6709369f7bf3",
-    "pullRequest": 36
+    "sha": "f5fbe267fbb5aedfa787ea36397ed644cdbccbb2",
+    "pullRequest": 36,
+    "incorporatedBy": "forward merge d1c99b1 (normal merge commit, no rebase, no force push)"
   },
   "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
   "codeCommit": {
-    "sha": "368dec81613c85272b1574908e05d2575a628de1",
-    "tree": "b21b1513e8a672c0afc888b79fce0d8492dc03cc",
-    "message": "chore(ci): run pull_request checks on the A-W10 stacked base"
+    "sha": "0ba68b0adcc5a6211269f02053c9870ffbe4c11c",
+    "tree": "134cde319ef847d62e9eeba001e77c39a61017e7",
+    "message": "test(trip): assert exact match counts via predicate overloads in W10 saga tests",
+    "note": "Supersedes anchor 368dec8 (tree b21b151). Diff from 368dec8: W09-parent hygiene hardening 0185c37/f5fbe26 via merge d1c99b1 (policy/scripts only), plus W10-owned cleanup of the 13 xUnit2029/xUnit2031 warnings in TripW10SagaTests.cs (semantically identical predicate overloads; no assertion weakened). Production saga source is unchanged from dbbe625."
   },
-  "provenanceModel": "reproduce.sh compares the git tree hash of every top-level path except evidence/ between HEAD and codeCommit; identical source is accepted, any drift aborts",
+  "provenanceModel": "reproduce.sh delegates to scripts/test/verify-source-anchor.sh: a symmetric git diff over every tracked path outside evidence/ between HEAD and codeCommit (added, modified, deleted, renamed and mode-changed paths are all drift), plus a clean working tree outside evidence/; identical source is accepted, any drift aborts. Pinned by scripts/test/verify-source-anchor.test.sh (12 git-fixture cases, run in CI).",
+  "evidenceModel": "Curated canonical bundle per docs/03 §25 and docs/05A §6: README.md, manifest.json, test-output.txt (§1 build, §2 full solution, §3–§6 lanes), final-state/rel-09-compensation.md, final-state/rel-10-capture-recovery.md and reproduce.sh at the bundle root. Raw execution output is local/ephemeral: reproduce.sh writes outputs/repro-<stamp>/ which is gitignored; nothing under outputs/ is tracked.",
   "environment": {
     "os": "Linux 7.3.0-1-default",
     "dotnetSdk": "10.0.401",
@@ -31,8 +34,8 @@
       "exitCode": 0,
       "errors": 0,
       "warnings": 1,
-      "warningNote": "Pre-existing xUnit2029 analyzer warning in DriverReserveConcurrencyTests.cs; not part of this change.",
-      "output": "outputs/solution-build-release.txt"
+      "warningNote": "Pre-existing xUnit2029 analyzer warning in B-owned DriverReserveConcurrencyTests.cs(289,13); deliberately not modified here. The previous bundle recorded '1 warning' while its own log showed 14 — the 13 xUnit2029/xUnit2031 diagnostics in TripW10SagaTests.cs were W10-owned and are fixed at codeCommit.",
+      "output": "test-output.txt §1 solution-build-release"
     },
     {
       "name": "solution-tests-release",
@@ -40,7 +43,8 @@
       "exitCode": 0,
       "passed": 954,
       "failed": 0,
-      "skipped": 0,
+      "skipped": 1,
+      "skipNote": "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState — pre-existing opt-in skip (mis-reported as 0 skipped in the previous bundle; the log always showed the skip).",
       "perProject": {
         "TripService.UnitTests": 299,
         "DriverService.UnitTests": 117,
@@ -50,9 +54,12 @@
         "MatchingService.IntegrationTests": 112,
         "PaymentService.IntegrationTests": 26,
         "Platform.IntegrationTests": 60,
-        "TripService.IntegrationTests": 157
+        "TripService.IntegrationTests": 157,
+        "IdentityService.IntegrationTests": 0,
+        "SystemTests": null
       },
-      "output": "outputs/solution-tests-release.txt"
+      "perProjectNote": "IdentityService.IntegrationTests: 0 passed / 1 skipped (pre-existing). SystemTests: null = no discoverable tests ('No test is available' — NOT a skipped test; dotnet test continues, exit 0).",
+      "output": "test-output.txt §2 solution-tests-release"
     },
     {
       "name": "w10-saga-integration",
@@ -61,7 +68,7 @@
       "passed": 14,
       "failed": 0,
       "note": "13 saga proofs on disposable PostgreSQL probe databases + 1 real-broker relay delivery proof onto payment.commands.q.",
-      "output": "outputs/w10-saga-tests.txt"
+      "output": "test-output.txt §3 w10-saga-tests"
     },
     {
       "name": "w10-saga-unit",
@@ -69,7 +76,7 @@
       "exitCode": 0,
       "passed": 27,
       "failed": 0,
-      "output": "outputs/w10-saga-unit-tests.txt"
+      "output": "test-output.txt §4 w10-saga-unit-tests"
     },
     {
       "name": "w09-outbox-regression",
@@ -77,7 +84,7 @@
       "exitCode": 0,
       "passed": 17,
       "failed": 0,
-      "output": "outputs/w09-outbox-regression.txt"
+      "output": "test-output.txt §5 w09-outbox-regression"
     },
     {
       "name": "w08-messaging-regression",
@@ -85,12 +92,16 @@
       "exitCode": 0,
       "passed": 18,
       "failed": 0,
-      "output": "outputs/w08-messaging-regression.txt"
+      "output": "test-output.txt §6 w08-messaging-regression"
     }
   ],
   "review": {
-    "adversarialPass": "Independent pre-commit review found two compensation-window defects (review signal clobbering COMPENSATING; reservation-release confirmation at AUTHORIZE_PENDING throwing and dead-lettering) plus two hardening items (zero-fare acceptance, saga unique-violation classification). All four fixed with regression tests in the verified code commit. Hardening fixes and regression tests are all inside the implementation commit dbbe625.",
-    "stability": "W10 lanes run 3+ consecutive passes after the deterministic TwoPartySaveBarrier replaced a timing-dependent OCC test."
+    "adversarialPass": "Independent pre-commit review found two compensation-window defects (review signal clobbering COMPENSATING; reservation-release confirmation at AUTHORIZE_PENDING throwing and dead-lettering) plus two hardening items (zero-fare acceptance, saga unique-violation classification). All four fixed with regression tests in the implementation commit dbbe625. A later evidence-audit pass found the manifest/README mis-reporting the solution run as '0 skipped' and the build as '1 warning' (actual: 1 Identity skip; 14 warnings, 13 W10-owned); corrected at 0ba68b0 by fixing the 13 xUnit2029/xUnit2031 assertions (predicate overloads, semantically identical) and re-running the full verification.",
+    "stability": "W10 lanes run 3+ consecutive passes after the deterministic TwoPartySaveBarrier replaced a timing-dependent OCC test; the consolidated bundle was re-verified end-to-end at codeCommit 0ba68b0 on 2026-10-25 (build exit 0, solution exit 0, all lanes exit 0)."
+  },
+  "finalState": {
+    "rel-09": "final-state/rel-09-compensation.md",
+    "rel-10": "final-state/rel-10-capture-recovery.md"
   },
   "crossOwnerPending": [
     "C-W10: payment.commands.q consumer (AuthorizePaymentV1/CapturePaymentV1/VoidPaymentAuthorizationV1) and Payment outcome producer with the same operationKey lineage.",
@@ -99,6 +110,6 @@
   "implementationCommit": {
     "sha": "dbbe6253d13e50c1bffa69afe771db2e3d9d2a94",
     "message": "feat(trip): add W10 persisted ride saga with payment orchestration",
-    "note": "All W10 production/test source; verified identically by every lane (the follow-up CI-trigger commit changes only .github/workflows/ci.yml)."
+    "note": "All W10 production/test source. Later non-evidence deltas up to codeCommit: 368dec8 (CI trigger only), d1c99b1 merge of the W09-parent hygiene hardening (policy/scripts only), 0ba68b0 (test-only assertion-overload cleanup in TripW10SagaTests.cs). Production saga source is identical to dbbe625 throughout."
   }
 }

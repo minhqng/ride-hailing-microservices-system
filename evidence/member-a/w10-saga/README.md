@@ -10,14 +10,24 @@ forward recovery that never regresses a COMPLETED Trip (REL-10, DSI-028).
 ## Provenance model
 
 Identical to W09: every result below was produced from exactly one code
-revision; `reproduce.sh` verifies that the checkout's source (every
-top-level git tree except `evidence/`) is identical to that revision before
-running anything, and refuses otherwise.
+revision; `reproduce.sh` delegates to the shared
+`scripts/test/verify-source-anchor.sh`, which proves the checkout's source
+(every tracked path outside `evidence/` — added, modified, deleted,
+renamed and mode-changed paths are all drift) is identical to that revision
+before running anything, and refuses otherwise.
 
-- Branch: `feature/A-W10-trip-saga` (stacked on `feature/A-W09-trip-outbox`
-  @ `5f61cff`, PR #36; see `manifest.json`).
-- Verified code commit: `368dec8` (tree `b21b151`) — the W10 implementation
-  (`dbbe625`) plus a workflow-file-only CI-trigger addition; see `manifest.json`.
+- Branch: `feature/A-W10-trip-saga` (stacked on the updated
+  `feature/A-W09-trip-outbox` head `f5fbe26`, PR #36, incorporated by a
+  normal forward merge `d1c99b1` — no history rewritten, no force push; see
+  `manifest.json`).
+- Verified code commit: `0ba68b0` (tree `134cde3`) — the W10 implementation
+  (`dbbe625`), the CI-trigger commit (`368dec8`), the merged W09 hygiene
+  hardening (`0185c37`/`f5fbe26`), plus the W10-owned test cleanup fixing
+  the 13 xUnit2029/xUnit2031 analyzer warnings in `TripW10SagaTests.cs`
+  (predicate overloads; semantically identical assertions, none weakened).
+- Final-state proof records for REL-09/REL-10 live in `final-state/`
+  (assertion records against disposable real PostgreSQL probes,
+  cross-referenced to the test names proven in `test-output.txt` §3/§4).
 
 ## Environment
 
@@ -34,15 +44,24 @@ running anything, and refuses otherwise.
 
 | Lane | Command | Result |
 |---|---|---|
-| solution-build-release | `dotnet build RideHailing.Distributed.slnx -c Release --no-incremental` | PASS (exit 0) |
-| solution-tests-release | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | PASS 954/954 (0 failed, 0 skipped) |
+| solution-build-release | `dotnet build RideHailing.Distributed.slnx -c Release --no-incremental` | PASS (exit 0, 0 errors, **1 pre-existing warning**: xUnit2029 in B-owned `DriverReserveConcurrencyTests.cs`, not touched here) |
+| solution-tests-release | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | PASS **954 passed, 0 failed, 1 skipped** (pre-existing Identity opt-in skip; the SystemTests project has no discoverable tests — explicitly not counted as a skip) |
 | w10-saga-integration | `dotnet test …TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW10Saga` | PASS 14/14 |
 | w10-saga-unit | `dotnet test …TripService.UnitTests -c Release --no-build --filter "FullyQualifiedName~RideSagaTransitionTests|FullyQualifiedName~TripSagaIntentTests"` | PASS 27/27 |
-| w09-outbox-regression | `dotnet test …TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW09` | PASS |
-| w08-messaging-regression | `dotnet test …TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW08MessagingTests` | PASS |
+| w09-outbox-regression | `dotnet test …TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW09` | PASS 17/17 |
+| w08-messaging-regression | `dotnet test …TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW08MessagingTests` | PASS 18/18 |
 
-Exact per-project totals are in `outputs/solution-tests-release.txt`; each
-lane log records its full dotnet output and exit code.
+Curated commands, exit codes, counts, per-project totals (including the
+Identity skip and the SystemTests observation) and lane verdicts live in
+**`test-output.txt`** (Doc 03 §25 bundle shape). Raw lane transcripts are
+not tracked: re-running `reproduce.sh` regenerates them under
+`outputs/repro-<stamp>/` (gitignored, local-only).
+
+Corrections against the superseded bundle (commit `e469fda` lineage): it
+reported `954/954 (0 failed, 0 skipped)` while its own log showed the
+Identity skip, and `1 warning` while its own build log showed 14 (13 of
+them xUnit2029/2031 in `TripW10SagaTests.cs`, W10-owned and fixed at this
+commit).
 
 ## What each proof detects (A-W10-09..11)
 
@@ -97,8 +116,8 @@ lane log records its full dotnet output and exit code.
 | A-W10-06 CompleteTrip | DONE | progress test |
 | A-W10-07 CapturePayment emission | DONE | completion-pivot test |
 | A-W10-08 capture pending/review | DONE | REL-10 test |
-| A-W10-09 REL-09 proof | DONE | real PostgreSQL; broker release-intent payload exactness |
-| A-W10-10 REL-10 proof | DONE | real PostgreSQL; authoritative outcome envelopes |
+| A-W10-09 REL-09 proof | DONE | real PostgreSQL; assertion record in `final-state/rel-09-compensation.md`; broker release-intent payload exactness |
+| A-W10-10 REL-10 proof | DONE | real PostgreSQL; assertion record in `final-state/rel-10-capture-recovery.md`; authoritative outcome envelopes |
 | A-W10-11 happy ride | A-SIDE DONE / 3-service INTEGRATION_PENDING | HappyRide_ALeg + relay proof |
 | A-W10-12 evidence + B/C review | evidence DONE; peer review pending | this bundle |
 
