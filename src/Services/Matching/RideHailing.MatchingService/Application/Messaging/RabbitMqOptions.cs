@@ -20,6 +20,7 @@ public sealed class RabbitMqOptions
     public ushort Prefetch { get; set; } = 16;
     public int MaxRedeliveries { get; set; } = 3;
     public bool ConsumersEnabled { get; set; } = true;
+    public bool PublishingEnabled { get; set; } = true;
 
     public string? Validate()
     {

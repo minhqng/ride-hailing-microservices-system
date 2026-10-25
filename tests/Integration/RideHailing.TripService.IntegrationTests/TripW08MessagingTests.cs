@@ -1,3 +1,5 @@
+extern alias MatchingSvc;
+
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
@@ -12,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using RabbitMQ.Client;
+using MatchingSvc::RideHailing.MatchingService.Application.Messaging;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Messaging.Topology;
@@ -574,5 +577,48 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
         await using var final = Db();
         Assert.Equal(TripState.MatchFailed, (await final.Trips.SingleAsync(t => t.TripId == trip.TripId)).State);
         Assert.False(final.Database.HasPendingModelChanges());
+    }
+
+    [Fact]
+    public async Task MatchingProducerContract_FailsTripAndDuplicateIdentityReplaysExactlyOnce()
+    {
+        // B-W09-03/04 consumer agreement: this publishes the SAME envelope the
+        // Matching terminalizer persists (production event type, route,
+        // deterministic result identity and minimal payload), over a real
+        // broker, twice under one messageId. The existing Trip consumer must
+        // apply one durable failure and dedup the duplicate.
+        var trip = await Seed();
+        var identity = MatchingResultMessageIds.ForNoDriver(trip.TripId, 1);
+        var envelope = MessageEnvelope<MatchingFailedPayload>.Create(
+            MatchingEventTypes.MatchingFailed,
+            correlationId: Guid.NewGuid().ToString("D"),
+            payload: new MatchingFailedPayload(trip.TripId, 1),
+            messageId: identity);
+
+        await using var publisher = new ConfirmedPublisher(rabbit.Factory);
+        await using var consumer = await Consumer(publisher, "trip.matching-outcome.q");
+        await publisher.PublishAsync(
+            MatchingEventRoutes.EventsExchange, MatchingEventRoutes.MatchingFailed, envelope);
+        await publisher.PublishAsync(
+            MatchingEventRoutes.EventsExchange, MatchingEventRoutes.MatchingFailed, envelope);
+        await Eventually(() => Task.FromResult(consumer.AcknowledgedCount == 2));
+
+        await using var db = Db();
+        var saved = await db.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        Assert.Equal(TripState.MatchFailed, saved.State);
+        Assert.Equal(trip.Version + 1, saved.Version);
+        Assert.Null(saved.Assignment);
+
+        var receipt = Assert.Single(
+            await db.MessageReceipts.Where(r => r.TripId == trip.TripId).ToListAsync());
+        Assert.Equal(identity, receipt.MessageId);
+        Assert.Equal(MatchingEventTypes.MatchingFailed, receipt.MessageType);
+        Assert.Equal("trip.matching-outcome.q", receipt.Consumer);
+        using var stored = JsonDocument.Parse(receipt.EnvelopeJson);
+        Assert.Equal(identity, stored.RootElement.GetProperty("messageId").GetString());
+        Assert.Equal(trip.TripId,
+            stored.RootElement.GetProperty("payload").GetProperty("tripId").GetGuid());
+        Assert.Equal(1,
+            stored.RootElement.GetProperty("payload").GetProperty("matchingRound").GetInt32());
     }
 }

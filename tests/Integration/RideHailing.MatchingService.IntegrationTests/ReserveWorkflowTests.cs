@@ -3,11 +3,14 @@
 // stub below injects deterministic transport faults, while BOTH databases
 // stay real: attempt/round rows in matching_db, reservation truth in
 // driver_db. Final durable state on both sides is the oracle throughout.
+using System.Text.Json;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.MatchingService.Application.Messaging;
 using RideHailing.MatchingService.Application.Reserve;
 using RideHailing.MatchingService.Infrastructure.DriverClient;
 using RideHailing.MatchingService.Infrastructure.Persistence;
+using RideHailing.Messaging.Outbox;
 using Xunit.Abstractions;
 
 namespace RideHailing.MatchingService.IntegrationTests;
@@ -34,9 +37,11 @@ public class ReserveWorkflowTests
 
     private MatchingAttemptRepository Attempts() => new(_matching.ConnectionString);
 
+    private MatchingTerminalizer Terminalizer() => new(_matching.DataSource, _matching.OutboxStore);
+
     private MatchingReserveOrchestrator Orchestrator(
         StubDriverClient stub, int maxReserve = 3, int maxReconcile = 3) =>
-        new(Attempts(), stub, maxReserve, maxReconcile);
+        new(Attempts(), stub, Terminalizer(), maxReserve, maxReconcile);
 
     private static Guid NewTrip() => Guid.NewGuid();
 
@@ -174,12 +179,14 @@ public class ReserveWorkflowTests
     }
 
     [Fact]
-    public async Task Round_All_Rejected_Exhausts_Without_Terminal_Marking()
+    public async Task Round_All_Rejected_Commits_NoDriver_With_Durable_Intent()
     {
 
-        // NO_DRIVER terminal needs W9 Outbox atomicity: all-rejected leaves
-        // the round PROCESSING (deferred, not fabricated).
+        // W9: every candidate is conclusively REJECTED, so the only legal
+        // terminal is NO_DRIVER. The terminal row and its MatchingFailedV1
+        // Outbox intent commit together; the broker is never touched here.
         var trip = NewTrip();
+        var inputMessageId = Guid.NewGuid().ToString("D");
         var stub = new StubDriverClient
         {
             OnReserve = (_, _) => Task.FromResult(
@@ -187,11 +194,33 @@ public class ReserveWorkflowTests
         };
 
         var result = await Orchestrator(stub).ExecuteRoundAsync(
-            trip, 1, [Guid.NewGuid(), Guid.NewGuid()], Guid.NewGuid().ToString("D"));
+            trip, 1, [Guid.NewGuid(), Guid.NewGuid()], inputMessageId);
 
-        Assert.Equal(RoundOutcome.Exhausted, result.Outcome);
+        Assert.Equal(RoundOutcome.NoDriver, result.Outcome);
+        var expectedIdentity = MatchingResultMessageIds.ForNoDriver(trip, 1);
+        Assert.Equal(expectedIdentity, result.ResultMessageId);
+
         var round = await Attempts().LoadRoundAsync(trip, 1);
-        Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
+        Assert.Equal(MatchingRoundStatuses.NoDriver, round!.Status);
+        Assert.Equal(Guid.Parse(expectedIdentity), round.ResultMessageId);
+        Assert.Null(round.SelectedDriverId);
+        Assert.Null(round.SelectedReservationId);
+
+        var attempts = await Attempts().LoadAttemptsAsync(trip, 1);
+        Assert.Equal(2, attempts.Count);
+        Assert.All(attempts, a => Assert.Equal(MatchingAttemptStates.Rejected, a.State));
+
+        var intent = await _matching.OutboxStore.LoadAsync(expectedIdentity);
+        Assert.NotNull(intent);
+        Assert.Equal(MatchingEventTypes.MatchingFailed, intent!.MessageType);
+        Assert.Equal(MatchingEventRoutes.EventsExchange, intent.Exchange);
+        Assert.Equal(MatchingEventRoutes.MatchingFailed, intent.RoutingKey);
+        Assert.Equal(inputMessageId, intent.CorrelationId);
+        Assert.Equal(inputMessageId, intent.CausationId);
+        Assert.Equal(OutboxStatus.Pending, intent.Status);
+        using var payload = JsonDocument.Parse(intent.PayloadJson);
+        Assert.Equal(trip, payload.RootElement.GetProperty("tripId").GetGuid());
+        Assert.Equal(1, payload.RootElement.GetProperty("matchingRound").GetInt32());
     }
 
     [Fact]
@@ -873,10 +902,14 @@ public class ReserveWorkflowTests
                 new DriverReserveResult(DriverReserveOutcomeKind.Rejected, "DRIVER_NOT_AVAILABLE", null)),
         };
         var exhausted = await Orchestrator(rejecting).ExecuteRoundAsync(trip, 8, [d1], Guid.NewGuid().ToString("D"));
-        Assert.Equal(RoundOutcome.Exhausted, exhausted.Outcome);
+        // Conclusively rejected is the one legal terminal: NO_DRIVER, never
+        // RESERVED (and never PROCESSING once W9 owns the terminal).
+        Assert.Equal(RoundOutcome.NoDriver, exhausted.Outcome);
         Assert.Equal(
-            MatchingRoundStatuses.Processing,
+            MatchingRoundStatuses.NoDriver,
             (await Attempts().LoadRoundAsync(trip, 8))!.Status);
+        Assert.NotNull(await _matching.OutboxStore.LoadAsync(
+            MatchingResultMessageIds.ForNoDriver(trip, 8)));
     }
 
     [Fact]
