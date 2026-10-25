@@ -75,9 +75,46 @@ does not invent a missing historical intent; rollout/backfill or authority-based
 projection rebuild needs lead coordination. New W9 effects are covered by
 [W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
 
-## NOT implemented (later weeks)
+## W10 Phase 1 lifecycle commands
 
-- Inbound `driver.commands.q` consumer (release/mark-trip-started/completed —
-  no production path to `ON_TRIP` yet).`matchingRound` on `DriverReservedV1`
-  has landed on this branch (see W8 hardening above); Trip's park path stays
-  conservatism for payloads that omit the field.
+The Driver host consumes `driver.commands.q` through C's `ManualAckConsumer`.
+`RabbitMq:CommandsEnabled` defaults to `true`; set the container environment
+`RabbitMq__CommandsEnabled=false` to suspend ingress during rollout/rollback.
+The worker waits for Driver migrations and shared Outbox schema before consuming.
+`RabbitMq:PublishingEnabled` independently controls the relay.
+
+All commands use the canonical V1 envelope and an object payload containing
+nonempty UUIDs `driverId`, `tripId`, `reservationId`:
+
+| Command | Exchange / routing key | Guard |
+|---|---|---|
+| MarkDriverTripStartedV1 | ride.commands / driver.mark-trip-started.v1 | exact current RESERVED assignment |
+| MarkDriverTripCompletedV1 | ride.commands / driver.mark-trip-completed.v1 | current ON_TRIP plus recorded original reservation |
+| ReleaseDriverReservationV1 | ride.commands / driver.release-reservation.v1 | existing exact-token release / coherent AVAILABLE no-op |
+
+Migration `005_driver_lifecycle.sql` adds `driver_lifecycle_effects` and
+`driver_command_receipts`. Lifecycle effects are append-only through the
+application; STARTED/COMPLETED rows retain the original reservation, version,
+event ID and timestamp across restarts and later trips. Live RESERVED fields
+still clear at Start. Historical trip/reservation identities cannot be reused
+for a fresh reservation on that Driver. Legacy ON_TRIP without ledger provenance
+fails with `LIFECYCLE_PROVENANCE_REQUIRED`; operators must reconcile from
+authoritative evidence, never fabricate a reservation ID.
+
+Command transaction order is message advisory lock, receipt semantic check,
+Driver row lock, exact guard, state/version, outgoing event intent, lifecycle
+history, final receipt, commit. Release shares its existing guarded operation
+and Outbox writer inside that transaction. ACK follows commit. Reused message
+IDs with changed semantic content are poison; infrastructure failures follow
+the platform's bounded retry and visible dead-letter policy. Rejected valid
+commands are retained in receipts (`disposition`, `reason`) for owner review.
+
+Lifecycle event payloads include the original driver/trip/reservation, version,
+and ON_TRIP/AVAILABLE status. Command correlation, causation, Saga/operation and
+active trace headers flow into the stored Outbox envelope. Historical replay
+returns its original version/event ID without touching the current Driver.
+No immediate publish follows the transaction.
+
+Full Payment-failure compensation and REL-09 remain Phase 2; A's actual W10
+command producer and human Driver–Trip agreement review are external gates.
+See [Phase 1 evidence](../../../../evidence/member-b/w10-lifecycle/README.md).
