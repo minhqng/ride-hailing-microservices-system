@@ -1,0 +1,57 @@
+# A-W12-03 — asynchronous trace-propagation reference (verified on real infrastructure)
+
+Oracle: `TripW12TracePropagationTests.CreateRideTrace_SurvivesOutboxPersistenceAndBrokerIntoConsumer`
+(real PostgreSQL + real RabbitMQ via Testcontainers; real OpenTelemetry
+collector and ActivityListener; disposable database and probe queue per
+run). Every arrow below was ASSERTED on emitted activities, the durable
+row and the wire headers — a DTO-level traceparent-string check is
+explicitly not the proof.
+
+## Verified chain
+
+```text
+HTTP POST /trips (AspNetCore span)
+  └─ RideHailing.Trip/CreateRide            (Trip domain decision span)
+       ├─ durable outbox row headers_json.traceparent
+       │    = 00-<CreateRide.traceId>-<CreateRide.spanId>-01     [ORACLE 1: SQL row]
+       ├─ outbox.publish                     (shared relay producer span)
+       │    traceId == CreateRide.traceId
+       │    parentSpanId == CreateRide.spanId                    [ORACLE 3]
+       │    (re-parented from the DURABLE headers, not the relay's
+       │     own execution context — creation vs relay context kept distinct)
+       ├─ RabbitMQ delivery headers.traceparent
+       │    == the durable creation context, byte-for-byte         [ORACLE 2: wire]
+       └─ consume                            (shared ManualAckConsumer span)
+            traceId == CreateRide.traceId
+            parentSpanId == CreateRide.spanId                    [ORACLE 4]
+            (parent from DELIVERY headers; observed inside the real
+             consumer's commit handler after a broker REDELIVERY —
+             basic.nack(requeue) — proving the same context survives
+             a second asynchronous handoff)
+```
+
+Additional verified properties:
+
+- `outbox.publish` occurs exactly ONCE per relayed messageId (no double
+  instrumentation from shared + Trip wrappers; the Trip wrapper is a domain
+  span, not a second producer span).
+- The relay's durable-row backlog observation refreshed the shared
+  `outbox.pending` gauge to 0 after publication (durable-row-backed gauge
+  agrees with the store).
+- Mechanism (pre-existing shared plumbing, now carrying Trip domain
+  context): `OutboxMessage.Create` injects `Activity.Current` into durable
+  `headers_json` at intent-creation time; `RabbitOutboxPublisher`
+  re-parents `outbox.publish` from those headers; `ManualAckConsumer`
+  re-parents `consume` from the delivery headers. The same chain applies to
+  consumer-staged intents (release/cancel/capture/void), whose creation
+  context is the `RideHailing.Trip/ApplyAuthority` span.
+
+Reproduce: `dotnet test tests/Integration/RideHailing.TripService.IntegrationTests
+--filter "FullyQualifiedName~TripW12TracePropagationTests"` (lane included
+in `reproduce.sh`).
+
+Messaging semantic conventions: the emitted attribute vocabulary is the
+one actually shipped by the repo's pinned OpenTelemetry 1.17.0 packages
+(`messaging.message.id`, `messaging.correlation.id`, `messaging.message.type`,
+`messaging.system` via shared instrumentation); no newer development-stage
+attribute set is assumed.
