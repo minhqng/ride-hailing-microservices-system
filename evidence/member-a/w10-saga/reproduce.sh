@@ -17,8 +17,8 @@
 # Writes fresh logs under outputs/repro-<UTC timestamp>/ (gitignored).
 set -euo pipefail
 
-VERIFIED_CODE_COMMIT="${VERIFIED_CODE_COMMIT:-dbbe6253d13e50c1bffa69afe771db2e3d9d2a94}"
-VERIFIED_CODE_TREE="975e890a82f4965bfd094f6cf5f83fe895d2001f"
+VERIFIED_CODE_COMMIT="${VERIFIED_CODE_COMMIT:-368dec81613c85272b1574908e05d2575a628de1}"
+VERIFIED_CODE_TREE="b21b1513e8a672c0afc888b79fce0d8492dc03cc"
 
 DOTNET="${DOTNET:-$(command -v dotnet || true)}"
 if [[ -z "$DOTNET" && -x "$HOME/.dotnet-sdk/dotnet" ]]; then DOTNET="$HOME/.dotnet-sdk/dotnet"; fi

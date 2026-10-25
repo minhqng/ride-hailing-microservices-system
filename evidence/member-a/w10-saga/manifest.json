@@ -11,9 +11,9 @@
   },
   "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
   "codeCommit": {
-    "sha": "dbbe6253d13e50c1bffa69afe771db2e3d9d2a94",
-    "tree": "975e890a82f4965bfd094f6cf5f83fe895d2001f",
-    "message": "feat(trip): add W10 persisted ride saga with payment orchestration"
+    "sha": "368dec81613c85272b1574908e05d2575a628de1",
+    "tree": "b21b1513e8a672c0afc888b79fce0d8492dc03cc",
+    "message": "chore(ci): run pull_request checks on the A-W10 stacked base"
   },
   "provenanceModel": "reproduce.sh compares the git tree hash of every top-level path except evidence/ between HEAD and codeCommit; identical source is accepted, any drift aborts",
   "environment": {
@@ -89,11 +89,16 @@
     }
   ],
   "review": {
-    "adversarialPass": "Independent pre-commit review found two compensation-window defects (review signal clobbering COMPENSATING; reservation-release confirmation at AUTHORIZE_PENDING throwing and dead-lettering) plus two hardening items (zero-fare acceptance, saga unique-violation classification). All four fixed with regression tests in the verified code commit.",
+    "adversarialPass": "Independent pre-commit review found two compensation-window defects (review signal clobbering COMPENSATING; reservation-release confirmation at AUTHORIZE_PENDING throwing and dead-lettering) plus two hardening items (zero-fare acceptance, saga unique-violation classification). All four fixed with regression tests in the verified code commit. Hardening fixes and regression tests are all inside the implementation commit dbbe625.",
     "stability": "W10 lanes run 3+ consecutive passes after the deterministic TwoPartySaveBarrier replaced a timing-dependent OCC test."
   },
   "crossOwnerPending": [
     "C-W10: payment.commands.q consumer (AuthorizePaymentV1/CapturePaymentV1/VoidPaymentAuthorizationV1) and Payment outcome producer with the same operationKey lineage.",
     "B-W10: driver.commands.q consumer (exact release, MarkDriverTripStarted/Completed) so the 3-service happy ride can be proven end-to-end."
-  ]
+  ],
+  "implementationCommit": {
+    "sha": "dbbe6253d13e50c1bffa69afe771db2e3d9d2a94",
+    "message": "feat(trip): add W10 persisted ride saga with payment orchestration",
+    "note": "All W10 production/test source; verified identically by every lane (the follow-up CI-trigger commit changes only .github/workflows/ci.yml)."
+  }
 }
