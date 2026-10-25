@@ -55,3 +55,33 @@ one actually shipped by the repo's pinned OpenTelemetry 1.17.0 packages
 (`messaging.message.id`, `messaging.correlation.id`, `messaging.message.type`,
 `messaging.system` via shared instrumentation); no newer development-stage
 attribute set is assumed.
+
+## F4 review record (2026-10-26): span-relationship accuracy
+
+- **One producer span per transport operation.** The relay publishes via
+  `RabbitOutboxPublisher` → `ConfirmedPublisher.PublishRawAsync`, which
+  creates NO span; the single "outbox.publish" span is the transport
+  representation. The span-creating `PublishAsync` path is a different,
+  direct-publish API (not used by the relay), so no duplicate send spans
+  exist. Verified in source and asserted once-per-messageId by the broker
+  test.
+- **Parent vs link.** The wire `traceparent` carries the CREATION context
+  (the durable outbox header), and both `outbox.publish` and `consume`
+  parent from it as siblings. This matches W3C context-propagation
+  semantics (the consumer continues the propagated trace), which the OTel
+  messaging conventions permit; the creation-vs-send-context distinction is
+  preserved because the relay's own execution context never replaces the
+  durable header. The Trip domain span (`ApplyAuthority`) is an ambient
+  child INSIDE the consume span — the domain decision, not a second
+  transport representation.
+- **Business identity independent of trace identity.** `messageId` /
+  `operationKey` are frozen business identities; the traceparent is
+  additional diagnostic metadata in `headers_json` (never mutated to carry
+  business meaning), so relay retries, process restarts and redelivery
+  reuse the same messageId under fresh execution contexts without breaking
+  correlation — the W11 process-kill lanes re-verified green in this
+  review's regression run.
+- **No sensitive tag data.** Verified by the W12 safe-fields assertion over
+  emitted `TagObjects`.
+- No code change made — the delivered topology is correct for the actual
+  host/shared-library context establishment.

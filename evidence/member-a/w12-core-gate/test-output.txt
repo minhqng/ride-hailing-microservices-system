@@ -1,8 +1,11 @@
-A-W12 curated verification record — Code SHA 976c7f8662e05c0abe17a0dedcf8a45d94b03592
-Run: reproduce.sh 2026-10-25T17:00:18Z–17:03:10Z UTC (Linux 7.3.0-1-default, .NET SDK 10.0.401,
+A-W12 curated verification record — Code SHA acaaa68abb5e26dac9ad4888c25a7dbeeabee643
+Run: reproduce.sh 2026-10-25T17:44:22Z–17:47:17Z UTC (Linux 7.3.0-1-default, .NET SDK 10.0.401,
 Release, Docker/Testcontainers: postgres:18.6 + rabbitmq:4.3.6-management).
 Source equivalence to the code commit verified by scripts/test/verify-source-anchor.sh
 (every tracked path outside evidence/ identical; run aborted on any drift).
+This run supersedes the 2026-10-25T17:00Z record (code revision 976c7f8):
+the 2026-10-26 targeted review added the LOCAL_PROXY_PASS auditor verdict
+correction; every lane was re-executed on the corrected revision.
 
 §1 Solution build (Release, --no-incremental)
   build_exit=0                                                    PASS
@@ -21,7 +24,9 @@ Source equivalence to the code commit verified by scripts/test/verify-source-anc
     (pre-existing opt-in authenticated-fixture skip, unchanged from W10/W11
      records; NOT a W12 concealment — SYSTEM_AUTH_PENDING tracked in the G4
      matrix)
-  Total: 988 passed, 1 skipped, 0 failed                       PASS
+  Total: 989 passed, 1 skipped, 0 failed                       PASS
+  (Correction note: the previous record mis-summed this total as 988; the
+   per-project rows were always correct and unchanged.)
 
 §3 W12 focused lanes
   w12-telemetry              7/7   (counters/gauge/spans semantics incl.
@@ -37,9 +42,11 @@ Source equivalence to the code commit verified by scripts/test/verify-source-anc
                                     malformed ids never routed; SEC-04 body
                                     actor inert; faultpoints inert on public
                                     traffic)                                PASS
-  w12-invariant-auditor      6/6   (compensated scenario PASS×5 + NOT RUN×3
-                                    cross-service; seeded-violation FAIL
-                                    proofs for AUD-03/06/07/08)             PASS
+  w12-invariant-auditor      6/6   (compensated scenario: AUD-03/08 PASS
+                                    (Level A), AUD-05/06/07 LOCAL_PROXY_PASS
+                                    (Level B), AUD-01/02/04 NOT RUN;
+                                    seeded-violation FAIL proofs for
+                                    AUD-03/06/07/08)                        PASS
 
 §4 Reliability regressions on the same revision
   w09-outbox-regression     17/17                                    PASS
@@ -51,10 +58,10 @@ Source equivalence to the code commit verified by scripts/test/verify-source-anc
 
 §5 Validation gates
   docker compose -f compose.yaml config --quiet      exit 0          PASS
-  bash scripts/test/hygiene-check.sh   "103 changed path(s) clean."   PASS
+  bash scripts/test/hygiene-check.sh   "111 changed path(s) clean."   PASS
   git diff --check (working tree and 46ac68a..HEAD)                   PASS
 
-Curated from outputs/repro-20261025T170018Z (raw logs gitignored; per-file
+Curated from outputs/repro-20261025T174422Z (raw logs gitignored; per-file
 summaries available by re-running reproduce.sh). No test was skipped to
 obtain these results except the documented pre-existing Identity opt-in
 fixture skip in §2.
