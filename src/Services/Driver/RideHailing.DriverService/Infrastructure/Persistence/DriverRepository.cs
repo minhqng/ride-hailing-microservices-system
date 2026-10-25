@@ -8,7 +8,7 @@ using RideHailing.Messaging.Outbox;
 
 namespace RideHailing.DriverService.Infrastructure.Persistence;
 
-public sealed class DriverRepository
+public sealed partial class DriverRepository
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly DriverOutboxWriter _outbox;
@@ -180,6 +180,21 @@ public sealed class DriverRepository
                 return ReserveResult.NotFound();
             }
 
+            // A finished lifecycle identity must never become fresh work again.
+            // Otherwise a delayed completion could match a reused assignment.
+            await using (var history = new NpgsqlCommand("""
+                SELECT EXISTS (SELECT 1 FROM driver_lifecycle_effects
+                WHERE driver_id = @driver AND (trip_id = @trip OR reservation_id = @reservation));
+                """, conn, tx))
+            {
+                history.Parameters.AddWithValue("driver", driverId);
+                history.Parameters.AddWithValue("trip", tripId);
+                history.Parameters.AddWithValue("reservation", reservationId);
+                if ((bool)(await history.ExecuteScalarAsync(ct))!)
+                    return ReserveResult.Conflict(DriverErrors.StaleReservation,
+                        "Trip or reservation identity already belongs to a started lifecycle.");
+            }
+
             var replayed = current.Status == DriverStatus.Reserved
                 && current.ReservedTripId == tripId
                 && current.ReservationId == reservationId;
@@ -257,10 +272,19 @@ public sealed class DriverRepository
 
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
+        var result = await ReleaseInTransactionAsync(conn, tx, driverId, tripId, reservationId, ct);
+        await tx.CommitAsync(ct);
+        return result;
+    }
+
+    private async Task<DriverMutationResult> ReleaseInTransactionAsync(
+        NpgsqlConnection conn, NpgsqlTransaction tx, Guid driverId, Guid tripId,
+        Guid reservationId, CancellationToken ct,
+        RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>? command = null)
+    {
         var current = await LoadForUpdateAsync(conn, tx, driverId, ct);
         if (current is null)
         {
-            await tx.RollbackAsync(ct);
             return DriverMutationResult.NotFound();
         }
 
@@ -274,17 +298,15 @@ public sealed class DriverRepository
         }
         catch (DriverDomainException ex)
         {
-            await tx.RollbackAsync(ct);
             return DriverMutationResult.Conflict(ex.Code, ex.Message);
         }
 
         if (effected)
         {
             await StoreAsync(conn, tx, current, ct);
-            await _outbox.EnqueueReleasedAsync(conn, tx, current, tripId, reservationId, ct);
+            await _outbox.EnqueueReleasedAsync(conn, tx, current, tripId, reservationId, ct, command);
         }
 
-        await tx.CommitAsync(ct);
         return effected
             ? DriverMutationResult.Applied(current)
             : DriverMutationResult.Unchanged(current);

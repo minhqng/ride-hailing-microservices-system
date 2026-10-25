@@ -1,4 +1,5 @@
 extern alias MatchingSvc;
+extern alias DriverSvc;
 
 using System.Diagnostics;
 using System.Net;
@@ -51,6 +52,47 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
     : IClassFixture<TripRabbitFixture>
 {
     private const string DriverQueue = "trip.driver-state.q";
+
+    [Fact]
+    public async Task DriverLifecycleProducerEvents_AreAcceptedAndReplaySafelyOverBroker()
+    {
+        var trip = await Seed();
+        var driver = DriverSvc::RideHailing.DriverService.Domain.Drivers.Driver.Create(Guid.NewGuid(), Guid.NewGuid());
+        var reservation = Guid.NewGuid();
+        driver.GoOnline(driver.Version);
+        driver.Reserve(trip.TripId, reservation, driver.Version, matchingRound: 1);
+        await using (var setup = Db())
+        {
+            var saved = await setup.Trips.SingleAsync(t => t.TripId == trip.TripId);
+            Assert.True(saved.ApplyDriverReserved(driver.DriverId, reservation, 1, Now).IsSuccess);
+            Assert.True(saved.RecordDriverAccepted(driver.DriverId, reservation, Now).IsSuccess);
+            Assert.True(saved.MarkPaymentAuthorized(Now).IsSuccess);
+            await setup.SaveChangesAsync();
+        }
+        driver.MarkTripStarted(trip.TripId, reservation);
+        var started = DriverSvc::RideHailing.DriverService.Application.Messaging.DriverEventMapper
+            .ForTripStartedEffect(driver, trip.TripId, reservation);
+        driver.MarkTripCompleted(trip.TripId);
+        var completed = DriverSvc::RideHailing.DriverService.Application.Messaging.DriverEventMapper
+            .ForTripCompletedEffect(driver, trip.TripId, reservation);
+        await using var publisher = new ConfirmedPublisher(rabbit.Factory);
+        await using var consumer = await Consumer(publisher);
+        foreach (var effect in new[] { started, completed })
+        {
+            var envelope = MessageEnvelope<JsonElement>.Create(effect.MessageType, trip.TripId.ToString("N"),
+                JsonSerializer.SerializeToElement(effect.Payload),
+                aggregateType: "driver", aggregateId: driver.DriverId.ToString("N"), aggregateVersion: effect.Version);
+            await publisher.PublishAsync(RideTopology.EventsExchange, effect.RoutingKey, envelope);
+            await publisher.PublishAsync(RideTopology.EventsExchange, effect.RoutingKey, envelope);
+        }
+        await Eventually(() => Task.FromResult(consumer.AcknowledgedCount == 4));
+        await using var final = Db();
+        var result = await final.Trips.SingleAsync(t => t.TripId == trip.TripId);
+        Assert.Equal(TripState.Completed, result.State);
+        Assert.Equal(driver.DriverId, result.Assignment!.DriverId);
+        Assert.Equal(reservation, result.Assignment.ReservationId);
+        Assert.Equal(2, await final.MessageReceipts.CountAsync(r => r.TripId == trip.TripId));
+    }
     private static readonly DateTimeOffset Now = new(2026, 10, 15, 1, 0, 0, TimeSpan.Zero);
     private TripDbContext Db(params IInterceptor[] interceptors) => new(
         new DbContextOptionsBuilder<TripDbContext>().UseNpgsql(postgres.ConnectionString)

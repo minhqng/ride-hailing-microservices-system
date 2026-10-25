@@ -12,6 +12,8 @@ namespace RideHailing.DriverService.Application.Messaging;
 
 public static class DriverEventTypes
 {
+    public const string TripStarted = "DriverTripStartedV1";
+    public const string TripCompleted = "DriverTripCompletedV1";
     public const string Reserved = "DriverReservedV1";
     public const string Available = "DriverAvailableV1";
     public const string Offline = "DriverOfflineV1";
@@ -21,6 +23,8 @@ public static class DriverEventTypes
 
 public static class DriverEventRoutes
 {
+    public const string TripStarted = "driver.trip-started.v1";
+    public const string TripCompleted = "driver.trip-completed.v1";
     public const string EventsExchange = "ride.events";
     public const string Reserved = "driver.reserved.v1";
     public const string Available = "driver.available.v1";

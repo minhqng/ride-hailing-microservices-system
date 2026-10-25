@@ -13,6 +13,7 @@ public sealed class DriverBrokerOptions
     public int Port { get; set; } = 5672;
     public int PublishTimeoutSeconds { get; set; } = 5;
     public bool PublishingEnabled { get; set; } = true;
+    public bool CommandsEnabled { get; set; } = true;
 
     public string? Validate()
     {

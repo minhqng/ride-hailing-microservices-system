@@ -3,6 +3,7 @@
 // connection/transaction that persists the authoritative Driver row; this
 // type never opens its own connection and never talks to RabbitMQ.
 using Npgsql;
+using System.Text.Json;
 using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.Messaging.Contracts;
@@ -23,9 +24,19 @@ public sealed class DriverOutboxWriter(NpgsqlOutboxStore store)
 
     public Task EnqueueReleasedAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
-        Driver driver, Guid tripId, Guid reservationId, CancellationToken ct = default) =>
+        Driver driver, Guid tripId, Guid reservationId, CancellationToken ct = default,
+        MessageEnvelope<JsonElement>? command = null) =>
         EnqueueAsync(connection, transaction, DriverEventMapper.ForReleasedEffect(
-            driver, tripId, reservationId), driver.UpdatedAt, ct);
+            driver, tripId, reservationId), driver.UpdatedAt, ct, command);
+
+    public Task EnqueueLifecycleAsync(
+        NpgsqlConnection connection, NpgsqlTransaction transaction, Driver driver,
+        Guid tripId, Guid reservationId, bool completed, CancellationToken ct,
+        MessageEnvelope<JsonElement>? command = null) =>
+        EnqueueAsync(connection, transaction, completed
+            ? DriverEventMapper.ForTripCompletedEffect(driver, tripId, reservationId)
+            : DriverEventMapper.ForTripStartedEffect(driver, tripId, reservationId),
+            driver.UpdatedAt, ct, command);
 
     public Task EnqueueAvailableAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
@@ -41,7 +52,8 @@ public sealed class DriverOutboxWriter(NpgsqlOutboxStore store)
 
     private async Task EnqueueAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
-        DriverEventToPublish effect, DateTimeOffset occurredAt, CancellationToken ct)
+        DriverEventToPublish effect, DateTimeOffset occurredAt, CancellationToken ct,
+        MessageEnvelope<JsonElement>? command = null)
     {
         // The message id is derived once from the committed logical effect
         // (driver + reservation + version + end status). The relay stores and
@@ -52,13 +64,16 @@ public sealed class DriverOutboxWriter(NpgsqlOutboxStore store)
 
         var envelope = MessageEnvelope<DriverStateEventPayload>.Create(
             effect.MessageType,
-            correlationId: Guid.NewGuid().ToString("N"),
+            correlationId: command?.CorrelationId ?? Guid.NewGuid().ToString("N"),
             payload: effect.Payload,
             messageId: messageId,
             occurredAt: occurredAt,
             aggregateType: "driver",
             aggregateId: effect.Payload.DriverId.ToString("N"),
-            aggregateVersion: effect.Version);
+            aggregateVersion: effect.Version,
+            causationId: command?.MessageId,
+            sagaId: command?.SagaId,
+            operationKey: command?.OperationKey);
 
         var message = OutboxMessage.Create(
             envelope, DriverEventRoutes.EventsExchange, effect.RoutingKey);

@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, 'MemC-*-Distributed']
   pull_request:
-    branches: [main, 'MemC-*-Distributed']
+    branches: [main, 'MemC-*-Distributed', 'feature/B-W09-driver-outbox']
 jobs:
   build-test:
     name: build-test

@@ -10,6 +10,45 @@ namespace RideHailing.MatchingService.IntegrationTests;
 public sealed class ProjectionDuplicateSafetyTests(RedisDatabase redis)
 {
     [Fact]
+    public async Task DriverLifecycleProducerEvents_RespectProjectionVersionFence()
+    {
+        var driver = RideHailing.DriverService.Domain.Drivers.Driver.Create(Guid.NewGuid(), Guid.NewGuid());
+        var trip = Guid.NewGuid(); var reservation = Guid.NewGuid();
+        driver.GoOnline(driver.Version);
+        driver.Reserve(trip, reservation, driver.Version);
+        driver.MarkTripStarted(trip, reservation);
+        var started = RideHailing.DriverService.Application.Messaging.DriverEventMapper.ForTripStartedEffect(driver, trip, reservation);
+        driver.MarkTripCompleted(trip);
+        var completed = RideHailing.DriverService.Application.Messaging.DriverEventMapper.ForTripCompletedEffect(driver, trip, reservation);
+        var updater = new RedisProjectionUpdater(redis.Multiplexer());
+        await updater.EnsureFunctionAsync();
+        var handler = new DriverProjectionHandler(updater, NullLogger<DriverProjectionHandler>.Instance);
+        var db = redis.Multiplexer().GetDatabase();
+        var envelopes = new[] { started, completed }.Select(effect =>
+            MessageEnvelope<JsonElement>.Create(effect.MessageType, "lifecycle",
+                JsonSerializer.SerializeToElement(effect.Payload))).ToArray();
+        async Task Deliver(int index)
+        {
+            var route = index == 0 ? started.RoutingKey : completed.RoutingKey;
+            Assert.Equal(HandlerOutcome.Done, await handler.HandleAsync(new(route,
+                JsonSerializer.SerializeToUtf8Bytes(envelopes[index]), new Dictionary<string, object?>(), 1, true), default));
+        }
+        try
+        {
+            await Deliver(0);
+            Assert.Equal("ON_TRIP", (string?)await db.HashGetAsync(RedisProjectionKeys.ProjectionKey(driver.DriverId), "derivedStatus"));
+            await Deliver(1); await Deliver(0); await Deliver(1);
+            Assert.Equal("AVAILABLE", (string?)await db.HashGetAsync(RedisProjectionKeys.ProjectionKey(driver.DriverId), "derivedStatus"));
+            Assert.Equal("5", (string?)await db.HashGetAsync(RedisProjectionKeys.ProjectionKey(driver.DriverId), "driverAggregateVersion"));
+        }
+        finally
+        {
+            foreach (var envelope in envelopes) await db.KeyDeleteAsync(ProjectionReceipt.ForEnvelope(envelope).Key);
+            await db.KeyDeleteAsync(RedisProjectionKeys.ProjectionKey(driver.DriverId));
+            await db.SortedSetRemoveAsync(RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver.DriverId));
+        }
+    }
+    [Fact]
     public async Task DuplicateAndStaleDeliveriesConverge_ConflictingIdentityFailsBeforeEffect()
     {
         var driver = Guid.NewGuid();
