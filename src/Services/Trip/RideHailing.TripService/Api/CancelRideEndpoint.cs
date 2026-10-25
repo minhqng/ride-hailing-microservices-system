@@ -11,6 +11,7 @@
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Observability;
 
 namespace RideHailing.TripService.Api;
 
@@ -48,6 +49,13 @@ public static class CancelRideEndpoint
                 extensions: new Dictionary<string, object?> { ["code"] = "FORBIDDEN" });
         }
 
+        // A-W12-01: one domain-decision span per logical CancelRide. A cancel
+        // stages cleanup intents in the same transaction, so this context
+        // becomes the durable parent of the relayed release/cancel commands.
+        using var span = TripDiagnostics.Activities.StartActivity("RideHailing.Trip/CancelRide");
+        span?.SetTag("ride.operation", "CancelRide");
+        span?.SetTag("trip.id", tripId.ToString());
+
         TripLifecycleResult result;
         try
         {
@@ -55,6 +63,8 @@ public static class CancelRideEndpoint
         }
         catch (TripConcurrencyConflictException)
         {
+            // Infrastructure race, not a domain rejection: no counter.
+            span?.SetTag("ride.outcome", "concurrency_conflict");
             return Results.Problem(statusCode: StatusCodes.Status409Conflict,
                 title: "Trip changed concurrently. Reload its current state before retrying cancellation.",
                 extensions: new Dictionary<string, object?> { ["code"] = "CONCURRENCY_CONFLICT" });
@@ -62,6 +72,7 @@ public static class CancelRideEndpoint
 
         if (result.IsNotFound)
         {
+            span?.SetTag("ride.outcome", "not_found");
             return Results.Problem(
                 statusCode: StatusCodes.Status404NotFound,
                 title: "Trip was not found.",
@@ -70,8 +81,29 @@ public static class CancelRideEndpoint
 
         if (result.IsSuccess)
         {
+            // A-W12-02: one committed CANCELLED transition; the idempotent
+            // already-CANCELLED replay never counts.
+            if (!result.IsReplay)
+                TripDiagnostics.RecordTripCancelled();
+            span?.SetTag("ride.outcome", result.IsReplay ? "replay" : "cancelled");
+            span?.SetTag("trip.state", result.State.ToCanonicalName());
             return Results.Ok(new CancelRideResponse { TripId = result.TripId, Status = "CANCELLED" });
         }
+
+        // A-W12-02: domain rejections by bounded reason class.
+        var rejection = result.ErrorCode switch
+        {
+            TripErrorCode.TerminalState => TripDiagnostics.RejectionReasons.TerminalState,
+            TripErrorCode.CancellationPolicyUnresolved =>
+                TripDiagnostics.RejectionReasons.CancellationPolicyUnresolved,
+            TripErrorCode.IllegalTransition => TripDiagnostics.RejectionReasons.InvalidTransition,
+            TripErrorCode.AssignmentRequired => TripDiagnostics.RejectionReasons.IdentityRequired,
+            _ => TripDiagnostics.RejectionReasons.InvalidTransition,
+        };
+        TripDiagnostics.RecordTransitionRejected(rejection);
+        span?.SetTag("ride.rejection", rejection);
+        span?.SetTag("ride.outcome", "rejected");
+        span?.SetTag("trip.state", result.State.ToCanonicalName());
 
         var code = result.ErrorCode switch
         {
