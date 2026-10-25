@@ -501,6 +501,86 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
         Assert.Single(await IntentsAsync(cs, trip.TripId));
     }
 
+    [Fact]
+    public async Task ConcurrentLateReservations_DiscoveringSameReleaseObligation_AreTransientRedelivery_WinnerStaysIntact()
+    {
+        var cs = await NewProbeAsync("trip_w09_handler_race");
+        var trip = await SeedCreatedAsync(cs);
+        await using (var db = Context(cs))
+        {
+            Assert.True((await new StartMatchingHandler(db, new Clock(),
+                NullLogger<StartMatchingHandler>.Instance).HandleAsync(trip.TripId, trip.RiderId)).IsSuccess);
+            Assert.True((await new CancelRideHandler(db, new Clock(),
+                NullLogger<CancelRideHandler>.Instance).HandleAsync(trip.TripId, trip.RiderId)).IsSuccess);
+        }
+
+        // Two distinct deliveries (different messageId, identical late
+        // authority fact) race on a terminal Trip and both derive the same
+        // deterministic release obligation — the exact "distinct deliveries
+        // concurrently discover the same obligation" window. The losing
+        // consumer runs inside its REAL explicit transaction: at its
+        // SaveChanges an interceptor commits the winning delivery first. This
+        // is the only collision path whose winner readback depends on EF's
+        // savepoint restoring the still-open transaction; the StartMatching
+        // tests above never open one.
+        var driverId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+        var winner = Reserved(trip, driverId, reservationId);
+        var loser = Reserved(trip, driverId, reservationId);
+
+        DeliveryFailureException failure;
+        await using (var db = Context(cs, new CommitWinnerMidSave(cs, winner)))
+        {
+            failure = await Assert.ThrowsAsync<DeliveryFailureException>(() =>
+                new TripMessageHandler(db, TimeProvider.System, NullLogger<TripMessageHandler>.Instance)
+                    .HandleAsync("trip.driver-state.q", loser, default));
+        }
+
+        // However the batch collides (outbox PK first or cleanup PK first),
+        // the clash must surface as bounded retry. Poison/Configuration would
+        // dead-letter a legitimate business fact as UNCLASSIFIED_HANDLER_FAILURE.
+        Assert.Equal(FailureKind.Transient, failure.Kind);
+
+        await using (var verify = Context(cs))
+        {
+            var saved = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == trip.TripId);
+            Assert.Equal(TripState.Cancelled, saved.State);
+            // The loser's mutation did not commit: exactly one terminal
+            // reservation record past the seeded Created row.
+            Assert.Equal(trip.Version + 3, saved.Version);
+            // Winner's outgoing obligation is durable exactly once: the
+            // original RideRequested + CancelMatchingRound + one Release.
+            var intents = await IntentsAsync(cs, trip.TripId);
+            Assert.Equal(3, intents.Count);
+            var release = Assert.Single(intents, i => i.MessageType == "ReleaseDriverReservationV1");
+            Assert.Equal($"trip:{trip.TripId:N}:release:{reservationId:N}", release.MessageId);
+            Assert.Equal("PENDING", release.Status);
+            // The loser's receipt claim rolled back with its transaction; only
+            // the winner's evidence is durable.
+            var winnerReceipt = await verify.MessageReceipts.AsNoTracking()
+                .SingleAsync(r => r.MessageId == winner.MessageId);
+            Assert.Equal("Applied", winnerReceipt.Disposition);
+            Assert.False(await verify.MessageReceipts.AnyAsync(r => r.MessageId == loser.MessageId));
+        }
+
+        // Redelivery of the losing fact converges through domain replay: it
+        // mutates nothing and never appends a second outgoing intent.
+        await using (var db = Context(cs))
+            await new TripMessageHandler(db, TimeProvider.System, NullLogger<TripMessageHandler>.Instance)
+                .HandleAsync("trip.driver-state.q", loser, default);
+
+        await using (var verify = Context(cs))
+        {
+            var saved = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == trip.TripId);
+            Assert.Equal(TripState.Cancelled, saved.State);
+            Assert.Equal(trip.Version + 3, saved.Version);
+            Assert.Equal(3, (await IntentsAsync(cs, trip.TripId)).Count);
+            var loserReceipt = await verify.MessageReceipts.AsNoTracking()
+                .SingleAsync(r => r.MessageId == loser.MessageId);
+            Assert.Equal("BusinessReplay", loserReceipt.Disposition);
+        }
+    }
+
     // ------------------------------------------------------ replay/stale/terminal
 
     [Fact]
@@ -897,6 +977,32 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
         {
             if (Interlocked.Increment(ref arrived) == 2) release.TrySetResult();
             await release.Task.WaitAsync(TimeSpan.FromSeconds(15), token);
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Deterministic concurrent-winner window: when the losing consumer saves
+    /// inside its open explicit transaction, the winning delivery is processed
+    /// and committed by a second consumer context first. One shot only — the
+    /// loser's own save then collides with the winner's committed rows.
+    /// </summary>
+    private sealed class CommitWinnerMidSave(string connectionString, MessageEnvelope<JsonElement> winner)
+        : SaveChangesInterceptor
+    {
+        private int committed;
+
+        public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData data, InterceptionResult<int> result, CancellationToken token = default)
+        {
+            if (Interlocked.Exchange(ref committed, 1) == 0)
+            {
+                await using var db = Context(connectionString);
+                await new TripMessageHandler(db, TimeProvider.System,
+                    NullLogger<TripMessageHandler>.Instance)
+                    .HandleAsync("trip.driver-state.q", winner, token);
+            }
+
             return result;
         }
     }
