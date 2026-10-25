@@ -5,11 +5,14 @@ using RideHailing.DriverService.Api;
 using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.Messaging;
+using RideHailing.Messaging.Faults;
 using RideHailing.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddRideTelemetry("driver-service");
 builder.Services.AddHealthChecks();
+builder.Services.AddSingleton<RideHailing.Messaging.IFaultPoint>(FaultPoint.FromEnvironment());
 builder.Services.Configure<LocationIngressOptions>(builder.Configuration.GetSection("Location"));
 builder.Services.AddSingleton(_ =>
 {

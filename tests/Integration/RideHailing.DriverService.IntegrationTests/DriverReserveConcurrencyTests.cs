@@ -286,7 +286,7 @@ public class DriverReserveConcurrencyTests
         {
             // Distinct won: no replay exists; every same-R caller conflicts.
             Assert.Equal(otherR, final.ReservationId);
-            Assert.Empty(attempts.Where(a => a.Outcome == ReserveOutcome.Replayed));
+            Assert.DoesNotContain(attempts, a => a.Outcome == ReserveOutcome.Replayed);
             Assert.Equal(n - 1, attempts.Count(a => a.Outcome == ReserveOutcome.Conflict));
         }
     }

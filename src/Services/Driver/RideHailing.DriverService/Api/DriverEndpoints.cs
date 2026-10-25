@@ -5,6 +5,7 @@ using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.Messaging;
 
 namespace RideHailing.DriverService.Api;
 
@@ -239,6 +240,7 @@ public static class DriverEndpoints
             ReserveDriverRequest req,
             DriverRepository repo,
             DriverEventPublisher publisher,
+            RideHailing.Messaging.IFaultPoint faultPoint,
             CancellationToken ct) =>
         {
             if (req.TripId == Guid.Empty || req.ReservationId == Guid.Empty || req.ExpectedVersion < 1
@@ -266,6 +268,8 @@ public static class DriverEndpoints
             {
                 var result = await repo.TryReserveAsync(
                     id, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
+                if (result.Outcome == ReserveOutcome.Won)
+                    await faultPoint.HitAsync(FaultPointNames.DriverAfterReserveCommitBeforeResponse, ct);
                 var published = DriverEventMapper.ForReserveResult(id, req.TripId, req.ReservationId, result);
                 if (published is not null)
                 {

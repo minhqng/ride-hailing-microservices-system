@@ -6,6 +6,13 @@ using System.Text.Json.Serialization;
 using RabbitMQ.Client;
 using RideHailing.PaymentService.Domain;
 using RideHailing.PaymentService.Infrastructure;
+using RideHailing.PaymentService.Application.Payment;
+using RideHailing.PaymentService.Integration.Payment;
+using RideHailing.Messaging;
+using RideHailing.Messaging.Dedup;
+using RideHailing.Messaging.Faults;
+using RideHailing.Messaging.Outbox;
+using RideHailing.Messaging.Reliability;
 using RideHailing.Messaging.Topology;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +20,9 @@ builder.AddRideTelemetry("payment-service");
 builder.Services.AddHealthChecks();
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+var faultPoint = FaultPoint.FromEnvironment();
+FaultPoints.Current = faultPoint;
+builder.Services.AddSingleton<RideHailing.Messaging.IFaultPoint>(faultPoint);
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres");
 if (!string.IsNullOrWhiteSpace(connectionString))
@@ -22,22 +32,52 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddSingleton<PaymentOperationRepository>();
     builder.Services.AddSingleton(new ProviderLedger(connectionString));
     builder.Services.AddSingleton<PaymentSimulator>();
+    builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+    builder.Services.AddTransient<PaymentCommandHandlers>();
+    builder.Services.AddSingleton<ProcessedMessageStore>();
+    builder.Services.AddSingleton<NpgsqlOutboxStore>();
+    builder.Services.AddSingleton<IOutboxStore>(services => services.GetRequiredService<NpgsqlOutboxStore>());
 }
 
 var rabbitHost = builder.Configuration["RabbitMq:Host"];
+ConnectionFactory? connectionFactory = null;
 if (!string.IsNullOrWhiteSpace(rabbitHost))
 {
-    var connectionFactory = new ConnectionFactory
+    connectionFactory = new ConnectionFactory
     {
         HostName = rabbitHost,
+        Port = builder.Configuration.GetValue("RabbitMq:Port", AmqpTcpEndpoint.UseDefaultPort),
         UserName = builder.Configuration["RabbitMq:Username"] ?? "ride_app",
         Password = builder.Configuration["RabbitMq:Password"] ?? "ride_dev_pw",
-        ClientProvidedName = "payment-service-topology-bootstrap",
-        AutomaticRecoveryEnabled = true
+        ClientProvidedName = "payment-service",
+        // The host owns explicit consumer/publisher recovery. Automatic client recovery
+        // cannot durably buffer publishes and would compete with this lifecycle.
+        AutomaticRecoveryEnabled = false,
+        TopologyRecoveryEnabled = false,
     };
+    builder.Services.AddSingleton(connectionFactory);
+    builder.Services.AddSingleton<ConfirmedPublisher>();
     using var bootstrapTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     await using var connection = await connectionFactory.CreateConnectionAsync(bootstrapTimeout.Token);
     await RideTopology.DeclareAsync(connection, bootstrapTimeout.Token);
+}
+
+if (!string.IsNullOrWhiteSpace(connectionString) && connectionFactory is not null)
+{
+    builder.Services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
+    builder.Services.AddSingleton(new OutboxRelayOptions
+    {
+        RelayId = builder.Configuration["Outbox:RelayId"]
+            ?? $"payment:{builder.Configuration["ServiceInstanceId"] ?? Environment.MachineName}",
+        BatchSize = builder.Configuration.GetValue("Outbox:BatchSize", 8),
+        ClaimLease = TimeSpan.FromSeconds(builder.Configuration.GetValue("Outbox:ClaimLeaseSeconds", 30)),
+        PollInterval = TimeSpan.FromMilliseconds(builder.Configuration.GetValue("Outbox:PollIntervalMilliseconds", 500)),
+        MaxAttempts = builder.Configuration.GetValue("Outbox:MaxAttempts", 5),
+        RetryDelay = TimeSpan.FromSeconds(builder.Configuration.GetValue("Outbox:RetryDelaySeconds", 1)),
+    });
+    builder.Services.AddSingleton<OutboxRelay>();
+    builder.Services.AddSingleton<PaymentMessageProcessor>();
+    builder.Services.AddHostedService<PaymentMessagingHostedService>();
 }
 
 var app = builder.Build();
@@ -46,6 +86,10 @@ if (!string.IsNullOrWhiteSpace(connectionString))
 {
     await app.Services.GetRequiredService<PaymentOperationRepository>()
         .InitializeAsync(CancellationToken.None);
+    await app.Services.GetRequiredService<ProcessedMessageStore>()
+        .EnsureSchemaAsync(CancellationToken.None);
+    await app.Services.GetRequiredService<NpgsqlOutboxStore>()
+        .EnsureSchemaAsync(CancellationToken.None);
 
     if (app.Environment.IsDevelopment())
     {
