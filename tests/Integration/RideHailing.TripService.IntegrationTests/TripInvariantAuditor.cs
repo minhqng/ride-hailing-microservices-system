@@ -15,8 +15,18 @@ namespace RideHailing.TripService.IntegrationTests;
 
 public enum AuditStatus
 {
+    /// <summary>Level A: the authoritative owner database of the invariant was inspected.</summary>
     Pass,
+
+    /// <summary>
+    /// Level B: a Trip-local condition supports a distributed invariant but does
+    /// not prove the other service's authoritative final state. Supporting
+    /// evidence only — never counts as a full G4 PASS for the property.
+    /// </summary>
+    LocalProxyPass,
+
     Fail,
+
     NotRun,
 }
 
@@ -27,6 +37,9 @@ public sealed record AuditorCheck(string Id, string Title, AuditStatus Status, s
 {
     public static AuditorCheck Pass(string id, string title, string note = "") =>
         new(id, title, AuditStatus.Pass, note, []);
+
+    public static AuditorCheck LocalProxyPass(string id, string title, string note) =>
+        new(id, title, AuditStatus.LocalProxyPass, note, []);
 
     public static AuditorCheck Fail(string id, string title, string note, IReadOnlyList<AuditorFinding> findings) =>
         new(id, title, AuditStatus.Fail, note, findings);
@@ -56,12 +69,17 @@ public sealed record AuditorReport(
             $"Run: {RunId}",
             $"Commit: {Commit}",
             $"ExecutedAtUtc: {ExecutedAtUtc:O}",
+            "Legend: PASS = authoritative owner database inspected (Level A);",
+            "       LOCAL_PROXY_PASS = Trip-local supporting proof only (Level B),",
+            "       never a full G4 pass for the distributed property;",
+            "       NOT RUN = required proof not executed (owner/dependency recorded).",
         };
         foreach (var check in Checks)
         {
             var verdict = check.Status switch
             {
                 AuditStatus.Pass => "PASS",
+                AuditStatus.LocalProxyPass => "LOCAL_PROXY_PASS",
                 AuditStatus.Fail => "FAIL",
                 _ => "NOT RUN",
             };
@@ -74,7 +92,7 @@ public sealed record AuditorReport(
 
         var overall = Checks.Any(c => c.Status == AuditStatus.Fail)
             ? "FAIL"
-            : Checks.All(c => c.Status == AuditStatus.Pass) ? "PASS" : "PARTIAL (NOT RUN present)";
+            : Checks.All(c => c.Status == AuditStatus.Pass) ? "PASS" : "PARTIAL (NOT RUN/LOCAL_PROXY present)";
         lines.Add($"Overall: {overall}");
         return string.Join(Environment.NewLine, lines);
     }
@@ -154,7 +172,7 @@ public static class TripInvariantAuditor
 
         return findings.Count == 0
             ? AuditorCheck.Pass("AUD-03", "Single current Trip assignment",
-                "Trip-side: one assignment triple per trip; no open release intent references a foreign reservation.")
+                "Level A: the assignment triple and release obligations are Trip-authoritative rows (trips + trip_cleanup_intents).")
             : AuditorCheck.Fail("AUD-03", "Single current Trip assignment",
                 $"{findings.Count} trip(s) hold conflicting active assignment references.", findings);
     }
@@ -200,10 +218,10 @@ public static class TripInvariantAuditor
         }
 
         return findings.Count == 0
-            ? AuditorCheck.Pass("AUD-05", "Payment logical uniqueness (Trip-side proxy)",
-                "Trip-side proxy only: saga operation keys unique + frozen lineage (also DB-CHECK-enforced). Payment-side one-logical-effect uniqueness is NOT RUN (C-owned data).")
+            ? AuditorCheck.LocalProxyPass("AUD-05", "Payment logical uniqueness (Trip-side proxy)",
+                "Level B: Trip-side obligation ledger only — saga operation keys unique + frozen lineage (also DB-CHECK-enforced), re-verified read-only. The authoritative Payment effect ledger (one logical effect per key) is NOT inspected: full AUD-05 requires C-owned data (DEPENDENCY_PENDING).")
             : AuditorCheck.Fail("AUD-05", "Payment logical uniqueness (Trip-side proxy)",
-                $"{findings.Count} operation-key violation(s).", findings);
+                $"{findings.Count} operation-key violation(s) in the Trip-owned ledger.", findings);
     }
 
     /// <summary>
@@ -232,10 +250,10 @@ public static class TripInvariantAuditor
                 $"Trip {reader.GetGuid(0)} round {reader.GetString(1)} has applied BOTH DriverReserved and MatchingFailed terminal facts."));
 
         return findings.Count == 0
-            ? AuditorCheck.Pass("AUD-06", "Matching terminal uniqueness (Trip-side proxy)",
-                "Trip-side proxy only: no contradictory applied terminal facts per (trip, round). Matching ledger uniqueness is NOT RUN (B-owned data).")
+            ? AuditorCheck.LocalProxyPass("AUD-06", "Matching terminal uniqueness (Trip-side proxy)",
+                "Level B: Trip's applied-fact ledger shows no contradictory applied terminal facts per (trip, round). The authoritative Matching ledger is NOT inspected: full AUD-06 requires B-owned data (DEPENDENCY_PENDING).")
             : AuditorCheck.Fail("AUD-06", "Matching terminal uniqueness (Trip-side proxy)",
-                $"{findings.Count} contradictory terminal fact pair(s).", findings);
+                $"{findings.Count} contradictory terminal fact pair(s) in the Trip-owned ledger.", findings);
     }
 
     /// <summary>
@@ -285,8 +303,13 @@ public static class TripInvariantAuditor
         var note = policy.Quiesced
             ? "Quiesced scenario: open release obligations on terminal trips are failures."
             : $"Mid-flight observation: {pending} recognized-pending release obligation(s) on terminal trips.";
+        // Level B: Trip proves its obligation ledger is coherent and that
+        // Driver AUTHORITY confirmed each release (completed_at is set only by
+        // DriverReservationReleasedV1 intake), but the canonical property also
+        // asserts the Driver's own reservation state — B-owned data.
         return findings.Count == 0
-            ? AuditorCheck.Pass("AUD-07", "No leaked pre-start reservation", note)
+            ? AuditorCheck.LocalProxyPass("AUD-07", "No leaked pre-start reservation", note +
+                " Level B: Trip ledger + Driver-confirmed releases; full AUD-07 additionally requires the Driver reservation table (B-owned, DEPENDENCY_PENDING).")
             : AuditorCheck.Fail("AUD-07", "No leaked pre-start reservation", note, findings);
     }
 
@@ -335,7 +358,8 @@ public static class TripInvariantAuditor
         }
 
         return findings.Count == 0
-            ? AuditorCheck.Pass("AUD-08", "Outbox/Saga resolution within policy")
+            ? AuditorCheck.Pass("AUD-08", "Outbox/Saga resolution within policy",
+                "Level A: outbox_messages and ride_sagas are Trip-owned tables.")
             : AuditorCheck.Fail("AUD-08", "Outbox/Saga resolution within policy",
                 $"{findings.Count} unresolved row(s) beyond policy.", findings);
     }
