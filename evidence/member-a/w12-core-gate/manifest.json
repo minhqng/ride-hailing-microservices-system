@@ -2,7 +2,7 @@
   "member": "A",
   "week": "W12",
   "topic": "Trip/Saga observability, authorization hardening and the core release gate review",
-  "scope": "A-W12-01..09 (domain spans/logs, committed-transition metrics with durable saga.active gauge, real-broker W3C propagation proof, authz/invalid-transition negatives with durable oracles, full regression, Trip-side invariant auditor with honest NOT RUN cross-service results, G4 review — G4 NOT YET GREEN with exact blockers; B/C peer reruns pending)",
+  "scope": "A-W12-01..09 (domain spans/logs, committed-transition metrics with durable saga.active gauge, real-broker W3C propagation proof, authz/invalid-transition negatives with durable oracles, full regression, Trip-side invariant auditor with honest NOT RUN cross-service results, G4 review — G4 NOT YET GREEN with exact blockers; B/C peer reruns pending); 2026-10-26 targeted review closed F1 (authorization boundary verified fail-closed, no A defect — authentication remains C-owned SYSTEM_AUTH_PENDING), F2 (auditor verdict levels: LOCAL_PROXY_PASS introduced for AUD-05/06/07), F3 (metrics collection safety verified, no change) and F4 (trace relationships verified, no change)",
   "branch": "feature/A-W12-trip-observability-g4",
   "base": {
     "ref": "feature/A-W11-trip-fault-proofs",
@@ -12,7 +12,7 @@
   },
   "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
   "codeCommit": {
-    "sha": "976c7f8662e05c0abe17a0dedcf8a45d94b03592",
+    "sha": "acaaa68abb5e26dac9ad4888c25a7dbeeabee643",
     "message": "feat(trip): add W12 observability, authz negatives and invariant auditor"
   },
   "provenanceModel": "reproduce.sh delegates to scripts/test/verify-source-anchor.sh: symmetric git diff over every tracked path outside evidence/ between HEAD and codeCommit (added, modified, deleted, renamed and mode-changed paths are all drift), plus a clean working tree outside evidence/; identical source is accepted, any drift aborts.",
@@ -28,24 +28,73 @@
   "telemetry": {
     "activitySource": "RideHailing.Trip",
     "meter": "RideHailing.Trip",
-    "spans": ["RideHailing.Trip/CreateRide", "RideHailing.Trip/CancelRide", "RideHailing.Trip/ApplyAuthority"],
-    "counters": ["trip.created", "trip.cancelled", "trip.transition.rejected{reason}", "saga.compensation", "saga.requires_review"],
-    "gauges": ["saga.active{step} (durable-state backed via TripMetricsObserver)"],
-    "reusedSharedInstruments": ["outbox.pending", "outbox.oldest_pending.age", "outbox.failed_visible (meter RideHailing.Messaging, relay-refreshed)"],
+    "spans": [
+      "RideHailing.Trip/CreateRide",
+      "RideHailing.Trip/CancelRide",
+      "RideHailing.Trip/ApplyAuthority"
+    ],
+    "counters": [
+      "trip.created",
+      "trip.cancelled",
+      "trip.transition.rejected{reason}",
+      "saga.compensation",
+      "saga.requires_review"
+    ],
+    "gauges": [
+      "saga.active{step} (durable-state backed via TripMetricsObserver)"
+    ],
+    "reusedSharedInstruments": [
+      "outbox.pending",
+      "outbox.oldest_pending.age",
+      "outbox.failed_visible (meter RideHailing.Messaging, relay-refreshed)"
+    ],
     "sharedPipeline": "Program.cs adds the Trip source/meter to the same AddOpenTelemetry pipeline as C's shared instruments; no second registry or exporter"
   },
   "commands": [
-    { "name": "solution-build-release", "command": "dotnet build RideHailing.Distributed.slnx -c Release --no-incremental" },
-    { "name": "solution-tests-release", "command": "dotnet test RideHailing.Distributed.slnx -c Release --no-build" },
-    { "name": "w12-telemetry", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12TelemetryTests" },
-    { "name": "w12-trace-propagation", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12TracePropagationTests" },
-    { "name": "w12-authz-negatives", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12AuthzNegativeTests" },
-    { "name": "w12-invariant-auditor", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12InvariantAuditorTests" },
-    { "name": "w09-regression", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW09" },
-    { "name": "w10-saga-regression", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW10Saga" },
-    { "name": "w11-fault-regression", "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW11Fault" },
-    { "name": "compose-config", "command": "docker compose -f compose.yaml config --quiet" },
-    { "name": "hygiene-guard", "command": "bash scripts/test/hygiene-check.sh" }
+    {
+      "name": "solution-build-release",
+      "command": "dotnet build RideHailing.Distributed.slnx -c Release --no-incremental"
+    },
+    {
+      "name": "solution-tests-release",
+      "command": "dotnet test RideHailing.Distributed.slnx -c Release --no-build"
+    },
+    {
+      "name": "w12-telemetry",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12TelemetryTests"
+    },
+    {
+      "name": "w12-trace-propagation",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12TracePropagationTests"
+    },
+    {
+      "name": "w12-authz-negatives",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12AuthzNegativeTests"
+    },
+    {
+      "name": "w12-invariant-auditor",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW12InvariantAuditorTests"
+    },
+    {
+      "name": "w09-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW09"
+    },
+    {
+      "name": "w10-saga-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW10Saga"
+    },
+    {
+      "name": "w11-fault-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests --filter FullyQualifiedName~TripW11Fault"
+    },
+    {
+      "name": "compose-config",
+      "command": "docker compose -f compose.yaml config --quiet"
+    },
+    {
+      "name": "hygiene-guard",
+      "command": "bash scripts/test/hygiene-check.sh"
+    }
   ],
   "g4": {
     "verdict": "NOT YET GREEN",

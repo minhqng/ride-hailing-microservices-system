@@ -1,9 +1,13 @@
-# A-W12-07 — Core Release Gate G4 matrix (reviewed 2026-10-25)
+# A-W12-07 — Core Release Gate G4 matrix (reviewed 2026-10-25, corrected 2026-10-26)
 
 Reviewed against Doc 03 §35, Doc 04 §23 and Doc 05A §20.3 on the verified
-A-W12 code revision `976c7f8662e05c0abe17a0dedcf8a45d94b03592`
-(branch `feature/A-W12-trip-observability-g4`, stacked on OPEN PR #42 head
-`46ac68a`). Statuses use exactly: PASS / FAIL / NOT RUN / DEPENDENCY_PENDING.
+A-W12 code revision `976c7f8662e05c0abe17a0dedcf8a45d94b03592` (branch
+`feature/A-W12-trip-observability-g4`, stacked on OPEN PR #42 head
+`46ac68a`; the 2026-10-26 targeted review added the verdict-level correction
+at code revision `acaaa68` without changing any query or scenario). Statuses
+use exactly: PASS / FAIL / NOT RUN / DEPENDENCY_PENDING. `LOCAL_PROXY_PASS`
+is a supporting-evidence detail (Level B Trip-local proof), never a full
+mandatory G4 PASS.
 
 **VERDICT: G4 NOT YET GREEN.** A-scope entries are executable and green; the
 team-level entries below carry exact blockers. A green A PR is not a green
@@ -24,11 +28,11 @@ team gate.
 | REL-05 duplicate publish | A (+C shared) | PASS | W09 duplicate-publication proofs (same messageId republish, receipt replay); green in A-W12 regression |
 | REL-06 commit-before-ACK | A (+C shared) | PASS | W08 durable-receipt commit-before-ACK oracle; green in A-W12 regression |
 | REL-07 Saga restart | A | PASS | W11 real SIGKILL/restart proofs (PR #42); green in A-W12 regression |
-| REL-09 compensation | A | PASS | W10/W11 exact compensation + W12 auditor compensated-scenario PASS (final-state/aw12-06-auditor.md) |
+| REL-09 compensation | A | PASS | W10/W11 exact-compensation proofs (Trip-authoritative rows); the W12 auditor compensated scenario adds supporting evidence (AUD-08 Level A PASS, AUD-07 LOCAL_PROXY_PASS) |
 | REL-11 poison/DLQ | C (+A consumer) | DEPENDENCY_PENDING | Trip consumer poison classification is covered component-side (W08); the shared DLQ/deadletter topology lane belongs to C's W10/W11 platform (PR #41 OPEN) |
-| SEC minimum + ownership isolation | A (Trip boundary) + C (platform) | PARTIAL: A AUTHZ VERIFIED / SYSTEM AUTH PENDING | Trip claims-boundary negatives PASS (401/403/404-ownership, fail-closed claims, SEC-04 spoofing inert, no-outbox-effect on rejection — TripW12AuthzNegativeTests + W4/W5 suites). End-to-end JWT issuance/validation is C/platform (Identity service is a skeleton today): SYSTEM_AUTH_PENDING. SEC-08/09 baseline belongs to C |
+| SEC minimum + ownership isolation | A (Trip boundary) + C (platform) | PARTIAL: A AUTHORIZATION VERIFIED / SYSTEM AUTHENTICATION PENDING | Trip enforces role + object-level authorization given an authenticated principal and fails CLOSED for unauthenticated traffic (direct host-port exposure included — see final-state/f1-authz-boundary.md): 401/403/404-ownership, fail-closed claim parsing, SEC-04 spoofing inert, durable zero-effect oracles. AUTHENTICATION ITSELF (principal issuance/validation) does not exist yet anywhere — C-owned Identity/Gateway skeletons: SYSTEM_AUTH_PENDING. SEC-08/09 baseline belongs to C |
 | Zero known S0/S1 correctness defect | A/B/C | PASS (A-scope) / TEAM PENDING | No known A-owned S0/S1 (W09–W12 proofs green, incl. W12 instrumentation introducing no behavior change — 989/989 solution tests). Team-wide confirmation needs B/C integration review |
-| Invariant auditor green | A+B+C | DEPENDENCY_PENDING | A-executable legs PASS (AUD-03/05-proxy/06-proxy/07/08) with seeded-violation FAIL proofs; AUD-01/02/04 + full AUD-05/06 NOT RUN — require B/C-owned datasets (final-state/aw12-06-auditor.md) |
+| Invariant auditor green | A+B+C | DEPENDENCY_PENDING | Level A (Trip-authoritative DBs inspected): AUD-03, AUD-08 PASS. Level B supporting (LOCAL_PROXY_PASS): AUD-05/06/07 — Trip-local ledgers only. NOT RUN: AUD-01/02/04 + the B/C halves of AUD-05/06/07 — require B/C-owned datasets (final-state/aw12-06-auditor.md). Seeded-violation FAIL proofs confirm the auditor is not vacuous. A Trip-only dataset cannot make this row green |
 
 ## A's canonical checklist (Doc 05A §20.3)
 
