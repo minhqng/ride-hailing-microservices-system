@@ -26,3 +26,29 @@ commit (or on Activity objects that may be null without a listener); no
 instrument writes the database inside a business transaction, and
 `TripMetricsObserver` failures keep the last durable snapshot and retry on
 the next interval without affecting any business outcome.
+
+## F3 review record (2026-10-26): observable-collection safety
+
+- **No SQL in the collect path.** The `saga.active` ObservableGauge callback
+  (`SnapshotSagaActive`) only iterates a volatile immutable dictionary that
+  is swapped wholesale by `TripMetricsObserver.ObserveSagaActive`; the
+  indexed GROUP BY runs exclusively on the background observer loop
+  (default every 15 s, `TripMetrics:RefreshSeconds` bounded 5–300). A scrape
+  therefore cannot block on the database, and callback work is O(number of
+  saga steps) ≤ 6.
+- **Outage behavior.** A slow or unreachable database slows only the
+  background refresh: the catch retains the LAST durable snapshot (stale,
+  never fabricated-zero) and re-probes readiness next tick; skips log at
+  Information. Sample freshness is thus bounded by the configured interval
+  plus one failed probe; it is observable through the skip log and the
+  readiness state feeding `/health/ready`.
+- **Restart correctness.** The gauge re-derives from durable rows after any
+  restart (the snapshot starts empty and the first successful refresh
+  repopulates it) — no in-memory reconstruction of business state.
+- **No shared-instrument interference.** Trip's meter is separate from C's
+  `RideHailing.Messaging` meter; the shared outbox gauges are read-only
+  reuse refreshed by C's relay from durable rows. One meter's collect never
+  runs the other's queries.
+- **Cost bound.** `Count(*)` grouped over the non-terminal subset uses the
+  `ride_sagas` status index; it is not a full-table scan. No change made —
+  the delivered design already satisfies the safety requirements.
