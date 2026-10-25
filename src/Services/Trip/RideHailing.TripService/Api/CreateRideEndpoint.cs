@@ -32,7 +32,7 @@ public static class CreateRideEndpoint
         HttpContext context,
         CreateRideRequest? request,
         CreateRideHandler handler,
-        TripRideRequestedPublisher publisher,
+        TripRideRequestedIntake rideRequested,
         CancellationToken cancellationToken)
     {
         if (!RiderIdentity.TryExtractRiderId(context.User, out var riderId))
@@ -87,14 +87,16 @@ public static class CreateRideEndpoint
 
         if (result.IsSuccess)
         {
-            if (!await publisher.PublishForOwnedRideAsync(result.TripId, riderId, cancellationToken))
+            // W9: durable local intent replaces the W8 direct publish. Broker
+            // availability is the relay's problem, not this request's.
+            if (!await rideRequested.EnsureRideRequestedAsync(result.TripId, riderId, cancellationToken))
             {
                 context.Response.Headers.RetryAfter = "5";
                 return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable,
-                    title: "Ride saved; matching publication is unconfirmed. Retry with the same Idempotency-Key and body.",
+                    title: "Ride saved; the matching intent is not yet durably committed. Retry with the same Idempotency-Key and body.",
                     extensions: new Dictionary<string, object?>
                     {
-                        ["code"] = "MATCHING_PUBLICATION_PENDING", ["tripId"] = result.TripId
+                        ["code"] = "MATCHING_INTENT_PENDING", ["tripId"] = result.TripId
                     });
             }
             var body = new CreateRideResponse { TripId = result.TripId };

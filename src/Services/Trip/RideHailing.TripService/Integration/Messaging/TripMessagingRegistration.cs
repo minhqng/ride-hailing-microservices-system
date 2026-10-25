@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using RabbitMQ.Client;
+using RideHailing.Messaging.Outbox;
 using RideHailing.Messaging.Reliability;
 using RideHailing.TripService.Infrastructure.Persistence;
 
@@ -41,7 +43,7 @@ public static class TripMessagingRegistration
     {
         var enabled = config.GetValue<bool>("TripMessaging:Enabled");
         services.AddSingleton(new TripMessagingSettings(enabled));
-        services.AddScoped<TripRideRequestedPublisher>();
+        services.AddScoped<TripRideRequestedIntake>();
         services.AddSingleton<TripDatabaseReadiness>();
         services.AddHealthChecks().AddCheck<TripDatabaseReadiness>("trip-database", tags: ["ready"]);
         if (!enabled) return services;
@@ -63,6 +65,24 @@ public static class TripMessagingRegistration
         services.AddSingleton<TripMessagingReadiness>();
         services.AddHealthChecks().AddCheck<TripMessagingReadiness>("trip-messaging", tags: ["ready"]);
         services.AddScoped<TripMessageHandler>();
+
+        // W9: reuse C's shared relay against the Trip-owned database. A
+        // supplies only semantic intents; claim/publish/confirm/mark/retry and
+        // outbox.pending / outbox.oldest_pending.age metrics stay shared.
+        services.AddSingleton<IOutboxStore>(sp =>
+            new NpgsqlOutboxStore(sp.GetRequiredService<NpgsqlDataSource>()));
+        services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
+        services.AddSingleton(_ => new OutboxRelayOptions
+        {
+            RelayId = $"{Environment.MachineName}:{Guid.NewGuid():N}",
+            BatchSize = config.GetValue<int?>("Outbox:BatchSize") ?? 8,
+            ClaimLease = TimeSpan.FromSeconds(config.GetValue<int?>("Outbox:ClaimLeaseSeconds") ?? 300),
+            PollInterval = TimeSpan.FromMilliseconds(config.GetValue<int?>("Outbox:PollIntervalMs") ?? 1000),
+            MaxAttempts = config.GetValue<int?>("Outbox:MaxAttempts") ?? 5,
+            RetryDelay = TimeSpan.FromSeconds(config.GetValue<int?>("Outbox:RetryDelaySeconds") ?? 1),
+        });
+        services.AddSingleton<OutboxRelay>();
+        services.AddHostedService<TripOutboxRelayWorker>();
         services.AddHostedService<TripMessagingWorker>();
         return services;
     }

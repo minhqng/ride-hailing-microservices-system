@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
 
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
@@ -53,6 +54,7 @@ public sealed class RecordDriverReservationHandler
             return TripLifecycleResult.NotFound();
         }
 
+        var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
         var outcome = trip.State is TripState.Cancelled or TripState.MatchFailed
             ? trip.RecordPreStartTerminalReservation(driverId, reservationId, matchingRound, _time.GetUtcNow())
             : trip.ApplyDriverReserved(driverId, reservationId, matchingRound, _time.GetUtcNow());
@@ -66,6 +68,9 @@ public sealed class RecordDriverReservationHandler
         // concurrent writer can never turn a replay into an overwrite.
         if (!outcome.IsReplay)
         {
+            // A late authority fact can add exact cleanup while the Trip stays
+            // terminal; any new release/cancel intent commits with it.
+            TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
