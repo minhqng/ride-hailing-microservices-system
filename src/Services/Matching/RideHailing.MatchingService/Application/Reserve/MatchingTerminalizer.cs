@@ -102,11 +102,26 @@ public sealed class MatchingTerminalizer
         {
             if (round.ResultMessageId is null)
             {
-                throw new InvalidOperationException(
-                    $"Matching round {tripId:D}/{matchingRound} is NO_DRIVER without a persisted result identity.");
+                // Migration 006 preserves old terminals. Repair their missing
+                // identity only after checking the same safety boundary as a
+                // new terminal; never publish failure over an unresolved win.
+                var legacyAttempts = await LoadAttemptsForUpdateAsync(conn, tx, tripId, matchingRound, ct);
+                if (round.CancelRequested
+                    || legacyAttempts.Any(a => a.State != MatchingAttemptStates.Rejected)
+                    || !SnapshotCovered(round.SnapshotJson, legacyAttempts))
+                {
+                    await tx.RollbackAsync(ct);
+                    return new(MatchingTerminalOutcome.Refused, Reason: "LEGACY_TERMINAL_REQUIRES_REVIEW");
+                }
+                await using var repair = new NpgsqlCommand(
+                    "UPDATE matching_rounds SET result_message_id = @id WHERE trip_id = @trip AND matching_round = @round", conn, tx);
+                repair.Parameters.AddWithValue("id", Guid.Parse(expectedIdentity));
+                repair.Parameters.AddWithValue("trip", tripId);
+                repair.Parameters.AddWithValue("round", matchingRound);
+                await repair.ExecuteNonQueryAsync(ct);
             }
 
-            var persisted = round.ResultMessageId.Value.ToString("D");
+            var persisted = round.ResultMessageId?.ToString("D") ?? expectedIdentity;
             if (!string.Equals(persisted, expectedIdentity, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
@@ -256,6 +271,11 @@ public sealed class MatchingTerminalizer
             || existing.SchemaVersion != expected.SchemaVersion
             || !string.Equals(existing.Exchange, expected.Exchange, StringComparison.Ordinal)
             || !string.Equals(existing.RoutingKey, expected.RoutingKey, StringComparison.Ordinal)
+            || existing.AggregateType != expected.AggregateType
+            || existing.AggregateId != expected.AggregateId
+            || existing.AggregateVersion != expected.AggregateVersion
+            || existing.SagaId != expected.SagaId
+            || existing.OperationKey != expected.OperationKey
             || !PayloadEquals(existing.PayloadJson, expected.PayloadJson))
         {
             throw new InvalidOperationException(
@@ -330,7 +350,8 @@ public sealed class MatchingTerminalizer
         NpgsqlConnection conn, NpgsqlTransaction tx, string messageId, CancellationToken ct)
     {
         const string Sql = """
-            SELECT message_type, schema_version, exchange, routing_key, payload_json::text
+            SELECT message_type, schema_version, exchange, routing_key, payload_json::text,
+                   aggregate_type, aggregate_id, aggregate_version, saga_id, operation_key
             FROM outbox_messages
             WHERE message_id = @id
             FOR UPDATE;
@@ -345,7 +366,12 @@ public sealed class MatchingTerminalizer
 
         return new OutboxIntent(
             reader.GetString(0), reader.GetInt32(1), reader.GetString(2),
-            reader.GetString(3), reader.GetString(4));
+            reader.GetString(3), reader.GetString(4),
+            reader.IsDBNull(5) ? null : reader.GetString(5),
+            reader.IsDBNull(6) ? null : reader.GetString(6),
+            reader.IsDBNull(7) ? null : reader.GetInt64(7),
+            reader.IsDBNull(8) ? null : reader.GetString(8),
+            reader.IsDBNull(9) ? null : reader.GetString(9));
     }
 
     /// <summary>
@@ -412,5 +438,10 @@ public sealed class MatchingTerminalizer
         int SchemaVersion,
         string Exchange,
         string RoutingKey,
-        string PayloadJson);
+        string PayloadJson,
+        string? AggregateType,
+        string? AggregateId,
+        long? AggregateVersion,
+        string? SagaId,
+        string? OperationKey);
 }
