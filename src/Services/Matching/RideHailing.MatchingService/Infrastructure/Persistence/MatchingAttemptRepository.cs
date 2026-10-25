@@ -41,7 +41,8 @@ public sealed record MatchingRoundRow(
     int MatchingRound,
     string Status,
     Guid? SelectedDriverId,
-    Guid? SelectedReservationId);
+    Guid? SelectedReservationId,
+    Guid? ResultMessageId);
 
 public sealed class MatchingAttemptRepository
 {
@@ -104,7 +105,8 @@ public sealed class MatchingAttemptRepository
         Guid tripId, int round, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT trip_id, matching_round, status, selected_driver_id, selected_reservation_id
+            SELECT trip_id, matching_round, status, selected_driver_id, selected_reservation_id,
+                   result_message_id
             FROM matching_rounds WHERE trip_id = @trip AND matching_round = @round;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -121,7 +123,8 @@ public sealed class MatchingAttemptRepository
         return new MatchingRoundRow(
             reader.GetGuid(0), reader.GetInt32(1), reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetGuid(3),
-            reader.IsDBNull(4) ? null : reader.GetGuid(4));
+            reader.IsDBNull(4) ? null : reader.GetGuid(4),
+            reader.IsDBNull(5) ? null : reader.GetGuid(5));
     }
 
     /// <summary>
@@ -152,9 +155,16 @@ public sealed class MatchingAttemptRepository
     /// Persists the write-ahead IN_FLIGHT attempt (Doc 02 §12.4). On PK
     /// conflict (duplicate worker, same ordinal) converges to the existing
     /// row so both workers share one reservation identity (DSI-018).
-    /// Returns (insertedNew, row).
+    ///
+    /// The round row is locked FOR SHARE before the insert and held for the
+    /// whole short transaction. W9 terminalization locks the same round row
+    /// FOR UPDATE before reading attempts: a terminal NO_DRIVER can therefore
+    /// never commit from a stale attempt set while this new attempt is being
+    /// created, and an attempt can never be created on a terminal round.
+    /// Returns (insertedNew, row); Row is null when the round is no longer
+    /// writable (terminal or cancellation requested).
     /// </summary>
-    public async Task<(bool Inserted, MatchingAttemptRow Row)> EnsureInflightAttemptAsync(
+    public async Task<(bool Inserted, MatchingAttemptRow? Row)> EnsureInflightAttemptAsync(
         Guid tripId, int round, int ordinal, Guid driverId, Guid reservationId,
         CancellationToken ct = default)
     {
@@ -165,15 +175,24 @@ public sealed class MatchingAttemptRepository
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        if (!await IsRoundWritableForShareAsync(conn, tx, tripId, round, ct))
+        {
+            await tx.RollbackAsync(ct);
+            return (false, null);
+        }
+
         try
         {
-            await using var cmd = new NpgsqlCommand(Insert, conn);
+            await using var cmd = new NpgsqlCommand(Insert, conn, tx);
             cmd.Parameters.AddWithValue("trip", tripId);
             cmd.Parameters.AddWithValue("round", round);
             cmd.Parameters.AddWithValue("ordinal", ordinal);
             cmd.Parameters.AddWithValue("driver", driverId);
             cmd.Parameters.AddWithValue("reservation", reservationId);
             await cmd.ExecuteNonQueryAsync(ct);
+            await tx.CommitAsync(ct);
             return (true, new MatchingAttemptRow(
                 tripId, round, ordinal, driverId, reservationId,
                 MatchingAttemptStates.InFlight, null, null));
@@ -183,8 +202,11 @@ public sealed class MatchingAttemptRepository
         {
             // Same ordinal already attempted (duplicate worker / redelivery):
             // converge to the existing row and its reservation identity.
+            // Release the share lock before the read so a waiting terminalizer
+            // is not held behind this losing duplicate.
+            await tx.RollbackAsync(ct);
             var existing = await LoadAttemptAsync(tripId, round, ordinal, ct);
-            return (false, existing!);
+            return (false, existing);
         }
     }
 
@@ -348,19 +370,52 @@ public sealed class MatchingAttemptRepository
             SET max_dispatched_version = GREATEST(COALESCE(a.max_dispatched_version, 0), @v),
                 updated_at = now()
             WHERE a.trip_id = @trip AND a.matching_round = @round AND a.ordinal = @ordinal
-              AND a.state IN ('READY', 'IN_FLIGHT', 'UNKNOWN')
-              AND EXISTS (
-                  SELECT 1 FROM matching_rounds AS r
-                  WHERE r.trip_id = @trip AND r.matching_round = @round AND r.status = 'PROCESSING');
+              AND a.state IN ('READY', 'IN_FLIGHT', 'UNKNOWN');
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand(Sql, conn);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        // Same round-row lock discipline as terminalization: hold FOR SHARE
+        // across the fence write so NO_DRIVER cannot commit between the
+        // PROCESSING check and the authorized dispatch, and a terminalizer
+        // that wins first makes this authorization fail closed.
+        if (!await IsRoundWritableForShareAsync(conn, tx, tripId, round, ct))
+        {
+            await tx.RollbackAsync(ct);
+            return false;
+        }
+
+        await using var cmd = new NpgsqlCommand(Sql, conn, tx);
         cmd.Parameters.AddWithValue("trip", tripId);
         cmd.Parameters.AddWithValue("round", round);
         cmd.Parameters.AddWithValue("ordinal", ordinal);
         cmd.Parameters.AddWithValue("v", dispatchedVersion);
-        return await cmd.ExecuteNonQueryAsync(ct) == 1;
+        var authorized = await cmd.ExecuteNonQueryAsync(ct) == 1;
+        await tx.CommitAsync(ct);
+        return authorized;
+    }
+
+    /// <summary>
+    /// Acquires the W9 serialization lock used by every operation that can
+    /// add or authorize a new attempt. Share mode lets concurrent attempt
+    /// creators/dispatchers proceed together, but excludes the terminalizer's
+    /// FOR UPDATE. A terminal round or a cancellation request yields false.
+    /// </summary>
+    private static async Task<bool> IsRoundWritableForShareAsync(
+        NpgsqlConnection conn, NpgsqlTransaction tx,
+        Guid tripId, int round, CancellationToken ct)
+    {
+        const string Sql = """
+            SELECT 1 FROM matching_rounds
+            WHERE trip_id = @trip AND matching_round = @round
+              AND status = 'PROCESSING' AND cancel_requested = FALSE
+            FOR SHARE;
+            """;
+        await using var cmd = new NpgsqlCommand(Sql, conn, tx);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        return await cmd.ExecuteScalarAsync(ct) is not null;
     }
 
     /// <summary>

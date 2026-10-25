@@ -37,12 +37,17 @@ public class MatchingSchemaBaselineTests
         var trip = Guid.NewGuid();
         try
         {
+            // W9: a new NO_DRIVER row must carry its terminal result identity
+            // (006 CHECK); every other status keeps it NULL.
             await using var cmd = new NpgsqlCommand(
-                "INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status) " +
-                "VALUES (@t, 1, @m, @s)", conn);
+                "INSERT INTO matching_rounds " +
+                "(trip_id, matching_round, input_message_id, status, result_message_id) " +
+                "VALUES (@t, 1, @m, @s, @r)", conn);
             cmd.Parameters.AddWithValue("t", trip);
             cmd.Parameters.AddWithValue("m", Guid.NewGuid().ToString("D"));
             cmd.Parameters.AddWithValue("s", status);
+            cmd.Parameters.AddWithValue("r", (object?)(
+                string.Equals(status, "NO_DRIVER", StringComparison.Ordinal) ? Guid.NewGuid() : null) ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync();
         }
         finally

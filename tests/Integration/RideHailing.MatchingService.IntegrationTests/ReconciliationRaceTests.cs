@@ -29,7 +29,8 @@ public sealed class ReconciliationRaceTests
 
     private MatchingReserveOrchestrator Orchestrator(
         StubDriverClient stub, int maxReserve = 3, int maxReconcile = 3) =>
-        new(Attempts(), stub, maxReserve, maxReconcile);
+        new(Attempts(), stub, new MatchingTerminalizer(_matching.DataSource, _matching.OutboxStore),
+            maxReserve, maxReconcile);
 
     private static Guid NewTrip() => Guid.NewGuid();
 

@@ -29,11 +29,20 @@
 // UNKNOWN on AVAILABLE/incompatible. NotFound carries no version and needs no
 // fence: no dispatch is possible without a version read.
 //
+// W9 terminal rule: when this bounded candidate list is all REJECTED, the
+// orchestrator asks MatchingTerminalizer for the atomic NO_DRIVER +
+// Outbox(MatchingFailedV1) commit. The terminalizer refuses if any attempt is
+// still READY/IN_FLIGHT/UNKNOWN/RESERVED, cancellation was requested, the
+// frozen snapshot is not fully covered, or the round is no longer
+// PROCESSING. A round already NO_DRIVER replays its persisted
+// result_message_id and never starts a new attempt sequence.
+//
 // What this never does: generic identity-changing retry (same R always,
-// Doc 02 §19.3), candidate advance on UNKNOWN (R-11), NO_DRIVER terminal
-// marking (needs W9 Outbox atomicity, Doc 02 §12.8), broker calls (W8).
-// Cancellation by the caller propagates; only transport uncertainty becomes
-// UNKNOWN. Programming/contract defects stay loud.
+// Doc 02 §19.3), candidate advance on UNKNOWN (R-11), broker calls from the
+// request path (the shared relay publishes committed Outbox intents), or a
+// second terminal result for the same round. Cancellation by the caller
+// propagates; only transport uncertainty becomes UNKNOWN. Programming/
+// contract defects stay loud.
 using RideHailing.MatchingService.Infrastructure.DriverClient;
 using RideHailing.MatchingService.Infrastructure.Persistence;
 
@@ -46,6 +55,8 @@ public enum AttemptOutcome
     Unknown,
     NeedsReview,
     Blocked,
+    /// <summary>The round stopped accepting work (terminal/cancelled).</summary>
+    RoundTerminal,
 }
 
 public sealed record AttemptResult(
@@ -56,6 +67,7 @@ public sealed record AttemptResult(
 public enum RoundOutcome
 {
     Reserved,
+    NoDriver,
     Exhausted,
     BlockedOnUnknown,
     NeedsReview,
@@ -66,23 +78,27 @@ public sealed record RoundReserveResult(
     RoundOutcome Outcome,
     Guid? DriverId,
     Guid? ReservationId,
-    string? Code);
+    string? Code,
+    string? ResultMessageId = null);
 
 public sealed class MatchingReserveOrchestrator
 {
     private readonly MatchingAttemptRepository _attempts;
     private readonly IDriverClient _driver;
+    private readonly MatchingTerminalizer _terminalizer;
     private readonly int _maxReserveAttempts;
     private readonly int _maxReconcileAttempts;
 
     public MatchingReserveOrchestrator(
         MatchingAttemptRepository attempts,
         IDriverClient driver,
+        MatchingTerminalizer terminalizer,
         int maxReserveAttempts = 3,
         int maxReconcileAttempts = 3)
     {
         _attempts = attempts;
         _driver = driver;
+        _terminalizer = terminalizer ?? throw new ArgumentNullException(nameof(terminalizer));
         _maxReserveAttempts = maxReserveAttempts;
         _maxReconcileAttempts = maxReconcileAttempts;
     }
@@ -114,6 +130,15 @@ public sealed class MatchingReserveOrchestrator
         {
             return new RoundReserveResult(
                 RoundOutcome.Reserved, roundRow.SelectedDriverId, roundRow.SelectedReservationId, null);
+        }
+
+        if (roundRow.Status == MatchingRoundStatuses.NoDriver)
+        {
+            // Exact replay of a completed round: reuse the persisted
+            // result_message_id, repair a missing intent under that SAME
+            // identity if necessary, and never start a new attempt sequence.
+            var replay = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
+            return MapTerminal(replay);
         }
 
         if (roundRow.Status != MatchingRoundStatuses.Processing)
@@ -160,13 +185,46 @@ public sealed class MatchingReserveOrchestrator
                     return new RoundReserveResult(RoundOutcome.NeedsReview, null, null, attempt.Code);
                 case AttemptOutcome.Blocked:
                     return new RoundReserveResult(RoundOutcome.BlockedOnUnknown, null, null, attempt.Code);
+                case AttemptOutcome.RoundTerminal:
+                    var terminal = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
+                    return MapTerminal(terminal);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(attempt));
             }
         }
 
-        return new RoundReserveResult(RoundOutcome.Exhausted, null, null, null);
+        // Every candidate in this bounded list is conclusively REJECTED. W9
+        // performs the only legal terminal transition: NO_DRIVER and its
+        // MatchingFailedV1 Outbox intent in one transaction, guarded against
+        // unresolved reservations, cancellation and concurrent new work.
+        var exhausted = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
+        return MapTerminal(exhausted);
     }
+
+    private static RoundReserveResult MapTerminal(MatchingTerminalResult terminal) =>
+        terminal.Outcome switch
+        {
+            MatchingTerminalOutcome.NoDriver => new RoundReserveResult(
+                RoundOutcome.NoDriver, null, null, null, terminal.ResultMessageId),
+            MatchingTerminalOutcome.Reserved => new RoundReserveResult(
+                RoundOutcome.Reserved, terminal.DriverId, terminal.ReservationId, null),
+            _ => terminal.Reason switch
+            {
+                MatchingTerminalReasons.CancelRequested or MatchingRoundStatuses.Cancelled
+                    or MatchingRoundStatuses.Failed => new RoundReserveResult(
+                        RoundOutcome.Refused, null, null, terminal.Reason),
+                MatchingTerminalReasons.UnresolvedAttempt => new RoundReserveResult(
+                    RoundOutcome.BlockedOnUnknown, null, null, terminal.Reason),
+                MatchingTerminalReasons.SnapshotIncomplete => new RoundReserveResult(
+                    RoundOutcome.NeedsReview, null, null, terminal.Reason),
+                // A vanished round is an infrastructure refusal, never proof
+                // that candidates were exhausted.
+                MatchingTerminalReasons.RoundNotFound => new RoundReserveResult(
+                    RoundOutcome.Refused, null, null, terminal.Reason),
+                _ => new RoundReserveResult(
+                    RoundOutcome.Exhausted, null, null, terminal.Reason),
+            },
+        };
 
     /// <summary>
     /// Single-attempt lifecycle: ensure write-ahead row (converging with
@@ -192,10 +250,16 @@ public sealed class MatchingReserveOrchestrator
             return new AttemptResult(AttemptOutcome.Blocked, Guid.Empty, "UNRESOLVED_ATTEMPT");
         }
 
-        await _attempts.EnsureInflightAttemptAsync(
+        var ensured = await _attempts.EnsureInflightAttemptAsync(
             tripId, round, ordinal, driverId, Guid.NewGuid(), ct);
-        var row = (await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct))!;
+        if (ensured.Row is null)
+        {
+            var current = await _attempts.LoadRoundAsync(tripId, round, ct);
+            return new AttemptResult(
+                AttemptOutcome.RoundTerminal, Guid.Empty, current?.Status ?? "ROUND_GONE");
+        }
 
+        var row = ensured.Row;
         return row.State switch
         {
             MatchingAttemptStates.Reserved => await RepairRoundAndReportAsync(tripId, round, row, ct),

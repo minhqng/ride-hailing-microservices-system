@@ -4,6 +4,7 @@
 // throws loud ( Ryuk disabled; cleanup explicit via AutoRemove + DisposeAsync).
 // Applies ALL migration scripts in filename order (001 baseline, 002 status fix, ...).
 using Npgsql;
+using RideHailing.Messaging.Outbox;
 using Testcontainers.PostgreSql;
 
 namespace RideHailing.MatchingService.IntegrationTests;
@@ -20,6 +21,12 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
 
     public string ConnectionString { get; private set; } = "";
 
+    /// <summary>Connection pool used by W9 Outbox/terminalization components.</summary>
+    public NpgsqlDataSource DataSource { get; private set; } = null!;
+
+    /// <summary>C's canonical shared Outbox store over the Matching database.</summary>
+    public NpgsqlOutboxStore OutboxStore { get; private set; } = null!;
+
     public async Task InitializeAsync()
     {
         var env = Environment.GetEnvironmentVariable("MATCHING_TEST_POSTGRES");
@@ -29,6 +36,7 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
             await probe.OpenAsync();
             ConnectionString = env;
             await ApplyScriptsAsync(env);
+            await EnsureSharedSchemaAsync();
             return;
         }
 
@@ -41,17 +49,43 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
         await ApplyScriptsAsync(ConnectionString);
+        await EnsureSharedSchemaAsync();
     }
 
     public async Task DisposeAsync()
     {
+        if (DataSource is not null)
+        {
+            await DataSource.DisposeAsync();
+        }
+
         if (_container is not null)
         {
             await _container.DisposeAsync();
         }
     }
 
-    public Task ReapplyScriptsAsync() => ApplyScriptsAsync(ConnectionString);
+    public async Task ReapplyScriptsAsync()
+    {
+        await ApplyScriptsAsync(ConnectionString);
+        await EnsureSharedSchemaAsync();
+    }
+
+    /// <summary>
+    /// W9: apply C's embedded Outbox DDL after the Matching-owned migrations.
+    /// NpgsqlOutboxStore.EnsureSchemaAsync is the single schema source (no
+    /// test-local copy), matching the production startup path.
+    /// </summary>
+    private async Task EnsureSharedSchemaAsync()
+    {
+        if (DataSource is null)
+        {
+            DataSource = NpgsqlDataSource.Create(ConnectionString);
+            OutboxStore = new NpgsqlOutboxStore(DataSource);
+        }
+
+        await OutboxStore.EnsureSchemaAsync();
+    }
 
     /// <summary>
     /// Loads one migration script by filename for tests that must apply

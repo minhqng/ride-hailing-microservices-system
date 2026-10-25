@@ -40,7 +40,7 @@ public sealed class AtomicDispatchFenceTests
     private MatchingAttemptRepository Attempts() => new(_matching.ConnectionString);
 
     private MatchingReserveOrchestrator Orchestrator(StubDriverClient stub) =>
-        new(Attempts(), stub);
+        new(Attempts(), stub, new MatchingTerminalizer(_matching.DataSource, _matching.OutboxStore));
 
     private static Guid NewTrip() => Guid.NewGuid();
 
