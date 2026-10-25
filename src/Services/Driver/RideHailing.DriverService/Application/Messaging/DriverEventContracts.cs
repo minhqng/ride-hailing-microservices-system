@@ -57,11 +57,11 @@ public sealed record DriverLocationEventPayload(
 
 public static class DriverEventMessageIds
 {
-    // Deterministic per logical effect (NOT per publish attempt): retries,
-    // replays and re-publication after publish loss recompute the SAME id,
-    // so downstream dedup/version guards converge. New effects (new R or new
-    // version) necessarily produce new ids. W9 Outbox replaces this scheme
-    // with row-generated identities; until then this is the stability story.
+    // Deterministic per logical effect (NOT per publish attempt): the value is
+    // computed once when the W9 Outbox intent is recorded, then stored verbatim
+    // in outbox_messages. Relay retries, restarts and republication after a
+    // lost confirm reuse that stored id, so downstream dedup/version guards
+    // converge. New effects (new reservation or new version) produce new ids.
     public static string ForDriverEffect(Guid driverId, Guid? reservationId, int version, string status)
     {
         using var sha = System.Security.Cryptography.SHA256.Create();

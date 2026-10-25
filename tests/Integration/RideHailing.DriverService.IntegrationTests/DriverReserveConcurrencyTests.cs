@@ -27,18 +27,12 @@ public class DriverReserveConcurrencyTests
     private DriverRepository Repo()
     {
         // Testcontainers PostgreSQL caps server connections (max_connections
-        // = 100, minus superuser reserve). Keep the client pool well below
-        // that so N=100 synchronized contenders queue client-side instead of
-        // tripping 53300: queuing does not weaken the proof (the row lock
-        // still serializes all contenders; exactly one commits first).
-        // Pool Timeout stays at the Npgsql default (30 s), far above a tx.
-        var cs = _db.ConnectionString;
-        if (!cs.Contains("Maximum Pool Size", StringComparison.OrdinalIgnoreCase))
-        {
-            cs += ";Maximum Pool Size=40";
-        }
-
-        return new DriverRepository(cs);
+        // = 100, minus superuser reserve). The fixture caps the shared client
+        // pool well below that so N=100 synchronized contenders queue
+        // client-side instead of tripping 53300: queuing does not weaken the
+        // proof (the row lock still serializes all contenders; exactly one
+        // commits first). Pool Timeout stays at the Npgsql default (30 s).
+        return _db.CreateRepository();
     }
 
     private void RequireDb()
