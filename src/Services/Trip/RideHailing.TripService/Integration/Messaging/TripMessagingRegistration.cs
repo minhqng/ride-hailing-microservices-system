@@ -5,6 +5,7 @@ using RabbitMQ.Client;
 using RideHailing.Messaging.Outbox;
 using RideHailing.Messaging.Reliability;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.FaultPoints;
 
 namespace RideHailing.TripService.Integration.Messaging;
 
@@ -39,14 +40,30 @@ public sealed class TripMessagingReadiness : IHealthCheck
 
 public static class TripMessagingRegistration
 {
-    public static IServiceCollection AddTripMessaging(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddTripMessaging(
+        this IServiceCollection services, IConfiguration config, IHostEnvironment environment)
     {
+        // A-W11-01: faultpoints are testing-only and double-gated. Refusing an
+        // explicit enable in Production at startup is fail-fast misconfiguration
+        // handling — the flag must never survive into a production host.
+        var faultPoints = TripFaultPointSettings.FromConfiguration(config);
+        if (faultPoints.Enabled && environment.IsProduction())
+        {
+            throw new InvalidOperationException(
+                "TripFaultPoints:Enabled=true is a testing-only setting and is refused in the Production environment.");
+        }
+
         var enabled = config.GetValue<bool>("TripMessaging:Enabled");
         services.AddSingleton(new TripMessagingSettings(enabled));
         services.AddScoped<TripRideRequestedIntake>();
         services.AddSingleton<TripDatabaseReadiness>();
         services.AddHealthChecks().AddCheck<TripDatabaseReadiness>("trip-database", tags: ["ready"]);
         if (!enabled) return services;
+        if (faultPoints.Enabled)
+        {
+            services.AddSingleton(faultPoints);
+            services.AddSingleton<TripFaultPointGate>();
+        }
 
         string Required(string key) => !string.IsNullOrWhiteSpace(config[key]) ? config[key]! :
             throw new InvalidOperationException($"Missing messaging configuration '{key}'.");
@@ -72,7 +89,7 @@ public static class TripMessagingRegistration
         services.AddSingleton<IOutboxStore>(sp =>
             new NpgsqlOutboxStore(sp.GetRequiredService<NpgsqlDataSource>()));
         services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
-        services.AddSingleton(_ => new OutboxRelayOptions
+        services.AddSingleton(sp => new OutboxRelayOptions
         {
             RelayId = $"{Environment.MachineName}:{Guid.NewGuid():N}",
             BatchSize = config.GetValue<int?>("Outbox:BatchSize") ?? 8,
@@ -80,6 +97,14 @@ public static class TripMessagingRegistration
             PollInterval = TimeSpan.FromMilliseconds(config.GetValue<int?>("Outbox:PollIntervalMs") ?? 1000),
             MaxAttempts = config.GetValue<int?>("Outbox:MaxAttempts") ?? 5,
             RetryDelay = TimeSpan.FromSeconds(config.GetValue<int?>("Outbox:RetryDelaySeconds") ?? 1),
+            // A-W11-01: the deterministic pre-dispatch faultpoint rides the
+            // same relay seam C's shared platform will use. Null (seam off) in
+            // every host without explicitly activated test faultpoints.
+            BeforePublish = faultPoints.Enabled
+                ? (message, token) => sp.GetRequiredService<TripFaultPointGate>().HoldBeforePublishAsync(
+                    TripFaultPointNames.SagaAfterPersistBeforeDispatch,
+                    message.MessageType, message.MessageId, token)
+                : null,
         });
         services.AddSingleton<OutboxRelay>();
         services.AddHostedService<TripOutboxRelayWorker>();
