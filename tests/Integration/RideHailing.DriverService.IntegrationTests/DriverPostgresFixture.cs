@@ -6,6 +6,9 @@
 //      is explicit via AutoRemove + DisposeAsync).
 // Applies ALL migration scripts in filename order (001, 002, ...).
 using Npgsql;
+using RideHailing.DriverService.Infrastructure.Outbox;
+using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.Messaging.Outbox;
 using Testcontainers.PostgreSql;
 
 namespace RideHailing.DriverService.IntegrationTests;
@@ -24,6 +27,17 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
 
     public string ConnectionString { get; private set; } = "";
 
+    /// <summary>
+    /// Shared pool for repository-backed tests. Capping the pool keeps the
+    /// 100-contender serialization proof client-side, exactly like the old
+    /// per-call connection strings did.
+    /// </summary>
+    public NpgsqlDataSource DataSource { get; private set; } = null!;
+
+    public NpgsqlOutboxStore OutboxStore { get; private set; } = null!;
+
+    public DriverRepository CreateRepository() => new(DataSource, OutboxStore);
+
     public async Task InitializeAsync()
     {
         var env = Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES");
@@ -33,6 +47,7 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             await probe.OpenAsync();
             ConnectionString = env;
             await ApplyScriptsAsync(env);
+            CreateDataSource();
             return;
         }
 
@@ -45,10 +60,31 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
         await _container.StartAsync();
         ConnectionString = FixContainerHost(_container.GetConnectionString());
         await ApplyScriptsAsync(ConnectionString);
+        CreateDataSource();
+    }
+
+    private void CreateDataSource()
+    {
+        // Respect an operator-provided pool cap; otherwise stay below the
+        // container's max_connections for the 100-contender lock proof.
+        var cs = ConnectionString;
+        if (!cs.Contains("Maximum Pool Size", StringComparison.OrdinalIgnoreCase))
+        {
+            cs += ";Maximum Pool Size=40";
+        }
+
+        var builder = new NpgsqlDataSourceBuilder(cs);
+        DataSource = builder.Build();
+        OutboxStore = new NpgsqlOutboxStore(DataSource);
     }
 
     public async Task DisposeAsync()
     {
+        if (DataSource is not null)
+        {
+            await DataSource.DisposeAsync();
+        }
+
         if (_container is not null)
         {
             await _container.DisposeAsync();
@@ -94,6 +130,10 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             await using var cmd = new NpgsqlCommand(sql, conn);
             await cmd.ExecuteNonQueryAsync();
         }
+
+        // W9: the Outbox table is C-owned shared schema, applied from C's
+        // embedded canonical DDL rather than duplicated in Driver migrations.
+        await DriverOutboxSchema.EnsureAsync(connectionString);
     }
 
     private static IEnumerable<string> LoadBaselineScripts()

@@ -46,7 +46,7 @@ public sealed class AtomicDispatchFenceTests
 
     private async Task<Guid> SeedAvailableDriverAsync()
     {
-        var repo = new DriverRepository(_drivers.ConnectionString);
+        var repo = _drivers.CreateRepository();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
         driver.GoOnline(driver.Version);
         Assert.True(await repo.TryInsertAsync(driver));
@@ -122,7 +122,7 @@ public sealed class AtomicDispatchFenceTests
         var trip = NewTrip();
         var d1 = await SeedAvailableDriverAsync();
         var d2 = await SeedAvailableDriverAsync();
-        var driverRepo = new DriverRepository(_drivers.ConnectionString);
+        var driverRepo = _drivers.CreateRepository();
 
         var seed = await driverRepo.LoadAsync(d1);
         var v1 = seed!.Version;
@@ -173,7 +173,7 @@ public sealed class AtomicDispatchFenceTests
         // follow-up reconcile converges R1 to RESERVED. Exactly one durable
         // reservation for the trip (D1/R1); D2 untouched.
         var (trip, d1, d2, r1, v1, v2) = await SetupStaleFenceAsync();
-        var driverRepo = new DriverRepository(_drivers.ConnectionString);
+        var driverRepo = _drivers.CreateRepository();
 
         var enteredA = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var gateA = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -286,7 +286,7 @@ public sealed class AtomicDispatchFenceTests
         // calls, no Driver effect); R1 stays properly terminal; the next
         // candidate D2 may advance normally.
         var (trip, d1, d2, r1, v1, v2) = await SetupStaleFenceAsync();
-        var driverRepo = new DriverRepository(_drivers.ConnectionString);
+        var driverRepo = _drivers.CreateRepository();
 
         var enteredB = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var gateB = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

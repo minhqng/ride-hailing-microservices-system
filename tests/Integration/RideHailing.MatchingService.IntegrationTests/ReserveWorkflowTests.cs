@@ -42,7 +42,7 @@ public class ReserveWorkflowTests
 
     private async Task<Guid> SeedAvailableDriverAsync()
     {
-        var repo = new DriverRepository(_drivers.ConnectionString);
+        var repo = _drivers.CreateRepository();
         var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
         driver.GoOnline(driver.Version);
         Assert.True(await repo.TryInsertAsync(driver));
@@ -234,7 +234,7 @@ public class ReserveWorkflowTests
         // RESERVED. Oracles on both databases.
         var trip = NewTrip();
         var driverId = await SeedAvailableDriverAsync();
-        var driverRepo = new DriverRepository(_drivers.ConnectionString);
+        var driverRepo = _drivers.CreateRepository();
         var stub = new StubDriverClient
         {
             OnVersion = async (id, ct) =>

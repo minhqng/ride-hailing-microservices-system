@@ -17,7 +17,7 @@ public class DriverPersistenceTests
         _db = db;
     }
 
-    private DriverRepository Repo() => new(_db.ConnectionString);
+    private DriverRepository Repo() => _db.CreateRepository();
 
     [Fact]
     public async Task Save_Load_RoundTrip_Preserves_Full_Shape()

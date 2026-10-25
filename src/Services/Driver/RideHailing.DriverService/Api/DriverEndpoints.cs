@@ -64,7 +64,6 @@ public static class DriverEndpoints
             Guid id,
             StateVersionRequest req,
             DriverRepository repo,
-            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (id == Guid.Empty || req.ExpectedVersion < 1)
@@ -78,19 +77,10 @@ public static class DriverEndpoints
 
             try
             {
+                // The repository commits the AVAILABLE row and its durable
+                // DriverAvailableV1 Outbox intent atomically; the shared relay
+                // publishes after commit. No broker call is made here.
                 var result = await repo.TryGoOnlineAsync(id, req.ExpectedVersion, ct);
-                var published = DriverEventMapper.ForOnlineResult(id, result);
-                if (published is not null)
-                {
-                    await publisher.PublishStateAsync(
-                        published.MessageType,
-                        published.RoutingKey,
-                        published.Payload,
-                        published.Version,
-                        id,
-                        ct: ct);
-                }
-
                 return DriverStateResults.ToHttpResult(result, "online");
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -107,7 +97,6 @@ public static class DriverEndpoints
             Guid id,
             StateVersionRequest req,
             DriverRepository repo,
-            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (id == Guid.Empty || req.ExpectedVersion < 1)
@@ -122,18 +111,6 @@ public static class DriverEndpoints
             try
             {
                 var result = await repo.TryGoOfflineAsync(id, req.ExpectedVersion, ct);
-                var published = DriverEventMapper.ForOfflineResult(id, result);
-                if (published is not null)
-                {
-                    await publisher.PublishStateAsync(
-                        published.MessageType,
-                        published.RoutingKey,
-                        published.Payload,
-                        published.Version,
-                        id,
-                        ct: ct);
-                }
-
                 return DriverStateResults.ToHttpResult(result, "offline");
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -155,7 +132,6 @@ public static class DriverEndpoints
             Guid id,
             ReleaseDriverRequest req,
             DriverRepository repo,
-            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (id == Guid.Empty || req.TripId == Guid.Empty || req.ReservationId == Guid.Empty)
@@ -170,18 +146,6 @@ public static class DriverEndpoints
             try
             {
                 var result = await repo.TryReleaseAsync(id, req.TripId, req.ReservationId, ct);
-                var published = DriverEventMapper.ForReleaseResult(id, req.TripId, req.ReservationId, result);
-                if (published is not null)
-                {
-                    await publisher.PublishStateAsync(
-                        published.MessageType,
-                        published.RoutingKey,
-                        published.Payload,
-                        published.Version,
-                        id,
-                        ct: ct);
-                }
-
                 return DriverStateResults.ToHttpResult(result, "released");
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
@@ -238,7 +202,6 @@ public static class DriverEndpoints
             Guid id,
             ReserveDriverRequest req,
             DriverRepository repo,
-            DriverEventPublisher publisher,
             CancellationToken ct) =>
         {
             if (req.TripId == Guid.Empty || req.ReservationId == Guid.Empty || req.ExpectedVersion < 1
@@ -266,18 +229,6 @@ public static class DriverEndpoints
             {
                 var result = await repo.TryReserveAsync(
                     id, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
-                var published = DriverEventMapper.ForReserveResult(id, req.TripId, req.ReservationId, result);
-                if (published is not null)
-                {
-                    await publisher.PublishStateAsync(
-                        published.MessageType,
-                        published.RoutingKey,
-                        published.Payload,
-                        published.Version,
-                        id,
-                        ct: ct);
-                }
-
                 return DriverReserveResults.ToHttpResult(result);
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
