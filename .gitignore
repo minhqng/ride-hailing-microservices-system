@@ -32,8 +32,10 @@ Thumbs.db
 # Local agent planning journals (AGENTS.md: transient, never PR content)
 /plans/
 
-# Regenerated evidence reproduction runs (curate summaries; keep raw runs local)
-evidence/**/outputs/repro-*/
+# Regenerated evidence execution output of any kind: evidence bundles keep
+# curated proof files (manifest.json, README.md, test-output.txt, final-state/)
+# at the bundle root; everything produced by re-running reproduce.sh stays local
+evidence/**/outputs/
 
 # CI/local smoke log written at repo root by platform-smoke
 platform-smoke.log

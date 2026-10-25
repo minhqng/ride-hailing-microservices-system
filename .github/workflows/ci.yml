@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - run: scripts/test/hygiene-check.sh --self-test
+      - run: scripts/test/verify-source-anchor.test.sh
       - run: scripts/test/hygiene-check.sh
   build-test:
     name: build-test
