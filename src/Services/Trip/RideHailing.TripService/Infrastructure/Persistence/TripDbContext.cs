@@ -8,11 +8,14 @@
 // Saga/Inbox tables belong to their owning services. Version is the
 // application-managed optimistic-concurrency token: the domain advances it,
 // persistence only compares the original value. A deterministic Outbox
-// messageId is the second fence for the same logical transition. Concurrency
+// messageId is the second fence for the same logical transition, and an
+// identity clash is only treated as a lost race after the committed winner is
+// read back and proven to carry the same message contract. Concurrency
 // failures are translated to TripConcurrencyConflictException at this
 // Trip-specific boundary; no generic repository, no blind retry.
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Npgsql;
 using RideHailing.TripService.Integration.Messaging;
 using RideHailing.TripService.Domain.Trips;
@@ -74,7 +77,12 @@ public sealed class TripDbContext : DbContext
             ConstraintName: "outbox_messages_pk",
         } conflict)
         {
-            throw TranslateOutboxIdentityConflict(ex, conflict);
+            if (SameLogicalIntentRace(ex.Entries))
+            {
+                throw TranslateOutboxIdentityConflict(ex, conflict);
+            }
+
+            throw;
         }
     }
 
@@ -100,7 +108,12 @@ public sealed class TripDbContext : DbContext
             ConstraintName: "outbox_messages_pk",
         } conflict)
         {
-            throw TranslateOutboxIdentityConflict(ex, conflict);
+            if (await SameLogicalIntentRaceAsync(ex.Entries, cancellationToken).ConfigureAwait(false))
+            {
+                throw TranslateOutboxIdentityConflict(ex, conflict);
+            }
+
+            throw;
         }
     }
 
@@ -109,6 +122,8 @@ public sealed class TripDbContext : DbContext
     /// same logical transition: if the row already exists, another writer has
     /// committed that transition. Report it like a Version conflict so callers
     /// reread the winner instead of treating a lost race as a server fault.
+    /// Only callers of this translation have already proven the persisted
+    /// winner carries the staged message contract.
     /// </summary>
     private static TripConcurrencyConflictException TranslateOutboxIdentityConflict(
         DbUpdateException ex, PostgresException uniqueViolation)
@@ -127,6 +142,52 @@ public sealed class TripDbContext : DbContext
         return new TripConcurrencyConflictException(tripId, expectedVersion: null,
             new InvalidOperationException("Outbox identity already committed by another writer.", uniqueViolation));
     }
+
+    /// <summary>
+    /// A duplicate outbox_messages key is a legitimate lost race only when the
+    /// committed winner carries the same message contract (type, exchange,
+    /// routing key) as the staged intent. The winner is read back outside the
+    /// rolled-back save: a foreign or corrupt row occupying a Trip intent
+    /// identity must surface as a database fault, never replay as concurrency,
+    /// and an unverifiable winner is treated as a fault rather than a race.
+    /// </summary>
+    private bool SameLogicalIntentRace(IReadOnlyList<EntityEntry> entries)
+    {
+        var staged = entries.Select(e => e.Entity).OfType<TripOutboxMessage>().ToList();
+        if (staged.Count == 0) return false;
+
+        foreach (var message in staged)
+        {
+            var winner = OutboxMessages.AsNoTracking()
+                .SingleOrDefault(m => m.MessageId == message.MessageId);
+            if (!WinnerMatchesContract(winner, message)) return false;
+        }
+
+        return true;
+    }
+
+    private async Task<bool> SameLogicalIntentRaceAsync(
+        IReadOnlyList<EntityEntry> entries, CancellationToken cancellationToken)
+    {
+        var staged = entries.Select(e => e.Entity).OfType<TripOutboxMessage>().ToList();
+        if (staged.Count == 0) return false;
+
+        foreach (var message in staged)
+        {
+            var winner = await OutboxMessages.AsNoTracking()
+                .SingleOrDefaultAsync(m => m.MessageId == message.MessageId, cancellationToken)
+                .ConfigureAwait(false);
+            if (!WinnerMatchesContract(winner, message)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool WinnerMatchesContract(TripOutboxMessage? winner, TripOutboxMessage staged) =>
+        winner is not null &&
+        winner.MessageType == staged.MessageType &&
+        winner.Exchange == staged.Exchange &&
+        winner.RoutingKey == staged.RoutingKey;
 
     private static TripConcurrencyConflictException? TryTranslateConcurrencyConflict(DbUpdateConcurrencyException ex)
     {
