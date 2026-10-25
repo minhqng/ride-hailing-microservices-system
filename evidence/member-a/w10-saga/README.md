@@ -16,7 +16,8 @@ running anything, and refuses otherwise.
 
 - Branch: `feature/A-W10-trip-saga` (stacked on `feature/A-W09-trip-outbox`
   @ `5f61cff`, PR #36; see `manifest.json`).
-- Verified code commit: see `manifest.json` (`codeCommit`).
+- Verified code commit: `368dec8` (tree `b21b151`) — the W10 implementation
+  (`dbbe625`) plus a workflow-file-only CI-trigger addition; see `manifest.json`.
 
 ## Environment
 
