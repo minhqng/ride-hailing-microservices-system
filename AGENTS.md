@@ -16,6 +16,18 @@ apply to every PR, independent of who implements a member's weekly work.
 | Transient agent output | progress diaries, session transcripts, self-review narratives, scratch plans, prompt dumps, handoff notes | Never commit (`plans/` is local-only) |
 | Generated runtime junk | `bin/`, `obj/`, `TestResults/`, `.trx`, coverage dumps, logs, local `.env`, IDE state | Never commit |
 
+**Execution output is local/ephemeral by default; canonical evidence must be
+intentionally curated.** Raw build/test output is never committed just because
+it was produced: re-running a `reproduce.sh` writes its logs under
+`evidence/**/outputs/` (gitignored), and the contributor curates the durable
+result — counts, per-project totals, lane verdicts, final-state assertions —
+into the bundle's `test-output.txt`/`final-state/` files and anchors them in
+`manifest.json`. A `.txt`, `.json` or `.sh` extension grants no exemption in
+either direction: canonical proof files are always acceptable, and raw run
+dumps under `evidence/*/outputs/` never are. The extension rule also protects
+EF migrations, fixtures and test source — the guard classifies by role, not
+file type.
+
 When a file mixes durable knowledge with session narration, extract the
 durable part into the appropriate existing location and leave the rest
 untracked. A path under `docs/`, `evidence/` or `reports/` is not automatically
@@ -35,7 +47,10 @@ durable — content and canonical authority decide, not the directory name.
   as mandatory prerequisites (scripts must resolve tools via `PATH` with
   documented fallbacks, not a hardcoded `$HOME`).
 - Evidence files must anchor to the exact code revision they verified; never
-  reuse old logs to support changed code.
+  reuse old logs to support changed code. Reproduction scripts prove source
+  equivalence with `scripts/test/verify-source-anchor.sh` (symmetric diff over
+  everything outside `evidence/`: added, modified, deleted, renamed and
+  mode-changed paths are all drift).
 
 ## Before opening/pushing a PR
 
@@ -43,7 +58,10 @@ durable — content and canonical authority decide, not the directory name.
   file — including Markdown, JSON, shell, and dotfiles/hidden directories.
 - Confirm no unrelated member's work or future-week implementation leaked in.
 - `scripts/test/hygiene-check.sh <base>` must pass (CI runs it as the
-  `hygiene` job; it rejects known transient paths from the changed-file list).
+  `hygiene` job; it rejects known transient paths from the changed-file list —
+  deletions are always allowed so cleanup PRs are not penalized). The guard's
+  pattern verdicts and the source-anchor verifier's git-fixture tests run in
+  the same CI job (`--self-test`, `verify-source-anchor.test.sh`).
 
 ## Before merge (reviewer)
 
@@ -58,7 +76,7 @@ durable — content and canonical authority decide, not the directory name.
 
 ## Local-only scratch
 
-`plans/` (agent planning journals), `logs/`, `TestResults/`, and regenerated
-evidence outputs (`evidence/**/outputs/repro-*/`) are ignored. If generated
-junk is already tracked, removing it from tracking is a code change that needs
-its own review — `.gitignore` alone does not untrack.
+`plans/` (agent planning journals), `logs/`, `TestResults/`, and all
+regenerated evidence execution output (`evidence/**/outputs/`) are ignored. If
+generated junk is already tracked, removing it from tracking is a code change
+that needs its own review — `.gitignore` alone does not untrack.
