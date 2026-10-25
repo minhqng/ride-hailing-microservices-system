@@ -17,8 +17,8 @@
 # runs are never committed — curate results into test-output.txt instead).
 set -euo pipefail
 
-VERIFIED_CODE_COMMIT="${VERIFIED_CODE_COMMIT:-976c7f8662e05c0abe17a0dedcf8a45d94b03592}"
-VERIFIED_CODE_TREE="${VERIFIED_CODE_TREE:-c8ef3dbd9a2a3bf8d5de989a4f8cfedc531e5187}"
+VERIFIED_CODE_COMMIT="${VERIFIED_CODE_COMMIT:-acaaa68abb5e26dac9ad4888c25a7dbeeabee643}"
+VERIFIED_CODE_TREE="${VERIFIED_CODE_TREE:-bff5d17a212b6313ac8ef6e898689971e7906628}"
 
 DOTNET="${DOTNET:-$(command -v dotnet || true)}"
 if [[ -z "$DOTNET" && -x "$HOME/.dotnet-sdk/dotnet" ]]; then DOTNET="$HOME/.dotnet-sdk/dotnet"; fi
