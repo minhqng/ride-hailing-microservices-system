@@ -1,0 +1,99 @@
+{
+  "member": "A",
+  "week": "W10",
+  "topic": "Persisted ride saga, payment orchestration, compensation, forward recovery",
+  "scope": "A-W10-01..12 (local verification; cross-owner 3-service leg classified INTEGRATION_PENDING; no CI or peer signoff claimed)",
+  "branch": "feature/A-W10-trip-saga",
+  "base": {
+    "ref": "origin/feature/A-W09-trip-outbox",
+    "sha": "5f61cff4fc7a6dd1c178c7ffac3d6709369f7bf3",
+    "pullRequest": 36
+  },
+  "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
+  "codeCommit": {
+    "sha": "dbbe6253d13e50c1bffa69afe771db2e3d9d2a94",
+    "tree": "975e890a82f4965bfd094f6cf5f83fe895d2001f",
+    "message": "feat(trip): add W10 persisted ride saga with payment orchestration"
+  },
+  "provenanceModel": "reproduce.sh compares the git tree hash of every top-level path except evidence/ between HEAD and codeCommit; identical source is accepted, any drift aborts",
+  "environment": {
+    "os": "Linux 7.3.0-1-default",
+    "dotnetSdk": "10.0.401",
+    "configuration": "Release",
+    "docker": "29.7.2-ce",
+    "testDatabase": "postgres:18.6 (Testcontainers)",
+    "testBroker": "rabbitmq:4.3.6-management (Testcontainers)"
+  },
+  "commands": [
+    {
+      "name": "solution-build-release",
+      "command": "dotnet build RideHailing.Distributed.slnx -c Release --no-incremental",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 1,
+      "warningNote": "Pre-existing xUnit2029 analyzer warning in DriverReserveConcurrencyTests.cs; not part of this change.",
+      "output": "outputs/solution-build-release.txt"
+    },
+    {
+      "name": "solution-tests-release",
+      "command": "dotnet test RideHailing.Distributed.slnx -c Release --no-build",
+      "exitCode": 0,
+      "passed": 954,
+      "failed": 0,
+      "skipped": 0,
+      "perProject": {
+        "TripService.UnitTests": 299,
+        "DriverService.UnitTests": 117,
+        "MatchingService.UnitTests": 98,
+        "PaymentService.UnitTests": 25,
+        "DriverService.IntegrationTests": 60,
+        "MatchingService.IntegrationTests": 112,
+        "PaymentService.IntegrationTests": 26,
+        "Platform.IntegrationTests": 60,
+        "TripService.IntegrationTests": 157
+      },
+      "output": "outputs/solution-tests-release.txt"
+    },
+    {
+      "name": "w10-saga-integration",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj -c Release --no-build --filter FullyQualifiedName~TripW10Saga",
+      "exitCode": 0,
+      "passed": 14,
+      "failed": 0,
+      "note": "13 saga proofs on disposable PostgreSQL probe databases + 1 real-broker relay delivery proof onto payment.commands.q.",
+      "output": "outputs/w10-saga-tests.txt"
+    },
+    {
+      "name": "w10-saga-unit",
+      "command": "dotnet test tests/Unit/RideHailing.TripService.UnitTests/RideHailing.TripService.UnitTests.csproj -c Release --no-build --filter \"FullyQualifiedName~RideSagaTransitionTests|FullyQualifiedName~TripSagaIntentTests\"",
+      "exitCode": 0,
+      "passed": 27,
+      "failed": 0,
+      "output": "outputs/w10-saga-unit-tests.txt"
+    },
+    {
+      "name": "w09-outbox-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj -c Release --no-build --filter FullyQualifiedName~TripW09",
+      "exitCode": 0,
+      "passed": 17,
+      "failed": 0,
+      "output": "outputs/w09-outbox-regression.txt"
+    },
+    {
+      "name": "w08-messaging-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj -c Release --no-build --filter FullyQualifiedName~TripW08MessagingTests",
+      "exitCode": 0,
+      "passed": 18,
+      "failed": 0,
+      "output": "outputs/w08-messaging-regression.txt"
+    }
+  ],
+  "review": {
+    "adversarialPass": "Independent pre-commit review found two compensation-window defects (review signal clobbering COMPENSATING; reservation-release confirmation at AUTHORIZE_PENDING throwing and dead-lettering) plus two hardening items (zero-fare acceptance, saga unique-violation classification). All four fixed with regression tests in the verified code commit.",
+    "stability": "W10 lanes run 3+ consecutive passes after the deterministic TwoPartySaveBarrier replaced a timing-dependent OCC test."
+  },
+  "crossOwnerPending": [
+    "C-W10: payment.commands.q consumer (AuthorizePaymentV1/CapturePaymentV1/VoidPaymentAuthorizationV1) and Payment outcome producer with the same operationKey lineage.",
+    "B-W10: driver.commands.q consumer (exact release, MarkDriverTripStarted/Completed) so the 3-service happy ride can be proven end-to-end."
+  ]
+}
