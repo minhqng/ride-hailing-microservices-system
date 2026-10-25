@@ -3,10 +3,10 @@ on:
   push:
     branches: [main, 'MemC-*-Distributed']
   pull_request:
-    # The A-W10 branch stacks on the unmerged A-W09 head (PR #36), so its PR
-    # targets that intermediate base; without listing it here CI never runs
-    # on the stacked PR. Same pattern as the B-W10 stacked-base entry.
-    branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox']
+    # The A-W10 branch stacks on the unmerged A-W09 head (PR #36), and A-W11
+    # stacks on the unmerged A-W10 head (PR #40), so each stacked base must be
+    # listed here or CI never runs on the stacked PR.
+    branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox', 'feature/A-W10-trip-saga']
 jobs:
   hygiene:
     name: hygiene

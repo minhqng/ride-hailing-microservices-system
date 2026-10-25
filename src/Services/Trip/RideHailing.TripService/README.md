@@ -61,6 +61,43 @@
   consumer) remains pending B/C work. The historical week-by-week notes
   below describe their own scope.
 
+## W11 deterministic fault proofs
+
+- `Integration/FaultPoints/` integrates the canonical named faultpoint
+  `Saga.AfterPersistBeforeDispatch` (A-W11-01, Doc 02 §27, Doc 05A §19) at
+  the durable boundary the Outbox already guarantees: the relay can only see
+  rows a committed transaction produced, so the pre-publish seam
+  (`OutboxRelayOptions.BeforePublish`) is necessarily after-commit. The gate
+  holds the saga's payment dispatches (`AuthorizePaymentV1`,
+  `CapturePaymentV1`, `VoidPaymentAuthorizationV1`), writes an observable
+  `reached` marker, releases on a harness signal, and never blocks past its
+  configured deadline. It never wraps business code, opens no transaction and
+  mutates no domain state.
+- Activation is double-gated and default-off: `TripFaultPoints:Enabled=true`
+  (plus an explicit `TripFaultPoints:Activated` list and
+  `TripFaultPoints:SignalDirectory`) AND a non-Production host environment —
+  an explicit enable in Production fails startup. There is no HTTP surface;
+  the faultpoint can never be activated by an untrusted request.
+- The frozen integration contract with C's pending shared W11 fault platform
+  (Doc 05C §30) is documented on `TripFaultPointGate`: name, location (relay
+  pre-publish seam), scope, activation gates, file signaling protocol and
+  bounded wait. C's provider can adopt these semantics without a Trip rewrite;
+  Trip will not fork or duplicate a shared framework once it lands.
+- `TripW11FaultProcessTests` prove the crash/restart properties across real
+  OS process boundaries: REL-04 (SIGKILL at the faultpoint, restart reclaims
+  and publishes the SAME messageId through the real broker), REL-07 (kill
+  after durable dispatch; the Payment outcome backlogs on the quorum queue
+  while the service is down; the SAME saga continues to terminal COMPLETED;
+  stale/duplicate late outcomes cannot regress it), REL-17 (late
+  DriverReserved/PaymentAuthorized on terminal trips: no regression, exact
+  cleanup identities, logically duplicate delivery is a durable
+  BusinessReplay), and W11-05 (crash with compensation obligations
+  outstanding; the backlogged release confirmation resolves the exact
+  reservation identity after restart; the authorized-after-cancel race
+  resolves through the exact void key; COMPENSATED only when every leg
+  resolved). All synchronization is bounded polling on authoritative
+  database/queue/process state — no sleep ever stands in for a barrier.
+
 - Owner: A (reviewer B, backup C)
 - Authority: ride lifecycle, FareSnapshot, assignment reference, Saga state, cancellation. Does NOT decide Driver reservability.
 - DB: `trip_db` (role `trip_app`)

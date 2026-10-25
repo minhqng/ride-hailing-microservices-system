@@ -63,7 +63,7 @@ builder.Services.AddScoped<MarkMatchingFailedHandler>();
 builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-builder.Services.AddTripMessaging(builder.Configuration);
+builder.Services.AddTripMessaging(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
