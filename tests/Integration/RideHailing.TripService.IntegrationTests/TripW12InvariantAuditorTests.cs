@@ -85,11 +85,16 @@ public sealed class TripW12InvariantAuditorTests(TripPostgresFixture fixture)
                 AuditorPolicy.QuiescedDefaults, runId: $"W12-AUD-{Guid.NewGuid():N}",
                 commit: TripInvariantAuditor.CommitPlaceholder);
 
+            // Level A: Trip-authoritative rows inspected.
             Assert.Equal(AuditStatus.Pass, Status(report, "AUD-03"));
-            Assert.Equal(AuditStatus.Pass, Status(report, "AUD-05"));
-            Assert.Equal(AuditStatus.Pass, Status(report, "AUD-06"));
-            Assert.Equal(AuditStatus.Pass, Status(report, "AUD-07"));
             Assert.Equal(AuditStatus.Pass, Status(report, "AUD-08"));
+
+            // Level B: Trip-local supporting proofs carry the distinct
+            // LOCAL_PROXY_PASS verdict — they must never read as a full
+            // distributed-invariant PASS in the machine-readable report.
+            Assert.Equal(AuditStatus.LocalProxyPass, Status(report, "AUD-05"));
+            Assert.Equal(AuditStatus.LocalProxyPass, Status(report, "AUD-06"));
+            Assert.Equal(AuditStatus.LocalProxyPass, Status(report, "AUD-07"));
 
             // Cross-service checks are dependencies, not silent green.
             Assert.Equal(AuditStatus.NotRun, Status(report, "AUD-01"));
@@ -144,7 +149,7 @@ public sealed class TripW12InvariantAuditorTests(TripPostgresFixture fixture)
             var midFlight = await TripInvariantAuditor.AuditAsync(connectionString,
                 new AuditorPolicy(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5), Quiesced: false),
                 "W12-AUD-OPEN-M", TripInvariantAuditor.CommitPlaceholder);
-            Assert.Equal(AuditStatus.Pass, Status(midFlight, "AUD-07"));
+            Assert.Equal(AuditStatus.LocalProxyPass, Status(midFlight, "AUD-07"));
             Assert.Contains("recognized-pending", midFlight.Checks.Single(c => c.Id == "AUD-07").Note);
         }
         finally
