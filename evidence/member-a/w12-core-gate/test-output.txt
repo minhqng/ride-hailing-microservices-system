@@ -1,0 +1,60 @@
+A-W12 curated verification record — Code SHA 976c7f8662e05c0abe17a0dedcf8a45d94b03592
+Run: reproduce.sh 2026-10-25T17:00:18Z–17:03:10Z UTC (Linux 7.3.0-1-default, .NET SDK 10.0.401,
+Release, Docker/Testcontainers: postgres:18.6 + rabbitmq:4.3.6-management).
+Source equivalence to the code commit verified by scripts/test/verify-source-anchor.sh
+(every tracked path outside evidence/ identical; run aborted on any drift).
+
+§1 Solution build (Release, --no-incremental)
+  build_exit=0                                                    PASS
+
+§2 Full solution tests (Release --no-build, real PG/Rabbit via Testcontainers)
+  RideHailing.TripService.UnitTests            299 passed           PASS
+  RideHailing.MatchingService.UnitTests         98 passed           PASS
+  RideHailing.DriverService.UnitTests          117 passed           PASS
+  RideHailing.PaymentService.UnitTests          25 passed           PASS
+  RideHailing.DriverService.IntegrationTests    60 passed           PASS
+  RideHailing.MatchingService.IntegrationTests 112 passed           PASS
+  RideHailing.PaymentService.IntegrationTests   26 passed           PASS
+  RideHailing.Platform.IntegrationTests         60 passed           PASS
+  RideHailing.TripService.IntegrationTests     192 passed           PASS
+  RideHailing.IdentityService.IntegrationTests   0 passed, 1 SKIPPED
+    (pre-existing opt-in authenticated-fixture skip, unchanged from W10/W11
+     records; NOT a W12 concealment — SYSTEM_AUTH_PENDING tracked in the G4
+     matrix)
+  Total: 988 passed, 1 skipped, 0 failed                       PASS
+
+§3 W12 focused lanes
+  w12-telemetry              7/7   (counters/gauge/spans semantics incl.
+                                    replay/redelivery non-counting, bounded
+                                    vocabulary, safe-field-only span tags)  PASS
+  w12-trace-propagation      1/1   (real-broker W3C chain: durable header ==
+                                    wire traceparent == CreateRide span;
+                                    outbox.publish + consume re-parented;
+                                    redelivery continuity; single publish
+                                    span; outbox.pending gauge 0)           PASS
+  w12-authz-negatives        5/5   (terminal cancels 409 + durable state/
+                                    version unchanged + zero outbox rows;
+                                    malformed ids never routed; SEC-04 body
+                                    actor inert; faultpoints inert on public
+                                    traffic)                                PASS
+  w12-invariant-auditor      6/6   (compensated scenario PASS×5 + NOT RUN×3
+                                    cross-service; seeded-violation FAIL
+                                    proofs for AUD-03/06/07/08)             PASS
+
+§4 Reliability regressions on the same revision
+  w09-outbox-regression     17/17                                    PASS
+  w10-saga-regression       14/14                                    PASS
+  w11-fault-regression      16/16  (faultpoint gate + process-kill
+                                    suites)                           PASS
+  (TripW08MessagingTests, incl. the trip-scoped BrokerOutage oracle,
+   ran green inside the §2 full-suite lane.)                          PASS
+
+§5 Validation gates
+  docker compose -f compose.yaml config --quiet      exit 0          PASS
+  bash scripts/test/hygiene-check.sh   "103 changed path(s) clean."   PASS
+  git diff --check (working tree and 46ac68a..HEAD)                   PASS
+
+Curated from outputs/repro-20261025T170018Z (raw logs gitignored; per-file
+summaries available by re-running reproduce.sh). No test was skipped to
+obtain these results except the documented pre-existing Identity opt-in
+fixture skip in §2.
