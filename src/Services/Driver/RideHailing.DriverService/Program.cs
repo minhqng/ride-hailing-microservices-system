@@ -29,6 +29,7 @@ builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
 builder.Services.AddSingleton<NpgsqlOutboxStore>();
 builder.Services.AddSingleton<IOutboxStore>(sp => sp.GetRequiredService<NpgsqlOutboxStore>());
 builder.Services.AddSingleton<DriverRepository>();
+builder.Services.AddSingleton<DriverCommandHandler>();
 builder.Services.AddSingleton<LocationAcceptor>();
 
 var brokerOptions = new DriverBrokerOptions();
@@ -67,6 +68,11 @@ builder.Services.AddSingleton<OutboxRelay>();
 if (brokerOptions.PublishingEnabled)
 {
     builder.Services.AddHostedService<DriverOutboxRelayHost>();
+}
+
+if (brokerOptions.CommandsEnabled)
+{
+    builder.Services.AddHostedService<DriverCommandConsumerHost>();
 }
 
 var app = builder.Build();

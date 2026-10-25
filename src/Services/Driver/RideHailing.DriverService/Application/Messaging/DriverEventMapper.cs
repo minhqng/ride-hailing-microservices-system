@@ -18,6 +18,14 @@ public sealed record DriverEventToPublish(
 
 public static class DriverEventMapper
 {
+    public static DriverEventToPublish ForTripStartedEffect(Driver driver, Guid tripId, Guid reservationId) =>
+        Event(driver.DriverId, DriverEventTypes.TripStarted, DriverEventRoutes.TripStarted,
+            "ON_TRIP", driver.Version, tripId, reservationId);
+
+    public static DriverEventToPublish ForTripCompletedEffect(Driver driver, Guid tripId, Guid reservationId) =>
+        Event(driver.DriverId, DriverEventTypes.TripCompleted, DriverEventRoutes.TripCompleted,
+            "AVAILABLE", driver.Version, tripId, reservationId);
+
     // Committed-effect mappings used by the persistence layer when it records
     // the durable Outbox intent in the SAME transaction as the Driver row.
     // Only an actually applied effect is passed here: an idempotent replay or
