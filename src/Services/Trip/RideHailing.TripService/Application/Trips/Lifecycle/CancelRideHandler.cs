@@ -13,6 +13,7 @@ using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
+using RideHailing.TripService.Integration.Observability;
 
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
@@ -73,6 +74,7 @@ public sealed class CancelRideHandler
         // authorization flips the saga to COMPENSATING immediately (release
         // and matching cleanup exist now), while the void decision waits for
         // the authority-confirmed outcome — never assume the effect absent.
+        var sagaStatusBefore = saga?.Status;
         if (saga is not null)
         {
             var sagaOutcome = saga.RecordCancellationDuringAuthorize(now);
@@ -88,6 +90,15 @@ public sealed class CancelRideHandler
         // the W10 payment outcome/void lineage, not a published command here.
         TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // A-W12-02: post-commit observation only — the committed saga status
+        // transition into COMPENSATING is counted once, here, where the unit
+        // of work is known durable. A failed save never reaches this line.
+        if (saga is not null && sagaStatusBefore != RideSagaStatus.Compensating &&
+            saga.Status == RideSagaStatus.Compensating)
+        {
+            TripDiagnostics.RecordSagaCompensation();
+        }
 
         _log.LogInformation(
             "CancelRide {TripId} state {State} compensation {Compensation} saga {SagaStatus}.",
