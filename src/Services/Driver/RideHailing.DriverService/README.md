@@ -44,7 +44,8 @@
   `messageId`), `DriverEventContracts/DriverEventMapper` (`DriverReservedV1`,
   `DriverAvailableV1`, `DriverOfflineV1`, `DriverReservationReleasedV1`,
   `DriverLocationAcceptedV1` on the frozen `RideTopology` routes). Publication
-  is post-commit best-effort; Outbox atomicity remains W9.
+  was post-commit best-effort in W8; W9 authoritative state events now use the
+  shared transactional Outbox (see below). Location samples remain best-effort.
 
 - W8 round-lineage hardening (this branch): `DriverReservedV1` carries
   `matchingRound` (Doc 02 §21.3) from durable provenance — `reserved_round`
@@ -55,10 +56,28 @@
   Trip's presence gate still parks genuinely legacy payloads as
   `NeedsReview:RESERVATION_ROUND_REQUIRED` while verified events flow.
 
+## W9 transactional publication
+
+Reserve, exact release, online and offline mutations persist their authoritative
+state and canonical event intent on the same connection/transaction. Failed
+intent insertion rolls back the state change. Exact effect replay leaves both
+aggregate version and existing intent identity unchanged. The shared relay uses
+publisher confirms and republishes the stored envelope messageId after uncertain
+publication; delivery remains at least once.
+
+`RabbitMq:PublishingEnabled` controls relay hosting, not intent persistence.
+Schema startup applies the Driver baseline and shared Outbox schema. Authoritative
+writes fail closed if the required schema is absent. The shared relay declares
+the canonical topology through the B-owned hosting adapter.
+
+Historical pre-W9 reservations have no guaranteed Outbox intent. Same-R replay
+does not invent a missing historical intent; rollout/backfill or authority-based
+projection rebuild needs lead coordination. New W9 effects are covered by
+[W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
+
 ## NOT implemented (later weeks)
 
-- W9: Outbox-atomic event publication (currently post-commit best-effort),
-  inbound `driver.commands.q` consumer (release/mark-trip-started/completed —
+- Inbound `driver.commands.q` consumer (release/mark-trip-started/completed —
   no production path to `ON_TRIP` yet).`matchingRound` on `DriverReservedV1`
   has landed on this branch (see W8 hardening above); Trip's park path stays
   conservatism for payloads that omit the field.
