@@ -1,0 +1,170 @@
+{
+  "member": "A",
+  "week": "W11",
+  "topic": "Deterministic crash faults, durable saga restart and distributed invariant proofs",
+  "scope": "A-W11-01..10 (local verification incl. real process kill/restart; shared C fault platform not delivered — frozen integration contract recorded; C-W10 Payment producer and B-W10 Driver command legs pending, never faked; peer rerun by C pending)",
+  "branch": "feature/A-W11-trip-fault-proofs",
+  "base": {
+    "ref": "feature/A-W10-trip-saga",
+    "sha": "532adb1c5f4651cd31fb517fe4458da9539b16be",
+    "pullRequest": 40,
+    "state": "OPEN (unmerged; W11 is stacked on its verified head)"
+  },
+  "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
+  "codeCommit": {
+    "sha": "6047a7adefb66c4672f0788b8903b37fef48ca44",
+    "tree": "d7a70793df29a7cf4fd430c7c21faa072fb79a47",
+    "message": "feat(trip): W11 deterministic faultpoint and real process crash/restart proofs"
+  },
+  "provenanceModel": "reproduce.sh delegates to scripts/test/verify-source-anchor.sh: a symmetric git diff over every tracked path outside evidence/ between HEAD and codeCommit (added, modified, deleted, renamed and mode-changed paths are all drift), plus a clean working tree outside evidence/; identical source is accepted, any drift aborts. Pinned by scripts/test/verify-source-anchor.test.sh (12 git-fixture cases, run in CI).",
+  "evidenceModel": "Curated canonical bundle per docs/03 §25 and docs/05A §6: README.md, manifest.json, test-output.txt (§1 build, §2 full solution, §3 faultpoint, §4 five-pass process campaign, §5–§7 regressions), final-state/ records, reproduce.sh at the bundle root. Raw execution output is local/ephemeral: reproduce.sh writes outputs/repro-<stamp>/ which is gitignored; nothing under outputs/ is tracked.",
+  "environment": {
+    "os": "Linux 7.3.0-1-default",
+    "dotnetSdk": "10.0.401",
+    "configuration": "Release",
+    "docker": "29.7.2-ce",
+    "testDatabase": "postgres:18.6 (Testcontainers)",
+    "testBroker": "rabbitmq:4.3.6-management (Testcontainers)",
+    "processKillMechanism": "SIGKILL (Process.Kill entireProcessTree) on harness-launched Trip service apphost processes; exit verified"
+  },
+  "faultPoint": {
+    "name": "Saga.AfterPersistBeforeDispatch",
+    "location": "Trip Outbox relay pre-publish seam (OutboxRelayOptions.BeforePublish) — necessarily after the Trip+Saga+Outbox commit, before dispatch",
+    "scope": "AuthorizePaymentV1 / CapturePaymentV1 / VoidPaymentAuthorizationV1",
+    "activation": "TripFaultPoints:Enabled + explicit Activated list + SignalDirectory AND non-Production host environment; enabling in Production fails startup; no HTTP surface",
+    "signaling": "faultpoint-<name>.reached marker (atomic write-through) + faultpoint-<name>.release; bounded wait (default 30s, capped 600s)",
+    "cContract": "Frozen on TripFaultPointGate and in scripts/fault/README.md; C's pending shared W11 platform (Doc 05C §30) adopts name/location/scope/activation/signaling without a Trip rewrite"
+  },
+  "commands": [
+    {
+      "name": "solution-build-release",
+      "command": "dotnet build RideHailing.Distributed.slnx -c Release --no-incremental",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 1,
+      "warningNote": "Pre-existing xUnit2029 in B-owned DriverReserveConcurrencyTests.cs(289,13); identical to the W10 bundle, not modified here.",
+      "output": "test-output.txt §1 solution-build-release"
+    },
+    {
+      "name": "solution-tests-release",
+      "command": "dotnet test RideHailing.Distributed.slnx -c Release --no-build",
+      "exitCode": 0,
+      "passed": 970,
+      "failed": 0,
+      "skipped": 1,
+      "skipNote": "Pre-existing opt-in Identity integration skip (unchanged since before W09); SystemTests project has no discoverable tests (unchanged).",
+      "output": "test-output.txt §2 solution-tests-release"
+    },
+    {
+      "name": "w11-faultpoint-tests",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW11FaultPointTests",
+      "exitCode": 0,
+      "passed": 11,
+      "failed": 0,
+      "output": "test-output.txt §3 w11-faultpoint-tests"
+    },
+    {
+      "name": "w11-process-tests-five-passes",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW11FaultProcessTests (×5 consecutive passes)",
+      "exitCode": 0,
+      "passedPerPass": 5,
+      "passes": 5,
+      "totalScenarioRuns": 25,
+      "failed": 0,
+      "flakes": 0,
+      "output": "test-output.txt §4 w11-process-tests"
+    },
+    {
+      "name": "w09-outbox-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW09",
+      "exitCode": 0,
+      "passed": 17,
+      "failed": 0,
+      "output": "test-output.txt §5 w09-outbox-regression"
+    },
+    {
+      "name": "w10-saga-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW10Saga",
+      "exitCode": 0,
+      "passed": 14,
+      "failed": 0,
+      "output": "test-output.txt §6 w10-saga-regression"
+    },
+    {
+      "name": "w08-messaging-regression",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests -c Release --no-build --filter FullyQualifiedName~TripW08MessagingTests",
+      "exitCode": 0,
+      "passed": 18,
+      "failed": 0,
+      "output": "test-output.txt §7 w08-messaging-regression"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "REL-04",
+      "test": "TripW11FaultProcessTests.ProducerProcess_CrashedAtSagaDispatchFaultPoint_RestartPublishesSameIdentity",
+      "claim": "Real producer process SIGKILLed after the authoritative local commit (Trip DRIVER_ACCEPTED + Saga AUTHORIZE_PENDING + pending AuthorizePaymentV1) and before publication, at the Saga.AfterPersistBeforeDispatch faultpoint; a new process on the same database/broker reclaims the orphaned claim and publishes the SAME messageId with intact sagaId/operationKey lineage; no second logical transition.",
+      "result": "PASS",
+      "record": "final-state/rel-04-producer-crash.md"
+    },
+    {
+      "id": "REL-07",
+      "test": "TripW11FaultProcessTests.SagaRestart_WhilePaymentOutcomeBacklogs_SameSagaContinuesToCompletion",
+      "claim": "Process killed after durable authorize dispatch; Payment success backlogs on the quorum queue while the service is down (consumers 0, ready 1); the restarted process continues the SAME saga (identity, operationKey, StepVersion+1 exactly) through READY_TO_START → IN_PROGRESS → COMPLETED → CAPTURED/COMPLETED; stale DECLINED and duplicate capture outcomes cannot regress terminal state.",
+      "result": "PASS",
+      "record": "final-state/rel-07-saga-restart.md"
+    },
+    {
+      "id": "REL-17",
+      "test": "TripW11FaultProcessTests.LateReservationAfterCancel_RealDelivery_ExactCleanupAndBusinessReplayDuplicate",
+      "claim": "Late DriverReservedV1 on a CANCELLED trip through the real broker: no reactivation, exact ReleaseDriverReservationV1 cleanup for the late reservation identity; a logically duplicate delivery (fresh messageId, same fact) is a durable BusinessReplay with no second mutation or intent.",
+      "result": "PASS",
+      "record": "final-state/rel-17-late-terminal-events.md"
+    },
+    {
+      "id": "A-W11-05-void",
+      "test": "TripW11FaultProcessTests.AuthorizedAfterCancel_VoidAndReleaseLegs_ExactIdentityToCompensated",
+      "claim": "Authorization success after cancellation through the real process: Trip stays CANCELLED, exact VoidPaymentAuthorizationV1 with the frozen void key ({tripId}:void:v1) and exact sagaId lineage; void then release legs resolve in order to terminal COMPENSATED only when both resolved.",
+      "result": "PASS",
+      "record": "final-state/aw11-05-compensation-recovery.md"
+    },
+    {
+      "id": "A-W11-05-outage",
+      "test": "TripW11FaultProcessTests.CompensationOutstanding_ProcessCrashed_BackloggedConfirmationResolvesAfterRestart",
+      "claim": "Process crashed with the release obligation outstanding (DECLINED path); the Driver release confirmation backlogs while the service is down; after restart the exact reservation identity resolves compensation to COMPENSATED; no void obligation ever existed on the DECLINED path.",
+      "result": "PASS",
+      "record": "final-state/aw11-05-compensation-recovery.md"
+    },
+    {
+      "id": "A-W11-01",
+      "test": "TripW11FaultPointTests (11 tests)",
+      "claim": "Faultpoint disabled by default; double-gated activation (config + non-Production, fail-fast in Production); loud misconfiguration; gate holds only activated saga dispatches, writes the observable reached marker, releases on signal, never blocks past its deadline; relay seam wired exactly when enabled.",
+      "result": "PASS",
+      "record": "final-state/aw11-01-faultpoint.md"
+    }
+  ],
+  "taskMatrix": {
+    "A-W11-01": "COMPLETE — canonical faultpoint integrated at the durable boundary; frozen C contract; 11 gate/wiring tests",
+    "A-W11-02": "COMPLETE — REL-04 proven with real process SIGKILL/restart (see scenarios)",
+    "A-W11-03": "COMPLETE (A-side) — REL-07 proven with real restart + real broker backlog; full three-service Payment execution remains C-W10-pending (outcome published by the harness with exact lineage, never claimed as a real provider effect)",
+    "A-W11-04": "COMPLETE — REL-17 late-event cases selected against existing W07–W10 negative coverage; real-delivery + restart variants proven; no redundant combinatorial suite added",
+    "A-W11-05": "COMPLETE — crash-with-obligations-outstanding and authorized-after-cancel void race proven with exact identities",
+    "A-W11-06": "COMPLETE — audit found no sleep-as-race coordination in A-owned tests; all waits are bounded polls, awaitable signals or deliberate negative windows (see final-state/auditor-review.md appendix)",
+    "A-W11-07": "COMPLETE — five consecutive controlled passes, 25/25 scenario runs green, zero flakes (test-output.txt §4)",
+    "A-W11-08": "PEER_RERUN_PENDING — independently runnable package provided (reproduce.sh from a plain checkout of the PR head); C has not executed or signed off",
+    "A-W11-09": "COMPLETE — this bundle, source-anchored to 6047a7a via the shared verifier",
+    "A-W11-10": "COMPLETE (A-owned review) — cross-service property review of the invariant auditor spec vs current A-owned assertions; local vs cross-owner split recorded; handoff in final-state/auditor-review.md; no second auditing framework created"
+  },
+  "crossOwner": {
+    "cFaultPlatform": "NOT DELIVERED. A froze the integration contract (name/location/scope/activation/signaling/wait on TripFaultPointGate, summarized in scripts/fault/README.md). C's FaultPointProvider should adopt it; A will migrate behind C's provider without semantic change.",
+    "cPaymentProducer": "C-W10 Payment command consumption/outcome production is unmerged/absent. REL-07's Payment outcome is published by the harness with the saga's exact operationKey/sagaId lineage; this is an A-side real-consumer recovery proof, NOT a three-service Payment execution claim.",
+    "bDriverCommands": "B-W10 (PR #39, OPEN) owns Driver command consumption (release/mark-started/mark-completed) and Driver state. The harness publishes Driver authority facts with correct identity metadata; Driver-side authoritative effects are NOT claimed.",
+    "peerRerun": "PEER_RERUN_PENDING — no C rerun has been executed or recorded; a self-run is not a peer rerun."
+  },
+  "limitations": [
+    "Payment outcomes are produced by the test harness acting as the Payment authority publisher (exact lineage carried); the real Payment service leg is C-W10-pending and is never faked as delivered.",
+    "Driver authority facts (reserved/released/started/completed) are produced by the harness; Driver-side authoritative state effects belong to B and are not claimed here.",
+    "The producer-commit artifacts for scenarios that require DRIVER_ACCEPTED (no transport exists yet for driver acceptance) are seeded through the real handler chain in one transaction — the identical rows the service itself commits — and every scenario asserts the committed pre-crash state through the real process's relay/consumer before the crash.",
+    "REL-04's dispatch window is held by the faultpoint; a claim-lease window of 2s is configured for the restarted process so reclaim is fast (Outbox:ClaimLeaseSeconds), which is configuration, not a timing assumption."
+  ]
+}
