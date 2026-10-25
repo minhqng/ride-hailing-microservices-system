@@ -30,6 +30,12 @@
     <ProjectReference Include="..\..\..\src\Services\Driver\RideHailing.DriverService\RideHailing.DriverService.csproj">
       <Aliases>DriverSvc</Aliases>
     </ProjectReference>
+    <!-- B-W09-03/04 consumer agreement: the Trip test publishes with the
+         REAL Matching event/payload/identity types over a real broker. The
+         alias keeps Matching's top-level Program out of the test host. -->
+    <ProjectReference Include="..\..\..\src\Services\Matching\RideHailing.MatchingService\RideHailing.MatchingService.csproj">
+      <Aliases>MatchingSvc</Aliases>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

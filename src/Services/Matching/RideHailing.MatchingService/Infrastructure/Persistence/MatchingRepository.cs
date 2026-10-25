@@ -119,6 +119,13 @@ public sealed class MatchingRepository
         return rows;
     }
 
+    /// <summary>
+    /// Adds one READY attempt to a live round. The round row is locked FOR
+    /// SHARE first and held across the insert, serializing with W9
+    /// terminalization (FOR UPDATE): a NO_DRIVER terminal can never commit
+    /// from a stale attempt set while a new candidate is being added, and no
+    /// candidate can be added to a terminal/cancel-requested round.
+    /// </summary>
     public async Task InsertAttemptAsync(
         Guid tripId, int round, int ordinal, Guid driverId, Guid reservationId,
         CancellationToken ct = default)
@@ -129,12 +136,36 @@ public sealed class MatchingRepository
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand(Sql, conn);
-        cmd.Parameters.AddWithValue("t", tripId);
-        cmd.Parameters.AddWithValue("r", round);
-        cmd.Parameters.AddWithValue("o", ordinal);
-        cmd.Parameters.AddWithValue("d", driverId);
-        cmd.Parameters.AddWithValue("res", reservationId);
-        await cmd.ExecuteNonQueryAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        const string LockRound = """
+            SELECT 1 FROM matching_rounds
+            WHERE trip_id = @t AND matching_round = @r
+              AND status = 'PROCESSING' AND cancel_requested = FALSE
+            FOR SHARE;
+            """;
+        await using (var lockCommand = new NpgsqlCommand(LockRound, conn, tx))
+        {
+            lockCommand.Parameters.AddWithValue("t", tripId);
+            lockCommand.Parameters.AddWithValue("r", round);
+            if (await lockCommand.ExecuteScalarAsync(ct) is null)
+            {
+                await tx.RollbackAsync(ct);
+                throw new InvalidOperationException(
+                    $"Matching round {tripId:D}/{round} is not accepting new attempts.");
+            }
+        }
+
+        await using (var cmd = new NpgsqlCommand(Sql, conn, tx))
+        {
+            cmd.Parameters.AddWithValue("t", tripId);
+            cmd.Parameters.AddWithValue("r", round);
+            cmd.Parameters.AddWithValue("o", ordinal);
+            cmd.Parameters.AddWithValue("d", driverId);
+            cmd.Parameters.AddWithValue("res", reservationId);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        await tx.CommitAsync(ct);
     }
 }
