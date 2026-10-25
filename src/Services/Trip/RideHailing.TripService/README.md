@@ -1,6 +1,6 @@
 # Trip / Booking Service — Owner A
 
-## Current W7–W9 additions
+## Current W7–W10 additions
 
 - W7 cancellation stores exact cleanup obligations in the same transaction as
   terminal state. Late outcomes never reopen cancelled trips.
@@ -16,7 +16,29 @@
   process crash after commit leaves a durable pending intent, and the shared
   C-owned relay claims/publishes/marks it with a deterministic `messageId`.
   `CancelMatchingRoundV1`/`ReleaseDriverReservationV1` go to `ride.commands`;
-  `RideRequestedV1` goes to `ride.events`. Payment commands remain W10.
+  `RideRequestedV1` goes to `ride.events`.
+- W10 adds the persisted Ride Saga (`ride_sagas`, migration `W10_RideSaga`;
+  exactly one authoritative saga per Trip) and the Payment orchestration:
+  the first DriverAccepted commits Trip DRIVER_ACCEPTED + Saga
+  AUTHORIZE_PENDING + `AuthorizePaymentV1` (`{tripId}:authorize:v1`) in one
+  transaction; `PaymentAuthorizedV1` under the exact operationKey/sagaId
+  lineage advances to READY_TO_START/AUTHORIZED; terminal DECLINED
+  compensates (Trip CANCELLED + Saga COMPENSATING + the exact
+  `ReleaseDriverReservationV1`/`CancelMatchingRoundV1` intents) while
+  uncertain outcomes (TRANSIENT/TIMEOUT/UNKNOWN) never compensate and keep
+  the same key; a cancel-race authorization dispatches the exact
+  `VoidPaymentAuthorizationV1` (`{tripId}:void:v1`); completion commits
+  `CapturePaymentV1` (`{tripId}:capture:v1`) + Saga CAPTURE_PENDING +
+  `MarkDriverTripStartedV1`/`MarkDriverTripCompletedV1` driver commands, and
+  capture failure/uncertainty NEVER regresses a COMPLETED Trip (DSI-028 —
+  the saga holds CAPTURE_PENDING/REQUIRES_REVIEW instead). Payment outcome
+  consumption replaces the W8 `PAYMENT_LINEAGE_UNRESOLVED` skeleton; trips
+  without a saga keep it. Trip, saga and the W10 payment/driver intents all
+  share one EF unit of work per step; `TripDbContext` translates both Trip
+  `Version` and saga `StepVersion` OCC conflicts to
+  `TripConcurrencyConflictException`. Payment-side command consumption and
+  Driver-side command execution are B/C-owned and pending (their absence is
+  never faked with local stubs).
 - Trip owns only intent semantics and the `outbox_messages` EF mapping, which
   mirrors C's shared schema (`001_outbox_messages.sql`) exactly. Claim,
   publish-confirm, mark, retry and backlog metrics stay C-owned
@@ -35,8 +57,9 @@
   disconnected), so an unavailable broker leaves rows pending instead of
   burning retry attempts into `FAILED_VISIBLE`, while a consumer-only fault
   cannot stall outgoing delivery.
-  Saga and Payment lineage resolution remain later work. The historical
-  week-by-week notes below describe their own scope.
+  Cross-owner W10 integration (Payment consumer/producer legs, Driver command
+  consumer) remains pending B/C work. The historical week-by-week notes
+  below describe their own scope.
 
 - Owner: A (reviewer B, backup C)
 - Authority: ride lifecycle, FareSnapshot, assignment reference, Saga state, cancellation. Does NOT decide Driver reservability.
