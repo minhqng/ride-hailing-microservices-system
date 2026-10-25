@@ -16,31 +16,40 @@ output, and it is not a peer signoff. See [Caveats](#caveats).
 - Base: `7a0575a51a89ba32bd3017afd779355ed2da9576`
   (`origin/MemC-W9-Distributed`, PR #35 head)
 - Main lineage base: `ba5bb40615564ab022ddb0ff5e933bde93ee15a1`
-- **Code commit under test: `6eb693a40bfb6b128cab22720034d05269b1234d`**
-  (tree `eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2`)
+- **Code commit under test: `0185c3755bd2887c9bd73287604608911ca10ed2`**
+  (tree `c430e1786b214c029f13283db0dadb3282a967df`)
 - Initial implementation: `63f13a5544dd5b1caed357b62c3e60a188113ed4`,
   hardened by `d87c147` (outbox identity winner verification) and
-  `20790f0` (relay publish-path gating), and extended by `6eb693a`
+  `20790f0` (relay publish-path gating), extended by `6eb693a`
   (concurrent same-obligation discovery proof; test-only, no production
-  change).
+  change), and re-anchored at `0185c37`, which changes only repository
+  hygiene policy/scripts (`AGENTS.md`, `.gitignore`,
+  `scripts/test/hygiene-check.sh`, `scripts/test/verify-source-anchor*.sh`,
+  `.github/workflows/ci.yml`); `src/`, `tests/` and `docs/` are identical
+  to `6eb693a`.
 
 Verify the tree locally:
 
 ```bash
-git rev-parse 6eb693a40bfb6b128cab22720034d05269b1234d^{tree}
-# eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2
+git rev-parse 0185c3755bd2887c9bd73287604608911ca10ed2^{tree}
+# c430e1786b214c029f13283db0dadb3282a967df
 ```
 
 ## Provenance model
 
 The evidence commits only add or edit files under `evidence/` on top of the
 verified code commit. `reproduce.sh` therefore accepts any checkout whose
-source is *provably identical* to the verified revision: it compares the git
-tree hash of every tracked top-level path (everything except `evidence/`)
-between `HEAD` and the verified code commit, and refuses to run (exit 2) on
-any drift or on a working tree that is dirty outside `evidence/`. Source
-provenance verification is never skipped; the run header records both the
-verified code commit and the actual `HEAD` it executed from.
+source is *provably identical* to the verified revision: the shared
+`scripts/test/verify-source-anchor.sh` diffs every tracked path outside
+`evidence/` between `HEAD` and the verified code commit — added, modified,
+deleted (including whole top-level paths), renamed and file-mode-changed
+paths all count as drift — and also refuses a working tree that is dirty
+outside `evidence/` (a rename parked under `evidence/` is still caught as
+the source-side deletion it is). Source provenance verification is never
+skipped; the run header records both the verified code commit and the
+actual `HEAD` it executed from. The verifier's behavior is pinned by
+`scripts/test/verify-source-anchor.test.sh` (12 disposable-git-fixture
+cases, run in CI).
 
 ## Environment
 
@@ -100,20 +109,24 @@ verified code commit and the actual `HEAD` it executed from.
 
 ## Results (local, Release)
 
-Verified at code commit `6eb693a` (see Provenance model above; the run logs
-live in `outputs/` and were produced by `reproduce.sh` at that source state).
+Verified at code commit `0185c37` (see Provenance model above). The curated
+result — commands, exit codes, counts, per-project totals, lane verdicts and
+the exact observed summary lines — lives in **`test-output.txt`** (Doc 03 §25
+bundle shape). Raw lane transcripts are not tracked: re-running
+`reproduce.sh` regenerates them under `outputs/repro-<stamp>/`, which is
+gitignored local execution output.
 
-| Lane | Command | Result | Log |
-| --- | --- | --- | --- |
-| Solution build | `dotnet build RideHailing.Distributed.slnx -c Release --no-incremental` | **0 errors**, 1 pre-existing warning (`xUnit2029` in Driver integration tests, file not touched by this change) | `outputs/solution-build-release.txt` |
-| Full solution tests | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | **913 passed, 0 failed, 1 skipped** (exit 0) | `outputs/solution-tests-release.txt` |
-| Trip unit | included above | **272 passed** | `outputs/solution-tests-release.txt` |
-| Trip integration | included above | **143 passed** | `outputs/solution-tests-release.txt` |
-| W09 Outbox proofs | `--filter FullyQualifiedName~TripW09` (outbox + relay-readiness classes) | **17 passed** | `outputs/w09-outbox-tests.txt` |
-| W08 messaging regressions | `--filter FullyQualifiedName~TripW08MessagingTests` | **18 passed** | `outputs/w08-messaging-tests.txt` |
-| W09 intent identity unit proofs | `--filter FullyQualifiedName~TripOutboxIntentTests` | **5 passed** | `outputs/w09-intent-unit-tests.txt` |
+| Lane | Command | Result |
+| --- | --- | --- |
+| Solution build | `dotnet build RideHailing.Distributed.slnx -c Release --no-incremental` | **0 errors**, 1 pre-existing warning (`xUnit2029` in Driver integration tests, file not touched by this change) |
+| Full solution tests | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | **913 passed, 0 failed, 1 skipped** (exit 0) |
+| Trip unit | included above | **272 passed** |
+| Trip integration | included above | **143 passed** |
+| W09 Outbox proofs | `--filter FullyQualifiedName~TripW09` (outbox + relay-readiness classes) | **17 passed** |
+| W08 messaging regressions | `--filter FullyQualifiedName~TripW08MessagingTests` | **18 passed** |
+| W09 intent identity unit proofs | `--filter FullyQualifiedName~TripOutboxIntentTests` | **5 passed** |
 
-Per-project totals from `outputs/solution-tests-release.txt`:
+Per-project totals (full `Passed!`/`Skipped!` lines in `test-output.txt` §2):
 
 ```text
 MatchingService.UnitTests            98 passed
@@ -133,7 +146,9 @@ The one skipped test is
 `IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState`,
 which was already opt-in/skipped before this change. The SystemTests project
 contains no discoverable tests in the current tree; `dotnet test` reports that
-and continues with exit 0.
+and continues with exit 0. The same numbers were produced independently by
+GitHub CI (`build-test` job) on the PR head at `5f61cff` and re-verified
+locally at `0185c37`.
 
 ## Dual-write crash matrix (A-W09-08)
 
@@ -188,20 +203,27 @@ SDK resolvable as `dotnet` on `PATH`, at `$HOME/.dotnet-sdk/dotnet`, or via
 the `DOTNET` environment variable.
 
 The script verifies source equivalence with the verified code commit first
-(see Provenance model) and then runs, writing fresh logs to
-`outputs/repro-<timestamp>/` (gitignored): solution Release build, full
-solution tests, the `TripW09` integration proofs (outbox + relay readiness),
-the W08 messaging regressions, and the W09 intent identity unit proofs.
+(see Provenance model) and then runs, writing fresh raw logs to
+`outputs/repro-<timestamp>/` (gitignored, local-only): solution Release
+build, full solution tests, the `TripW09` integration proofs (outbox + relay
+readiness), the W08 messaging regressions, and the W09 intent identity unit
+proofs. Curate the durable result of such runs into `test-output.txt`; do
+not commit the raw transcripts.
 
-The curated lane logs in `outputs/*.txt` were produced the same way at code
-commit `6eb693a`; the earlier bundle at `20790f0` (912 passed) and the
-historical first implementation run at `63f13a5` (909 passed) are superseded
-by this bundle.
+`test-output.txt` was produced this way at code commit `0185c37`
+(2026-10-25T08:44–08:45 UTC). Earlier bundles: `6eb693a` (913 passed, raw
+lane logs under `outputs/`, superseded by this curated bundle),
+`20790f0` (912 passed) and the first implementation run at `63f13a5`
+(909 passed) — all reachable in branch history.
 
 ## Caveats
 
-- **Local evidence, not CI.** No CI run is claimed. These logs were produced by
-  the author on the commit above.
+- **Local evidence, not CI output.** The curated logs were produced by the
+  author on the commit above. GitHub CI (`build-test`, `hygiene`,
+  `platform-smoke`, `compose-config`) runs on every PR head and was green at
+  the previous head `5f61cff` with the same per-project counts; this bundle
+  does not claim a CI-produced log as its proof. See the PR checks for the
+  current head.
 - **REL-04 fault injection.** The crash is executed through C's documented
   `OutboxRelayOptions.BeforePublish` seam, which throws after claim and before
   publish; the row remains claimed/PENDING and a **new relay instance** with an

@@ -11,9 +11,10 @@
   },
   "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
   "codeCommit": {
-    "sha": "6eb693a40bfb6b128cab22720034d05269b1234d",
-    "tree": "eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2",
-    "message": "test(trip): prove concurrent same-obligation discovery resolves as transient replay"
+    "sha": "0185c3755bd2887c9bd73287604608911ca10ed2",
+    "tree": "c430e1786b214c029f13283db0dadb3282a967df",
+    "message": "chore(hygiene): make execution output ephemeral by default and harden the changed-path guard",
+    "note": "Differs from 6eb693a (previous anchor) only in hygiene policy/scripts (AGENTS.md, .gitignore, scripts/test/hygiene-check.sh, scripts/test/verify-source-anchor*.sh, .github/workflows/ci.yml); src/, tests/ and docs/ are identical."
   },
   "initialCodeCommit": {
     "sha": "63f13a5544dd5b1caed357b62c3e60a188113ed4",
@@ -22,10 +23,12 @@
     "hardenedBy": [
       "d87c147 fix(trip): verify committed outbox winner before treating identity clash as concurrency",
       "20790f0 fix(trip): gate outbox relay on its own publish path, not consumer readiness",
-      "6eb693a test(trip): prove concurrent same-obligation discovery resolves as transient replay (test-only; production source identical to 20790f0)"
+      "6eb693a test(trip): prove concurrent same-obligation discovery resolves as transient replay (test-only; production source identical to 20790f0)",
+      "0185c37 chore(hygiene): make execution output ephemeral by default and harden the changed-path guard (policy/scripts only; src/tests/docs identical to 6eb693a)"
     ]
   },
-  "provenanceModel": "reproduce.sh compares the git tree hash of every top-level path except evidence/ between HEAD and codeCommit; identical source is accepted, any drift aborts",
+  "provenanceModel": "reproduce.sh delegates to scripts/test/verify-source-anchor.sh: a symmetric git diff over every tracked path outside evidence/ between HEAD and codeCommit (added, modified, deleted, renamed and mode-changed paths are all drift), plus a clean working tree outside evidence/; identical source is accepted, any drift aborts. Pinned by scripts/test/verify-source-anchor.test.sh (12 git-fixture cases, run in CI).",
+  "evidenceModel": "Curated canonical bundle per docs/03 §25 and docs/05A §6: README.md, manifest.json, test-output.txt (§1 build, §2 full solution, §3–§5 lanes) and reproduce.sh at the bundle root. Raw execution output is local/ephemeral: reproduce.sh writes outputs/repro-<stamp>/ which is gitignored; nothing under outputs/ is tracked.",
   "environment": {
     "os": "Linux 7.3.0-1-default",
     "dotnetSdk": "10.0.401",
@@ -42,7 +45,7 @@
       "errors": 0,
       "warnings": 1,
       "warningNote": "Pre-existing xUnit2029 analyzer warning in DriverReserveConcurrencyTests.cs; not part of this change.",
-      "output": "outputs/solution-build-release.txt"
+      "output": "test-output.txt §1 solution-build-release"
     },
     {
       "name": "solution-tests-release",
@@ -51,7 +54,7 @@
       "passed": 913,
       "failed": 0,
       "skipped": 1,
-      "output": "outputs/solution-tests-release.txt"
+      "output": "test-output.txt §2 solution-tests-release"
     },
     {
       "name": "trip-w09-outbox",
@@ -59,7 +62,7 @@
       "exitCode": 0,
       "passed": 17,
       "failed": 0,
-      "output": "outputs/w09-outbox-tests.txt"
+      "output": "test-output.txt §3 w09-outbox-tests"
     },
     {
       "name": "trip-w08-messaging-regressions",
@@ -67,7 +70,7 @@
       "exitCode": 0,
       "passed": 18,
       "failed": 0,
-      "output": "outputs/w08-messaging-tests.txt"
+      "output": "test-output.txt §4 w08-messaging-tests"
     },
     {
       "name": "trip-w09-intent-unit",
@@ -75,7 +78,7 @@
       "exitCode": 0,
       "passed": 5,
       "failed": 0,
-      "output": "outputs/w09-intent-unit-tests.txt"
+      "output": "test-output.txt §5 w09-intent-unit-tests"
     }
   ],
   "perProject": {
