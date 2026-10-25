@@ -1,5 +1,0 @@
-Test run for /tmp/opencode/w10-trip-saga/tests/Integration/RideHailing.TripService.IntegrationTests/bin/Release/net10.0/RideHailing.TripService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-
-Passed!  - Failed:     0, Passed:    17, Skipped:     0, Total:    17, Duration: 8 s - RideHailing.TripService.IntegrationTests.dll (net10.0)
-exit=0
