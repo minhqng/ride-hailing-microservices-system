@@ -247,6 +247,136 @@ namespace RideHailing.TripService.Migrations
                     b.ToTable("trip_message_receipts", (string)null);
                 });
 
+            modelBuilder.Entity("RideHailing.TripService.Integration.Messaging.TripOutboxMessage", b =>
+                {
+                    b.Property<string>("MessageId")
+                        .HasColumnType("text")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("AggregateId")
+                        .HasColumnType("text")
+                        .HasColumnName("aggregate_id");
+
+                    b.Property<string>("AggregateType")
+                        .HasColumnType("text")
+                        .HasColumnName("aggregate_type");
+
+                    b.Property<long?>("AggregateVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("aggregate_version");
+
+                    b.Property<int>("AttemptCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("attempt_count");
+
+                    b.Property<string>("CausationId")
+                        .HasColumnType("text")
+                        .HasColumnName("causation_id");
+
+                    b.Property<DateTimeOffset?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<string>("ClaimedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("claimed_by");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("Exchange")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("exchange");
+
+                    b.Property<string>("HeadersJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("headers_json")
+                        .HasDefaultValueSql("'{}'::jsonb");
+
+                    b.Property<DateTimeOffset?>("LastErrorAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_error_at");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error_code");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("message_type");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("OperationKey")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_key");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload_json");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("RoutingKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("routing_key");
+
+                    b.Property<string>("SagaId")
+                        .HasColumnType("text")
+                        .HasColumnName("saga_id");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("schema_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("PENDING")
+                        .HasColumnName("status");
+
+                    b.HasKey("MessageId")
+                        .HasName("outbox_messages_pk");
+
+                    b.HasIndex("OccurredAt", "MessageId")
+                        .HasDatabaseName("ix_outbox_messages_failed_visible")
+                        .HasFilter("status = 'FAILED_VISIBLE'");
+
+                    b.HasIndex("NextAttemptAt", "OccurredAt", "MessageId")
+                        .HasDatabaseName("ix_outbox_messages_claim")
+                        .HasFilter("status = 'PENDING'");
+
+                    b.ToTable("outbox_messages", null, t =>
+                        {
+                            t.HasCheckConstraint("outbox_messages_attempt_count_check", "attempt_count >= 0");
+
+                            t.HasCheckConstraint("outbox_messages_identity_nonempty", "btrim(message_id) <> '' AND btrim(message_type) <> '' AND btrim(correlation_id) <> '' AND btrim(exchange) <> '' AND btrim(routing_key) <> ''");
+
+                            t.HasCheckConstraint("outbox_messages_schema_version_check", "schema_version >= 1");
+
+                            t.HasCheckConstraint("outbox_messages_status_check", "status IN ('PENDING', 'PUBLISHED', 'FAILED_VISIBLE')");
+                        });
+                });
+
             modelBuilder.Entity("RideHailing.TripService.Domain.Trips.Trip", b =>
                 {
                     b.OwnsMany("RideHailing.TripService.Domain.Trips.TripCleanupIntent", "CleanupIntents", b1 =>
