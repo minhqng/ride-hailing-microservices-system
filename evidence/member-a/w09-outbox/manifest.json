@@ -1,0 +1,130 @@
+{
+  "member": "A",
+  "week": "W09",
+  "topic": "Trip transactional outbox",
+  "scope": "A-W09-01..10 (local verification; no CI or peer signoff claimed)",
+  "branch": "feature/A-W09-trip-outbox",
+  "base": {
+    "ref": "origin/MemC-W9-Distributed",
+    "sha": "7a0575a51a89ba32bd3017afd779355ed2da9576",
+    "pullRequest": 35
+  },
+  "mainLineageBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
+  "codeCommit": {
+    "sha": "63f13a5544dd5b1caed357b62c3e60a188113ed4",
+    "tree": "6e4369c1d314d55821f9e00ae455b1e1ad64b1bc",
+    "message": "feat(trip): add W9 transactional outbox for trip intents"
+  },
+  "environment": {
+    "os": "Linux 7.3.0-1-default",
+    "dotnetSdk": "10.0.401",
+    "configuration": "Release",
+    "docker": "29.7.2-ce",
+    "testDatabase": "postgres:18.6 (Testcontainers)",
+    "testBroker": "rabbitmq:4.3.6-management (Testcontainers)"
+  },
+  "commands": [
+    {
+      "name": "solution-build-release",
+      "command": "dotnet build RideHailing.Distributed.slnx -c Release --no-incremental",
+      "exitCode": 0,
+      "errors": 0,
+      "warnings": 1,
+      "warningNote": "Pre-existing xUnit2029 analyzer warning in DriverReserveConcurrencyTests.cs; not part of this change.",
+      "output": "outputs/solution-build-release.txt"
+    },
+    {
+      "name": "solution-tests-release",
+      "command": "dotnet test RideHailing.Distributed.slnx -c Release --no-build",
+      "exitCode": 0,
+      "passed": 909,
+      "failed": 0,
+      "skipped": 1,
+      "output": "outputs/solution-tests-release.txt"
+    },
+    {
+      "name": "trip-w09-outbox",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj -c Release --no-build --filter FullyQualifiedName~TripW09OutboxTests",
+      "exitCode": 0,
+      "passed": 13,
+      "failed": 0,
+      "output": "outputs/w09-outbox-tests.txt"
+    },
+    {
+      "name": "trip-w08-messaging-regressions",
+      "command": "dotnet test tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj -c Release --no-build --filter FullyQualifiedName~TripW08MessagingTests",
+      "exitCode": 0,
+      "passed": 18,
+      "failed": 0,
+      "output": "outputs/w08-messaging-tests.txt"
+    },
+    {
+      "name": "trip-w09-intent-unit",
+      "command": "dotnet test tests/Unit/RideHailing.TripService.UnitTests/RideHailing.TripService.UnitTests.csproj -c Release --no-build --filter FullyQualifiedName~TripOutboxIntentTests",
+      "exitCode": 0,
+      "passed": 5,
+      "failed": 0,
+      "output": "outputs/w09-intent-unit-tests.txt"
+    }
+  ],
+  "perProject": {
+    "MatchingService.UnitTests": 98,
+    "DriverService.UnitTests": 117,
+    "TripService.UnitTests": 272,
+    "PaymentService.UnitTests": 25,
+    "IdentityService.IntegrationTests": 0,
+    "DriverService.IntegrationTests": 60,
+    "MatchingService.IntegrationTests": 112,
+    "PaymentService.IntegrationTests": 26,
+    "Platform.IntegrationTests": 60,
+    "TripService.IntegrationTests": 139,
+    "SystemTests": null
+  },
+  "skipped": [
+    "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState (pre-existing opt-in skip)"
+  ],
+  "claims": {
+    "atomicStateAndOutboxCommit": true,
+    "rollbackRestoresBothHalves": true,
+    "deterministicMessageIdAcrossRetryAndRestart": true,
+    "rel04CrashBeforePublishRecovery": "simulated via shared OutboxRelayOptions.BeforePublish seam, then new relay instance",
+    "rel05SameIdRepublishConsumerEffectOnce": true,
+    "observabilityPendingCountAndOldestAge": true,
+    "dualWriteCrashMatrix": true,
+    "realOsProcessKill": false,
+    "ciRun": false,
+    "peerRerun": false
+  },
+  "schemaContract": {
+    "table": "outbox_messages",
+    "primaryKey": "outbox_messages_pk",
+    "migration": "20261025031423_W09_TripOutbox",
+    "sharedSchemaSource": "src/BuildingBlocks/RideHailing.Messaging/Outbox/Schema/001_outbox_messages.sql",
+    "efOwnsSchemaInTrip": true,
+    "relayCallsEnsureSchemaInTripHost": false
+  },
+  "routes": {
+    "RideRequestedV1": {
+      "exchange": "ride.events",
+      "routingKey": "trip.ride-requested.v1",
+      "messageId": "trip:{tripId:N}:ride-requested:{matchingRound}"
+    },
+    "CancelMatchingRoundV1": {
+      "exchange": "ride.commands",
+      "routingKey": "matching.cancel-round.v1",
+      "messageId": "trip:{tripId:N}:cancel-round:{matchingRound}"
+    },
+    "ReleaseDriverReservationV1": {
+      "exchange": "ride.commands",
+      "routingKey": "driver.release-reservation.v1",
+      "messageId": "trip:{tripId:N}:release:{reservationId:N}"
+    }
+  },
+  "outOfScope": [
+    "W10 Saga / Payment execution",
+    "generic Outbox framework",
+    "CDC / MassTransit / distributed transactions",
+    "CI evidence",
+    "peer rerun signoff"
+  ]
+}
