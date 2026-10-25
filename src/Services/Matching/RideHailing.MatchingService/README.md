@@ -5,7 +5,9 @@
 - DB: `matching_db` (role `matching_app`)
 - Deps: `ConnectionStrings__Postgres`, `Redis__ConnectionString`, `RabbitMq__Host`, `Services__DriverBaseUrl`
 - Read: Docs 00 §8, 01 §8-9, 02 §12-13, 05B
-- Bootstrap: skeleton only. NOT implemented: GEOSEARCH ranking, broker wiring, terminal NO_DRIVER marking.
+- W9: terminal `NO_DRIVER` and `MatchingFailedV1` intent commit together through
+  `MatchingTerminalizer` and the shared Outbox store. The relay is enabled by
+  `RabbitMq:PublishingEnabled`; pending intents remain durable when disabled.
 - W7: durable reserve workflow on the frozen W2 attempt/round tables
   (`Infrastructure/Persistence/MatchingAttemptRepository`: write-ahead
   `IN_FLIGHT` persist, guarded transitions, PK-convergent duplicate workers,
@@ -22,8 +24,35 @@
 
 - W5 bulk pipeline (GEOSEARCH ranking/eligibility over Redis) remains absent
   (reverted from main; W7 consumes explicit candidate lists, not the pipeline).
-- W8+: RabbitMQ wiring (W4 updater is invoked directly; broker consumer comes
-  later). W9: terminal publication/Outbox.
+- W8 broker consumers and W9 terminal publication/Outbox are implemented.
+
+## W9 duplicate safety and recovery
+
+Migration 006 preserves legacy `NO_DRIVER` rows without a result identity. On
+replay, the terminalizer repairs identity and intent in one transaction only if
+attempts are conclusively rejected, the snapshot is covered, and cancellation is
+absent. Unsafe legacy rows return `LEGACY_TERMINAL_REQUIRES_REVIEW`.
+Existing intents must match payload, type, schema, route, aggregate identity and
+version, Saga identity and operation key; conflicts fail before terminal commit.
+
+Driver projection deliveries store a semantic fingerprint at
+`driver:projection:receipt:<SHA256(messageId)>` in the same Redis function call as
+the version/session guarded projection and GEO update. Conflicting content raises
+`MESSAGE_ID_CONTENT_CONFLICT` and follows the existing poison/DLQ policy. Receipts
+have no TTL and share the derived projection's rebuild lifecycle; clear them
+with a deliberate complete projection rebuild, never independently during normal
+consumption. Redis is derived state: loss of its data also loses these conflict
+receipts. FCALL prevents interleaving; it does not roll back arbitrary server
+errors. Dependency errors retry and version/session guards converge redelivery.
+
+`CrashAfterReserveRecoveryTests` is the REL-02 W9 executable base: real PostgreSQL
+and Driver repository, exception injected after remote commit before local
+`RESERVED`, followed by fresh repository/orchestrator recovery from persisted
+`IN_FLIGHT`. Recovery replays the same reservation through the existing reserve
+reconciliation path. It proves one attempt, no next candidate, no false
+`NO_DRIVER`, and unchanged Driver version. It is not a process-kill or HTTP
+transport proof. W11 owns external kill/restart orchestration; it was not started.
+See [W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
 
 ## Implemented (W2+W4)
 
@@ -89,5 +118,5 @@
 
 ## NOT implemented (later weeks)
 
-- W6: Reserve OCC + UNKNOWN reconciliation start. W7: UNKNOWN/reconcile completion.
-  W8+: RabbitMQ wiring (pipeline is invoked directly; broker consumer comes later).
+- End-to-end automatic dispatch/recovery orchestration remains separate from the
+  tested reserve/reconciliation application entry points.
