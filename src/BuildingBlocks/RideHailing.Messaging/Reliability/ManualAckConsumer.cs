@@ -12,6 +12,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
     private readonly IConnection connection;
     private readonly IChannel channel;
     private readonly ConfirmedPublisher publisher;
+    private readonly RideHailing.Messaging.IFaultPoint faultPoint;
     private readonly CancellationTokenSource stopping = new();
     private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private string consumerTag = "";
@@ -20,13 +21,14 @@ public sealed class ManualAckConsumer : IAsyncDisposable
     public Task Completion => completion.Task;
     public long AcknowledgedCount => Interlocked.Read(ref acknowledged);
 
-    private ManualAckConsumer(IConnection connection, IChannel channel, ConfirmedPublisher publisher)
-    { this.connection = connection; this.channel = channel; this.publisher = publisher; }
+    private ManualAckConsumer(IConnection connection, IChannel channel, ConfirmedPublisher publisher, RideHailing.Messaging.IFaultPoint faultPoint)
+    { this.connection = connection; this.channel = channel; this.publisher = publisher; this.faultPoint = faultPoint; }
 
     public static async Task<ManualAckConsumer> StartAsync(ConnectionFactory factory, ConfirmedPublisher publisher,
         string queue, IReadOnlySet<string> supportedTypes,
         Func<MessageEnvelope<JsonElement>, CancellationToken, Task> commitHandler,
-        ushort prefetch = 16, CancellationToken token = default)
+        ushort prefetch = 16, CancellationToken token = default,
+        RideHailing.Messaging.IFaultPoint? faultPoint = null)
     {
         if (prefetch is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(prefetch));
         if (supportedTypes.Count == 0) throw new ArgumentException("Explicit supported types required");
@@ -36,7 +38,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
         {
             channel = await connection.CreateChannelAsync(new CreateChannelOptions(false, false, consumerDispatchConcurrency: 1), token);
             await channel.BasicQosAsync(0, prefetch, global: false, token);
-            var runtime = new ManualAckConsumer(connection, channel, publisher);
+            var runtime = new ManualAckConsumer(connection, channel, publisher, faultPoint ?? FaultPoints.Current);
             var consumer = new AsyncEventingBasicConsumer(channel);
             consumer.ReceivedAsync += (_, delivery) => runtime.ReceiveAsync(queue, supportedTypes, commitHandler, delivery);
             consumer.UnregisteredAsync += (_, _) =>
@@ -130,6 +132,7 @@ public sealed class ManualAckConsumer : IAsyncDisposable
                 }
             }
             // Success: handler committed. Failure: retry/error transfer was confirmed. Only now ACK.
+            await faultPoint.HitAsync(RideHailing.Messaging.FaultPointNames.ConsumerAfterBusinessCommitBeforeAck, stopping.Token);
             await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, stopping.Token);
             Interlocked.Increment(ref acknowledged);
         }
