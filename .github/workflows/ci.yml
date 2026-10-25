@@ -3,7 +3,10 @@ on:
   push:
     branches: [main, 'MemC-*-Distributed']
   pull_request:
-    branches: [main, 'MemC-*-Distributed', 'feature/B-W09-driver-outbox']
+    # Week 9/10 work landed as stacked PRs against intermediate member
+    # branches; keep those bases listed until the stack is integrated into
+    # main, otherwise CI never runs on the stacked PRs.
+    branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox', 'feature/B-W09-driver-outbox']
 jobs:
   hygiene:
     name: hygiene
