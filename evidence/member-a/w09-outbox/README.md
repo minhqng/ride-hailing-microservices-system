@@ -16,17 +16,19 @@ output, and it is not a peer signoff. See [Caveats](#caveats).
 - Base: `7a0575a51a89ba32bd3017afd779355ed2da9576`
   (`origin/MemC-W9-Distributed`, PR #35 head)
 - Main lineage base: `ba5bb40615564ab022ddb0ff5e933bde93ee15a1`
-- **Code commit under test: `20790f0f361af3501e4e08b30eb0aa781bcf2a0b`**
-  (tree `9820c0652a89c64c1cdb3b99758efcdfa3d07962`)
+- **Code commit under test: `6eb693a40bfb6b128cab22720034d05269b1234d`**
+  (tree `eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2`)
 - Initial implementation: `63f13a5544dd5b1caed357b62c3e60a188113ed4`,
   hardened by `d87c147` (outbox identity winner verification) and
-  `20790f0` (relay publish-path gating).
+  `20790f0` (relay publish-path gating), and extended by `6eb693a`
+  (concurrent same-obligation discovery proof; test-only, no production
+  change).
 
 Verify the tree locally:
 
 ```bash
-git rev-parse 20790f0f361af3501e4e08b30eb0aa781bcf2a0b^{tree}
-# 9820c0652a89c64c1cdb3b99758efcdfa3d07962
+git rev-parse 6eb693a40bfb6b128cab22720034d05269b1234d^{tree}
+# eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2
 ```
 
 ## Provenance model
@@ -98,16 +100,16 @@ verified code commit and the actual `HEAD` it executed from.
 
 ## Results (local, Release)
 
-Verified at code commit `20790f0` (see Provenance model above; the run logs
+Verified at code commit `6eb693a` (see Provenance model above; the run logs
 live in `outputs/` and were produced by `reproduce.sh` at that source state).
 
 | Lane | Command | Result | Log |
 | --- | --- | --- | --- |
 | Solution build | `dotnet build RideHailing.Distributed.slnx -c Release --no-incremental` | **0 errors**, 1 pre-existing warning (`xUnit2029` in Driver integration tests, file not touched by this change) | `outputs/solution-build-release.txt` |
-| Full solution tests | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | **912 passed, 0 failed, 1 skipped** (exit 0) | `outputs/solution-tests-release.txt` |
+| Full solution tests | `dotnet test RideHailing.Distributed.slnx -c Release --no-build` | **913 passed, 0 failed, 1 skipped** (exit 0) | `outputs/solution-tests-release.txt` |
 | Trip unit | included above | **272 passed** | `outputs/solution-tests-release.txt` |
-| Trip integration | included above | **142 passed** | `outputs/solution-tests-release.txt` |
-| W09 Outbox proofs | `--filter FullyQualifiedName~TripW09` (outbox + relay-readiness classes) | **16 passed** | `outputs/w09-outbox-tests.txt` |
+| Trip integration | included above | **143 passed** | `outputs/solution-tests-release.txt` |
+| W09 Outbox proofs | `--filter FullyQualifiedName~TripW09` (outbox + relay-readiness classes) | **17 passed** | `outputs/w09-outbox-tests.txt` |
 | W08 messaging regressions | `--filter FullyQualifiedName~TripW08MessagingTests` | **18 passed** | `outputs/w08-messaging-tests.txt` |
 | W09 intent identity unit proofs | `--filter FullyQualifiedName~TripOutboxIntentTests` | **5 passed** | `outputs/w09-intent-unit-tests.txt` |
 
@@ -123,7 +125,7 @@ DriverService.IntegrationTests       60 passed
 MatchingService.IntegrationTests    112 passed
 PaymentService.IntegrationTests      26 passed
 Platform.IntegrationTests            60 passed
-TripService.IntegrationTests        142 passed
+TripService.IntegrationTests        143 passed
 SystemTests                         no tests discovered (solution-wide "no test available"; unchanged)
 ```
 
@@ -142,6 +144,7 @@ and continues with exit 0.
 | Publish accepted, local mark lost | `PENDING` row, no `published_at` | new relay republishes same identity; Trip's durable receipt applies the downstream effect once | `LostMarkAfterAcceptedPublish_RepublishesSameIdentity_ThenSettles` |
 | Publish repeatedly fails | `FAILED_VISIBLE` after `MaxAttempts`, `last_error_code` set | backlog metric/visibility; identity and payload unchanged | `FailedPublication_BecomesFailedVisible_AndRelayMetricsAreEmitted` |
 | Concurrent same transition (OCC) | one winner with exactly one intent; loser observes committed state | Version fence + deterministic PK fence; replay appends nothing | `ConcurrentStartMatching_OneWinner_OneIntent_NoOrphan`, `DuplicateLogicalIntent_BlocksStateCommit_ThenLeavesOneRow` |
+| Concurrent deliveries discover the same obligation (inside the consumer's explicit transaction) | one committed obligation; the loser classifies as bounded Transient retry and its receipt claim rolls back | EF's automatic savepoint restores the open transaction so the winner readback verifies on a valid snapshot; redelivery converges as domain replay with no second intent | `ConcurrentLateReservations_DiscoveringSameReleaseObligation_AreTransientRedelivery_WinnerStaysIntact` |
 | Broker unavailable at HTTP create | MATCHING + `PENDING` intent, HTTP 201 | broker restarted → relay publishes the same id; replay does not enqueue twice | `BrokerOutage_CommitsMatchingWithDurableIntent_ThenRelayPublishesSameIdAfterRecovery` |
 | Replay / stale / terminal transition | no new intent | handler replay flag + domain generation guards | `ReplayPaths_NeverAppendSecondIntent`, `RejectedAndStaleTransitions_AppendNoIntent` |
 | Foreign row under a deterministic intent identity | database fault, business state unchanged, no replay-as-race | winner readback compares type/exchange/routing before translating the duplicate key | `IdentityCollisionWithForeignContract_IsADataFault_NotAReplayableRace` |
@@ -191,8 +194,9 @@ solution tests, the `TripW09` integration proofs (outbox + relay readiness),
 the W08 messaging regressions, and the W09 intent identity unit proofs.
 
 The curated lane logs in `outputs/*.txt` were produced the same way at code
-commit `20790f0`; the historical first implementation run at `63f13a5`
-(909 passed) is superseded by this bundle.
+commit `6eb693a`; the earlier bundle at `20790f0` (912 passed) and the
+historical first implementation run at `63f13a5` (909 passed) are superseded
+by this bundle.
 
 ## Caveats
 
