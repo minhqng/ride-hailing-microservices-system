@@ -1,18 +1,28 @@
-// Start/complete ride system intake (local lifecycle close-out).
+// Start/complete ride system intake (A-W10-05/06/07).
 //
 // Applies Driver-actor start/completion evidence to the Trip lifecycle. The
 // supplied driver/reservation identity is fenced against the authoritative
 // current assignment by the aggregate (DSI-011, DSI-012); authorization
 // ordering is enforced by lifecycle state (DSI-026: READY_TO_START is the
-// local proof that authorization was recorded). Driver transport
-// authentication belongs to the future edge/middleware owner; this skeleton
-// proves assignment fencing and terminal monotonicity, not actor
-// authentication.
+// local proof that authorization was recorded) and, when a saga exists, by
+// the saga's authorized-ride phase as a second guard (Doc 05A §18.3
+// A-W10-05). Driver transport authentication belongs to the future
+// edge/middleware owner.
+//
+// W10 obligations committed atomically with each FIRST transition:
+//   Start:    Trip IN_PROGRESS + Outbox MarkDriverTripStartedV1 (B owns the
+//             Driver RESERVED→ON_TRIP authority).
+//   Complete: Trip COMPLETED + Saga CAPTURE_PENDING + Outbox CapturePayment
+//             (stable K_capture, DSI-027) + Outbox MarkDriverTripCompletedV1.
+// Replays stage nothing: a duplicate fact must never mint a second logical
+// payment effect or driver command.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
 
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
@@ -36,7 +46,8 @@ public sealed class StartTripHandler
     }
 
     /// <summary>
-    /// Starts the ride for the exact current assignment.
+    /// Starts the ride for the exact current assignment, after the saga (when
+    /// present) confirms authoritative authorization.
     /// </summary>
     public async Task<TripLifecycleResult> HandleAsync(
         Guid tripId,
@@ -53,6 +64,19 @@ public sealed class StartTripHandler
             return TripLifecycleResult.NotFound();
         }
 
+        var saga = await _db.RideSagas
+            .SingleOrDefaultAsync(s => s.TripId == tripId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Pre-check BEFORE the aggregate mutates so a saga disagreement can
+        // never leave a mutated tracked entity behind on failure.
+        if (trip.State == TripState.ReadyToStart && saga is not null && !saga.MayStartRide)
+        {
+            return TripLifecycleResult.Fail(trip, TripOutcome.Fail(
+                TripErrorCode.IllegalTransition,
+                $"Start requires the saga's authoritative authorization (DSI-026) but the saga is {saga.Status.ToCanonicalName()}/{saga.CurrentStep.ToCanonicalName()}."));
+        }
+
         var outcome = trip.Start(driverId, reservationId, _time.GetUtcNow());
         if (!outcome.IsSuccess)
         {
@@ -62,6 +86,8 @@ public sealed class StartTripHandler
         // Start replay is already IN_PROGRESS: no mutation, skip the write.
         if (!outcome.IsReplay)
         {
+            var now = _time.GetUtcNow();
+            TripOutboxWriter.Enqueue(_db, TripSagaIntents.MarkDriverTripStarted(trip, now));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
@@ -95,8 +121,8 @@ public sealed class CompleteTripHandler
     }
 
     /// <summary>
-    /// Completes the ride for the exact current assignment. Trip completion
-    /// never mutates Payment authority (forward recovery belongs to W10+).
+    /// Completes the ride for the exact current assignment and dispatches the
+    /// capture obligation (forward recovery begins; DSI-027/DSI-028).
     /// </summary>
     public async Task<TripLifecycleResult> HandleAsync(
         Guid tripId,
@@ -113,18 +139,49 @@ public sealed class CompleteTripHandler
             return TripLifecycleResult.NotFound();
         }
 
+        var saga = await _db.RideSagas
+            .SingleOrDefaultAsync(s => s.TripId == tripId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Pre-check BEFORE the aggregate mutates: capture follows only the
+        // authorized, non-compensating ride phase.
+        if (trip.State == TripState.InProgress && saga is not null && !saga.MayCompleteRide)
+        {
+            return TripLifecycleResult.Fail(trip, TripOutcome.Fail(
+                TripErrorCode.IllegalTransition,
+                $"Completion requires the saga's authorized ride phase but the saga is {saga.Status.ToCanonicalName()}/{saga.CurrentStep.ToCanonicalName()}."));
+        }
+
         var outcome = trip.Complete(driverId, reservationId, _time.GetUtcNow());
         if (!outcome.IsSuccess)
         {
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (!outcome.IsReplay)
+        {
+            var now = _time.GetUtcNow();
+            if (saga is not null)
+            {
+                var sagaOutcome = saga.RecordRideCompleted(RideSagaOperationKeys.Capture(tripId), now);
+                if (!sagaOutcome.IsSuccess)
+                {
+                    throw new InvalidOperationException(
+                        $"Saga rejected the completion step after phase verification: {sagaOutcome.ErrorCode} {sagaOutcome.Message}");
+                }
+
+                TripOutboxWriter.Enqueue(_db, TripSagaIntents.CapturePayment(trip, saga, now));
+            }
+
+            TripOutboxWriter.Enqueue(_db, TripSagaIntents.MarkDriverTripCompleted(trip, now));
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         _log.LogInformation(
-            "CompleteTrip {TripId} state {State}.",
+            "CompleteTrip {TripId} state {State} capture {CaptureDispatched}.",
             trip.TripId,
-            trip.State.ToCanonicalName());
+            trip.State.ToCanonicalName(),
+            saga?.CurrentStep.ToCanonicalName() ?? "NO_SAGA");
 
         return TripLifecycleResult.Success(trip, outcome.IsReplay, outcome.Compensation);
     }

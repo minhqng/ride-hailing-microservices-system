@@ -320,7 +320,10 @@ public sealed class TripLifecycleComponentTests
         Assert.Equal(driverId, trip.Assignment!.DriverId);
         Assert.Equal(reservationId, trip.Assignment.ReservationId);
         Assert.Equal(1, trip.CurrentMatchingRound);
-        Assert.Equal(4, trip.Version);
+        // W5 counted four transitions; W10's saga path additionally discharges
+        // the ReconcilePayment obligation in the same commit because DECLINED
+        // is conclusive no-effect authority evidence.
+        Assert.Equal(5, trip.Version);
         Assert.True(Math.Abs((trip.UpdatedAt.ToUniversalTime() - ActionAt).TotalMilliseconds) < 1);
     }
 

@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Reliability;
+using RideHailing.TripService.Application.Trips.Lifecycle;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 
@@ -86,10 +88,12 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
             else
             {
                 // A late authority fact may create an exact cleanup obligation
-                // while the Trip stays terminal. The receipt, Trip effect and
-                // any outgoing intent commit in this one transaction.
+                // while the Trip stays terminal. The receipt, Trip effect, the
+                // saga transition and any outgoing intent commit in this one
+                // transaction.
+                var saga = await db.RideSagas.SingleOrDefaultAsync(s => s.TripId == tripId, token);
                 var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
-                Apply(trip, envelope, receipt, now);
+                Apply(trip, saga, envelope, receipt, now);
                 TripOutboxWriter.EnqueueNewCleanup(db, trip, preexistingCleanup);
             }
             await db.SaveChangesAsync(token);
@@ -117,21 +121,22 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         }
     }
 
-    private static void Apply(Trip trip, MessageEnvelope<JsonElement> e, TripMessageReceipt receipt, DateTimeOffset now)
+    private void Apply(Trip trip, RideSaga? saga, MessageEnvelope<JsonElement> e, TripMessageReceipt receipt, DateTimeOffset now)
     {
+        if (e.MessageType.StartsWith("Payment", StringComparison.Ordinal))
+        {
+            // W10: the outcome resolves the saga's awaited step only under the
+            // frozen operationKey/sagaId lineage; a tripId alone never moves
+            // ride state (Doc 05A §18, DSI-034).
+            var result = PaymentOutcomeIntake.Apply(trip, saga, PaymentFact(e), now, db);
+            receipt.Disposition = result.Disposition;
+            receipt.Reason = result.Reason;
+            return;
+        }
+
         TripOutcome outcome;
         try
         {
-            if (e.MessageType.StartsWith("Payment", StringComparison.Ordinal))
-            {
-                // W8 skeleton: preserve authority evidence until Saga can verify
-                // operation lineage. A tripId alone never authorizes READY_TO_START.
-                if (e.MessageType == "PaymentAuthorizedV1" && trip.State == TripState.Cancelled)
-                    trip.RecordCancelledPaymentAuthorization(now);
-                receipt.Disposition = "PendingWorkflow";
-                receipt.Reason = "PAYMENT_LINEAGE_UNRESOLVED";
-                return;
-            }
             if (e.MessageType == "MatchingFailedV1")
                 outcome = trip.MarkMatchingFailed(RequiredRound(e.Payload), now);
             else
@@ -161,14 +166,64 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                     var intent = trip.CleanupIntents.SingleOrDefault(i =>
                         i.Kind == TripCleanupKind.ReleaseReservation && i.DriverId == driverId &&
                         i.ReservationId == reservationId);
-                    outcome = intent is null
-                        ? TripOutcome.Fail(TripErrorCode.StaleIdentity, "Release does not identify owned cleanup.")
-                        : trip.ConfirmCleanup(intent.Key, now);
+                    if (intent is null)
+                    {
+                        outcome = TripOutcome.Fail(TripErrorCode.StaleIdentity, "Release does not identify owned cleanup.");
+                    }
+                    else
+                    {
+                        outcome = trip.ConfirmCleanup(intent.Key, now);
+                        // The exact release completes a compensation obligation:
+                        // the saga finishes only when every obligation resolved.
+                        if (outcome.IsSuccess && saga is { Status: RideSagaStatus.Compensating })
+                        {
+                            var released = saga.RecordReservationReleased(now);
+                            if (!released.IsSuccess)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Saga rejected reservation-release completion: {released.ErrorCode} {released.Message}");
+                            }
+                        }
+                    }
+                }
+                else if (e.MessageType == "DriverTripCompletedV1")
+                {
+                    if (trip.State == TripState.Completed)
+                    {
+                        // Command-response agreement: the completion was already
+                        // recorded Trip-side; this authoritative confirmation is
+                        // a durable replay, never a second capture effect.
+                        receipt.Disposition = trip.Assignment is not null &&
+                            trip.Assignment.DriverId == driverId &&
+                            trip.Assignment.ReservationId == reservationId
+                            ? "BusinessReplay"
+                            : "NeedsReview";
+                        receipt.Reason = receipt.Disposition == "BusinessReplay" ? string.Empty : "AssignmentIdentityMismatch";
+                        return;
+                    }
+
+                    outcome = trip.Complete(driverId, reservationId, now);
+                    if (outcome.IsSuccess && !outcome.IsReplay)
+                    {
+                        // The physical ride pivot happened: dispatch the capture
+                        // obligation with the stable capture key (DSI-027/028).
+                        // No MarkDriverTripCompleted command: Driver authority
+                        // supplied this completion fact itself.
+                        if (saga is not null)
+                        {
+                            var completed = saga.RecordRideCompleted(RideSagaOperationKeys.Capture(trip.TripId), now);
+                            if (!completed.IsSuccess)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Saga rejected the completion step: {completed.ErrorCode} {completed.Message}");
+                            }
+
+                            TripOutboxWriter.Enqueue(db, TripSagaIntents.CapturePayment(trip, saga, now));
+                        }
+                    }
                 }
                 else
-                    outcome = e.MessageType == "DriverTripStartedV1"
-                        ? trip.Start(driverId, reservationId, now)
-                        : trip.Complete(driverId, reservationId, now);
+                    outcome = trip.Start(driverId, reservationId, now);
             }
         }
         catch (ArgumentException)
@@ -176,7 +231,20 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         // A fresh messageId is not permission to bypass domain state/identity guards.
         // Retain rejected facts durably for reconciliation, without mutating Trip.
         receipt.Disposition = outcome.IsSuccess ? (outcome.IsReplay ? "BusinessReplay" : "Applied") : "NeedsReview";
-        receipt.Reason = outcome.IsSuccess ? "" : outcome.ErrorCode.ToString();
+        receipt.Reason = outcome.IsSuccess ? string.Empty : outcome.ErrorCode.ToString();
+    }
+
+    private static PaymentOutcomeFact PaymentFact(MessageEnvelope<JsonElement> envelope)
+    {
+        string? resultCode = null;
+        if (envelope.Payload.ValueKind == JsonValueKind.Object &&
+            envelope.Payload.TryGetProperty("resultCode", out var code) &&
+            code.ValueKind == JsonValueKind.String)
+        {
+            resultCode = code.GetString();
+        }
+
+        return new PaymentOutcomeFact(envelope.MessageType, envelope.OperationKey, envelope.SagaId, resultCode);
     }
 
     private static Guid RequiredGuid(JsonElement payload, string name)
