@@ -131,7 +131,8 @@ public class BrokerConsumeTests
             var db = _redis.Multiplexer().GetDatabase();
             foreach (var envelope in envelopes)
             {
-                if (!await db.KeyExistsAsync(ProjectionReceipt.ForEnvelope(envelope).Key))
+                var expected = ProjectionReceipt.ForEnvelope(envelope);
+                if ((string?)await db.StringGetAsync(expected.Key) != expected.Fingerprint)
                 {
                     return false;
                 }
@@ -574,15 +575,6 @@ public class BrokerConsumeTests
         var elapsed = Stopwatch.StartNew();
         try
         {
-            await PublishAsync("ride.events", "driver.available.v1",
-                JsonSerializer.SerializeToUtf8Bytes(available9, Json));
-            await PublishAsync("ride.events", "driver.location-accepted.v1",
-                JsonSerializer.SerializeToUtf8Bytes(location, Json));
-            await PublishAsync("ride.events", "driver.reserved.v1",
-                JsonSerializer.SerializeToUtf8Bytes(reserved10, Json));
-            await PublishAsync("ride.events", "driver.available.v1",
-                JsonSerializer.SerializeToUtf8Bytes(staleAvailable9, Json));
-
             using var cts = new CancellationTokenSource();
             Task? run = null;
             try
@@ -591,9 +583,16 @@ public class BrokerConsumeTests
                     Factory(), "matching.driver-projection.q", 8, 3,
                     handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
 
-                // Every published envelope must have reached the real handler;
-                // the Lua receipt is written after its projection effect.
-                await WaitForProjectionReceiptsAsync(envelopes);
+                // Phase 1: authoritative events first. Receipts are written
+                // after their projection effect, so phase 2 is provably later.
+                await PublishAsync("ride.events", "driver.available.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(available9, Json));
+                await PublishAsync("ride.events", "driver.location-accepted.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(location, Json));
+                await PublishAsync("ride.events", "driver.reserved.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(reserved10, Json));
+                await WaitForProjectionReceiptsAsync(
+                    new[] { available9, location, reserved10 });
 
                 var db = _redis.Multiplexer().GetDatabase();
                 Assert.Equal("10", (string?)await db.HashGetAsync(
@@ -602,9 +601,21 @@ public class BrokerConsumeTests
                     $"driver:projection:{driver:N}", "derivedStatus"));
                 Assert.Null(await db.GeoPositionAsync(
                     RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver)));
+
+                // Phase 2: the delayed stale AVAILABLE cannot regress v10.
+                await PublishAsync("ride.events", "driver.available.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(staleAvailable9, Json));
+                await WaitForProjectionReceiptsAsync(new[] { staleAvailable9 });
+                Assert.Equal("10", (string?)await db.HashGetAsync(
+                    $"driver:projection:{driver:N}", "driverAggregateVersion"));
+                Assert.Equal("RESERVED", (string?)await db.HashGetAsync(
+                    $"driver:projection:{driver:N}", "derivedStatus"));
+                Assert.Null(await db.GeoPositionAsync(
+                    RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver)));
+
                 _output.WriteLine(
                     $"W11 REL-12-broker driver={driver} staleVersion=9 finalVersion=10 " +
-                    $"finalStatus=RESERVED geo=absent receipts=4/4 " +
+                    $"finalStatus=RESERVED geo=absent receipts=4/4 ordered=true " +
                     $"elapsedMs={elapsed.ElapsedMilliseconds}");
             }
             finally
@@ -612,8 +623,7 @@ public class BrokerConsumeTests
                 cts.Cancel();
                 if (run is not null)
                 {
-                    try { await run.WaitAsync(TimeSpan.FromSeconds(30)); }
-                    catch (Exception) { }
+                    await run.WaitAsync(TimeSpan.FromSeconds(30));
                 }
             }
         }
@@ -669,15 +679,6 @@ public class BrokerConsumeTests
         var elapsed = Stopwatch.StartNew();
         try
         {
-            await PublishAsync("ride.events", "driver.available.v1",
-                JsonSerializer.SerializeToUtf8Bytes(state, Json));
-            await PublishAsync("ride.events", "driver.location-accepted.v1",
-                JsonSerializer.SerializeToUtf8Bytes(seq20, Json));
-            await PublishAsync("ride.events", "driver.location-accepted.v1",
-                JsonSerializer.SerializeToUtf8Bytes(staleSeq19, Json));
-            await PublishAsync("ride.events", "driver.location-accepted.v1",
-                JsonSerializer.SerializeToUtf8Bytes(foreignSession, Json));
-
             using var cts = new CancellationTokenSource();
             Task? run = null;
             try
@@ -686,7 +687,12 @@ public class BrokerConsumeTests
                     Factory(), "matching.driver-projection.q", 8, 3,
                     handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
 
-                await WaitForProjectionReceiptsAsync(envelopes);
+                // Phase 1: authoritative sequence 20 and state first.
+                await PublishAsync("ride.events", "driver.available.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(state, Json));
+                await PublishAsync("ride.events", "driver.location-accepted.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(seq20, Json));
+                await WaitForProjectionReceiptsAsync(new[] { state, seq20 });
 
                 var db = _redis.Multiplexer().GetDatabase();
                 var key = $"driver:projection:{driver:N}";
@@ -698,9 +704,26 @@ public class BrokerConsumeTests
                     RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
                 Assert.NotNull(pos);
                 Assert.Equal(10.8, pos!.Value.Latitude, 4);
+
+                // Phase 2: delayed seq19 and foreign session cannot regress.
+                await PublishAsync("ride.events", "driver.location-accepted.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(staleSeq19, Json));
+                await PublishAsync("ride.events", "driver.location-accepted.v1",
+                    JsonSerializer.SerializeToUtf8Bytes(foreignSession, Json));
+                await WaitForProjectionReceiptsAsync(new[] { staleSeq19, foreignSession });
+
+                Assert.Equal("20", (string?)await db.HashGetAsync(key, "sequenceNo"));
+                Assert.Equal("s", (string?)await db.HashGetAsync(key, "locationSessionId"));
+                Assert.Equal("10.8", (string?)await db.HashGetAsync(key, "latitude"));
+                Assert.Equal(t0.UtcDateTime.ToString("O"), (string?)await db.HashGetAsync(key, "capturedAt"));
+                pos = await db.GeoPositionAsync(
+                    RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+                Assert.NotNull(pos);
+                Assert.Equal(10.8, pos!.Value.Latitude, 4);
+
                 _output.WriteLine(
                     $"W11 REL-13-broker driver={driver} authoritativeSeq=20 staleSeq=19 " +
-                    $"foreignSession=rejected lat=10.8 receipts=4/4 " +
+                    $"foreignSession=rejected lat=10.8 receipts=4/4 ordered=true " +
                     $"elapsedMs={elapsed.ElapsedMilliseconds}");
             }
             finally
@@ -708,8 +731,7 @@ public class BrokerConsumeTests
                 cts.Cancel();
                 if (run is not null)
                 {
-                    try { await run.WaitAsync(TimeSpan.FromSeconds(30)); }
-                    catch (Exception) { }
+                    await run.WaitAsync(TimeSpan.FromSeconds(30));
                 }
             }
         }
