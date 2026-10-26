@@ -13,6 +13,7 @@ using RideHailing.MatchingService.Infrastructure.Persistence;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Topology;
 using StackExchange.Redis;
+using Xunit.Abstractions;
 
 namespace RideHailing.MatchingService.IntegrationTests;
 
@@ -22,13 +23,16 @@ public class BrokerConsumeTests
     private readonly MatchingPostgresDatabase _pg;
     private readonly RedisDatabase _redis;
     private readonly RabbitMqDatabase _rabbit;
+    private readonly ITestOutputHelper _output;
 
     public BrokerConsumeTests(
-        MatchingPostgresDatabase pg, RedisDatabase redis, RabbitMqDatabase rabbit)
+        MatchingPostgresDatabase pg, RedisDatabase redis, RabbitMqDatabase rabbit,
+        ITestOutputHelper output)
     {
         _pg = pg;
         _redis = redis;
         _rabbit = rabbit;
+        _output = output;
     }
 
     private sealed class TestLogger<T> : ILogger<T>
@@ -109,6 +113,14 @@ public class BrokerConsumeTests
         await using var channel = await connection.CreateChannelAsync();
         var info = await channel.QueueDeclarePassiveAsync(queue);
         return info.MessageCount;
+    }
+
+    private async Task PurgeProjectionQueueAsync()
+    {
+        using var connection = await Factory().CreateConnectionAsync();
+        await RideTopology.DeclareAsync(connection);
+        await using var channel = await connection.CreateChannelAsync();
+        await channel.QueuePurgeAsync("matching.driver-projection.q");
     }
 
     private async Task RunConsumerAsync(
@@ -311,15 +323,20 @@ public class BrokerConsumeTests
             AutomaticRecoveryEnabled = false,
         };
         var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
+        var logger = new TestLogger<BrokerConsumeTests>();
         using var cts = new CancellationTokenSource();
         var run = BrokerConsume.RunAsync(
             dead, "matching.ride-requested.q", 8, 3,
             (d, ct) => handler.HandleAsync(d, ct),
-            new TestLogger<BrokerConsumeTests>(), cts.Token);
+            logger, cts.Token);
 
-        // Let several reconnect attempts happen (observational window, not
-        // correctness sync: the assertion is graceful shutdown, below).
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        // Observable retry barrier instead of a fixed observational sleep:
+        // two logged failures prove the loop survived the first reconnect and
+        // attempted again. The correctness assertion is graceful shutdown.
+        await PollUntilAsync(() => Task.FromResult(
+            logger.Messages.Count(message => message.Contains(
+                "Broker consume loop failed", StringComparison.Ordinal)) >= 2),
+            "broker reconnect retry");
         Assert.False(run.IsCompleted);
         cts.Cancel();
         await run.WaitAsync(TimeSpan.FromSeconds(30));
@@ -503,5 +520,167 @@ public class BrokerConsumeTests
         Assert.NotNull(consumed);
         Assert.Equal(producer.Context.SpanId, consumed!.ParentSpanId);
         Assert.Equal(producer.TraceId, consumed.TraceId);
+    }
+
+    [Fact]
+    public async Task W11_Rel12_StaleState_ViaBroker_DoesNotRegressProjection()
+    {
+        await PurgeProjectionQueueAsync();
+        var driver = Guid.NewGuid();
+        var updater = new RedisProjectionUpdater(_redis.Multiplexer());
+        await updater.EnsureFunctionAsync();
+        var handler = new DriverProjectionHandler(
+            updater, new TestLogger<DriverProjectionHandler>());
+        MessageEnvelope<JsonElement> Env(string type, object payload) =>
+            MessageEnvelope<JsonElement>.Create(
+                type, Guid.NewGuid().ToString("N"), JsonSerializer.SerializeToElement(payload));
+
+        var available9 = Env("DriverAvailableV1", new
+        {
+            driverId = driver, status = "AVAILABLE", version = 9,
+        });
+        var location = Env("DriverLocationAcceptedV1", new
+        {
+            driverId = driver, longitude = 106.6, latitude = 10.8,
+            sessionId = "w11-rel12", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
+        });
+        var reserved10 = Env("DriverReservedV1", new
+        {
+            driverId = driver, status = "RESERVED", version = 10,
+        });
+        var staleAvailable9 = Env("DriverAvailableV1", new
+        {
+            driverId = driver, status = "AVAILABLE", version = 9,
+        });
+        var envelopes = new[] { available9, location, reserved10, staleAvailable9 };
+        var elapsed = Stopwatch.StartNew();
+        try
+        {
+            await PublishAsync("ride.events", "driver.available.v1",
+                JsonSerializer.SerializeToUtf8Bytes(available9, Json));
+            await PublishAsync("ride.events", "driver.location-accepted.v1",
+                JsonSerializer.SerializeToUtf8Bytes(location, Json));
+            await PublishAsync("ride.events", "driver.reserved.v1",
+                JsonSerializer.SerializeToUtf8Bytes(reserved10, Json));
+            await PublishAsync("ride.events", "driver.available.v1",
+                JsonSerializer.SerializeToUtf8Bytes(staleAvailable9, Json));
+
+            using var cts = new CancellationTokenSource();
+            var run = BrokerConsume.RunAsync(
+                Factory(), "matching.driver-projection.q", 8, 3,
+                handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
+            await PollUntilAsync(async () =>
+                await QueueDepthAsync("matching.driver-projection.q") == 0,
+                "REL-12 projection queue drain");
+            cts.Cancel();
+            await run.WaitAsync(TimeSpan.FromSeconds(30));
+
+            var db = _redis.Multiplexer().GetDatabase();
+            Assert.Equal("10", (string?)await db.HashGetAsync(
+                $"driver:projection:{driver:N}", "driverAggregateVersion"));
+            Assert.Equal("RESERVED", (string?)await db.HashGetAsync(
+                $"driver:projection:{driver:N}", "derivedStatus"));
+            Assert.Null(await db.GeoPositionAsync(
+                RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver)));
+            _output.WriteLine(
+                $"W11 REL-12-broker driver={driver} staleVersion=9 finalVersion=10 " +
+                $"finalStatus=RESERVED geo=absent elapsedMs={elapsed.ElapsedMilliseconds}");
+        }
+        finally
+        {
+            var db = _redis.Multiplexer().GetDatabase();
+            foreach (var envelope in envelopes)
+            {
+                await db.KeyDeleteAsync(ProjectionReceipt.ForEnvelope(envelope).Key);
+            }
+
+            await db.KeyDeleteAsync($"driver:projection:{driver:N}");
+            await db.SortedSetRemoveAsync(
+                RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+        }
+    }
+
+    [Fact]
+    public async Task W11_Rel13_StaleLocation_ViaBroker_DoesNotRegressProjection()
+    {
+        await PurgeProjectionQueueAsync();
+        var driver = Guid.NewGuid();
+        var t0 = new DateTimeOffset(2026, 10, 26, 12, 0, 0, TimeSpan.Zero);
+        var updater = new RedisProjectionUpdater(_redis.Multiplexer());
+        await updater.EnsureFunctionAsync();
+        var handler = new DriverProjectionHandler(
+            updater, new TestLogger<DriverProjectionHandler>());
+        MessageEnvelope<JsonElement> Env(string type, object payload) =>
+            MessageEnvelope<JsonElement>.Create(
+                type, Guid.NewGuid().ToString("N"), JsonSerializer.SerializeToElement(payload));
+
+        var state = Env("DriverAvailableV1", new
+        {
+            driverId = driver, status = "AVAILABLE", version = 1,
+        });
+        var seq20 = Env("DriverLocationAcceptedV1", new
+        {
+            driverId = driver, longitude = 106.6, latitude = 10.8,
+            sessionId = "s", sequenceNo = 20, capturedAt = t0,
+        });
+        var staleSeq19 = Env("DriverLocationAcceptedV1", new
+        {
+            driverId = driver, longitude = 106.7, latitude = 10.9,
+            sessionId = "s", sequenceNo = 19, capturedAt = t0.AddSeconds(1),
+        });
+        var foreignSession = Env("DriverLocationAcceptedV1", new
+        {
+            driverId = driver, longitude = 106.8, latitude = 11.0,
+            sessionId = "foreign", sequenceNo = 1, capturedAt = t0.AddSeconds(2),
+        });
+        var envelopes = new[] { state, seq20, staleSeq19, foreignSession };
+        var elapsed = Stopwatch.StartNew();
+        try
+        {
+            await PublishAsync("ride.events", "driver.available.v1",
+                JsonSerializer.SerializeToUtf8Bytes(state, Json));
+            await PublishAsync("ride.events", "driver.location-accepted.v1",
+                JsonSerializer.SerializeToUtf8Bytes(seq20, Json));
+            await PublishAsync("ride.events", "driver.location-accepted.v1",
+                JsonSerializer.SerializeToUtf8Bytes(staleSeq19, Json));
+            await PublishAsync("ride.events", "driver.location-accepted.v1",
+                JsonSerializer.SerializeToUtf8Bytes(foreignSession, Json));
+
+            using var cts = new CancellationTokenSource();
+            var run = BrokerConsume.RunAsync(
+                Factory(), "matching.driver-projection.q", 8, 3,
+                handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
+            await PollUntilAsync(async () =>
+                await QueueDepthAsync("matching.driver-projection.q") == 0,
+                "REL-13 projection queue drain");
+            cts.Cancel();
+            await run.WaitAsync(TimeSpan.FromSeconds(30));
+
+            var db = _redis.Multiplexer().GetDatabase();
+            var key = $"driver:projection:{driver:N}";
+            Assert.Equal("20", (string?)await db.HashGetAsync(key, "sequenceNo"));
+            Assert.Equal("s", (string?)await db.HashGetAsync(key, "locationSessionId"));
+            Assert.Equal("10.8", (string?)await db.HashGetAsync(key, "latitude"));
+            Assert.Equal(t0.UtcDateTime.ToString("O"), (string?)await db.HashGetAsync(key, "capturedAt"));
+            var pos = await db.GeoPositionAsync(
+                RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+            Assert.NotNull(pos);
+            Assert.Equal(10.8, pos!.Value.Latitude, 4);
+            _output.WriteLine(
+                $"W11 REL-13-broker driver={driver} authoritativeSeq=20 staleSeq=19 " +
+                $"foreignSession=rejected lat=10.8 elapsedMs={elapsed.ElapsedMilliseconds}");
+        }
+        finally
+        {
+            var db = _redis.Multiplexer().GetDatabase();
+            foreach (var envelope in envelopes)
+            {
+                await db.KeyDeleteAsync(ProjectionReceipt.ForEnvelope(envelope).Key);
+            }
+
+            await db.KeyDeleteAsync($"driver:projection:{driver:N}");
+            await db.SortedSetRemoveAsync(
+                RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+        }
     }
 }
