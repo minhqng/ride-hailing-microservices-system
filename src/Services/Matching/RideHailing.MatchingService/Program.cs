@@ -165,6 +165,17 @@ app.MapGet("/info", (IHostEnvironment env) =>
 
 MatchingEndpoints.Map(app);
 
+if (app.Environment.IsEnvironment("Testing"))
+{
+    var controlToken = Environment.GetEnvironmentVariable("RIDE_FAULT_CONTROL_TOKEN");
+    if (!string.IsNullOrWhiteSpace(controlToken))
+    {
+        MatchingTestEndpoints.Map(app, controlToken);
+        app.Logger.LogWarning(
+            "B-W11 Matching test-control endpoints enabled for the explicit Testing environment.");
+    }
+}
+
 // Best-effort baseline ensure (idempotent SQL). Service still boots if PG is down.
 try
 {
