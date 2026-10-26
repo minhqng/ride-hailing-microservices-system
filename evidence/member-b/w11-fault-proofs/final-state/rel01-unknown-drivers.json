@@ -1,0 +1,2 @@
+[{"driver_id":"3d40a9e7-e744-4dbf-9b56-10036395b051","status":"RESERVED","version":3,"reserved_trip_id":"8c4dbedc-0b3a-4b2a-8e1c-efc3b5464e36","reservation_id":"e182771d-b2d7-4440-862a-d13999807dd6","reserved_round":1,"updated_at":"2026-10-26T16:35:55.273645+00:00"},
+ {"driver_id":"b69f4f7c-ec84-499a-a744-4579e7547333","status":"AVAILABLE","version":2,"reserved_trip_id":null,"reservation_id":null,"reserved_round":null,"updated_at":"2026-10-26T16:35:51.996843+00:00"}]

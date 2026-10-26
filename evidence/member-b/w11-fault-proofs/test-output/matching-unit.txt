@@ -1,0 +1,11 @@
+  Determining projects to restore...
+  Restored D:\rh-w11b\tests\Unit\RideHailing.MatchingService.UnitTests\RideHailing.MatchingService.UnitTests.csproj (in 331 ms).
+  3 of 4 projects are up-to-date for restore.
+  RideHailing.Messaging -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Messaging\bin\Debug\net10.0\RideHailing.Messaging.dll
+  RideHailing.Observability -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Observability\bin\Debug\net10.0\RideHailing.Observability.dll
+  RideHailing.MatchingService -> D:\rh-w11b\src\Services\Matching\RideHailing.MatchingService\bin\Debug\net10.0\RideHailing.MatchingService.dll
+  RideHailing.MatchingService.UnitTests -> D:\rh-w11b\tests\Unit\RideHailing.MatchingService.UnitTests\bin\Debug\net10.0\RideHailing.MatchingService.UnitTests.dll
+Test run for D:\rh-w11b\tests\Unit\RideHailing.MatchingService.UnitTests\bin\Debug\net10.0\RideHailing.MatchingService.UnitTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 133 ms - RideHailing.MatchingService.UnitTests.dll (net10.0)
