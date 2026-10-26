@@ -13,12 +13,25 @@ using RideHailing.Messaging.Topology;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
+using Xunit.Abstractions;
 
 namespace RideHailing.DriverService.IntegrationTests;
 
 [Collection(DriverBrokerCollection.Name)]
-public sealed class DriverCompensationTests(DriverPostgresDatabase db, RabbitMqDatabase rabbit)
+public sealed class DriverCompensationTests
 {
+    private readonly DriverPostgresDatabase db;
+    private readonly RabbitMqDatabase rabbit;
+    private readonly ITestOutputHelper _output;
+
+    public DriverCompensationTests(
+        DriverPostgresDatabase db, RabbitMqDatabase rabbit, ITestOutputHelper output)
+    {
+        this.db = db;
+        this.rabbit = rabbit;
+        _output = output;
+    }
+
     private ConnectionFactory Factory => new() { Uri = new(rabbit.ConnectionString), AutomaticRecoveryEnabled = false };
 
     private static Trip CancelledTrip(Guid tripId, Guid driver, Guid reservation, int round = 1)
@@ -61,6 +74,30 @@ public sealed class DriverCompensationTests(DriverPostgresDatabase db, RabbitMqD
 
     private Task<long> Events(Guid driver) => ScalarAsync(
         "SELECT count(*) FROM outbox_messages WHERE aggregate_id = @id", driver.ToString("N"));
+
+    private async Task<long> EventsByType(Guid driver, string messageType)
+    {
+        await using var conn = await db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            SELECT count(*) FROM outbox_messages
+            WHERE aggregate_id = @id AND message_type = @type;
+            """, conn);
+        cmd.Parameters.AddWithValue("id", driver.ToString("N"));
+        cmd.Parameters.AddWithValue("type", messageType);
+        return (long)(await cmd.ExecuteScalarAsync())!;
+    }
+
+    private async Task<long> ReleaseEventsForReservation(Guid reservation)
+    {
+        await using var conn = await db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            SELECT count(*) FROM outbox_messages
+            WHERE message_type = 'DriverReservationReleasedV1'
+              AND payload_json->>'reservationId' = @reservation;
+            """, conn);
+        cmd.Parameters.AddWithValue("reservation", reservation.ToString("D"));
+        return (long)(await cmd.ExecuteScalarAsync())!;
+    }
 
     private async Task AssertReceipt(MessageEnvelope<JsonElement> command, DriverLifecycleResult expected)
     {
@@ -213,6 +250,68 @@ public sealed class DriverCompensationTests(DriverPostgresDatabase db, RabbitMqD
         Assert.Equal(newer, current.ReservationId); Assert.Equal(nextTrip, current.ReservedTripId);
         Assert.Equal(2, current.ReservationRound); Assert.Equal(5, current.Version);
         Assert.Equal(3, await Events(driver));
+    }
+
+    [Fact]
+    public async Task Con04_LateReleaseR1_ViaBroker_CannotFreeR2_AndReplaysReceipt()
+    {
+        await PrepareBroker();
+        var (driver, trip1, r1) = await ReserveAsync(round: 1);
+        var repo = db.CreateRepository();
+        var releaseR1 = Release(driver, trip1, r1, round: 1);
+
+        await using var publisher = new ConfirmedPublisher(Factory);
+        await using var consumer = await ManualAckConsumer.StartAsync(Factory, publisher,
+            DriverCommand.Queue, DriverCommand.SupportedTypes,
+            new DriverCommandHandler(repo).HandleAsync, prefetch: 1);
+
+        await publisher.PublishAsync(RideTopology.CommandsExchange,
+            "driver.release-reservation.v1", releaseR1);
+        await Until(() => Task.FromResult(consumer.AcknowledgedCount == 1));
+        var applied = await repo.HandleCommandAsync(releaseR1);
+        Assert.Equal("Applied", applied.Disposition);
+        Assert.Equal(4, applied.Version);
+
+        var trip2 = Guid.NewGuid();
+        var r2 = Guid.NewGuid();
+        Assert.Equal(ReserveOutcome.Won, (await repo.TryReserveAsync(
+            driver, trip2, r2, 4, matchingRound: 2)).Outcome);
+
+        var before = (await repo.LoadAsync(driver))!;
+        var reservedBefore = await EventsByType(driver, DriverEventTypes.Reserved);
+        var releasedBefore = await EventsByType(driver, DriverEventTypes.ReservationReleased);
+
+        // New envelope identity => execute the late R1 command. The exact
+        // committed envelope then replays its original receipt.
+        var lateR1 = releaseR1 with { MessageId = Guid.NewGuid().ToString("N") };
+        await publisher.PublishAsync(RideTopology.CommandsExchange,
+            "driver.release-reservation.v1", lateR1);
+        await publisher.PublishAsync(RideTopology.CommandsExchange,
+            "driver.release-reservation.v1", releaseR1);
+        await Until(() => Task.FromResult(consumer.AcknowledgedCount == 3));
+
+        var late = await repo.HandleCommandAsync(lateR1);
+        Assert.Equal("Rejected", late.Disposition);
+        Assert.Equal(DriverErrors.StaleReservation, late.Reason);
+        Assert.Null(late.EventMessageId);
+        await AssertReceipt(lateR1, late);
+        Assert.Equal(applied, await repo.HandleCommandAsync(releaseR1));
+
+        var after = (await repo.LoadAsync(driver))!;
+        Assert.Equal(before.Version, after.Version);
+        Assert.Equal(DriverStatus.Reserved, after.Status);
+        Assert.Equal(trip2, after.ReservedTripId);
+        Assert.Equal(r2, after.ReservationId);
+        Assert.Equal(2, after.ReservationRound);
+        Assert.Equal(reservedBefore, await EventsByType(driver, DriverEventTypes.Reserved));
+        Assert.Equal(releasedBefore, await EventsByType(driver, DriverEventTypes.ReservationReleased));
+        Assert.Equal(1, await ReleaseEventsForReservation(r1));
+        Assert.Equal(0, await ReleaseEventsForReservation(r2));
+
+        _output.WriteLine(
+            $"W11 CON-04-broker driver={driver} r1={r1} r2={r2} trip2={trip2} " +
+            $"lateDisposition=Rejected reason={late.Reason} replayDisposition=Applied " +
+            $"finalVersion={after.Version} releaseIntentsR2=0");
     }
 
     [Theory]
