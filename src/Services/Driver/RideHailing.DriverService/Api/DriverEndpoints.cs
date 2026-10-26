@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
+using RideHailing.DriverService.Infrastructure.Faults;
 using RideHailing.DriverService.Infrastructure.Persistence;
 
 namespace RideHailing.DriverService.Api;
@@ -202,6 +203,7 @@ public static class DriverEndpoints
             Guid id,
             ReserveDriverRequest req,
             DriverRepository repo,
+            DriverFaultPoint faults,
             CancellationToken ct) =>
         {
             if (req.TripId == Guid.Empty || req.ReservationId == Guid.Empty || req.ExpectedVersion < 1
@@ -229,6 +231,17 @@ public static class DriverEndpoints
             {
                 var result = await repo.TryReserveAsync(
                     id, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
+
+                // B-W11-01: after the authoritative row + Outbox intent have
+                // committed, a Testing-only barrier can suppress the response
+                // so REL-01/REL-02 exercise genuine transport uncertainty.
+                // Production resolves a disabled no-op.
+                if (result.Outcome == ReserveOutcome.Won)
+                {
+                    await faults.HitAsync(
+                        DriverFaultPointNames.AfterReserveCommitBeforeResponse, ct);
+                }
+
                 return DriverReserveResults.ToHttpResult(result);
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException
