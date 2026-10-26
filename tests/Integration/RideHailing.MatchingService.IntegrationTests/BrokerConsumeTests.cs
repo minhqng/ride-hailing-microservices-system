@@ -2,6 +2,7 @@
 // REAL PostgreSQL (+ REAL Redis for projection paths). The consumer loop
 // runs in-process against the test broker; oracles are durable state
 // (round rows, Redis projection, queue depth), never message counts alone.
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -37,17 +38,12 @@ public class BrokerConsumeTests
 
     private sealed class TestLogger<T> : ILogger<T>
     {
-        public readonly List<string> Messages = new();
+        public readonly ConcurrentQueue<string> Messages = new();
         IDisposable? ILogger.BeginScope<TState>(TState state) => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-            Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            lock (Messages)
-            {
-                Messages.Add($"{logLevel}: {formatter(state, exception)}");
-            }
-        }
+            Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Enqueue($"{logLevel}: {formatter(state, exception)}");
     }
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -121,6 +117,28 @@ public class BrokerConsumeTests
         await RideTopology.DeclareAsync(connection);
         await using var channel = await connection.CreateChannelAsync();
         await channel.QueuePurgeAsync("matching.driver-projection.q");
+    }
+
+    private async Task WaitForProjectionReceiptsAsync(
+        IReadOnlyCollection<MessageEnvelope<JsonElement>> envelopes)
+    {
+        // Receipts are written by the Lua function after the projection
+        // effect. Their presence for every published envelope is the
+        // completion barrier: every message reached the real handler, even
+        // when the handler's outcome was a stale/no-op.
+        await PollUntilAsync(async () =>
+        {
+            var db = _redis.Multiplexer().GetDatabase();
+            foreach (var envelope in envelopes)
+            {
+                if (!await db.KeyExistsAsync(ProjectionReceipt.ForEnvelope(envelope).Key))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }, "all projection receipts");
     }
 
     private async Task RunConsumerAsync(
@@ -566,25 +584,38 @@ public class BrokerConsumeTests
                 JsonSerializer.SerializeToUtf8Bytes(staleAvailable9, Json));
 
             using var cts = new CancellationTokenSource();
-            var run = BrokerConsume.RunAsync(
-                Factory(), "matching.driver-projection.q", 8, 3,
-                handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
-            await PollUntilAsync(async () =>
-                await QueueDepthAsync("matching.driver-projection.q") == 0,
-                "REL-12 projection queue drain");
-            cts.Cancel();
-            await run.WaitAsync(TimeSpan.FromSeconds(30));
+            Task? run = null;
+            try
+            {
+                run = BrokerConsume.RunAsync(
+                    Factory(), "matching.driver-projection.q", 8, 3,
+                    handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
 
-            var db = _redis.Multiplexer().GetDatabase();
-            Assert.Equal("10", (string?)await db.HashGetAsync(
-                $"driver:projection:{driver:N}", "driverAggregateVersion"));
-            Assert.Equal("RESERVED", (string?)await db.HashGetAsync(
-                $"driver:projection:{driver:N}", "derivedStatus"));
-            Assert.Null(await db.GeoPositionAsync(
-                RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver)));
-            _output.WriteLine(
-                $"W11 REL-12-broker driver={driver} staleVersion=9 finalVersion=10 " +
-                $"finalStatus=RESERVED geo=absent elapsedMs={elapsed.ElapsedMilliseconds}");
+                // Every published envelope must have reached the real handler;
+                // the Lua receipt is written after its projection effect.
+                await WaitForProjectionReceiptsAsync(envelopes);
+
+                var db = _redis.Multiplexer().GetDatabase();
+                Assert.Equal("10", (string?)await db.HashGetAsync(
+                    $"driver:projection:{driver:N}", "driverAggregateVersion"));
+                Assert.Equal("RESERVED", (string?)await db.HashGetAsync(
+                    $"driver:projection:{driver:N}", "derivedStatus"));
+                Assert.Null(await db.GeoPositionAsync(
+                    RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver)));
+                _output.WriteLine(
+                    $"W11 REL-12-broker driver={driver} staleVersion=9 finalVersion=10 " +
+                    $"finalStatus=RESERVED geo=absent receipts=4/4 " +
+                    $"elapsedMs={elapsed.ElapsedMilliseconds}");
+            }
+            finally
+            {
+                cts.Cancel();
+                if (run is not null)
+                {
+                    try { await run.WaitAsync(TimeSpan.FromSeconds(30)); }
+                    catch (Exception) { }
+                }
+            }
         }
         finally
         {
@@ -597,6 +628,7 @@ public class BrokerConsumeTests
             await db.KeyDeleteAsync($"driver:projection:{driver:N}");
             await db.SortedSetRemoveAsync(
                 RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+            try { await PurgeProjectionQueueAsync(); } catch { }
         }
     }
 
@@ -647,28 +679,39 @@ public class BrokerConsumeTests
                 JsonSerializer.SerializeToUtf8Bytes(foreignSession, Json));
 
             using var cts = new CancellationTokenSource();
-            var run = BrokerConsume.RunAsync(
-                Factory(), "matching.driver-projection.q", 8, 3,
-                handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
-            await PollUntilAsync(async () =>
-                await QueueDepthAsync("matching.driver-projection.q") == 0,
-                "REL-13 projection queue drain");
-            cts.Cancel();
-            await run.WaitAsync(TimeSpan.FromSeconds(30));
+            Task? run = null;
+            try
+            {
+                run = BrokerConsume.RunAsync(
+                    Factory(), "matching.driver-projection.q", 8, 3,
+                    handler.HandleAsync, new TestLogger<BrokerConsumeTests>(), cts.Token);
 
-            var db = _redis.Multiplexer().GetDatabase();
-            var key = $"driver:projection:{driver:N}";
-            Assert.Equal("20", (string?)await db.HashGetAsync(key, "sequenceNo"));
-            Assert.Equal("s", (string?)await db.HashGetAsync(key, "locationSessionId"));
-            Assert.Equal("10.8", (string?)await db.HashGetAsync(key, "latitude"));
-            Assert.Equal(t0.UtcDateTime.ToString("O"), (string?)await db.HashGetAsync(key, "capturedAt"));
-            var pos = await db.GeoPositionAsync(
-                RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
-            Assert.NotNull(pos);
-            Assert.Equal(10.8, pos!.Value.Latitude, 4);
-            _output.WriteLine(
-                $"W11 REL-13-broker driver={driver} authoritativeSeq=20 staleSeq=19 " +
-                $"foreignSession=rejected lat=10.8 elapsedMs={elapsed.ElapsedMilliseconds}");
+                await WaitForProjectionReceiptsAsync(envelopes);
+
+                var db = _redis.Multiplexer().GetDatabase();
+                var key = $"driver:projection:{driver:N}";
+                Assert.Equal("20", (string?)await db.HashGetAsync(key, "sequenceNo"));
+                Assert.Equal("s", (string?)await db.HashGetAsync(key, "locationSessionId"));
+                Assert.Equal("10.8", (string?)await db.HashGetAsync(key, "latitude"));
+                Assert.Equal(t0.UtcDateTime.ToString("O"), (string?)await db.HashGetAsync(key, "capturedAt"));
+                var pos = await db.GeoPositionAsync(
+                    RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+                Assert.NotNull(pos);
+                Assert.Equal(10.8, pos!.Value.Latitude, 4);
+                _output.WriteLine(
+                    $"W11 REL-13-broker driver={driver} authoritativeSeq=20 staleSeq=19 " +
+                    $"foreignSession=rejected lat=10.8 receipts=4/4 " +
+                    $"elapsedMs={elapsed.ElapsedMilliseconds}");
+            }
+            finally
+            {
+                cts.Cancel();
+                if (run is not null)
+                {
+                    try { await run.WaitAsync(TimeSpan.FromSeconds(30)); }
+                    catch (Exception) { }
+                }
+            }
         }
         finally
         {
@@ -681,6 +724,7 @@ public class BrokerConsumeTests
             await db.KeyDeleteAsync($"driver:projection:{driver:N}");
             await db.SortedSetRemoveAsync(
                 RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver));
+            try { await PurgeProjectionQueueAsync(); } catch { }
         }
     }
 }

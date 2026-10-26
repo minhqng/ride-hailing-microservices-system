@@ -99,6 +99,20 @@ public sealed class DriverCompensationTests
         return (long)(await cmd.ExecuteScalarAsync())!;
     }
 
+    private async Task<(string Disposition, string? Reason)> ReadReceiptAsync(
+        string messageId)
+    {
+        await using var conn = await db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            SELECT disposition, reason FROM driver_command_receipts
+            WHERE message_id = @id;
+            """, conn);
+        cmd.Parameters.AddWithValue("id", messageId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        Assert.True(await reader.ReadAsync());
+        return (reader.GetString(0), reader.IsDBNull(1) ? null : reader.GetString(1));
+    }
+
     private async Task AssertReceipt(MessageEnvelope<JsonElement> command, DriverLifecycleResult expected)
     {
         await using var conn = await db.DataSource.OpenConnectionAsync();
@@ -289,6 +303,18 @@ public sealed class DriverCompensationTests
         await publisher.PublishAsync(RideTopology.CommandsExchange,
             "driver.release-reservation.v1", releaseR1);
         await Until(() => Task.FromResult(consumer.AcknowledgedCount == 3));
+
+        // The broker consumer, not a direct call, must have written both
+        // receipts and left R2 untouched before any replay below.
+        var brokerLateReceipt = await ReadReceiptAsync(lateR1.MessageId);
+        Assert.Equal("Rejected", brokerLateReceipt.Disposition);
+        Assert.Equal(DriverErrors.StaleReservation, brokerLateReceipt.Reason);
+        var brokerOriginalReceipt = await ReadReceiptAsync(releaseR1.MessageId);
+        Assert.Equal("Applied", brokerOriginalReceipt.Disposition);
+        var brokerFinal = (await repo.LoadAsync(driver))!;
+        Assert.Equal(before.Version, brokerFinal.Version);
+        Assert.Equal(r2, brokerFinal.ReservationId);
+        Assert.Equal(trip2, brokerFinal.ReservedTripId);
 
         var late = await repo.HandleCommandAsync(lateR1);
         Assert.Equal("Rejected", late.Disposition);
