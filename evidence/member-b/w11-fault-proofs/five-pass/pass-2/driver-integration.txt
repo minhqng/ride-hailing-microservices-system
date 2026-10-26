@@ -1,0 +1,72 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  RideHailing.Messaging -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Messaging\bin\Release\net10.0\RideHailing.Messaging.dll
+  RideHailing.Observability -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Observability\bin\Release\net10.0\RideHailing.Observability.dll
+  RideHailing.TripService -> D:\rh-w11b\src\Services\Trip\RideHailing.TripService\bin\Release\net10.0\RideHailing.TripService.dll
+  RideHailing.DriverService -> D:\rh-w11b\src\Services\Driver\RideHailing.DriverService\bin\Release\net10.0\RideHailing.DriverService.dll
+  RideHailing.DriverService.IntegrationTests -> D:\rh-w11b\tests\Integration\RideHailing.DriverService.IntegrationTests\bin\Release\net10.0\RideHailing.DriverService.IntegrationTests.dll
+Test run for D:\rh-w11b\tests\Integration\RideHailing.DriverService.IntegrationTests\bin\Release\net10.0\RideHailing.DriverService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+D:\rh-w11b\tests\Integration\RideHailing.DriverService.IntegrationTests\bin\Release\net10.0\RideHailing.DriverService.IntegrationTests.dll
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.14)
+[xUnit.net 00:00:00.11]   Discovering: RideHailing.DriverService.IntegrationTests
+[xUnit.net 00:00:00.18]   Discovered:  RideHailing.DriverService.IntegrationTests
+[xUnit.net 00:00:00.22]   Starting:    RideHailing.DriverService.IntegrationTests
+[testcontainers.org 00:00:00.16] Connected to Docker:
+  Host: npipe://./pipe/docker_engine
+  Server Version: 29.8.2
+  Kernel Version: 6.18.54.1-microsoft-standard-WSL2
+  API Version: 1.56
+  Operating System: Docker Desktop
+  Total Memory: 7.36 GB
+  Labels:
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+[testcontainers.org 00:00:00.56] Docker container 0bd11ccef6b3 created
+[testcontainers.org 00:00:00.57] Docker container 7627d2e6e9f3 created
+[testcontainers.org 00:00:00.57] Docker container 00344eebccb3 created
+[testcontainers.org 00:00:00.65] Start Docker container 00344eebccb3
+[testcontainers.org 00:00:00.65] Start Docker container 0bd11ccef6b3
+[testcontainers.org 00:00:00.66] Start Docker container 7627d2e6e9f3
+[testcontainers.org 00:00:01.00] Wait for Docker container 0bd11ccef6b3 to complete readiness checks
+[testcontainers.org 00:00:01.06] Wait for Docker container 00344eebccb3 to complete readiness checks
+[testcontainers.org 00:00:01.09] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 00344eebccb3
+[testcontainers.org 00:00:01.12] Wait for Docker container 7627d2e6e9f3 to complete readiness checks
+[testcontainers.org 00:00:01.13] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7627d2e6e9f3
+[testcontainers.org 00:00:02.25] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 00344eebccb3
+[testcontainers.org 00:00:02.25] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7627d2e6e9f3
+[testcontainers.org 00:00:03.37] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7627d2e6e9f3
+[testcontainers.org 00:00:03.37] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 00344eebccb3
+[testcontainers.org 00:00:04.51] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 00344eebccb3
+[testcontainers.org 00:00:04.51] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7627d2e6e9f3
+[testcontainers.org 00:00:04.59] Docker container 7627d2e6e9f3 ready
+[testcontainers.org 00:00:04.59] Docker container 00344eebccb3 ready
+[testcontainers.org 00:00:05.09] Delete Docker container 7627d2e6e9f3
+  Passed RideHailing.DriverService.IntegrationTests.DriverRaceFencingTests.Stale_Release_After_ReReserve_Cannot_Free_Newer_Owner [180 ms]
+  Standard Output Messages:
+ W11 CON-04-direct driver=8b5e692a-a944-4364-9c8d-f06ca5213128 r1=da0a699c-b3be-4f4a-97ca-02e804d61fc7 r2=4b7228f8-3c92-48c3-98cc-67cb4294f211 trip2=52c662b3-72dd-4f6d-b646-b13ceb522a16 lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0
+
+
+  Passed RideHailing.DriverService.IntegrationTests.DriverCon02DeterministicTests.OfflineWins_ThenReserveLoses_WithOnlyOfflineIntent [21 ms]
+  Standard Output Messages:
+ W11 CON-02 schedule=offline-wins barrier=reached driver=46bb765e-0aef-4856-b18d-9142d885d099 lostReservation=b824b09a-24b5-4001-a528-712ebf92f49e finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=15
+
+
+  Passed RideHailing.DriverService.IntegrationTests.DriverCon02DeterministicTests.ReserveWins_ThenOfflineLoses_WithOnlyReservedIntent [13 ms]
+  Standard Output Messages:
+ W11 CON-02 schedule=reserve-wins barrier=reached driver=865e035d-3e57-4263-a49c-9989f379c02d reservation=0390330c-72c9-4c02-8070-1993ae361603 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=9
+
+
+[testcontainers.org 00:00:08.24] Docker container 0bd11ccef6b3 ready
+[testcontainers.org 00:00:10.05] Delete Docker container 00344eebccb3
+[testcontainers.org 00:00:10.05] Delete Docker container 0bd11ccef6b3
+[xUnit.net 00:00:11.01]   Finished:    RideHailing.DriverService.IntegrationTests
+  Passed RideHailing.DriverService.IntegrationTests.DriverCompensationTests.Con04_LateReleaseR1_ViaBroker_CannotFreeR2_AndReplaysReceipt [1 s]
+  Standard Output Messages:
+ W11 CON-04-broker driver=3d73cbce-fac2-41da-aba2-aba19e4afb7c r1=eeafa07d-1785-430c-9e3d-958763c83d40 r2=7ac9e086-89b5-4681-b945-016ac70eb9ed trip2=9c8d4f3d-4025-4cad-a0e3-1884f0de0716 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0
+
+
+
+Test Run Successful.
+Total tests: 4
+     Passed: 4
+ Total time: 11.7034 Seconds
