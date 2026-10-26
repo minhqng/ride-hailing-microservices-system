@@ -341,7 +341,10 @@ public sealed class RedisOutageRecoveryTests
                 var proxy = ProxyAsync(client, ct);
                 lock (_clientsGate)
                 {
-                    _proxies.Add(proxy);
+                    if (!proxy.IsCompleted)
+                    {
+                        _proxies.Add(proxy);
+                    }
                 }
 
                 _ = proxy.ContinueWith(done =>
@@ -407,7 +410,6 @@ public sealed class RedisOutageRecoveryTests
 
             _stopping?.Cancel();
             _listener.Stop();
-            Task[] proxies;
             lock (_clientsGate)
             {
                 foreach (var client in _clients)
@@ -416,19 +418,32 @@ public sealed class RedisOutageRecoveryTests
                 }
 
                 _clients.Clear();
-                proxies = _proxies.ToArray();
             }
 
             if (_acceptLoop is not null)
             {
                 try
                 {
-                    await _acceptLoop;
+                    await _acceptLoop.WaitAsync(TimeSpan.FromSeconds(5));
                 }
                 catch (Exception)
                 {
                     // Expected during teardown.
                 }
+            }
+
+            Task[] proxies;
+            lock (_clientsGate)
+            {
+                // An accept may have completed just before Stop; close and
+                // snapshot only after the accept loop is fully stopped.
+                foreach (var client in _clients)
+                {
+                    client.Dispose();
+                }
+
+                _clients.Clear();
+                proxies = _proxies.ToArray();
             }
 
             try
