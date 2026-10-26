@@ -1,0 +1,864 @@
+{
+  "bundle": "W09/W10 attribution correction",
+  "date": "2026-10-26",
+  "kind": "metadata-only history rewrite",
+  "authorizedBy": "repository owner (minhqng)",
+  "base": {
+    "sha": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
+    "note": "rewrite baseline; unchanged and not rewritten"
+  },
+  "rewriteRange": {
+    "oldTip": "fbe3eb674bb716fb566fb6fbb09c31d028f8488c",
+    "newTip": "c166a3a3961f349337d7062adbbce5d49ea256b6",
+    "commits": 31
+  },
+  "archive": {
+    "ref": "refs/tags/archive/main-pre-attribution-correction-2026-10-26",
+    "commit": "fbe3eb674bb716fb566fb6fbb09c31d028f8488c",
+    "note": "immutable anchor retaining every pre-rewrite object; fetch it before resolving any old SHA"
+  },
+  "invariants": {
+    "treesIdentical": true,
+    "patchesIdentical": true,
+    "messagesIdentical": true,
+    "committersPreserved": true,
+    "datesPreserved": true,
+    "commitsBeforeBaselineRewritten": 0,
+    "mergeCommitsIntroduced": 0
+  },
+  "groups": {
+    "A": {
+      "label": "verified Member B authorship correction",
+      "basis": "independently traced to Member B source PRs #37/#39; integrated objects were patch-identical replays",
+      "identity": {
+        "name": "Fried-toofuu",
+        "email": "nghoangkhanh67@gmail.com"
+      },
+      "commits": [
+        {
+          "oldSha": "53765b8ff160e2d311a6a415c2144700f28450fb",
+          "newSha": "ab640773b476b04279d1eebdb8d05af6c2d491c5",
+          "tree": "baf62af6ef419ab77cda783dd392e21597b2633f",
+          "subject": "feat(driver): persist authoritative events with transactional outbox",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792895301 +0700",
+          "committerDate": "1793001039 +0700",
+          "parent": {
+            "original": "1ff93d93a7712c492384c5831a1033324e1b1fc1",
+            "rewritten": "116d27537a3d8c09f4025c2f159b4cc59591d77f"
+          },
+          "source": {
+            "pr": 37,
+            "sourceCommit": "0b1611cfee256f1acb1dc698a59675a18603d4c9",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "cbe6c81895aa15925a03f566c53c979fd087c049",
+          "newSha": "e0996a3bce211736f1fb40328bf8497cb6008945",
+          "tree": "8c5b2619b71f5b16472cfb7bda47a93e33892a21",
+          "subject": "feat(matching): persist terminal failure with transactional outbox",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792900140 +0700",
+          "committerDate": "1793001039 +0700",
+          "parent": {
+            "original": "53765b8ff160e2d311a6a415c2144700f28450fb",
+            "rewritten": "ab640773b476b04279d1eebdb8d05af6c2d491c5"
+          },
+          "source": {
+            "pr": 37,
+            "sourceCommit": "03c04380ec8ddd7409e0dce934c155f853922779",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "59d0dac5e9ae00681a54b517ce14c0e1ffea0762",
+          "newSha": "49cc5431f232518e4769d84ce1a30f9c13ea43d2",
+          "tree": "6f72f5bbe2b2616ce4220aeaaa05b10f0c00d7d7",
+          "subject": "fix(matching): enforce duplicate safety and prove reserve recovery",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792901664 +0700",
+          "committerDate": "1793001039 +0700",
+          "parent": {
+            "original": "cbe6c81895aa15925a03f566c53c979fd087c049",
+            "rewritten": "e0996a3bce211736f1fb40328bf8497cb6008945"
+          },
+          "source": {
+            "pr": 37,
+            "sourceCommit": "d825920d51aaae39ecff31a72540bf45cd800b4a",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "be654f911c5da69c83adb5f75e15620095745ebb",
+          "newSha": "6d974ae3855aeb3f2ff5e83ee742f7bb3d653832",
+          "tree": "4c64fa9a9af3111acd2b7fd4d4d97f06be661af9",
+          "subject": "docs(evidence): close member B W9 verification and handoff",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792901878 +0700",
+          "committerDate": "1793001039 +0700",
+          "parent": {
+            "original": "59d0dac5e9ae00681a54b517ce14c0e1ffea0762",
+            "rewritten": "49cc5431f232518e4769d84ce1a30f9c13ea43d2"
+          },
+          "source": {
+            "pr": 37,
+            "sourceCommit": "66d7d1c1f05a87fe3156b43b94616ae3201006bb",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "b3f464e773564297bf8ce63aef5afa3bd5c58596",
+          "newSha": "1e2cc04f14ab4276c9db531389141f3af35a422f",
+          "tree": "413982c21c515762c7322fb6cd24be6d0f7a7436",
+          "subject": "feat(driver): add replay-safe trip start and completion",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792914672 +0700",
+          "committerDate": "1793001202 +0700",
+          "parent": {
+            "original": "6a74d303410b618264ab2db2e0a08e6e7cac61c9",
+            "rewritten": "a848ef616142cc38de37f8140cb936503599bf02"
+          },
+          "source": {
+            "pr": 39,
+            "sourceCommit": "b1435f79d1fd5b29696de68eeeaedcbd989e7a96",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "3e6a893a339961b683b6e495d7d1820c3b69d1db",
+          "newSha": "ffce050886b5ae4d2f8f33c8ea4ff0d3c8b38ece",
+          "tree": "03d64132fc8cdf354f7a6725c493f17c87107c55",
+          "subject": "docs(evidence): record W10 lifecycle verification and handoff",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792914855 +0700",
+          "committerDate": "1793001202 +0700",
+          "parent": {
+            "original": "b3f464e773564297bf8ce63aef5afa3bd5c58596",
+            "rewritten": "1e2cc04f14ab4276c9db531389141f3af35a422f"
+          },
+          "source": {
+            "pr": 39,
+            "sourceCommit": "2d9a3032978296246b172b53001123c22015d7fd",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "a1229d28107f3560e8c4a1c604825aa7c42200ba",
+          "newSha": "feb41c15f30ec5fbb8c49f2a61c1e1723acc0339",
+          "tree": "dbda366ef09584a010311fdee8dea065b4a90ac5",
+          "subject": "fix(driver): fence exact compensation by matching generation",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792917247 +0700",
+          "committerDate": "1793001202 +0700",
+          "parent": {
+            "original": "3e6a893a339961b683b6e495d7d1820c3b69d1db",
+            "rewritten": "ffce050886b5ae4d2f8f33c8ea4ff0d3c8b38ece"
+          },
+          "source": {
+            "pr": 39,
+            "sourceCommit": "87b639f5c471861129f05811968e92a3090a5ce7",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        },
+        {
+          "oldSha": "34baae06350a47eb36e09a72dadf05a84f266473",
+          "newSha": "846930a6350a78ed545387d474465a3632828d5f",
+          "tree": "c9b2e41aa808d78fe0cb4a0a644f53f9cf9a2905",
+          "subject": "docs(evidence): record W10 exact compensation proofs and owner gates",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Fried-toofuu <nghoangkhanh67@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792917337 +0700",
+          "committerDate": "1793001202 +0700",
+          "parent": {
+            "original": "a1229d28107f3560e8c4a1c604825aa7c42200ba",
+            "rewritten": "feb41c15f30ec5fbb8c49f2a61c1e1723acc0339"
+          },
+          "source": {
+            "pr": 39,
+            "sourceCommit": "8bf0da66342a5f4dc7420e7344650fc2ef7ad1fe",
+            "patchIdEqual": true,
+            "note": "replayed integration object; author field corrected to the verified Member B identity"
+          }
+        }
+      ]
+    },
+    "B": {
+      "label": "owner-directed credit allocation",
+      "basis": "team credit decision by the repository owner; NOT an authorship finding and NOT evidence of original execution",
+      "identity": {
+        "name": "Nerduckk",
+        "email": "leanhviet2005@gmail.com"
+      },
+      "originalIdentity": {
+        "name": "minhqng",
+        "email": "minhnq.181005@gmail.com"
+      },
+      "commits": [
+        {
+          "oldSha": "98ebb7b9445f56c5b2d5515a8bbefc2089f12f03",
+          "newSha": "25bd5b8a784e0fcfc87ef004860f4a0e387bd1a5",
+          "tree": "6e4369c1d314d55821f9e00ae455b1e1ad64b1bc",
+          "subject": "feat(trip): add W9 transactional outbox for trip intents",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792899234 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "5130b0f963c4edf5dd994bd63515d2fd9bf9372a",
+            "rewritten": "5130b0f963c4edf5dd994bd63515d2fd9bf9372a"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "c8973e66eab6a096afff52a9be34abdd8706223a",
+          "newSha": "25f2498f40e170b80ffdf9c0bdfe619676d8345c",
+          "tree": "1e4035d23a882015f5fa87d1b5c007388e53aefc",
+          "subject": "docs(evidence): add W09 trip outbox local verification",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792899453 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "98ebb7b9445f56c5b2d5515a8bbefc2089f12f03",
+            "rewritten": "25bd5b8a784e0fcfc87ef004860f4a0e387bd1a5"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "b10569884d6445f91880148ba5b6ab4cb90bf6b6",
+          "newSha": "b5afaa8c3ac0aa3c0e333a69788384512e359885",
+          "tree": "53c0607be5634ae07405d868e338052a37e0e117",
+          "subject": "chore(hygiene): add repository PR hygiene policy and changed-path guard",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792902383 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "c8973e66eab6a096afff52a9be34abdd8706223a",
+            "rewritten": "25f2498f40e170b80ffdf9c0bdfe619676d8345c"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "6f61ba0aef287bc0e86baa7d326f46e4b72f1b98",
+          "newSha": "0b78de5a491ec6ac675e067c5abdbcc3197612f9",
+          "tree": "92721472b32056d6e645bffe99468c66823bec23",
+          "subject": "fix(trip): verify committed outbox winner before treating identity clash as concurrency",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792902396 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "b10569884d6445f91880148ba5b6ab4cb90bf6b6",
+            "rewritten": "b5afaa8c3ac0aa3c0e333a69788384512e359885"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "413ce2c42d7894efd86a3f7743aa48957c94848a",
+          "newSha": "d9531d0ce90ffefb2910d3f742af5c88a966facc",
+          "tree": "9820c0652a89c64c1cdb3b99758efcdfa3d07962",
+          "subject": "fix(trip): gate outbox relay on its own publish path, not consumer readiness",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792902411 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "6f61ba0aef287bc0e86baa7d326f46e4b72f1b98",
+            "rewritten": "0b78de5a491ec6ac675e067c5abdbcc3197612f9"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "1d96333e3bce701463cea6f58a4b0715a09b7328",
+          "newSha": "c095f2139813ce810dfbb2fd2cae4fb1f90d5a9c",
+          "tree": "6d064ca51362eef389039d1dfb44c894c3e4a658",
+          "subject": "docs(evidence): refresh W09 outbox evidence for hardened code and portable reproduction",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792902601 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "413ce2c42d7894efd86a3f7743aa48957c94848a",
+            "rewritten": "d9531d0ce90ffefb2910d3f742af5c88a966facc"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "7ef10fc1c3ec21e3b4bc9a9ba5a91f6bafeeac03",
+          "newSha": "2a3eb5f8b8f3dd92beb71371aae76b46ef139088",
+          "tree": "eff9afa51d563f9b07cfb05f93e7dc44bc0ecfb2",
+          "subject": "test(trip): prove concurrent same-obligation discovery resolves as transient replay",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792905561 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "1d96333e3bce701463cea6f58a4b0715a09b7328",
+            "rewritten": "c095f2139813ce810dfbb2fd2cae4fb1f90d5a9c"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "4c779a5762294b79d82debda43d012ba209b96ad",
+          "newSha": "d61c788b80847d0d78b6ada74555547849c5f29e",
+          "tree": "019fafea8ef4fb22b72e3bbdb71bf994b4690b07",
+          "subject": "docs(evidence): refresh W09 evidence for concurrent same-obligation discovery proof",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792905933 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "7ef10fc1c3ec21e3b4bc9a9ba5a91f6bafeeac03",
+            "rewritten": "2a3eb5f8b8f3dd92beb71371aae76b46ef139088"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "146501cc736d8dd96f4eed7de85ac13ea64f037b",
+          "newSha": "de0708eb14811177a69f49070ae71620b5277765",
+          "tree": "c430e1786b214c029f13283db0dadb3282a967df",
+          "subject": "chore(hygiene): make execution output ephemeral by default and harden the changed-path guard",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792917796 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "4c779a5762294b79d82debda43d012ba209b96ad",
+            "rewritten": "d61c788b80847d0d78b6ada74555547849c5f29e"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "1ff93d93a7712c492384c5831a1033324e1b1fc1",
+          "newSha": "116d27537a3d8c09f4025c2f159b4cc59591d77f",
+          "tree": "671bb334ae4150b46b773fe38fae9666546c1852",
+          "subject": "docs(evidence): consolidate W09 lane logs into canonical test-output.txt",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792918234 +0700",
+          "committerDate": "1793001036 +0700",
+          "parent": {
+            "original": "146501cc736d8dd96f4eed7de85ac13ea64f037b",
+            "rewritten": "de0708eb14811177a69f49070ae71620b5277765"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "6a74d303410b618264ab2db2e0a08e6e7cac61c9",
+          "newSha": "a848ef616142cc38de37f8140cb936503599bf02",
+          "tree": "bb9830efc8d4122e168a11413135658ad77f944c",
+          "subject": "chore(hygiene): keep local planning journals out of integration",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1793001048 +0700",
+          "committerDate": "1793001048 +0700",
+          "parent": {
+            "original": "be654f911c5da69c83adb5f75e15620095745ebb",
+            "rewritten": "6d974ae3855aeb3f2ff5e83ee742f7bb3d653832"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "b4cc1246454da2628d069f49bdc1be77bc20edf3",
+          "newSha": "f14aeb436fc27109e780ab4110d935f25745e57a",
+          "tree": "fa56c18d9d7d60ac9ba14d92c61ab47cb6ce6e82",
+          "subject": "chore(hygiene): drop local W10 planning journals",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1793001219 +0700",
+          "committerDate": "1793001219 +0700",
+          "parent": {
+            "original": "34baae06350a47eb36e09a72dadf05a84f266473",
+            "rewritten": "846930a6350a78ed545387d474465a3632828d5f"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "ee52c26c940a9630d7e55056dd6952a4125042f4",
+          "newSha": "3ea4d7cea20ba4cdccdbe1d8f65760bbebaae66f",
+          "tree": "50df52c9faef79fc645f3e623d05c6793e45cf66",
+          "subject": "feat(trip): add W10 persisted ride saga with payment orchestration",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792913900 +0700",
+          "committerDate": "1793001285 +0700",
+          "parent": {
+            "original": "b4cc1246454da2628d069f49bdc1be77bc20edf3",
+            "rewritten": "f14aeb436fc27109e780ab4110d935f25745e57a"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "d0653de9c8e16ad7d807198755ce33b2da8e8a99",
+          "newSha": "cce7e4856892ab6aa3a8607f45e5c467562bb96a",
+          "tree": "dcefda4f23337fb39f4e2a16dfe7dc69ca7a56db",
+          "subject": "docs(evidence): add member A W10 saga local verification",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792914643 +0700",
+          "committerDate": "1793001285 +0700",
+          "parent": {
+            "original": "ee52c26c940a9630d7e55056dd6952a4125042f4",
+            "rewritten": "3ea4d7cea20ba4cdccdbe1d8f65760bbebaae66f"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "1028def8187fe767fbcd67be6e4c2afe29abd7c1",
+          "newSha": "f33bfaa6703bd0b45e5d9e969b1c6a6cf7a0c31e",
+          "tree": "3f07c55b81594e708596ab18ad087161f3dcdc38",
+          "subject": "chore(ci): run pull_request checks on the A-W10 stacked base",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792915180 +0700",
+          "committerDate": "1793001344 +0700",
+          "parent": {
+            "original": "d0653de9c8e16ad7d807198755ce33b2da8e8a99",
+            "rewritten": "cce7e4856892ab6aa3a8607f45e5c467562bb96a"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "4f1826c20a3921539e94120711fbb6d1c819cf29",
+          "newSha": "0f22dcb8789ef6d05d995c999f175d6365ebca6d",
+          "tree": "81341efe23905e69107ff23ef012c95c99de6456",
+          "subject": "docs(evidence): re-anchor W10 verification to the CI-trigger commit",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792915380 +0700",
+          "committerDate": "1793001344 +0700",
+          "parent": {
+            "original": "1028def8187fe767fbcd67be6e4c2afe29abd7c1",
+            "rewritten": "f33bfaa6703bd0b45e5d9e969b1c6a6cf7a0c31e"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "b8656f35eace961f541c072cf60bccf4b7e94f30",
+          "newSha": "ffe306c62836130ec4f2ddb8a2afeb0579375989",
+          "tree": "ceb4ad60ed631e7c17f14d2c80a17f7015798f30",
+          "subject": "test(trip): assert exact match counts via predicate overloads in W10 saga tests",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792918426 +0700",
+          "committerDate": "1793001344 +0700",
+          "parent": {
+            "original": "4f1826c20a3921539e94120711fbb6d1c819cf29",
+            "rewritten": "0f22dcb8789ef6d05d995c999f175d6365ebca6d"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "a4e69b56891f3f02b1053500cfad28309453bb5c",
+          "newSha": "2bff4b3157cb859f50a9942a767eb4a56dfe757d",
+          "tree": "e1608fbd039e08dfc79559422513dfdedc3d3e61",
+          "subject": "docs(evidence): curate W10 bundle, correct reported counts, add REL-09/10 final-state records",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792918796 +0700",
+          "committerDate": "1793001344 +0700",
+          "parent": {
+            "original": "b8656f35eace961f541c072cf60bccf4b7e94f30",
+            "rewritten": "ffe306c62836130ec4f2ddb8a2afeb0579375989"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "20d3b46f1d0158f6f7d7fbc4a977b6f8af4ec7b2",
+          "newSha": "37cd90a08d03a4c4b21110bd8c92747e1c131404",
+          "tree": "b6d55f521a2a5f86edf22c8dd6cff52ad8f16e1e",
+          "subject": "fix(trip): consume Payment reasonCode on authorization outcomes",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1793003937 +0700",
+          "committerDate": "1793003937 +0700",
+          "parent": {
+            "original": "5b07085e7fb83021ca149f175130bc2719ce9c1d",
+            "rewritten": "f9e681b3e637064f3425347a96d56a898e1f109f"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "b6d57b6aa22bd38d8e8d0a42ac2bea3f5fa3dd06",
+          "newSha": "8b819ebea27eaa71080068fef3826fa896c67bab",
+          "tree": "5de1ff927e3deadf66ef89c998f4d43ee1b2b60c",
+          "subject": "test(integration): add W10 G3 controlled actor harness",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1793003942 +0700",
+          "committerDate": "1793003942 +0700",
+          "parent": {
+            "original": "20d3b46f1d0158f6f7d7fbc4a977b6f8af4ec7b2",
+            "rewritten": "37cd90a08d03a4c4b21110bd8c92747e1c131404"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        },
+        {
+          "oldSha": "fbe3eb674bb716fb566fb6fbb09c31d028f8488c",
+          "newSha": "c166a3a3961f349337d7062adbbce5d49ea256b6",
+          "tree": "e5be68d72e114e15a7580d778a4b088d5f96d6e9",
+          "subject": "docs(evidence): add W09/W10 integration acceptance bundle",
+          "author": {
+            "original": "minhqng <minhnq.181005@gmail.com>",
+            "rewritten": "Nerduckk <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1793006896 +0700",
+          "committerDate": "1793006896 +0700",
+          "parent": {
+            "original": "b6d57b6aa22bd38d8e8d0a42ac2bea3f5fa3dd06",
+            "rewritten": "8b819ebea27eaa71080068fef3826fa896c67bab"
+          },
+          "creditAllocation": {
+            "decidedBy": "repository owner (minhqng)",
+            "originalAuthor": "minhqng <minhnq.181005@gmail.com>",
+            "originalCommitter": "minhqng <minhnq.181005@gmail.com>",
+            "newDisplayIdentity": "Nerduckk <leanhviet2005@gmail.com>",
+            "verifiedAuthorship": false
+          }
+        }
+      ]
+    },
+    "C": {
+      "label": "already-correct attribution, preserved",
+      "identity": {
+        "name": "vitquaybarking",
+        "email": "leanhviet2005@gmail.com"
+      },
+      "commits": [
+        {
+          "oldSha": "5130b0f963c4edf5dd994bd63515d2fd9bf9372a",
+          "newSha": "5130b0f963c4edf5dd994bd63515d2fd9bf9372a",
+          "tree": "ae2a0e94aebcf383b9a9198fb963c51c2bc9be62",
+          "subject": "feat(messaging): add W9 outbox and durable dedup",
+          "author": {
+            "original": "vitquaybarking <leanhviet2005@gmail.com>",
+            "rewritten": "vitquaybarking <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1792483624 +0700",
+          "committerDate": "1793001027 +0700",
+          "parent": {
+            "original": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
+            "rewritten": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1"
+          },
+          "note": "author identity unchanged; SHA moved only because its parent moved"
+        },
+        {
+          "oldSha": "5b07085e7fb83021ca149f175130bc2719ce9c1d",
+          "newSha": "f9e681b3e637064f3425347a96d56a898e1f109f",
+          "tree": "35bd7624d1f000ac018a7057938235603109776c",
+          "subject": "feat(payment): add W10 command consumption with transactional result outbox",
+          "author": {
+            "original": "vitquaybarking <leanhviet2005@gmail.com>",
+            "rewritten": "vitquaybarking <leanhviet2005@gmail.com>"
+          },
+          "committer": "minhqng <minhnq.181005@gmail.com>",
+          "authorDate": "1793001667 +0700",
+          "committerDate": "1793001667 +0700",
+          "parent": {
+            "original": "a4e69b56891f3f02b1053500cfad28309453bb5c",
+            "rewritten": "2bff4b3157cb859f50a9942a767eb4a56dfe757d"
+          },
+          "note": "author identity unchanged; SHA moved only because its parent moved"
+        }
+      ]
+    }
+  },
+  "evidenceAnchor": {
+    "bundle": "evidence/integration/w09-w10",
+    "verifiedCodeCommit": {
+      "old": "b6d57b6aa22bd38d8e8d0a42ac2bea3f5fa3dd06",
+      "new": "8b819ebea27eaa71080068fef3826fa896c67bab"
+    },
+    "verifiedTree": "5de1ff927e3deadf66ef89c998f4d43ee1b2b60c",
+    "historicalClaim": "manifest.json keeps the original SHA on purpose; the verification ran against the pre-rewrite object",
+    "sourceEquivalence": "identical tree object; scripts/test/verify-source-anchor.sh reports no source drift",
+    "retainedBy": "refs/tags/archive/main-pre-attribution-correction-2026-10-26",
+    "newValidation": "none: no test was re-run for this metadata-only rewrite"
+  },
+  "successors": {
+    "note": "No successor branch or PR ref was modified. An unchanged merge-base is not proof of a clean future PR: the three-dot diff against main still re-adds W09/W10 patches that main already contains.",
+    "mergeBase": "ba5bb40615564ab022ddb0ff5e933bde93ee15a1",
+    "effectiveDiffUnchanged": true,
+    "measured": {
+      "feature/A-W11-trip-fault-proofs": {
+        "commitsSinceBase": 20,
+        "patchAlreadyOnMain": 16,
+        "genuinelyNew": 2,
+        "superseded": 1,
+        "mergeCommitsToDrop": 1,
+        "threeDotDiff": "95 files, +13212/-216 (identical before and after the rewrite)"
+      },
+      "feature/A-W12-trip-observability-g4": {
+        "commitsSinceBase": 24,
+        "patchAlreadyOnMain": 16,
+        "genuinelyNew": 6,
+        "superseded": 1,
+        "mergeCommitsToDrop": 1
+      },
+      "feature/C-W10-W11-payment-fault-platform": {
+        "commitsSinceBase": 2,
+        "patchAlreadyOnMain": 1,
+        "genuinelyNew": 1,
+        "note": "d300849 is mixed: its W10 payment command-consumption part is already reconstructed at 5b07085, its W11 fault-platform part is new"
+      }
+    },
+    "restackPlan": {
+      "policy": "replay only commits whose patch is not already on main; never rebase the branch wholesale",
+      "W11": {
+        "onto": "c166a3a3961f349337d7062adbbce5d49ea256b6",
+        "replay": [
+          "6047a7a",
+          "46ac68a"
+        ],
+        "drop": [
+          "368dec8 (superseded by main 1028def)",
+          "d1c99b1 (merge commit)"
+        ],
+        "conflict": ".github/workflows/ci.yml only; keep main's file and re-add the branch entry if the stacked base is still needed",
+        "dryRun": "clean after the ci.yml resolution"
+      },
+      "W12": {
+        "onto": "restacked W11",
+        "replay": [
+          "976c7f8",
+          "f07c0e7",
+          "acaaa68",
+          "132ecfd"
+        ],
+        "conflict": ".github/workflows/ci.yml only on 976c7f8",
+        "dryRun": "clean after the ci.yml resolution"
+      },
+      "C": {
+        "onto": "c166a3a3961f349337d7062adbbce5d49ea256b6",
+        "replay": [
+          "d300849 (split)"
+        ],
+        "conflict": "7 files: the W10 payment command-consumption hunks are already on main",
+        "dryRun": "mechanical cherry-pick conflicts; requires splitting W11 fault platform from the already-integrated W10 payment work"
+      },
+      "verification": "after restack, diff each restacked tip against its original head restricted to the replayed paths, and confirm no W09/W10 patch re-enters main"
+    }
+  }
+}
