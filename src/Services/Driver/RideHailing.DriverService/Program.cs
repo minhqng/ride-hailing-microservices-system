@@ -5,6 +5,7 @@ using RabbitMQ.Client;
 using RideHailing.DriverService.Api;
 using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Application.Messaging;
+using RideHailing.DriverService.Infrastructure.Faults;
 using RideHailing.DriverService.Infrastructure.Outbox;
 using RideHailing.DriverService.Infrastructure.Persistence;
 using RideHailing.Messaging.Outbox;
@@ -31,6 +32,8 @@ builder.Services.AddSingleton<IOutboxStore>(sp => sp.GetRequiredService<NpgsqlOu
 builder.Services.AddSingleton<DriverRepository>();
 builder.Services.AddSingleton<DriverCommandHandler>();
 builder.Services.AddSingleton<LocationAcceptor>();
+builder.Services.AddSingleton(sp => DriverFaultPoint.FromEnvironment(
+    builder.Environment, sp.GetRequiredService<ILogger<DriverFaultPoint>>()));
 
 var brokerOptions = new DriverBrokerOptions();
 builder.Configuration.GetSection(DriverBrokerOptions.SectionName).Bind(brokerOptions);
@@ -83,6 +86,17 @@ app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "driver-service", environment = env.EnvironmentName }));
 
 DriverEndpoints.Map(app);
+
+var faultPoint = app.Services.GetRequiredService<DriverFaultPoint>();
+if (app.Environment.IsEnvironment("Testing") && faultPoint.Enabled)
+{
+    // FromEnvironment refuses to enable the seam without this token, so the
+    // non-empty value here is part of the same fail-closed contract.
+    var controlToken = Environment.GetEnvironmentVariable(DriverFaultPoint.ControlTokenVariable)!;
+    DriverFaultEndpoints.Map(app, faultPoint, controlToken);
+    app.Logger.LogWarning(
+        "B-W11 fault control endpoints enabled for the explicit Testing environment.");
+}
 
 // Idempotent baseline + canonical shared Outbox schema. Both are applied
 // before the host starts serving. If PostgreSQL is down the process still
