@@ -71,3 +71,36 @@ The restarted Matching process uses the W11 test-only reconcile trigger. The
 service does not yet perform unattended recovery/redelivery, so the proof is a
 real process kill + real DB reload + explicit recovery invocation, not an
 automatic recovery claim.
+
+## B-W11 Phase 2 — full deterministic campaign
+
+`b-w11-full-campaign.sh` is the single clean-checkout acceptance command. It
+runs five consecutive controlled passes of:
+
+- REL-01 / REL-02 through the real service containers (Phase 1 script).
+- CON-02 both deterministic GoOffline-vs-Reserve winning schedules, with
+  Outbox-intent assertions (`DriverCon02DeterministicTests`).
+- CON-04 direct exact-token release and a real RabbitMQ
+  `ReleaseDriverReservationV1` late-arrival/receipt replay
+  (`DriverRaceFencingTests`, `DriverCompensationTests`).
+- REL-12 / REL-13 through the real `DriverProjectionHandler` + Redis and
+  through real RabbitMQ projection-queue deliveries
+  (`DriverProjectionStalenessHandlerTests`, `BrokerConsumeTests`).
+- REL-14 with a real disposable Redis container network-isolated by a
+  test-controlled TCP gate. The production candidate path must degrade with
+  zero candidates/reservations and unchanged Driver authority; after the gate
+  reopens the test proves surviving projection data and event-driven
+  reconstruction separately (`RedisOutageRecoveryTests`).
+
+```bash
+./scripts/fault/b-w11-full-campaign.sh
+PASSES=1 ./scripts/fault/b-w11-full-campaign.sh       # smoke only
+ALLOW_DIRTY=1 PASSES=1 ./scripts/fault/b-w11-full-campaign.sh
+```
+
+Each pass gets a fresh container namespace and fresh GUID identities. A
+failed or zero-test scenario stops the streak and leaves its logs under
+`evidence/member-b/w11-fault-proofs/raw/five-pass-*/pass-N/`. The final
+`five-pass-summary.json` records the source SHA/tree, per-pass scenario
+results, elapsed time and identity lines. No user-owned Redis or other
+container is stopped or removed.
