@@ -1,177 +1,201 @@
-# Member B W11 Phase 1 — deterministic REL-01 / REL-02 fault proofs
+# Member B W11 — deterministic fault campaign
 
-Status: **CODE VERIFIED — EXTERNAL GATES REMAIN**
+Status: **B-W11 COMPLETE LOCALLY — CI/PEER GATES REMAIN**
 
-Branch: `feature/B-W11-deterministic-faults`
-Base: `origin/main` `86062af028d01b86f07b1c902f040a41c41fe57f`
-Verified source: `608426e5dc85e02d82e24a66f01c5efdb0cce5fa`
-Source tree: `88f48fb4b70cabafe758258770f4057d209362e7`
-
-This bundle contains a reproducible Driver response-loss proof (REL-01) and a
-real Matching process-kill/restart proof (REL-02). Both use real PostgreSQL,
-RabbitMQ and HTTP transport in the final campaign.
-
-## What landed
-
-| Item | Result |
+| Item | Value |
 |---|---|
-| B-W11-01 B-owned seam | `Driver.AfterReserveCommitBeforeResponse`, Testing-only, control-token gated, bounded hold, post-commit and post-Outbox |
-| B-W11-02 REL-01 | PASS across a real HTTP boundary and reloaded databases |
-| B-W11-03 REL-02 | PASS with `SIGKILL`, confirmed exit 137, new Matching PID, same DB/broker, same reservation identity |
-| C shared fault platform | **Not wired.** PR #41 is not on `main`; its Driver hook predates the W9 transactional Outbox. B-W11-01 is therefore not claimed as fully integrated. |
-| W11-04…W11-11 | Not started in this phase |
+| Branch | `feature/B-W11-deterministic-faults` |
+| PR | [#44](https://github.com/minhqng/ride-hailing-microservices-system/pull/44) |
+| Integration base | `origin/main` `86062af028d01b86f07b1c902f040a41c41fe57f` |
+| Phase 1 source | `608426e5dc85e02d82e24a66f01c5efdb0cce5fa` |
+| Final tested source | `c3907a93404d9016a2afefd5b25434f0bacfb49f` |
+| Final source tree | `7aad55bb54b574f0edfaf4efaecf3dcaf2caa153` |
+| Final five-pass run | `five-pass-20261026t174928z` (clean source status) |
 
-## REL-01 — lost Reserve response after Driver commit
+Commits: Phase 1 `608426e`; Phase 1 evidence `b4eae70`; Phase 2 campaign
+`cdd0474`; review hardening `bcbd2c5`, `427c043`, `c3907a9`.
 
-Controlled sequence actually observed:
+## B-W11 status
 
-```text
-Matching attempt IN_FLIGHT + dispatch fence (Matching DB)
-→ real POST /drivers/{id}/reserve
-→ Driver RESERVED + DriverReservedV1 Outbox committed
-→ Driver.AfterReserveCommitBeforeResponse holds the response
-→ Matching 3s HTTP timeout: UNKNOWN / RESERVE_TRANSPORT, no candidate advance
-→ release fault
-→ reconcile the SAME reservationId
-→ Matching attempt + round RESERVED
-```
-
-Final-run identities:
-
-| Field | Value |
+| Task | Status |
 |---|---|
-| tripId | `8c4dbedc-0b3a-4b2a-8e1c-efc3b5464e36` |
-| driverId | `3d40a9e7-e744-4dbf-9b56-10036395b051` |
-| next driverId | `b69f4f7c-ec84-499a-a744-4579e7547333` (never attempted) |
-| reservationId | `e182771d-b2d7-4440-862a-d13999807dd6` (unchanged end to end) |
-| Driver version | 3 at commit and after reconcile replay |
-| Driver Outbox | exactly one `DriverReservedV1`, published once |
-| Matching round | `PROCESSING` while UNKNOWN → `RESERVED`, no result identity |
-| `MatchingFailedV1` | none |
+| B-W11-01 Driver faultpoint | **EXTERNAL INTEGRATION PENDING** — B-owned seam works; C PR #41 is still open against `MemC-W9-Distributed`, not on `main` |
+| B-W11-02 REL-01 | COMPLETE |
+| B-W11-03 REL-02 | COMPLETE (harness-triggered recovery) |
+| B-W11-04 CON-02 | COMPLETE — both schedules, 5/5 |
+| B-W11-05 CON-04 | COMPLETE — direct + real broker, 5/5 |
+| B-W11-06 REL-12 | COMPLETE — handler + real broker, 5/5 |
+| B-W11-07 REL-13 | COMPLETE — handler + real broker, 5/5 |
+| B-W11-08 REL-14 | COMPLETE — network partition, survival + event reconstruction, 5/5 |
+| B-W11-09 sleeps | COMPLETE — see `sleep-audit.md` |
+| B-W11-10 five passes | COMPLETE — 5/5 consecutive for all seven scenarios |
+| B-W11-11 evidence/peer | EVIDENCE COMPLETE — **PEER PENDING** |
 
-Key evidence:
+## REL-01 / REL-02 (Phase 1, retained)
 
-- `final-state/rel01-before-release-attempts.json` — `IN_FLIGHT`,
-  `max_dispatched_version=2`.
-- `final-state/rel01-before-release-fault.json` — barrier reached,
-  `pendingCount=1`.
-- `final-state/rel01-unknown-attempts.json` — `UNKNOWN` /
-  `RESERVE_TRANSPORT`, same reservation.
-- `final-state/rel01-final-attempts.json` and
-  `rel01-final-attempts-round.json` — `RESERVED` with the same identity.
-- `final-state/rel01-final-attempts-driver-outbox.json` — one published
-  `DriverReservedV1` with the same reservation and round 1.
-- `final-state/rel01-final-drivers.json` — Driver `RESERVED`, next Driver
-  `AVAILABLE` at its pre-test version.
+Phase 1 proved the Driver post-commit response-loss and real Matching
+`SIGKILL`/restart paths. The five-pass campaign now repeats both every pass.
+Pass 5 representative identities:
 
-The automated test `LostReserveResponseHttpTests` reproduces the same sequence
-inside the test suite using a real Kestrel Driver host and the production
-`HttpDriverClient`/orchestrator/repository. It passed in the final
-`MatchingService.IntegrationTests` run.
+| Field | REL-01 | REL-02 |
+|---|---|---|
+| trip | `15a06d15-00c6-4313-924e-299337d0dfa2` | `b5bbd225-4a5c-4037-bf8f-f19bd670ab67` |
+| driver | `b3937ad8-2d36-4d93-b01b-c7fa1f8df4b6` | `02ff1fcb-915f-4c19-854c-eb26813cb4a1` |
+| reservation | `dfe628cd-c752-4eee-8ca4-4b1e552ed4fb` | `c5db6b84-a209-400c-bfca-2d8ad3046744` |
+| process evidence | timeout while post-commit response held | PID `61644` → `62837`, exit `137` |
 
-## REL-02 — real Matching process crash after Driver commit
+Every pass retains the fault-reached snapshot (`pendingCount=1`), pre-crash
+`IN_FLIGHT`/Driver `RESERVED`, process exit 137, and final `RESERVED` rows with
+one Outbox intent. See `five-pass/pass-N/`.
 
-Controlled sequence actually observed:
+## CON-02 — GoOffline vs Reserve
 
-```text
-Matching attempt IN_FLIGHT + fence; Driver RESERVED + one Outbox intent
-→ barrier reached with pendingCount=1
-→ SIGKILL Matching container
-→ original PID 55560 exited 137, container not running
-→ reserve HTTP client failed (000 / curl 52)
-→ Driver and Matching DB still hold the same committed R / IN_FLIGHT
-→ release fault
-→ NEW Matching container + PID 56637 on the same PostgreSQL and RabbitMQ
-→ reconcile persisted IN_FLIGHT identity
-→ attempt + round RESERVED with the same R
-```
+Both winning schedules are forced after a common barrier; the loser is
+released only after the winner commits from the same starting version.
 
-| Field | Value |
-|---|---|
-| tripId | `48bdeb40-c3a8-48aa-9bad-7877ac1631b0` |
-| driverId | `c8312f61-823c-4527-9ce4-5de74343b454` |
-| next driverId | `222f8ed1-1821-48a3-b37d-6805116b32dc` (never attempted) |
-| reservationId | `58d5cac0-7a0a-4660-bfa8-165dda1876cc` |
-| killed container | `ca896139a1313c0f8c454e78a0da321dcb41d71caa212749b5d3a2e88de6d2dd` |
-| killed PID / exit | `55560` / `137` |
-| restarted container | `879021393d4fd52dbcd3756d83fb16ffb18bb9df6da27f14a65bd3f04f0214c0` |
-| restarted PID | `56637` |
-| Driver Outbox | exactly one `DriverReservedV1`, published once |
+| Schedule | Final | Version | Outbox |
+|---|---|---|---|
+| offline-wins | OFFLINE, no reservation | start + 1 | one `DriverOfflineV1`; zero `DriverReservedV1` |
+| reserve-wins | RESERVED with R | start + 1 | one `DriverReservedV1`; zero `DriverOfflineV1` |
 
-`final-state/rel02-before-crash-fault.json` proves a new fault hit
-(`reachedCount=2`, `pendingCount=1`) rather than reusing REL-01's event.
-`final-state/rel02-process-*.txt` records the real container/PID transition.
-The final attempt row is `RESERVED` with the same reservation and ordinal 0.
-`max_dispatched_version` moves 2 → 3 because the restarted process re-reads the
-current Driver version before its same-R replay; the Driver row/version and
-Outbox do not change.
+The losing operation always returns `STALE_VERSION` and does not mutate the
+row. Both schedules pass 5/5; representative pass-5 IDs are in
+`five-pass/scenarios.tsv`.
 
-## Fault-seam safety
+## CON-04 — Late release vs newer reservation
 
-- Enabled only under `ASPNETCORE_ENVIRONMENT=Testing`; every other environment
-  resolves a disabled no-op even if `RIDE_FAULTPOINTS` is set.
-- Requires `RIDE_FAULT_CONTROL_TOKEN`; without it the seam disables itself
-  (fail closed). Control endpoints exist only in Testing and compare the token
-  with SHA-256 + fixed-time equality.
-- No HTTP endpoint can activate a fault. Activation is process environment at
-  startup.
-- The hit is after `TryReserveAsync` returns (row + Outbox committed) and
-  before the HTTP result is built. No exception is injected before commit.
-- Every hold is bounded (default 30s, clamp 1–120s). The harness sets 90s and
-  releases explicitly.
-- Request cancellation is deliberately not linked to the hold: a timed-out or
-  killed caller must not erase the committed effect before the proof observes
-  it. The bounded timeout is the fail-safe.
+Direct proof: `Reserve R1 → Release R1 → Reserve R2 → late Release R1`.
+Late R1 is `Conflict/STALE_RESERVATION`; R2 and trip2 remain current at
+version 5; `DriverReservationReleasedV1` exists once for R1 and zero times for
+R2.
 
-## Test matrix (final source `608426e`)
+Real-broker proof: `ReleaseDriverReservationV1` for R1 is published after R2
+commits. A new envelope identity is executed by the real
+`ManualAckConsumer` + `DriverCommandHandler` and produces a durable
+`Rejected/STALE_RESERVATION` receipt **before any direct replay**. The exact
+committed R1 envelope replays its original `Applied` receipt. R2/trip2,
+version and Outbox counts remain unchanged.
+
+## REL-12 / REL-13 — stale projection
+
+Through the real `DriverProjectionHandler` and Redis:
+
+- v10 `RESERVED` then v9 `AVAILABLE`: v10 and `RESERVED` remain; GEO stays
+  absent; stale outcome is `Stale`.
+- location seq 20 then seq 19: sequence 20, timestamp, coordinates and GEO
+  position remain; foreign session is rejected; same-sequence newer timestamp
+  applies and older is stale; duplicate delivery converges and its receipt
+  fingerprint is retained.
+
+Through real RabbitMQ projection-queue deliveries, authoritative and stale
+envelopes are published in separate phases. Each phase completes only when
+every envelope has the expected projection receipt; final state remains
+authoritative (`receipts=4/4 ordered=true`).
+
+## REL-14 — Redis availability
+
+The test starts a real disposable Redis container and places it behind a
+test-controlled TCP gate. Closing the gate drops active client connections:
+
+- production `MatchingRoundService` returns `Degraded=true` with zero
+  candidates and zero attempts;
+- Driver authority (status, version, reservation) is unchanged;
+- no reservation or fabricated availability is created.
+
+After reopening the gate, the shared multiplexer reconnects. The test proves
+**data survival** for one driver (`survived=True`) and, separately, deletes a
+second driver's projection and reconstructs it by replaying authoritative
+Driver state/location events through the real handler
+(`eventReplayReconstructed=True`). There is **no automatic full projection
+rebuild** in the implementation and none is claimed. The Redis process is not
+stopped and no user-owned Redis is touched.
+
+## Five-pass acceptance
+
+`scripts/fault/b-w11-full-campaign.sh` on clean source `c3907a9`:
+
+| Scenario | Pass 1 | Pass 2 | Pass 3 | Pass 4 | Pass 5 |
+|---|---|---|---|---|---|
+| REL-01 | PASS | PASS | PASS | PASS | PASS |
+| REL-02 | PASS | PASS | PASS | PASS | PASS |
+| CON-02 | PASS | PASS | PASS | PASS | PASS |
+| CON-04 | PASS | PASS | PASS | PASS | PASS |
+| REL-12 | PASS | PASS | PASS | PASS | PASS |
+| REL-13 | PASS | PASS | PASS | PASS | PASS |
+| REL-14 | PASS | PASS | PASS | PASS | PASS |
+
+Fresh GUID identities and a fresh container namespace are used in every
+pass. The summary records source SHA/tree, clean source status, image IDs,
+per-scenario elapsed time and identity lines. See
+`five-pass/five-pass-summary.json`, `five-pass/scenarios.tsv`, and
+`five-pass/pass-N/` (including process death evidence).
+
+## Full regression on final source
 
 | Suite | Result |
 |---|---|
-| Driver unit (`RideHailing.DriverService.UnitTests`) | 129 / 129 PASS |
-| Matching unit (`RideHailing.MatchingService.UnitTests`) | 104 / 104 PASS |
-| Matching integration (real PostgreSQL/RabbitMQ/Redis via Testcontainers) | 139 / 139 PASS |
-| Driver integration (PostgreSQL + RabbitMQ) | 107 / 107 PASS |
-| Platform integration (shared Outbox/dedup/relay) | 60 / 60 PASS |
-| Trip identity agreement (`TripDriverAgreementTests`, `TripW06AssignmentProofsTests`) | 10 / 10 PASS |
-| **Total** | **549 / 549 PASS, 0 failed** |
+| Driver unit | 129 / 129 PASS |
+| Matching unit | 104 / 104 PASS (Linux SDK container; host Application Control blocked that DLL load) |
+| Driver integration | 110 / 110 PASS |
+| Matching integration | 144 / 144 PASS |
+| Platform integration | 60 / 60 PASS |
+| Trip identity agreement | 10 / 10 PASS |
+| **Total** | **557 / 557 PASS, 0 failed** |
 
-The final campaign itself (`campaign.txt`) passed REL-01 and REL-02. No
-assertion was weakened to obtain green runs.
+The same test code was also green on parent `427c043`; the final source change
+is the campaign runner's summary-quoting fix. Logs: `test-output/`.
+
+## Independent review
+
+Two fresh-context read-only reviews examined the Phase 2 diff and its Phase 1
+interaction. No P0 was found. The P1 finding — dirty-source evidence could
+attest a clean SHA — was fixed by rejecting multi-pass dirty runs, recording
+source status and marking diagnostics. P2 findings fixed: broker tests now
+require a receipt for every delivered message and order authoritative/stale
+phases; consumers cancel only after that barrier and are cleaned up in
+`finally`; the test logger is concurrent; shared-test env overrides are
+cleared; CON-04 asserts the broker-written receipt before replay; REL-14 gate
+teardown is bounded/race-hardened. No P0/P1 remains open. This AI review is
+not the required human peer rerun.
 
 ## Limitations / non-claims
 
-1. **B-W11-01 is not fully integrated with C's shared platform.** The B seam is
-   an adapter-shaped placeholder with the frozen fault name and `HitAsync`
-   contract. C PR #41 is open, not on `main`, and its Driver hook is stale
-   relative to W9's transactional Outbox. Do not count B-W11-01 as complete
-   until the shared contract is wired.
-2. **REL-02 recovery is harness-triggered.** The service has no unattended
-   startup/redelivery reconcile. The proof is a real process kill, real DB
-   reload and explicit `ReconcileAsync` through the real Matching process; it
-   is not an automatic-recovery claim.
-3. **No Trip leg in the container oracle.** Matching's production intake does
-   not execute reserve in this branch, so the container proof asserts Driver +
-   Matching only. Trip identity agreement is covered separately by the 10
-   passing Trip tests above.
-4. **No W11-04…W11-08 Redis/CON campaign, no W11-10 five-pass stability, no
-   W11-11 peer rerun.** Those remain B W11 work.
-5. **No GitHub Actions green claim.** The latest `main` runs failed before any
-   job step started (run `40343480340`, four jobs, 0 steps, billing-blocked).
-   Local evidence above stands on its own; branch CI is reported separately.
-6. The final-state JSON `rel02-final-attempts-driver-outbox.json` includes the
-   `DriverAvailableV1` rows from the two seeded drivers; the assertion filters
-   `DriverReservedV1` and requires exactly one.
+1. **B-W11-01 is not fully integrated with C's shared platform.** C PR #41 is
+   open, not on `main`; its Driver hook predates W9's transactional Outbox.
+   The B seam keeps the frozen name/`HitAsync` shape and is inert in
+   Production. Do not count B-W11-01 complete until the shared contract lands.
+2. **REL-02 recovery is harness-triggered.** Real process kill, DB reload and
+   new-process reconcile are proven; unattended startup/redelivery recovery
+   is not.
+3. **REL-14 is a network partition of a live Redis**, not a process stop. It
+   proves degrade/no-fabrication/reconnect plus data survival and event-driven
+   reconstruction. No automatic full rebuild exists.
+4. **No Trip leg in the container oracle.** Matching's production intake does
+   not execute reserve in this branch. Trip identity agreement is separately
+   green (10/10).
+5. **No W12/W13 work; no merge.** Peer rerun is `PEER PENDING`.
+6. **No green CI claim.** GitHub Actions still fails before any job step
+   (billing). Branch CI is reported separately.
 
 ## Reproduce
 
 ```bash
-# Build and run the full container campaign (fresh images from HEAD)
-./scripts/fault/b-w11-rel01-rel02.sh
+# One clean-checkout command: five consecutive passes of all seven scenarios
+./scripts/fault/b-w11-full-campaign.sh
 
-# Reuse rhw11b-driver:local / rhw11b-matching:local for a fast rerun
-SKIP_BUILD=1 ./scripts/fault/b-w11-rel01-rel02.sh
+# Focused Docker campaign for REL-01/REL-02 only
+./scripts/fault/b-w11-rel01-rel02.sh
 ```
 
-Requirements: bash, Docker, curl, Node.js. Exact suite commands are in
-`manifest.md`. Raw container logs are under `raw/` and are gitignored; curated
-snapshots and test logs are committed here.
+Requirements: bash, Docker, curl, Node.js, dotnet in `PATH`. Full suite
+commands are in `manifest.md`.
+
+## Evidence map
+
+- `campaign.txt`, `final-state/` — Phase 1 authoritative REL-01/02 run.
+- `five-pass/` — Phase 2 five-pass matrix, per-pass process/DB evidence and logs.
+- `test-output/` — final-source full-suite logs.
+- `sleep-audit.md` — B-W11-09 findings.
+- `manifest.md` — source binding, exact commands, identities, retry history.
+- `handoff.md` — peer rerun and external gates.
+- `hashes.txt` — SHA-256 of committed evidence and source files.

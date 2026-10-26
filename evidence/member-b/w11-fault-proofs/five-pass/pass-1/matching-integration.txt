@@ -1,0 +1,104 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  RideHailing.Messaging -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Messaging\bin\Release\net10.0\RideHailing.Messaging.dll
+  RideHailing.Observability -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Observability\bin\Release\net10.0\RideHailing.Observability.dll
+  RideHailing.DriverService -> D:\rh-w11b\src\Services\Driver\RideHailing.DriverService\bin\Release\net10.0\RideHailing.DriverService.dll
+  RideHailing.MatchingService -> D:\rh-w11b\src\Services\Matching\RideHailing.MatchingService\bin\Release\net10.0\RideHailing.MatchingService.dll
+  RideHailing.MatchingService.IntegrationTests -> D:\rh-w11b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0\RideHailing.MatchingService.IntegrationTests.dll
+Test run for D:\rh-w11b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0\RideHailing.MatchingService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+D:\rh-w11b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0\RideHailing.MatchingService.IntegrationTests.dll
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.14)
+[xUnit.net 00:00:01.72]   Discovering: RideHailing.MatchingService.IntegrationTests
+[xUnit.net 00:00:01.79]   Discovered:  RideHailing.MatchingService.IntegrationTests
+[xUnit.net 00:00:01.82]   Starting:    RideHailing.MatchingService.IntegrationTests
+[testcontainers.org 00:00:00.14] Connected to Docker:
+  Host: npipe://./pipe/docker_engine
+  Server Version: 29.8.2
+  Kernel Version: 6.18.54.1-microsoft-standard-WSL2
+  API Version: 1.56
+  Operating System: Docker Desktop
+  Total Memory: 7.36 GB
+  Labels:
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+[testcontainers.org 00:00:00.66] Docker container ec15abb1a4be created
+[testcontainers.org 00:00:00.66] Docker container 6b6fb5462a1f created
+[testcontainers.org 00:00:00.67] Docker container 682d25a9d2b0 created
+[testcontainers.org 00:00:00.71] Docker container 2835feb2bff1 created
+[testcontainers.org 00:00:00.71] Docker container e1e4f2981f31 created
+[testcontainers.org 00:00:00.72] Docker container 89589e22c1d3 created
+[testcontainers.org 00:00:00.77] Start Docker container 89589e22c1d3
+[testcontainers.org 00:00:00.77] Start Docker container 6b6fb5462a1f
+[testcontainers.org 00:00:00.77] Start Docker container ec15abb1a4be
+[testcontainers.org 00:00:00.77] Start Docker container e1e4f2981f31
+[testcontainers.org 00:00:00.77] Start Docker container 2835feb2bff1
+[testcontainers.org 00:00:00.77] Start Docker container 682d25a9d2b0
+[testcontainers.org 00:00:01.22] Wait for Docker container 89589e22c1d3 to complete readiness checks
+[testcontainers.org 00:00:01.26] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 89589e22c1d3
+[testcontainers.org 00:00:01.31] Wait for Docker container e1e4f2981f31 to complete readiness checks
+[testcontainers.org 00:00:01.36] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container e1e4f2981f31
+[testcontainers.org 00:00:01.39] Wait for Docker container 6b6fb5462a1f to complete readiness checks
+[testcontainers.org 00:00:01.41] Execute "redis-cli ping" at Docker container 6b6fb5462a1f
+[testcontainers.org 00:00:01.45] Wait for Docker container 2835feb2bff1 to complete readiness checks
+[testcontainers.org 00:00:01.50] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 2835feb2bff1
+[testcontainers.org 00:00:01.54] Wait for Docker container 682d25a9d2b0 to complete readiness checks
+[testcontainers.org 00:00:01.57] Docker container 6b6fb5462a1f ready
+[testcontainers.org 00:00:01.58] Execute "redis-cli ping" at Docker container 682d25a9d2b0
+[testcontainers.org 00:00:01.60] Wait for Docker container ec15abb1a4be to complete readiness checks
+[testcontainers.org 00:00:01.74] Docker container 682d25a9d2b0 ready
+[testcontainers.org 00:00:02.03] Delete Docker container 682d25a9d2b0
+[testcontainers.org 00:00:02.57] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container e1e4f2981f31
+[testcontainers.org 00:00:02.57] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 89589e22c1d3
+[testcontainers.org 00:00:02.74] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 2835feb2bff1
+  Passed RideHailing.MatchingService.IntegrationTests.DriverProjectionStalenessHandlerTests.StaleLocation_CannotRegressSequenceTimestampOrCoordinates [172 ms]
+  Standard Output Messages:
+ W11 REL-13 driver=5e7ee810-ba7f-44b5-b38a-5bcf4f368fd8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=84
+
+
+  Passed RideHailing.MatchingService.IntegrationTests.DriverProjectionStalenessHandlerTests.StaleStateEvent_CannotRegressVersionOrReenterGeo [28 ms]
+  Standard Output Messages:
+ W11 REL-12 driver=6ef303ae-9612-4889-b731-1851e87445b2 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=17
+
+
+[testcontainers.org 00:00:03.79] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container e1e4f2981f31
+[testcontainers.org 00:00:03.80] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 89589e22c1d3
+[testcontainers.org 00:00:03.90] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 2835feb2bff1
+[testcontainers.org 00:00:04.89] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container e1e4f2981f31
+[testcontainers.org 00:00:04.91] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 89589e22c1d3
+[testcontainers.org 00:00:05.00] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 2835feb2bff1
+[testcontainers.org 00:00:05.03] Docker container e1e4f2981f31 ready
+[testcontainers.org 00:00:05.06] Docker container 89589e22c1d3 ready
+[testcontainers.org 00:00:05.17] Docker container 2835feb2bff1 ready
+[testcontainers.org 00:00:05.60] Docker container 69ee8572d0ee created
+[testcontainers.org 00:00:05.61] Start Docker container 69ee8572d0ee
+[testcontainers.org 00:00:05.91] Wait for Docker container 69ee8572d0ee to complete readiness checks
+[testcontainers.org 00:00:05.93] Execute "redis-cli ping" at Docker container 69ee8572d0ee
+[testcontainers.org 00:00:06.01] Docker container 69ee8572d0ee ready
+[testcontainers.org 00:00:09.95] Docker container ec15abb1a4be ready
+[testcontainers.org 00:00:12.77] Delete Docker container 69ee8572d0ee
+[testcontainers.org 00:00:13.16] Delete Docker container e1e4f2981f31
+[testcontainers.org 00:00:13.16] Delete Docker container 89589e22c1d3
+  Passed RideHailing.MatchingService.IntegrationTests.RedisOutageRecoveryTests.RedisPartition_DegradesCandidatePath_ThenSurvivalAndEventReconstruction [7 s]
+  Standard Output Messages:
+ W11 REL-14 driverSurvives=f74440ac-1062-482d-8735-fc00c0aa45da driverRebuilt=0acab7c2-b0c6-4b52-ab84-031af176254c outageTrip=24b342fa-0414-4cce-851b-8054463bf5fe partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7382
+
+
+  Passed RideHailing.MatchingService.IntegrationTests.BrokerConsumeTests.W11_Rel13_StaleLocation_ViaBroker_DoesNotRegressProjection [4 s]
+  Standard Output Messages:
+ W11 REL-13-broker driver=7963ab11-b62c-4f42-b9a3-8865f4a0737f authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2033
+
+
+[testcontainers.org 00:00:16.94] Delete Docker container 6b6fb5462a1f
+[testcontainers.org 00:00:16.94] Delete Docker container ec15abb1a4be
+[testcontainers.org 00:00:16.94] Delete Docker container 2835feb2bff1
+  Passed RideHailing.MatchingService.IntegrationTests.BrokerConsumeTests.W11_Rel12_StaleState_ViaBroker_DoesNotRegressProjection [2 s]
+  Standard Output Messages:
+ W11 REL-12-broker driver=5b464210-64d9-40e9-8131-7c40ac4cede3 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=1976
+
+
+[xUnit.net 00:00:19.63]   Finished:    RideHailing.MatchingService.IntegrationTests
+
+Test Run Successful.
+Total tests: 5
+     Passed: 5
+ Total time: 20.2412 Seconds
