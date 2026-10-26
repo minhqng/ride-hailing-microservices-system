@@ -132,13 +132,13 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
     }
 
     private static MessageEnvelope<JsonElement> PaymentEnvelope(
-        string messageType, Guid tripId, string? operationKey, string? sagaId, string? resultCode = null,
+        string messageType, Guid tripId, string? operationKey, string? sagaId, string? reasonCode = null,
         string? messageId = null)
     {
         var payload = new Dictionary<string, object> { ["tripId"] = tripId };
-        if (resultCode is not null)
+        if (reasonCode is not null)
         {
-            payload["resultCode"] = resultCode;
+            payload["reasonCode"] = reasonCode;
         }
 
         return MessageEnvelope<JsonElement>.Create(
@@ -356,7 +356,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // the SAME key and the ride state is untouched.
         var uncertain = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, saga.AuthorizeOperationKey,
-                saga.SagaId.ToString("D"), resultCode: "TRANSIENT_FAILURE"));
+                saga.SagaId.ToString("D"), reasonCode: "TRANSIENT_FAILURE"));
         Assert.Equal("PendingWorkflow", uncertain.Disposition);
         Assert.Equal("PAYMENT_OUTCOME_UNRESOLVED", uncertain.Reason);
         var awaiting = await SagaAsync(cs, tripId);
@@ -371,7 +371,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // compensation step and stages the EXACT release identity (REL-09).
         var declined = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, saga.AuthorizeOperationKey,
-                saga.SagaId.ToString("D"), resultCode: "DECLINED"));
+                saga.SagaId.ToString("D"), reasonCode: "DECLINED"));
         Assert.Equal("Applied", declined.Disposition);
 
         var trip = await TripAsync(cs, tripId);
@@ -430,7 +430,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // The outcome then resolves DECLINED: no effect existed, so no void.
         var declined = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, saga.AuthorizeOperationKey,
-                saga.SagaId.ToString("D"), resultCode: "DECLINED"));
+                saga.SagaId.ToString("D"), reasonCode: "DECLINED"));
         Assert.Equal("Applied", declined.Disposition);
         var afterDecline = await SagaAsync(cs, tripId);
         Assert.Equal(RideSagaStep.ReleasePending, afterDecline.CurrentStep);
@@ -576,7 +576,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // Transient capture trouble: durable observation, ride untouched.
         var transient = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentCapturePendingV1", tripId, captureKey, saga.SagaId.ToString("D"),
-                resultCode: "TRANSIENT_FAILURE"));
+                reasonCode: "TRANSIENT_FAILURE"));
         Assert.Equal("Applied", transient.Disposition);
         var pending = await SagaAsync(cs, tripId);
         Assert.Equal(RideSagaStep.CapturePending, pending.CurrentStep);
@@ -587,7 +587,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // Explicit review: visible resolution state, ride still untouched.
         var review = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentRequiresReviewV1", tripId, captureKey, saga.SagaId.ToString("D"),
-                resultCode: "RETRY_EXHAUSTED"));
+                reasonCode: "RETRY_EXHAUSTED"));
         Assert.Equal("Applied", review.Disposition);
         var reviewed = await SagaAsync(cs, tripId);
         Assert.Equal(RideSagaStatus.RequiresReview, reviewed.Status);
@@ -597,7 +597,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // A DECLINED capture still never regresses the completed ride.
         var declined = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, captureKey, saga.SagaId.ToString("D"),
-                resultCode: "DECLINED", messageId: $"stale-{Guid.NewGuid():N}"));
+                reasonCode: "DECLINED", messageId: $"stale-{Guid.NewGuid():N}"));
         Assert.Equal("NeedsReview", declined.Disposition);
         Assert.Equal(TripState.Completed, (await TripAsync(cs, tripId)).State);
 
@@ -628,7 +628,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // DECLINED for the resolved authorize step must not regress the ride.
         var late = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, saga.AuthorizeOperationKey,
-                saga.SagaId.ToString("D"), resultCode: "DECLINED"));
+                saga.SagaId.ToString("D"), reasonCode: "DECLINED"));
         Assert.Equal("NeedsReview", late.Disposition);
         Assert.Equal("STALE_PAYMENT_OUTCOME", late.Reason);
         Assert.Equal(TripState.ReadyToStart, (await TripAsync(cs, tripId)).State);
@@ -654,7 +654,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         var success = PaymentEnvelope("PaymentAuthorizedV1", tripId, saga.AuthorizeOperationKey,
             saga.SagaId.ToString("D"), messageId: $"win-{Guid.NewGuid():N}");
         var failure = PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, saga.AuthorizeOperationKey,
-            saga.SagaId.ToString("D"), resultCode: "DECLINED", messageId: $"lose-{Guid.NewGuid():N}");
+            saga.SagaId.ToString("D"), reasonCode: "DECLINED", messageId: $"lose-{Guid.NewGuid():N}");
 
         var winnerTask = Task.Run(() => winnerHandler.HandleAsync("trip.payment-outcome.q", success, CancellationToken.None));
         var loserTask = Task.Run(() => loserHandler.HandleAsync("trip.payment-outcome.q", failure, CancellationToken.None));
@@ -720,7 +720,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // the void leg below can still resolve (regression: review clobber).
         var review = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentRequiresReviewV1", tripId, saga.AuthorizeOperationKey,
-                saga.SagaId.ToString("D"), resultCode: "RETRY_EXHAUSTED"));
+                saga.SagaId.ToString("D"), reasonCode: "RETRY_EXHAUSTED"));
         Assert.Equal("Applied", review.Disposition);
         var observed = await SagaAsync(cs, tripId);
         Assert.Equal(RideSagaStatus.Compensating, observed.Status);
@@ -738,7 +738,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // A review signal for the VOID key is likewise an observation only.
         var voidReview = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentRequiresReviewV1", tripId, RideSagaOperationKeys.Void(tripId),
-                saga.SagaId.ToString("D"), resultCode: "VOID_REVIEW", messageId: $"vr-{Guid.NewGuid():N}"));
+                saga.SagaId.ToString("D"), reasonCode: "VOID_REVIEW", messageId: $"vr-{Guid.NewGuid():N}"));
         Assert.Equal("Applied", voidReview.Disposition);
         Assert.Equal(RideSagaStatus.Compensating, (await SagaAsync(cs, tripId)).Status);
 
@@ -785,7 +785,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // already-consumed release event.
         var declined = await DeliverAsync(cs, "trip.payment-outcome.q",
             PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, saga.AuthorizeOperationKey,
-                saga.SagaId.ToString("D"), resultCode: "DECLINED"));
+                saga.SagaId.ToString("D"), reasonCode: "DECLINED"));
         Assert.Equal("Applied", declined.Disposition);
         Assert.Equal(RideSagaStatus.Compensated, (await SagaAsync(cs, tripId)).Status);
         var releasedTrip = await TripAsync(cs, tripId);

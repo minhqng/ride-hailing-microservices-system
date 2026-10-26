@@ -236,15 +236,20 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
 
     private static PaymentOutcomeFact PaymentFact(MessageEnvelope<JsonElement> envelope)
     {
-        string? resultCode = null;
+        // Payment's authoritative failure/pending/review payloads carry the
+        // provider reason as `reasonCode` (PaymentMessages.cs). Reading a
+        // different field here silently turns a terminal DECLINED into an
+        // uncertain outcome, so this name is part of the cross-service
+        // contract and is pinned by PaymentMessageContractsTests.
+        string? reasonCode = null;
         if (envelope.Payload.ValueKind == JsonValueKind.Object &&
-            envelope.Payload.TryGetProperty("resultCode", out var code) &&
+            envelope.Payload.TryGetProperty("reasonCode", out var code) &&
             code.ValueKind == JsonValueKind.String)
         {
-            resultCode = code.GetString();
+            reasonCode = code.GetString();
         }
 
-        return new PaymentOutcomeFact(envelope.MessageType, envelope.OperationKey, envelope.SagaId, resultCode);
+        return new PaymentOutcomeFact(envelope.MessageType, envelope.OperationKey, envelope.SagaId, reasonCode);
     }
 
     private static Guid RequiredGuid(JsonElement payload, string name)
