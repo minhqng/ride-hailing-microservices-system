@@ -1,0 +1,145 @@
+{
+  "capturedAt": "2026-10-26T09:23:08Z",
+  "tripId": "1f947b40-019e-41d8-9e6a-90580850103f",
+  "driverId": "557e82e9-cf4a-4957-8a0e-309e61f41fba",
+  "reservationId": "dee506a3-8bc9-4aae-bfce-ff9a2bb4fff0",
+  "trip": {
+    "trip_id": "1f947b40-019e-41d8-9e6a-90580850103f",
+    "state": "COMPLETED",
+    "version": 6,
+    "current_matching_round": 1,
+    "assigned_driver_id": "557e82e9-cf4a-4957-8a0e-309e61f41fba",
+    "reservation_id": "dee506a3-8bc9-4aae-bfce-ff9a2bb4fff0"
+  },
+  "saga": {
+    "saga_id": "f5aa9407-c299-458a-a837-511f17935e20",
+    "status": "ACTIVE",
+    "current_step": "CAPTURE_PENDING",
+    "step_version": 3,
+    "reservation_id": "dee506a3-8bc9-4aae-bfce-ff9a2bb4fff0",
+    "authorize_operation_key": "1f947b40-019e-41d8-9e6a-90580850103f:authorize:v1",
+    "capture_operation_key": "1f947b40-019e-41d8-9e6a-90580850103f:capture:v1",
+    "void_operation_key": null,
+    "last_error_code": null,
+    "requires_review_reason": null
+  },
+  "outbox": [
+    {
+      "message_type": "AuthorizePaymentV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "CapturePaymentV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "MarkDriverTripCompletedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "MarkDriverTripStartedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "RideRequestedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    }
+  ],
+  "receipts": [
+    {
+      "message_type": "DriverReservedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    },
+    {
+      "message_type": "DriverTripStartedV1",
+      "count": 1,
+      "dispositions": "NeedsReview"
+    },
+    {
+      "message_type": "PaymentAuthorizedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    }
+  ],
+  "cleanup": [],
+  "matching": {
+    "round": [
+      {
+        "matching_round": 1,
+        "status": "RESERVED",
+        "candidate_count": 1,
+        "selected_driver_id": "557e82e9-cf4a-4957-8a0e-309e61f41fba",
+        "selected_reservation_id": "dee506a3-8bc9-4aae-bfce-ff9a2bb4fff0"
+      }
+    ],
+    "attempts": [
+      {
+        "ordinal": 0,
+        "driver_id": "557e82e9-cf4a-4957-8a0e-309e61f41fba",
+        "reservation_id": "dee506a3-8bc9-4aae-bfce-ff9a2bb4fff0",
+        "state": "RESERVED"
+      }
+    ]
+  },
+  "payment": {
+    "operations": [
+      {
+        "operation_type": "AUTHORIZE",
+        "operation_key": "1f947b40-019e-41d8-9e6a-90580850103f:authorize:v1",
+        "state": "SUCCEEDED",
+        "provider_effect_occurred": true,
+        "provider_effect_id": "sim-d5a97469819f418cb25232aa1e0df688",
+        "result_code": "APPROVED",
+        "attempt_count": 1,
+        "completed_at": "2026-10-26T09:23:04.610244+00:00"
+      },
+      {
+        "operation_type": "CAPTURE",
+        "operation_key": "1f947b40-019e-41d8-9e6a-90580850103f:capture:v1",
+        "state": "UNKNOWN",
+        "provider_effect_occurred": false,
+        "provider_effect_id": null,
+        "result_code": "PROVIDER_RESPONSE_LOST",
+        "attempt_count": 1,
+        "completed_at": null
+      }
+    ],
+    "providerEffects": [
+      {
+        "operation_key": "1f947b40-019e-41d8-9e6a-90580850103f:authorize:v1",
+        "effect_id": "sim-d5a97469819f418cb25232aa1e0df688",
+        "committed_at": "2026-10-26T09:23:04.608816+00:00"
+      }
+    ],
+    "outbox": [
+      {
+        "message_type": "PaymentAuthorizedV1",
+        "status": "PUBLISHED"
+      },
+      {
+        "message_type": "PaymentCapturePendingV1",
+        "status": "PUBLISHED"
+      }
+    ]
+  },
+  "driver": {
+    "driver_id": "557e82e9-cf4a-4957-8a0e-309e61f41fba",
+    "status": "AVAILABLE",
+    "version": 7,
+    "reserved_trip_id": null,
+    "reservation_id": null,
+    "reserved_round": null,
+    "active_trip_id": null
+  }
+}

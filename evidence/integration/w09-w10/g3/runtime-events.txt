@@ -1,0 +1,36 @@
+# Runtime evidence excerpt (docker compose logs, W09/W10 G3 campaign)
+
+# Trip applied authoritative outcomes
+      Trip message dac9f7e9db03cc40f52a871c8c8e31b1 correlation bf53abe1c40347aeaf8df02b1858ffdf trip 01b91744-02dd-4632-98f3-33fe6ee465a9 result Applied reason 
+      Trip message payment:6b4511e88a7148b996e7654b9bee57f4:PaymentAuthorizedV1 correlation 01b91744-02dd-4632-98f3-33fe6ee465a9 trip 01b91744-02dd-4632-98f3-33fe6ee465a9 result Applied reason 
+      Trip message bebd56b4dd46b805058e88a7ac2812af correlation 01b91744-02dd-4632-98f3-33fe6ee465a9 trip 01b91744-02dd-4632-98f3-33fe6ee465a9 result BusinessReplay reason 
+      Trip message payment:8ab3abf06c7a4fcd8e42d84a8e849955:PaymentCapturedV1 correlation 01b91744-02dd-4632-98f3-33fe6ee465a9 trip 01b91744-02dd-4632-98f3-33fe6ee465a9 result Applied reason 
+      Trip message cc349163633741b17cfc73f6ffcc2de0 correlation 01b91744-02dd-4632-98f3-33fe6ee465a9 trip 01b91744-02dd-4632-98f3-33fe6ee465a9 result BusinessReplay reason 
+      Trip message 18868a6f669fee7b4fa3a686526e6a83 correlation 43f90fb17aa142619697a1ca9cd0d9ea trip 8ee137a4-152f-491e-bf93-1db3188be88f result Applied reason 
+      Trip message payment:018255ea9c0a4dfe85fcc3e0baa50270:PaymentAuthorizationFailedV1 correlation 8ee137a4-152f-491e-bf93-1db3188be88f trip 8ee137a4-152f-491e-bf93-1db3188be88f result Applied reason 
+      Trip message cb144289649d5aee7d47d5f2eb01d09c correlation 8ee137a4-152f-491e-bf93-1db3188be88f trip 8ee137a4-152f-491e-bf93-1db3188be88f result Applied reason 
+      Trip message faed5b035f82fbed23d2a49477f0d0f8 correlation cde472f9c7564d92b74c22cd0e5bafa9 trip 1f947b40-019e-41d8-9e6a-90580850103f result Applied reason 
+      Trip message payment:d5a97469819f418cb25232aa1e0df688:PaymentAuthorizedV1 correlation 1f947b40-019e-41d8-9e6a-90580850103f trip 1f947b40-019e-41d8-9e6a-90580850103f result Applied reason 
+      Trip message 3822031e43d91f6c2086f80ec6f23d80 correlation 1f947b40-019e-41d8-9e6a-90580850103f trip 1f947b40-019e-41d8-9e6a-90580850103f result NeedsReview reason TerminalState
+      Trip message payment:3337904af5294401bb52130b4b33f8a4:PaymentCapturePendingV1 correlation 1f947b40-019e-41d8-9e6a-90580850103f trip 1f947b40-019e-41d8-9e6a-90580850103f result Applied reason 
+      Trip message 7ddf0a0458e783b13e409982556b7aad correlation 1f947b40-019e-41d8-9e6a-90580850103f trip 1f947b40-019e-41d8-9e6a-90580850103f result BusinessReplay reason 
+      Trip message 23f7dac9a8263cc82401d901e3bc5fa5 correlation 1f23ee61c06943ddb575c2b5a75f6fa9 trip 3d7aa399-add5-41c5-8e8e-d186a9d5fda6 result Applied reason 
+      Trip message payment:032c4bc826804045a9a5b4847935170c:PaymentAuthorizationFailedV1 correlation 3d7aa399-add5-41c5-8e8e-d186a9d5fda6 trip 3d7aa399-add5-41c5-8e8e-d186a9d5fda6 result PendingWorkflow reason PAYMENT_OUTCOME_UNRESOLVED
+      Trip message af1c8e1a99b93d6e28345784010edada correlation 79c0661e773545f4a36c6de26bb7c2ee trip 5b1d9490-2902-4606-8ca9-bd26f8e42840 result Applied reason 
+      Trip message payment:e7f810c320884e4089ae24d9d90f09bf:PaymentAuthorizedV1 correlation 5b1d9490-2902-4606-8ca9-bd26f8e42840 trip 5b1d9490-2902-4606-8ca9-bd26f8e42840 result Applied reason 
+
+# Payment command executions
+      Payment command AuthorizePaymentV1 trip:01b9174402dd463298f333fe6ee465a9:authorize:v1 key 01b91744-02dd-4632-98f3-33fe6ee465a9:authorize:v1 completed as Succeeded; applied=True.
+      Payment command CapturePaymentV1 trip:01b9174402dd463298f333fe6ee465a9:capture:v1 key 01b91744-02dd-4632-98f3-33fe6ee465a9:capture:v1 completed as Succeeded; applied=True.
+      Payment command AuthorizePaymentV1 trip:8ee137a4152f491ebf931db3188be88f:authorize:v1 key 8ee137a4-152f-491e-bf93-1db3188be88f:authorize:v1 completed as Declined; applied=True.
+      Payment command AuthorizePaymentV1 trip:1f947b40019e41d89e6a90580850103f:authorize:v1 key 1f947b40-019e-41d8-9e6a-90580850103f:authorize:v1 completed as Succeeded; applied=True.
+      Payment command CapturePaymentV1 trip:1f947b40019e41d89e6a90580850103f:capture:v1 key 1f947b40-019e-41d8-9e6a-90580850103f:capture:v1 completed as Unknown; applied=True.
+      Payment command AuthorizePaymentV1 trip:3d7aa399add541c58e8ed186a9d5fda6:authorize:v1 key 3d7aa399-add5-41c5-8e8e-d186a9d5fda6:authorize:v1 completed as Unknown; applied=True.
+      Payment command AuthorizePaymentV1 trip:5b1d9490290246068ca9bd26f8e42840:authorize:v1 key 5b1d9490-2902-4606-8ca9-bd26f8e42840:authorize:v1 completed as Succeeded; applied=True.
+
+# Matching RideRequestedV1 consumption
+      Consumed RideRequestedV1 for trip 01b91744-02dd-4632-98f3-33fe6ee465a9 round 1: round PROCESSING.
+      Consumed RideRequestedV1 for trip 8ee137a4-152f-491e-bf93-1db3188be88f round 1: round PROCESSING.
+      Consumed RideRequestedV1 for trip 1f947b40-019e-41d8-9e6a-90580850103f round 1: round PROCESSING.
+      Consumed RideRequestedV1 for trip 3d7aa399-add5-41c5-8e8e-d186a9d5fda6 round 1: round PROCESSING.
+      Consumed RideRequestedV1 for trip 5b1d9490-2902-4606-8ca9-bd26f8e42840 round 1: round PROCESSING.

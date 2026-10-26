@@ -1,0 +1,135 @@
+W09/W10 integration acceptance — curated verification output
+============================================================
+
+Integration branch : integration/w09-w10
+Base                : origin/main ba5bb40615564ab022ddb0ff5e933bde93ee15a1
+Verified tip        : b6d57b6aa22bd38d8e8d0a42ac2bea3f5fa3dd06
+Tree                : 5de1ff927e3deadf66ef89c998f4d43ee1b2b60c
+Environment         : .NET SDK 10.0.401 · Linux 7.3.0-1-default · Docker 29.7.2-ce
+                      PostgreSQL 18.6 · RabbitMQ 4.3.6-management · Redis 8.10.2 · Release
+
+The solution-level lanes below were produced on the host worktree
+/home/minhqng/Documents/projects/rh-w09w10-verify at the verified tip.
+The targeted lanes were re-run from the same tip after the evidence bundle
+was assembled, with no source changes in between. Per-test names for every
+targeted lane are committed under g2/.
+
+§1 solution-build-release
+  command : dotnet build RideHailing.Distributed.slnx -c Release --no-incremental
+  exit    : 0
+  errors  : 0
+  warnings: 9 (non-blocking)
+    - 3 × CS8604 in src/Services/Payment/RideHailing.PaymentService/Application/Payment/PaymentCommandHandlers.cs
+      (nullable operationKey passed to PaymentOperation.Create; new C-W10 command path)
+    - 5 × CS0436 in the Driver integration test snapshot
+      (TripProducerSnapshot/trip-outbox-intents.cs and DriverCompensationTests.cs
+      define local contract copies that shadow the Trip project reference)
+    - 1 × xUnit2029 in DriverReserveConcurrencyTests.cs (pre-existing Driver test)
+  verdict : PASS
+
+§2 solution-tests-release
+  command : dotnet test RideHailing.Distributed.slnx -c Release --no-build
+  exit    : 0
+  total   : 1049 passed · 0 failed · 1 skipped
+  skip    : RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState
+            (pre-existing opt-in skip)
+  note    : SystemTests has no discoverable tests ("No test is available"); dotnet test
+            continues with exit 0. This is not a skipped test.
+  per-project passed:
+    DriverService.UnitTests              123
+    TripService.UnitTests                299
+    MatchingService.UnitTests            104
+    PaymentService.UnitTests              28
+    MatchingService.IntegrationTests     138
+    PaymentService.IntegrationTests       28
+    Platform.IntegrationTests             60
+    DriverService.IntegrationTests       107
+    TripService.IntegrationTests         162
+    IdentityService.IntegrationTests       0 passed / 1 skipped
+    SystemTests                           no discoverable tests
+  verdict : PASS
+
+§3 trip-w09-w10-integration (real PostgreSQL Testcontainers)
+  command : dotnet test tests/Integration/RideHailing.TripService.IntegrationTests \
+              -c Release --no-build \
+              --filter "FullyQualifiedName~TripW09OutboxTests|FullyQualifiedName~TripW10SagaTests"
+  result  : 28/28 passed · 0 failed · 0 skipped
+  coverage: 15 W09 outbox proofs + 13 W10 saga proofs
+  key names:
+    TripW09OutboxTests.CrashBeforePublish_LeavesDurablePendingRow_ThenRestartPublishesSameIdentity
+    TripW09OutboxTests.LostMarkAfterAcceptedPublish_RepublishesSameIdentity_ThenSettles
+    TripW09OutboxTests.IdentityCollisionWithForeignContract_IsADataFault_NotAReplayableRace
+    TripW10SagaTests.DriverAccepted_CommitsTripSagaAndAuthorizeAtomically_DuplicateNeverReauthorizes
+    TripW10SagaTests.DeclinedAuthorization_CompensatesWithExactRelease_UncertainNeverCompensates
+    TripW10SagaTests.CaptureFailure_AfterCompletion_NeverRegressesTheRide_NeverReMintsTheKey
+  verdict : PASS
+
+§4 platform-w09-integration (real PostgreSQL + RabbitMQ Testcontainers)
+  command : dotnet test tests/Integration/RideHailing.Platform.IntegrationTests \
+              -c Release --no-build \
+              --filter "FullyQualifiedName~RabbitBackboneTests|FullyQualifiedName~W9DedupTests|FullyQualifiedName~W9OutboxRelayTests"
+  result  : 19/19 passed · 0 failed · 0 skipped
+  coverage: 9 RabbitBackbone + 5 W9Dedup + 5 W9OutboxRelay
+  key names:
+    W9DedupTests.CommitBeforeAckRedeliveryFindsCommittedMarkerAndAppliesNoSecondEffect
+    W9OutboxRelayTests.PublishAcceptedThenMarkLostRepublishesSameIdentityAndDedupKeepsOneEffect
+    W9OutboxRelayTests.RelayRestartReclaimsClaimedPendingRowWithoutSilentLoss
+    RabbitBackboneTests.PoisonOrExhaustedTransientMovesToConfirmedErrorQueue
+    RabbitBackboneTests.BrokerDeliveryLimitPreservesOriginalInQuarantine
+  verdict : PASS
+
+§5 payment-w10-integration (real PostgreSQL + RabbitMQ Testcontainers)
+  command : dotnet test tests/Integration/RideHailing.PaymentService.IntegrationTests \
+              -c Release --no-build \
+              --filter "FullyQualifiedName~PaymentConcurrencyTests|FullyQualifiedName~PaymentMessagingTransactionTests|FullyQualifiedName~PaymentRecoveryTests|FullyQualifiedName~PaymentReplayTests"
+  result  : 20/20 passed · 0 failed · 0 skipped
+  coverage: 9 concurrency (10/50/100 × authorize/capture/void) + 2 messaging
+            + 6 recovery + 3 replay
+  key names:
+    PaymentRecoveryTests.LostResponseAfterEffectIsUnknownThenReconcilesSameKeyAfterRestart
+    PaymentRecoveryTests.ProviderCommitSurvivesPaymentTransactionRollbackAndCannotBecomeDecline
+    PaymentMessagingTransactionTests.RedeliveryKeepsOnePaymentEffectMarkerAndResultIntent
+    PaymentReplayTests.SameKeyReplaysAfterNewServiceInstanceAndConflictsNeverOverwrite
+  verdict : PASS
+
+§6 payment-contract
+  command : dotnet test tests/Unit/RideHailing.PaymentService.UnitTests \
+              -c Release --no-build --filter "FullyQualifiedName~PaymentMessageContractsTests"
+  result  : 3/3 passed · 0 failed · 0 skipped
+  names   :
+    PaymentMessageContractsTests.AuthorizeAndEventsPreserveOperationKey
+    PaymentMessageContractsTests.DeclinedAuthorizationSerializesReasonCodeForTripIntake
+    PaymentMessageContractsTests.SuccessfulVoidMapsToTheDedicatedVoidedEvent
+  verdict : PASS
+
+§7 trip-saga-unit
+  command : dotnet test tests/Unit/RideHailing.TripService.UnitTests \
+              -c Release --no-build \
+              --filter "FullyQualifiedName~RideSagaTransitionTests|FullyQualifiedName~TripSagaIntentTests"
+  result  : 27/27 passed · 0 failed · 0 skipped
+  coverage: saga transition matrix, exact lineage, compensation/void/release
+            ordering, capture uncertainty, terminal replay rejection
+  verdict : PASS
+
+§8 G3 real-compose campaign (see g3/)
+  topology: postgres, rabbitmq, redis, identity, driver, matching, trip,
+            payment, gateway, notification (real services, fresh volumes)
+  actor   : scripts/test/w10-g3-harness (verification-only; calls production
+            Trip handlers and Matching reserve orchestrator; no direct
+            business-row writes, no authority events)
+  result  : 5/5 scenarios PASS, transcripts in g3/campaign.log
+    happy  trip=01b91744-02dd-4632-98f3-33fe6ee465a9 saga=cf96caa8-f523-4d38-83df-9aa9828ee68f
+    rel07  trip=5b1d9490-2902-4606-8ca9-bd26f8e42840 saga=d3a303e1-6347-49c4-a6a9-493babd91648
+    rel08  trip=3d7aa399-add5-41c5-8e8e-d186a9d5fda6 saga=995808b1-23b0-46ce-b29f-ecc550b4de5f
+    rel09  trip=8ee137a4-152f-491e-bf93-1db3188be88f saga=e271a507-3b8f-4776-9a98-45f91947a57c
+    rel10  trip=1f947b40-019e-41d8-9e6a-90580850103f saga=f5aa9407-c299-458a-a837-511f17935e20
+  broker  : matching.commands.q = 1 ready / 0 consumers (unconsumed
+            CancelMatchingRoundV1 from REL-09; documented boundary gap);
+            every trip/payment command queue is drained.
+  verdict : PASS with the boundary gaps documented in README.md
+
+Attribution note
+  Authors are preserved from the source branches: 28 commits by
+  minhqng <minhnq.181005@gmail.com>; 2 commits by
+  vitquaybarking <leanhviet2005@gmail.com> (C-W09 5130b0f and C-W10-only
+  5b07085). The integration lead is the committer of rebased commits.
