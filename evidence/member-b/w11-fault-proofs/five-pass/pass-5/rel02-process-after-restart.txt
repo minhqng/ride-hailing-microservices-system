@@ -1,0 +1,7 @@
+name=/rhw11b-20261026t175726z-4883-match02b
+id=fe01afcc5414756978789bf52d03dddc937bf81381ba6600c928c0c1302f6b79
+pid=62837
+started=2026-10-26T17:58:14.443683329Z
+running=true
+exit_code=0
+oom_killed=false
