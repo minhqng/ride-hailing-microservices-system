@@ -38,6 +38,24 @@ The integration lead is the committer of the rebased commits because the
 rebase was the integration action. No source author was rewritten to the
 integrator. W11/W12 refs were not modified.
 
+### History correction (post-integration, 2026-10-26)
+
+The statement above describes the integration-time objects. `main` was later
+replaced by a metadata-only rewrite of the same range (`fbe3eb6` →
+`c166a3a`): eight verified Member B commits were re-attributed to
+`Fried-toofuu`, and the repository owner allocated the remaining
+integration-batch credit to `Nerduckk` as a team decision, not as an
+authorship finding. Trees, patches, messages, committers and dates are
+unchanged.
+
+The `codeCommit.sha` in `manifest.json` is deliberately left at
+`b6d57b6aa22bd38d8e8d0a42ac2bea3f5fa3dd06`, because that is the object the
+verification actually ran against; it is retained by
+`archive/main-pre-attribution-correction-2026-10-26`, and its replacement is
+`8b819eb` with the same tree `5de1ff9…`. The full old→new map and the W11/W12
+restack requirements are in `attribution-rewrite.json`, with the narrative in
+[`docs/06-history-attribution-correction.md`](../../../docs/06-history-attribution-correction.md).
+
 ## Verification results
 
 Environment: .NET SDK 10.0.401, Release, Linux 7.3.0, Docker 29.7.2-ce,

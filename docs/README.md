@@ -10,6 +10,7 @@ Canonical specs (do not rewrite; code wins only for exact patch/config after app
 - `05A-member-a-trip-workflow.md` → Member A playbook
 - `05B-member-b-driver-matching.md` → Member B playbook
 - `05C-member-c-payment-messaging-platform.md` → Member C playbook
+- `06-history-attribution-correction.md` → W09/W10 authorship correction and credit-allocation record
 
 Reading order: 00 → 01 → 02 → 03 → 04 → 05A/B/C. Priority: 00–03 over 04 over 05.
 
