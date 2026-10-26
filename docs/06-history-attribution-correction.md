@@ -42,10 +42,16 @@ parent before/after, and the group each commit belongs to.
 ## Group A — verified authorship correction (8 commits)
 
 These eight commits were integrated from Member B's work and were independently
-traced to Member B's source PRs. The integrated objects are patch-identical
-replays of the source-branch commits, and the source PRs were opened by
-`Fried-toofuu`. The Git author field recorded `minhqng` instead — a
-misconfigured local identity, not a different author.
+traced to Member B's source PRs, which were opened by `Fried-toofuu`. The Git
+author field recorded `minhqng` instead — a misconfigured local identity, not a
+different author.
+
+Seven of the eight integrated objects are patch-identical replays of the
+source-branch commits. The eighth, `b3f464e`, adds and removes exactly the same
+lines as its source commit (1119 additions, 16 deletions) but carries different
+hunk context because it was replayed onto a different base, so its stable
+patch-id differs. `attribution-rewrite.json` records `patchIdEqual` and
+`contentChangeEqual` separately for each of the eight.
 
 | Integrated (old) | Replacement (new) | Source PR | Source commit |
 |---|---|---|---|
@@ -63,7 +69,8 @@ New author: `Fried-toofuu <nghoangkhanh67@gmail.com>`. Committer stays
 integrated objects.
 
 This group is a **verified authorship correction**: the new Author is a claim
-supported by the source PRs and by patch identity.
+supported by the source PRs and by patch/content identity, not a team
+preference.
 
 ## Group B — owner-directed credit allocation (21 commits)
 
