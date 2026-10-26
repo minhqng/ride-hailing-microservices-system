@@ -55,7 +55,10 @@
             "pr": 37,
             "sourceCommit": "0b1611cfee256f1acb1dc698a59675a18603d4c9",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 927,
+            "removedLines": 336,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         },
         {
@@ -78,7 +81,10 @@
             "pr": 37,
             "sourceCommit": "03c04380ec8ddd7409e0dce934c155f853922779",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 2143,
+            "removedLines": 65,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         },
         {
@@ -101,7 +107,10 @@
             "pr": 37,
             "sourceCommit": "d825920d51aaae39ecff31a72540bf45cd800b4a",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 420,
+            "removedLines": 19,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         },
         {
@@ -124,7 +133,10 @@
             "pr": 37,
             "sourceCommit": "66d7d1c1f05a87fe3156b43b94616ae3201006bb",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 448,
+            "removedLines": 8,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         },
         {
@@ -146,8 +158,11 @@
           "source": {
             "pr": 39,
             "sourceCommit": "b1435f79d1fd5b29696de68eeeaedcbd989e7a96",
-            "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "patchIdEqual": false,
+            "contentChangeEqual": true,
+            "addedLines": 1119,
+            "removedLines": 16,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Same added/removed lines as the source commit, but different hunk context because the replay base differed, so the stable patch-id differs."
           }
         },
         {
@@ -170,7 +185,10 @@
             "pr": 39,
             "sourceCommit": "2d9a3032978296246b172b53001123c22015d7fd",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 389,
+            "removedLines": 0,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         },
         {
@@ -193,7 +211,10 @@
             "pr": 39,
             "sourceCommit": "87b639f5c471861129f05811968e92a3090a5ce7",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 793,
+            "removedLines": 16,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         },
         {
@@ -216,7 +237,10 @@
             "pr": 39,
             "sourceCommit": "8bf0da66342a5f4dc7420e7344650fc2ef7ad1fe",
             "patchIdEqual": true,
-            "note": "replayed integration object; author field corrected to the verified Member B identity"
+            "contentChangeEqual": true,
+            "addedLines": 393,
+            "removedLines": 3,
+            "note": "replayed integration object; author field corrected to the verified Member B identity. Patch-id and content change match the source commit."
           }
         }
       ]
