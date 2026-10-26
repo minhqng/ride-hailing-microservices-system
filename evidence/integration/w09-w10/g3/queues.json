@@ -1,0 +1,135 @@
+[
+  {
+    "name": "driver.commands.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "driver.commands.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "matching.commands.q",
+    "messages": 1,
+    "messages_ready": 1,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "matching.commands.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "matching.driver-projection.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "matching.driver-projection.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "matching.ride-requested.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "matching.ride-requested.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "notification.business-events.q",
+    "messages": 43,
+    "messages_ready": 43,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "notification.business-events.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "payment.commands.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "payment.commands.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "ride.quarantine.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "trip.driver-state.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "trip.driver-state.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "trip.matching-outcome.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "trip.matching-outcome.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  },
+  {
+    "name": "trip.payment-outcome.q",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 1
+  },
+  {
+    "name": "trip.payment-outcome.q.dead",
+    "messages": 0,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "consumers": 0
+  }
+]

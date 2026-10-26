@@ -1,0 +1,160 @@
+{
+  "capturedAt": "2026-10-26T09:22:48Z",
+  "tripId": "01b91744-02dd-4632-98f3-33fe6ee465a9",
+  "driverId": "5cd8a80c-ff50-4040-8530-1937b046e5f8",
+  "reservationId": "2b5255ec-bb0b-4d22-ae68-f1cc1a5cdcb9",
+  "trip": {
+    "trip_id": "01b91744-02dd-4632-98f3-33fe6ee465a9",
+    "state": "COMPLETED",
+    "version": 6,
+    "current_matching_round": 1,
+    "assigned_driver_id": "5cd8a80c-ff50-4040-8530-1937b046e5f8",
+    "reservation_id": "2b5255ec-bb0b-4d22-ae68-f1cc1a5cdcb9"
+  },
+  "saga": {
+    "saga_id": "cf96caa8-f523-4d38-83df-9aa9828ee68f",
+    "status": "COMPLETED",
+    "current_step": "CAPTURED",
+    "step_version": 4,
+    "reservation_id": "2b5255ec-bb0b-4d22-ae68-f1cc1a5cdcb9",
+    "authorize_operation_key": "01b91744-02dd-4632-98f3-33fe6ee465a9:authorize:v1",
+    "capture_operation_key": "01b91744-02dd-4632-98f3-33fe6ee465a9:capture:v1",
+    "void_operation_key": null,
+    "last_error_code": null,
+    "requires_review_reason": null
+  },
+  "outbox": [
+    {
+      "message_type": "AuthorizePaymentV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "CapturePaymentV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "MarkDriverTripCompletedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "MarkDriverTripStartedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "RideRequestedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    }
+  ],
+  "receipts": [
+    {
+      "message_type": "DriverReservedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    },
+    {
+      "message_type": "DriverTripCompletedV1",
+      "count": 1,
+      "dispositions": "BusinessReplay"
+    },
+    {
+      "message_type": "DriverTripStartedV1",
+      "count": 1,
+      "dispositions": "BusinessReplay"
+    },
+    {
+      "message_type": "PaymentAuthorizedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    },
+    {
+      "message_type": "PaymentCapturedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    }
+  ],
+  "cleanup": [],
+  "matching": {
+    "round": [
+      {
+        "matching_round": 1,
+        "status": "RESERVED",
+        "candidate_count": 1,
+        "selected_driver_id": "5cd8a80c-ff50-4040-8530-1937b046e5f8",
+        "selected_reservation_id": "2b5255ec-bb0b-4d22-ae68-f1cc1a5cdcb9"
+      }
+    ],
+    "attempts": [
+      {
+        "ordinal": 0,
+        "driver_id": "5cd8a80c-ff50-4040-8530-1937b046e5f8",
+        "reservation_id": "2b5255ec-bb0b-4d22-ae68-f1cc1a5cdcb9",
+        "state": "RESERVED"
+      }
+    ]
+  },
+  "payment": {
+    "operations": [
+      {
+        "operation_type": "AUTHORIZE",
+        "operation_key": "01b91744-02dd-4632-98f3-33fe6ee465a9:authorize:v1",
+        "state": "SUCCEEDED",
+        "provider_effect_occurred": true,
+        "provider_effect_id": "sim-6b4511e88a7148b996e7654b9bee57f4",
+        "result_code": "APPROVED",
+        "attempt_count": 1,
+        "completed_at": "2026-10-26T09:22:41.543868+00:00"
+      },
+      {
+        "operation_type": "CAPTURE",
+        "operation_key": "01b91744-02dd-4632-98f3-33fe6ee465a9:capture:v1",
+        "state": "SUCCEEDED",
+        "provider_effect_occurred": true,
+        "provider_effect_id": "sim-8ab3abf06c7a4fcd8e42d84a8e849955",
+        "result_code": "APPROVED",
+        "attempt_count": 1,
+        "completed_at": "2026-10-26T09:22:46.521676+00:00"
+      }
+    ],
+    "providerEffects": [
+      {
+        "operation_key": "01b91744-02dd-4632-98f3-33fe6ee465a9:authorize:v1",
+        "effect_id": "sim-6b4511e88a7148b996e7654b9bee57f4",
+        "committed_at": "2026-10-26T09:22:41.541431+00:00"
+      },
+      {
+        "operation_key": "01b91744-02dd-4632-98f3-33fe6ee465a9:capture:v1",
+        "effect_id": "sim-8ab3abf06c7a4fcd8e42d84a8e849955",
+        "committed_at": "2026-10-26T09:22:46.519525+00:00"
+      }
+    ],
+    "outbox": [
+      {
+        "message_type": "PaymentAuthorizedV1",
+        "status": "PUBLISHED"
+      },
+      {
+        "message_type": "PaymentCapturedV1",
+        "status": "PUBLISHED"
+      }
+    ]
+  },
+  "driver": {
+    "driver_id": "5cd8a80c-ff50-4040-8530-1937b046e5f8",
+    "status": "AVAILABLE",
+    "version": 5,
+    "reserved_trip_id": null,
+    "reservation_id": null,
+    "reserved_round": null,
+    "active_trip_id": null
+  }
+}

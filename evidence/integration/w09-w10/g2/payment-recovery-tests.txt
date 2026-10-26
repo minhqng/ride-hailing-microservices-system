@@ -1,0 +1,25 @@
+# g3-payment-recovery names
+RideHailing.PaymentService.IntegrationTests.PaymentReplayTests.SameKeyReplaysAfterNewServiceInstanceAndConflictsNeverOverwrite(type: Capture) [69 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentReplayTests.SameKeyReplaysAfterNewServiceInstanceAndConflictsNeverOverwrite(type: Authorize) [6 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentRecoveryTests.ProviderCommitSurvivesPaymentTransactionRollbackAndCannotBecomeDecline(type: Void) [82 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentReplayTests.SameKeyReplaysAfterNewServiceInstanceAndConflictsNeverOverwrite(type: Void) [7 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentMessagingTransactionTests.RedeliveryKeepsOnePaymentEffectMarkerAndResultIntent [99 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentRecoveryTests.ProviderCommitSurvivesPaymentTransactionRollbackAndCannotBecomeDecline(type: Capture) [26 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentMessagingTransactionTests.TripShapedPayloadWithoutOperationKeyUsesTheEnvelopeIdentity [21 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentRecoveryTests.ProviderCommitSurvivesPaymentTransactionRollbackAndCannotBecomeDecline(type: Authorize) [31 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentRecoveryTests.ProviderRecoveryPreservesOriginalReferenceAndRejectsConflictingMeaning [21 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 50, type: Capture) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentRecoveryTests.MissingEffectReconcilesBeforeRetryAndRetryBudgetIsFinite [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentRecoveryTests.LostResponseAfterEffectIsUnknownThenReconcilesSameKeyAfterRestart [20 ms]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 10, type: Void) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 10, type: Capture) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 100, type: Void) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 10, type: Authorize) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 50, type: Void) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 100, type: Capture) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 50, type: Authorize) [2 s]
+RideHailing.PaymentService.IntegrationTests.PaymentConcurrencyTests.SynchronizedCallersConvergeToOneIndependentProviderEffect(contenders: 100, type: Authorize) [2 s]
+
+Test Run Successful.
+Total tests: 20
+     Passed: 20

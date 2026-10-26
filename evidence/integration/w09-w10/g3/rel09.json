@@ -1,0 +1,144 @@
+{
+  "capturedAt": "2026-10-26T09:22:58Z",
+  "tripId": "8ee137a4-152f-491e-bf93-1db3188be88f",
+  "driverId": "f1560c46-d212-4a4e-8f84-a8af0abb4b5a",
+  "reservationId": "18f6872a-17a2-48f7-a13e-07c9fa4ceb76",
+  "trip": {
+    "trip_id": "8ee137a4-152f-491e-bf93-1db3188be88f",
+    "state": "CANCELLED",
+    "version": 6,
+    "current_matching_round": 1,
+    "assigned_driver_id": "f1560c46-d212-4a4e-8f84-a8af0abb4b5a",
+    "reservation_id": "18f6872a-17a2-48f7-a13e-07c9fa4ceb76"
+  },
+  "saga": {
+    "saga_id": "e271a507-3b8f-4776-9a98-45f91947a57c",
+    "status": "COMPENSATED",
+    "current_step": "RELEASE_PENDING",
+    "step_version": 3,
+    "reservation_id": "18f6872a-17a2-48f7-a13e-07c9fa4ceb76",
+    "authorize_operation_key": "8ee137a4-152f-491e-bf93-1db3188be88f:authorize:v1",
+    "capture_operation_key": null,
+    "void_operation_key": null,
+    "last_error_code": "DECLINED",
+    "requires_review_reason": null
+  },
+  "outbox": [
+    {
+      "message_type": "AuthorizePaymentV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "CancelMatchingRoundV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "ReleaseDriverReservationV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    },
+    {
+      "message_type": "RideRequestedV1",
+      "count": 1,
+      "min_status": "PUBLISHED",
+      "max_status": "PUBLISHED"
+    }
+  ],
+  "receipts": [
+    {
+      "message_type": "DriverReservationReleasedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    },
+    {
+      "message_type": "DriverReservedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    },
+    {
+      "message_type": "PaymentAuthorizationFailedV1",
+      "count": 1,
+      "dispositions": "Applied"
+    }
+  ],
+  "cleanup": [
+    {
+      "key": "matching:1",
+      "kind": "CancelMatching",
+      "driver_id": null,
+      "reservation_id": null,
+      "matching_round": 1,
+      "completed_at": null
+    },
+    {
+      "key": "payment",
+      "kind": "ReconcilePayment",
+      "driver_id": null,
+      "reservation_id": null,
+      "matching_round": 1,
+      "completed_at": "2026-10-26T09:22:55.788281+00:00"
+    },
+    {
+      "key": "release:18f6872a-17a2-48f7-a13e-07c9fa4ceb76",
+      "kind": "ReleaseReservation",
+      "driver_id": "f1560c46-d212-4a4e-8f84-a8af0abb4b5a",
+      "reservation_id": "18f6872a-17a2-48f7-a13e-07c9fa4ceb76",
+      "matching_round": 1,
+      "completed_at": "2026-10-26T09:22:57.524672+00:00"
+    }
+  ],
+  "matching": {
+    "round": [
+      {
+        "matching_round": 1,
+        "status": "RESERVED",
+        "candidate_count": 1,
+        "selected_driver_id": "f1560c46-d212-4a4e-8f84-a8af0abb4b5a",
+        "selected_reservation_id": "18f6872a-17a2-48f7-a13e-07c9fa4ceb76"
+      }
+    ],
+    "attempts": [
+      {
+        "ordinal": 0,
+        "driver_id": "f1560c46-d212-4a4e-8f84-a8af0abb4b5a",
+        "reservation_id": "18f6872a-17a2-48f7-a13e-07c9fa4ceb76",
+        "state": "RESERVED"
+      }
+    ]
+  },
+  "payment": {
+    "operations": [
+      {
+        "operation_type": "AUTHORIZE",
+        "operation_key": "8ee137a4-152f-491e-bf93-1db3188be88f:authorize:v1",
+        "state": "DECLINED",
+        "provider_effect_occurred": false,
+        "provider_effect_id": null,
+        "result_code": "DECLINED",
+        "attempt_count": 1,
+        "completed_at": "2026-10-26T09:22:53.944543+00:00"
+      }
+    ],
+    "providerEffects": [],
+    "outbox": [
+      {
+        "message_type": "PaymentAuthorizationFailedV1",
+        "status": "PUBLISHED"
+      }
+    ]
+  },
+  "driver": {
+    "driver_id": "f1560c46-d212-4a4e-8f84-a8af0abb4b5a",
+    "status": "AVAILABLE",
+    "version": 6,
+    "reserved_trip_id": null,
+    "reservation_id": null,
+    "reserved_round": null,
+    "active_trip_id": null
+  }
+}

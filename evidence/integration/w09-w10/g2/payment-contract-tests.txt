@@ -1,0 +1,8 @@
+# g2-payment-contract names
+RideHailing.PaymentService.UnitTests.PaymentMessageContractsTests.SuccessfulVoidMapsToTheDedicatedVoidedEvent [6 ms]
+RideHailing.PaymentService.UnitTests.PaymentMessageContractsTests.DeclinedAuthorizationSerializesReasonCodeForTripIntake [16 ms]
+RideHailing.PaymentService.UnitTests.PaymentMessageContractsTests.AuthorizeAndEventsPreserveOperationKey [10 ms]
+
+Test Run Successful.
+Total tests: 3
+     Passed: 3
