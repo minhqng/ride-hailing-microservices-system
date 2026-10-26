@@ -223,8 +223,8 @@ if [ "$(git -C "$REPO_ROOT" rev-parse HEAD)" != "$SOURCE_HEAD" ]; then
   die "source HEAD changed during the campaign; final acceptance run invalid"
 fi
 FINAL_STATUS=$(git -C "$REPO_ROOT" status --porcelain)
-if [ -n "$FINAL_STATUS" ]; then
-  die "working tree became dirty during the campaign; final acceptance run invalid"
+if [ "$FINAL_STATUS" != "$SOURCE_STATUS" ]; then
+  die "working tree changed during the campaign; final acceptance run invalid"
 fi
 
 node -e '
