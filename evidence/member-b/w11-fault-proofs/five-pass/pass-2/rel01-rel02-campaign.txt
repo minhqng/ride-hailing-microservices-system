@@ -1,0 +1,24 @@
+[2026-10-26T17:52:13Z] B-W11 REL-01/REL-02 campaign rhw11b-20261026t175213z-1324
+[2026-10-26T17:52:13Z] source HEAD c3907a93404d9016a2afefd5b25434f0bacfb49f
+[2026-10-26T17:52:13Z] evidence D:/rh-w11b/evidence/member-b/w11-fault-proofs/raw/five-pass-20261026t174928z/pass-2/rel01-rel02
+[2026-10-26T17:52:13Z] SKIP_BUILD=1: reusing rhw11b-driver:local and rhw11b-matching:local
+[2026-10-26T17:52:14Z] Starting PostgreSQL, RabbitMQ and Redis in rhw11b-20261026t175213z-1324-net
+[2026-10-26T17:52:20Z] Starting Driver service with the W11 fault point enabled
+[2026-10-26T17:52:22Z] Driver ready at http://127.0.0.1:49710
+[2026-10-26T17:52:22Z] REL-01: create isolated drivers
+[2026-10-26T17:52:24Z] REL-01 trip=6abc56f6-dc8f-485f-bd5a-4bff8a971ad8 drivers=1098866a-a793-4c7e-bf6d-88acc8c851c4,9332068a-a112-4cf8-a9e7-29f89c517515
+[2026-10-26T17:52:25Z] REL-01 Matching ready at http://127.0.0.1:49719
+[2026-10-26T17:52:35Z] REL-01 timeout observed: HTTP=200 curl_exit=0 reservation=10cb9980-0f2d-4082-ac68-28c70f8bac15
+[2026-10-26T17:52:40Z] REL-01 PASS: reservation=10cb9980-0f2d-4082-ac68-28c70f8bac15 unchanged across timeout and reconcile
+[2026-10-26T17:52:41Z] REL-02: create isolated drivers
+[2026-10-26T17:52:43Z] REL-02 trip=593dde30-c4af-4dbf-9a86-9690c270071e drivers=d29762e8-07b3-4b7a-9f4e-c01705516e4a,cacc5abe-0658-4777-a087-1d852c867383
+[2026-10-26T17:52:47Z] REL-02 Matching-A 7cfff404c0f63ae87636e7e33d08342afbfb3049d3b9fd1a2a1ee92172157c2f pid=37451 at http://127.0.0.1:49735
+[2026-10-26T17:52:51Z] REL-02 pre-crash: reservation=d1bbc18b-b8ea-4aad-8de4-812ce14ffffe driverVersion=3 attempt=IN_FLIGHT state=RESERVED
+[2026-10-26T17:52:51Z] REL-02 SIGKILL Matching container rhw11b-20261026t175213z-1324-match02a
+[2026-10-26T17:52:55Z] REL-02 original Matching PID 37451 exited 137 at 2026-10-26T17:52:52.057039144Z
+[2026-10-26T17:52:57Z] REL-02 reserve request failed after kill: http='000' curl_exit='52' health='000'
+[2026-10-26T17:53:04Z] REL-02 Matching-B d9d05a1a723a8ba34eaf68ab68aa94014768eb3ad0cb4b77d25f2b56e04d0c39 pid=38514 at http://127.0.0.1:49751
+[2026-10-26T17:53:10Z] REL-02 PASS: old PID 37451 exited 137; new PID 38514 reconciled R=d1bbc18b-b8ea-4aad-8de4-812ce14ffffe
+[2026-10-26T17:53:11Z] PASS: REL-01 and REL-02
+[2026-10-26T17:53:11Z] Evidence: D:/rh-w11b/evidence/member-b/w11-fault-proofs/raw/five-pass-20261026t174928z/pass-2/rel01-rel02
+[2026-10-26T17:53:11Z] campaign exiting rc=0

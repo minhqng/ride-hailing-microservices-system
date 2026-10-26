@@ -1,0 +1,3 @@
+[{"message_id":"82a4de94ceb414960574b4e364674727","message_type":"DriverAvailableV1","status":"PUBLISHED","reservation_id":null,"matching_round":null,"trip_id":null,"attempt_count":0,"published_at":"2026-10-26T17:50:53.616662+00:00"},
+ {"message_id":"8f57cc4e32d03327974b687e6ef5d6a9","message_type":"DriverAvailableV1","status":"PUBLISHED","reservation_id":null,"matching_round":null,"trip_id":null,"attempt_count":0,"published_at":"2026-10-26T17:50:53.625248+00:00"},
+ {"message_id":"ccb28432870cc70c0472c191eea82576","message_type":"DriverReservedV1","status":"PUBLISHED","reservation_id":"4cda75c0-8169-4f77-8b3d-4ef02bf312e7","matching_round":"1","trip_id":"7bccbf9e-8982-474e-924e-0612e77a559e","attempt_count":0,"published_at":"2026-10-26T17:50:58.663102+00:00"}]
