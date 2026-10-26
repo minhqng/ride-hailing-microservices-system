@@ -41,13 +41,19 @@ preflight() {
     command -v "$tool" >/dev/null 2>&1 || die "missing required tool: $tool"
   done
   docker info >/dev/null 2>&1 || die "Docker is not available"
-  local status
-  status=$(git -C "$REPO_ROOT" status --porcelain)
-  if [ -n "$status" ] && [ "${ALLOW_DIRTY:-0}" != "1" ]; then
-    die "working tree is dirty; commit or set ALLOW_DIRTY=1 for a diagnostic run"
+  case "$PASSES" in
+    ''|*[!0-9]*) die "PASSES must be a positive integer" ;;
+  esac
+  [ "$PASSES" -ge 1 ] || die "PASSES must be >= 1"
+  if [ "${ALLOW_DIRTY:-0}" = "1" ] && [ "$PASSES" -gt 1 ]; then
+    die "ALLOW_DIRTY is diagnostic-only; multi-pass acceptance requires a clean tree"
+  fi
+  SOURCE_STATUS=$(git -C "$REPO_ROOT" status --porcelain)
+  if [ -n "$SOURCE_STATUS" ] && [ "${ALLOW_DIRTY:-0}" != "1" ]; then
+    die "working tree is dirty; commit or set ALLOW_DIRTY=1 for a single-pass diagnostic"
   fi
   log "source HEAD $(git -C "$REPO_ROOT" rev-parse HEAD) tree $(git -C "$REPO_ROOT" rev-parse HEAD^{tree})"
-  log "source status '${status}'"
+  log "source status '${SOURCE_STATUS}'"
 }
 
 run_phase1() { # pass_dir [skip_build]
@@ -99,7 +105,7 @@ phase1_ids() { # summary
 
 run_driver_tests() { # pass_dir
   local out=$1
-  $DOTNET test \
+  "$DOTNET" test \
     "$REPO_ROOT/tests/Integration/RideHailing.DriverService.IntegrationTests/RideHailing.DriverService.IntegrationTests.csproj" \
     -c Release --filter \
     "FullyQualifiedName~DriverCon02DeterministicTests|FullyQualifiedName~Con04_LateReleaseR1_ViaBroker|FullyQualifiedName~Stale_Release_After_ReReserve_Cannot_Free_Newer_Owner" \
@@ -108,21 +114,26 @@ run_driver_tests() { # pass_dir
 
 run_matching_tests() { # pass_dir
   local out=$1
-  $DOTNET test \
+  "$DOTNET" test \
     "$REPO_ROOT/tests/Integration/RideHailing.MatchingService.IntegrationTests/RideHailing.MatchingService.IntegrationTests.csproj" \
     -c Release --filter \
     "FullyQualifiedName~DriverProjectionStalenessHandlerTests|FullyQualifiedName~W11_Rel12_|FullyQualifiedName~W11_Rel13_|FullyQualifiedName~RedisOutageRecoveryTests" \
     --logger "console;verbosity=detailed" > "$out/matching-integration.log" 2>&1
 }
 
+# The acceptance runner must never inherit a user-owned shared test database
+# or broker. Fixtures fall back to disposable Testcontainers without these.
+unset MATCHING_TEST_POSTGRES DRIVER_TEST_POSTGRES RABBITMQ_TEST_CONNECTION \
+  REDIS_TEST_CONNECTION Redis__ConnectionString TRIP_TEST_POSTGRES
 preflight
 SOURCE_HEAD=$(git -C "$REPO_ROOT" rev-parse HEAD)
 SOURCE_TREE=$(git -C "$REPO_ROOT" rev-parse HEAD^{tree})
+log "isolated test infrastructure: explicit shared-test env overrides cleared"
 log "B-W11 five-pass campaign -> $OUT"
 write_scenarios_header
 
 log "Release build"
-$DOTNET build "$REPO_ROOT/RideHailing.Distributed.slnx" -c Release \
+"$DOTNET" build "$REPO_ROOT/RideHailing.Distributed.slnx" -c Release \
   > "$OUT/release-build.log" 2>&1 || {
     tail -40 "$OUT/release-build.log" || true
     die "Release build failed"
@@ -168,7 +179,8 @@ for pass in $(seq 1 "$PASSES"); do
   assert_passed_test "$pass_dir/driver-integration.log" "Stale_Release_After_ReReserve_Cannot_Free_Newer_Owner" "CON-04 direct"
   assert_passed_test "$pass_dir/driver-integration.log" "Con04_LateReleaseR1_ViaBroker" "CON-04 broker"
   driver_elapsed=$(( $(date +%s) - driver_start ))
-  driver_ids=$(grep -h "W11 CON-" "$pass_dir/driver-integration.log" | tr '\n' ';' | sed 's/  */ /g')
+  driver_ids=$(grep -h "W11 CON-" "$pass_dir/driver-integration.log" | tr '\n' ';' | sed 's/  */ /g' || true)
+  [ -n "$driver_ids" ] || die "pass $pass CON identity evidence missing"
   record "$pass" "CON-02" "both-schedules" "PASS" "$driver_elapsed" "$driver_ids"
   record "$pass" "CON-04" "direct+broker" "PASS" "$driver_elapsed" "$driver_ids"
   log "PASS $pass CON-02/CON-04 PASS"
@@ -186,7 +198,8 @@ for pass in $(seq 1 "$PASSES"); do
   assert_passed_test "$pass_dir/matching-integration.log" "W11_Rel13_StaleLocation_ViaBroker" "REL-13 broker"
   assert_passed_test "$pass_dir/matching-integration.log" "RedisPartition_DegradesCandidatePath" "REL-14"
   matching_elapsed=$(( $(date +%s) - matching_start ))
-  matching_ids=$(grep -h "W11 REL-" "$pass_dir/matching-integration.log" | tr '\n' ';' | sed 's/  */ /g')
+  matching_ids=$(grep -h "W11 REL-" "$pass_dir/matching-integration.log" | tr '\n' ';' | sed 's/  */ /g' || true)
+  [ -n "$matching_ids" ] || die "pass $pass REL identity evidence missing"
   record "$pass" "REL-12" "handler+broker" "PASS" "$matching_elapsed" "$matching_ids"
   record "$pass" "REL-13" "handler+broker" "PASS" "$matching_elapsed" "$matching_ids"
   record "$pass" "REL-14" "real-partition+recovery" "PASS" "$matching_elapsed" "$matching_ids"
@@ -209,6 +222,10 @@ done
 if [ "$(git -C "$REPO_ROOT" rev-parse HEAD)" != "$SOURCE_HEAD" ]; then
   die "source HEAD changed during the campaign; final acceptance run invalid"
 fi
+FINAL_STATUS=$(git -C "$REPO_ROOT" status --porcelain)
+if [ -n "$FINAL_STATUS" ]; then
+  die "working tree became dirty during the campaign; final acceptance run invalid"
+fi
 
 node -e '
   const fs = require("fs");
@@ -216,7 +233,8 @@ node -e '
   const out = process.argv[1];
   const source = process.argv[2];
   const tree = process.argv[3];
-  const passes = Number(process.argv[4]);
+  const sourceStatus = process.argv[4];
+  const passes = Number(process.argv[5]);
   const rows = fs.readFileSync(path.join(out, "scenarios.tsv"), "utf8")
     .trim().split(/\r?\n/).slice(1).map(line => line.split("\t"));
   const matrix = {};
@@ -230,14 +248,17 @@ node -e '
     timestampUtc: new Date().toISOString(),
     sourceHead: source,
     sourceTree: tree,
+    sourceStatus,
     passes,
-    acceptance: passes === 5 ? "5/5 consecutive passes" : `smoke only (${passes} pass)`,
+    acceptance: passes === 5 && sourceStatus === ""
+      ? "5/5 consecutive passes"
+      : `DIAGNOSTIC — not acceptance (${passes} pass, sourceStatus='${sourceStatus}')`,
     driverImageId: process.env.W11_DRIVER_IMAGE_ID || null,
     matchingImageId: process.env.W11_MATCHING_IMAGE_ID || null,
     matrix,
     result: "PASS"
   };
   fs.writeFileSync(path.join(out, "five-pass-summary.json"), JSON.stringify(summary, null, 2));
-' "$OUT" "$SOURCE_HEAD" "$SOURCE_TREE" "$PASSES"
+' "$OUT" "$SOURCE_HEAD" "$SOURCE_TREE" "$SOURCE_STATUS" "$PASSES"
 
 log "FIVE-PASS PASS ($PASSES/$PASSES) — $OUT/five-pass-summary.json"

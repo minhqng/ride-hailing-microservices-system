@@ -101,6 +101,20 @@ ALLOW_DIRTY=1 PASSES=1 ./scripts/fault/b-w11-full-campaign.sh
 Each pass gets a fresh container namespace and fresh GUID identities. A
 failed or zero-test scenario stops the streak and leaves its logs under
 `evidence/member-b/w11-fault-proofs/raw/five-pass-*/pass-N/`. The final
-`five-pass-summary.json` records the source SHA/tree, per-pass scenario
-results, elapsed time and identity lines. No user-owned Redis or other
-container is stopped or removed.
+`five-pass-summary.json` records the source SHA/tree, source status, per-pass
+scenario results, elapsed time and identity lines. Multi-pass acceptance
+requires a clean tree; `ALLOW_DIRTY=1` is accepted only for a single-pass
+diagnostic and the summary is marked `DIAGNOSTIC`.
+
+The runner clears `MATCHING_TEST_POSTGRES`, `DRIVER_TEST_POSTGRES`,
+`RABBITMQ_TEST_CONNECTION`, `REDIS_TEST_CONNECTION`,
+`Redis__ConnectionString` and `TRIP_TEST_POSTGRES` so a pass cannot silently
+run against user-owned infrastructure. Only Project B's isolated containers
+are created/removed; no user-owned Redis or other container is stopped.
+
+REL-14's partition is a test-controlled TCP gate in front of the disposable
+Redis container: active client sockets are closed, the production candidate
+path degrades, and the gate is reopened. Redis process/data stay alive, so the
+test explicitly reports `survived` separately from
+`eventReplayReconstructed`. The broker projection tests require a receipt for
+every published envelope, so stale deliveries cannot pass by being dropped.

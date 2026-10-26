@@ -265,12 +265,17 @@ public sealed class RedisOutageRecoveryTests
         }
         finally
         {
-            if (gate is not null)
+            try
             {
-                await gate.DisposeAsync();
+                if (gate is not null)
+                {
+                    await gate.DisposeAsync();
+                }
             }
-
-            await redis.DisposeAsync();
+            finally
+            {
+                await redis.DisposeAsync();
+            }
         }
     }
 
@@ -285,6 +290,7 @@ public sealed class RedisOutageRecoveryTests
         private readonly int _upstreamPort;
         private readonly object _clientsGate = new();
         private readonly List<TcpClient> _clients = [];
+        private readonly HashSet<Task> _proxies = [];
         private TcpListener? _listener;
         private CancellationTokenSource? _stopping;
         private Task? _acceptLoop;
@@ -332,7 +338,19 @@ public sealed class RedisOutageRecoveryTests
                     return;
                 }
 
-                _ = ProxyAsync(client, ct);
+                var proxy = ProxyAsync(client, ct);
+                lock (_clientsGate)
+                {
+                    _proxies.Add(proxy);
+                }
+
+                _ = proxy.ContinueWith(done =>
+                {
+                    lock (_clientsGate)
+                    {
+                        _proxies.Remove(done);
+                    }
+                }, TaskScheduler.Default);
             }
         }
 
@@ -340,6 +358,12 @@ public sealed class RedisOutageRecoveryTests
         {
             lock (_clientsGate)
             {
+                if (ct.IsCancellationRequested)
+                {
+                    client.Dispose();
+                    return;
+                }
+
                 _clients.Add(client);
             }
 
@@ -349,6 +373,11 @@ public sealed class RedisOutageRecoveryTests
                 using (var upstream = new TcpClient())
                 {
                     await upstream.ConnectAsync(_upstreamHost, _upstreamPort, ct);
+                    if (ct.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     var clientStream = client.GetStream();
                     var upstreamStream = upstream.GetStream();
                     var forward = clientStream.CopyToAsync(upstreamStream, ct);
@@ -378,6 +407,7 @@ public sealed class RedisOutageRecoveryTests
 
             _stopping?.Cancel();
             _listener.Stop();
+            Task[] proxies;
             lock (_clientsGate)
             {
                 foreach (var client in _clients)
@@ -386,6 +416,7 @@ public sealed class RedisOutageRecoveryTests
                 }
 
                 _clients.Clear();
+                proxies = _proxies.ToArray();
             }
 
             if (_acceptLoop is not null)
@@ -398,6 +429,15 @@ public sealed class RedisOutageRecoveryTests
                 {
                     // Expected during teardown.
                 }
+            }
+
+            try
+            {
+                await Task.WhenAll(proxies).WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (TimeoutException)
+            {
+                // Bounded teardown; sockets were already closed above.
             }
 
             _listener = null;
