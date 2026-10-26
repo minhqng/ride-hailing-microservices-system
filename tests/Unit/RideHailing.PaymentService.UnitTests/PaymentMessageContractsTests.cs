@@ -25,6 +25,24 @@ public class PaymentMessageContractsTests
     }
 
     [Fact]
+    public async Task DeclinedAuthorizationSerializesReasonCodeForTripIntake()
+    {
+        // Trip's saga intake reads `reasonCode` from this outcome. The field
+        // name is cross-service authority: renaming it would turn a terminal
+        // DECLINED into an uncertain outcome and strand REL-09 compensation.
+        var pending = PaymentOperation.Create("trip-1:authorize:v1", Guid.NewGuid(),
+            PaymentOperationType.Authorize, 100, "VND", DateTimeOffset.UtcNow);
+        var declined = await new PaymentSimulator().ExecuteAsync(
+            pending.BeginAttempt(DateTimeOffset.UtcNow), PaymentSimulatorMode.Decline, CancellationToken.None);
+
+        var outcome = Assert.IsType<PaymentAuthorizationFailedV1>(
+            PaymentCommandHandlers.ToAuthorizeResult(declined));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(outcome));
+        Assert.Equal("DECLINED", json.RootElement.GetProperty("reasonCode").GetString());
+        Assert.False(json.RootElement.TryGetProperty("resultCode", out _));
+    }
+
+    [Fact]
     public async Task SuccessfulVoidMapsToTheDedicatedVoidedEvent()
     {
         var pending = PaymentOperation.Create("trip-1:void:v1", Guid.NewGuid(),
