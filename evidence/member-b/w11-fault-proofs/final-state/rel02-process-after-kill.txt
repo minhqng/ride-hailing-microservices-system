@@ -1,0 +1,7 @@
+name=/rhw11b-20261026t163456z-746-match02a
+id=ca896139a1313c0f8c454e78a0da321dcb41d71caa212749b5d3a2e88de6d2dd
+pid=0
+started=2026-10-26T16:36:14.794779912Z
+running=false
+exit_code=137
+oom_killed=false
