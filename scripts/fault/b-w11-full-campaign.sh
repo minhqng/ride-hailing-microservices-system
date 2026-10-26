@@ -252,7 +252,7 @@ node -e '
     passes,
     acceptance: passes === 5 && sourceStatus === ""
       ? "5/5 consecutive passes"
-      : `DIAGNOSTIC — not acceptance (${passes} pass, sourceStatus='${sourceStatus}')`,
+      : `DIAGNOSTIC — not acceptance (${passes} pass, sourceStatus=${sourceStatus || "clean"})`,
     driverImageId: process.env.W11_DRIVER_IMAGE_ID || null,
     matchingImageId: process.env.W11_MATCHING_IMAGE_ID || null,
     matrix,
