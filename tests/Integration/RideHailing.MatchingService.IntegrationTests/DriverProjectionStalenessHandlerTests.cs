@@ -196,6 +196,9 @@ public sealed class DriverProjectionStalenessHandlerTests
             Assert.Equal(HandlerOutcome.Done, await DeliverAsync(handler, "driver.location-accepted.v1", sameSeqNewer));
             Assert.Equal(beforeDuplicate, await HashAsync(driver, "capturedAt"));
             Assert.Equal(10.85, (await GeoAsync(driver))!.Value.Latitude, 4);
+            var duplicateReceipt = ProjectionReceipt.ForEnvelope(sameSeqNewer);
+            Assert.Equal(duplicateReceipt.Fingerprint,
+                (string?)await Db().StringGetAsync(duplicateReceipt.Key));
 
             var staleOutcome = await updater.ApplyLocationAsync(
                 new LocationProjectionUpdate(driver, 106.7, 10.9, "s", 19, t0.AddSeconds(1)));
