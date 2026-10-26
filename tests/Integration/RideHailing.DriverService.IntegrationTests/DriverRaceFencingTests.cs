@@ -2,6 +2,8 @@
 // Race B GoOffline-vs-Reserve (CON-02) on REAL PostgreSQL. Final DB rows are
 // the oracle throughout: R2 (or the single legal winner) survives with exact
 // version accounting, losers conflict without mutation.
+using Npgsql;
+using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
 using Xunit.Abstractions;
@@ -12,13 +14,39 @@ namespace RideHailing.DriverService.IntegrationTests;
 public class DriverRaceFencingTests
 {
     private readonly DriverPostgresDatabase _db;
+    private readonly ITestOutputHelper _output;
 
     public DriverRaceFencingTests(ITestOutputHelper output, DriverPostgresDatabase db)
     {
         _db = db;
+        _output = output;
     }
 
     private DriverRepository Repo() => _db.CreateRepository();
+
+    private async Task<long> EventCountAsync(Guid driver, string messageType)
+    {
+        await using var conn = await _db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            SELECT count(*) FROM outbox_messages
+            WHERE aggregate_id = @id AND message_type = @type;
+            """, conn);
+        cmd.Parameters.AddWithValue("id", driver.ToString("N"));
+        cmd.Parameters.AddWithValue("type", messageType);
+        return (long)(await cmd.ExecuteScalarAsync())!;
+    }
+
+    private async Task<long> ReleaseEventsForReservationAsync(Guid reservation)
+    {
+        await using var conn = await _db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            SELECT count(*) FROM outbox_messages
+            WHERE message_type = 'DriverReservationReleasedV1'
+              AND payload_json->>'reservationId' = @reservation;
+            """, conn);
+        cmd.Parameters.AddWithValue("reservation", reservation.ToString("D"));
+        return (long)(await cmd.ExecuteScalarAsync())!;
+    }
 
     // Fixtures fail loud at collection init (no skip path on this base):
     // reaching a test body proves the database is real.
@@ -130,6 +158,17 @@ public class DriverRaceFencingTests
         Assert.Equal(t2, final.ReservedTripId);
         Assert.Equal(r2, final.ReservationId);
         Assert.Equal(start.Version + 3, final.Version);
+
+        // Late R1 is a visible conflict with no release intent for either R2
+        // or a second R1 effect. R1's legitimate earlier release remains one.
+        Assert.Equal(2, await EventCountAsync(driverId, DriverEventTypes.Reserved));
+        Assert.Equal(1, await EventCountAsync(driverId, DriverEventTypes.ReservationReleased));
+        Assert.Equal(1, await ReleaseEventsForReservationAsync(r1));
+        Assert.Equal(0, await ReleaseEventsForReservationAsync(r2));
+        _output.WriteLine(
+            $"W11 CON-04-direct driver={driverId} r1={r1} r2={r2} trip2={t2} " +
+            $"lateDisposition=Conflict reason={late.ConflictCode} finalVersion={final.Version} " +
+            $"releaseIntentsR1=1 releaseIntentsR2=0");
     }
 
     [Fact]
