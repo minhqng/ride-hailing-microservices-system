@@ -5,6 +5,7 @@
 // resume. Matching owns this DB exclusively; Driver truth is only ever read
 // through the Driver HTTP contract, never SQL.
 using Npgsql;
+using RideHailing.MatchingService.Application.Matching;
 
 namespace RideHailing.MatchingService.Infrastructure.Persistence;
 
@@ -47,10 +48,17 @@ public sealed record MatchingRoundRow(
 public sealed class MatchingAttemptRepository
 {
     private readonly string _connectionString;
+    private readonly MatchingMetrics? _metrics;
 
     public MatchingAttemptRepository(string connectionString)
+        : this(connectionString, null)
+    {
+    }
+
+    public MatchingAttemptRepository(string connectionString, MatchingMetrics? metrics)
     {
         _connectionString = connectionString;
+        _metrics = metrics;
     }
 
     /// <summary>
@@ -193,6 +201,12 @@ public sealed class MatchingAttemptRepository
             cmd.Parameters.AddWithValue("reservation", reservationId);
             await cmd.ExecuteNonQueryAsync(ct);
             await tx.CommitAsync(ct);
+
+            // B-W12-02: one durable ATTEMPT IDENTITY per inserted row. A
+            // duplicate worker converges on the existing row and is not
+            // counted again; retries/reconnects reuse the same reservation.
+            _metrics?.AttemptCreated();
+
             return (true, new MatchingAttemptRow(
                 tripId, round, ordinal, driverId, reservationId,
                 MatchingAttemptStates.InFlight, null, null));

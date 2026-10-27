@@ -2,6 +2,7 @@ using System.Text.Json;
 using Npgsql;
 using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Domain.Drivers;
+using RideHailing.DriverService.Infrastructure.Telemetry;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Reliability;
 
@@ -95,6 +96,16 @@ public sealed partial class DriverRepository
             await receipt.ExecuteNonQueryAsync(ct);
         }
         await tx.CommitAsync(ct);
+
+        // B-W12-01: the broker compensation path uses the same fencing rules
+        // as HTTP release. Count only a committed fenced stale rejection (no
+        // mutation); idempotent receipts and non-fencing refusals are excluded.
+        if (envelope.MessageType == DriverCommand.Release
+            && DriverMetrics.IsStaleReleaseBlocked(result.Reason))
+        {
+            _metrics?.StaleReleaseBlocked(DriverMetrics.ReleaseReasonClass(result.Reason));
+        }
+
         return result;
     }
 

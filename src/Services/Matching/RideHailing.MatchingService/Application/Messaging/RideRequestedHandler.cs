@@ -14,13 +14,14 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RideHailing.MatchingService.Infrastructure.Persistence;
+using RideHailing.MatchingService.Application.Matching;
 using RideHailing.Messaging.Contracts;
 
 namespace RideHailing.MatchingService.Application.Messaging;
 
 public sealed class RideRequestedHandler
 {
-    public static readonly System.Diagnostics.ActivitySource Activities = new("RideHailing.MatchingService");
+    public static readonly System.Diagnostics.ActivitySource Activities = MatchingTelemetry.Activities;
 
     private const string ExpectedMessageType = "RideRequestedV1";
 
