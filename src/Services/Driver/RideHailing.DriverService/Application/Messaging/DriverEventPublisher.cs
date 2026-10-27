@@ -14,13 +14,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RideHailing.Messaging.Contracts;
+using RideHailing.DriverService.Infrastructure.Telemetry;
 using RideHailing.Messaging.Topology;
 
 namespace RideHailing.DriverService.Application.Messaging;
 
 public sealed class DriverEventPublisher : IAsyncDisposable
 {
-    public static readonly ActivitySource Activities = new("RideHailing.DriverService");
+    public static readonly ActivitySource Activities = DriverTelemetry.Activities;
 
     private readonly DriverBrokerOptions _options;
     private readonly ILogger<DriverEventPublisher> _logger;
