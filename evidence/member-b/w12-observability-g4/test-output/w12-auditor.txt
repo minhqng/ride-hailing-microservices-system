@@ -1,0 +1,189 @@
+=== B-W12-08 invariant auditor ===
+source commit : 7bc4510cbf524406d545b7529c938414b85f9c9c
+source tree   : 27ba100e59bec471489a5f7cdfaa5dc7c54361b9
+evidence dir  : /d/rh-w12-evidence/auditor-final
+project       : tests/Audit/RideHailing.B12Audit.Tests/RideHailing.B12Audit.Tests.csproj
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  RideHailing.Messaging -> D:\rh-w12b\src\BuildingBlocks\RideHailing.Messaging\bin\Release\net10.0\RideHailing.Messaging.dll
+  RideHailing.Observability -> D:\rh-w12b\src\BuildingBlocks\RideHailing.Observability\bin\Release\net10.0\RideHailing.Observability.dll
+  RideHailing.TripService -> D:\rh-w12b\src\Services\Trip\RideHailing.TripService\bin\Release\net10.0\RideHailing.TripService.dll
+  RideHailing.DriverService -> D:\rh-w12b\src\Services\Driver\RideHailing.DriverService\bin\Release\net10.0\RideHailing.DriverService.dll
+  RideHailing.MatchingService -> D:\rh-w12b\src\Services\Matching\RideHailing.MatchingService\bin\Release\net10.0\RideHailing.MatchingService.dll
+  RideHailing.B12Audit.Tests -> D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0\RideHailing.B12Audit.Tests.dll
+Test run for D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0\RideHailing.B12Audit.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.14)
+[xUnit.net 00:00:00.12]   Discovering: RideHailing.B12Audit.Tests
+[xUnit.net 00:00:00.17]   Discovered:  RideHailing.B12Audit.Tests
+[xUnit.net 00:00:00.21]   Starting:    RideHailing.B12Audit.Tests
+[testcontainers.org 00:00:00.17] Connected to Docker:
+  Host: npipe://./pipe/docker_engine
+  Server Version: 29.8.2
+  Kernel Version: 6.18.54.1-microsoft-standard-WSL2
+  API Version: 1.56
+  Operating System: Docker Desktop
+  Total Memory: 7.36 GB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+[testcontainers.org 00:00:00.58] Docker container 7b4d6815c396 created
+[testcontainers.org 00:00:00.59] Docker container e22ae5734bdb created
+[testcontainers.org 00:00:00.60] Docker container 3c1e12dd5d47 created
+[testcontainers.org 00:00:00.70] Start Docker container 3c1e12dd5d47
+[testcontainers.org 00:00:00.70] Start Docker container e22ae5734bdb
+[testcontainers.org 00:00:00.70] Start Docker container 7b4d6815c396
+[testcontainers.org 00:00:01.08] Wait for Docker container 3c1e12dd5d47 to complete readiness checks
+[testcontainers.org 00:00:01.10] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 3c1e12dd5d47
+[testcontainers.org 00:00:01.14] Wait for Docker container e22ae5734bdb to complete readiness checks
+[testcontainers.org 00:00:01.15] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container e22ae5734bdb
+[testcontainers.org 00:00:01.27] Wait for Docker container 7b4d6815c396 to complete readiness checks
+[testcontainers.org 00:00:01.29] Execute "pg_isready --host localhost --dbname trip_db --username trip_app" at Docker container 7b4d6815c396
+[testcontainers.org 00:00:02.30] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 3c1e12dd5d47
+[testcontainers.org 00:00:02.30] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container e22ae5734bdb
+[testcontainers.org 00:00:02.44] Execute "pg_isready --host localhost --dbname trip_db --username trip_app" at Docker container 7b4d6815c396
+[testcontainers.org 00:00:03.39] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container e22ae5734bdb
+[testcontainers.org 00:00:03.39] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 3c1e12dd5d47
+[testcontainers.org 00:00:03.53] Execute "pg_isready --host localhost --dbname trip_db --username trip_app" at Docker container 7b4d6815c396
+[testcontainers.org 00:00:04.50] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container e22ae5734bdb
+[testcontainers.org 00:00:04.50] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container 3c1e12dd5d47
+[testcontainers.org 00:00:04.58] Docker container e22ae5734bdb ready
+[testcontainers.org 00:00:04.60] Docker container 3c1e12dd5d47 ready
+[testcontainers.org 00:00:04.65] Execute "pg_isready --host localhost --dbname trip_db --username trip_app" at Docker container 7b4d6815c396
+[testcontainers.org 00:00:04.72] Docker container 7b4d6815c396 ready
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56016
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.LateReleaseFenced_KeepsNewerReservation [3 s]
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56025
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.ReservedAgreement_ProducesAuthoritativePasses [613 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Negative_StuckUnresolvedRecords_FailsAud08 [436 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Control_EmptyDataset_IsNotRunNotPass [443 ms]
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56049
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56067
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Negative_LeakedReservationAfterFalseCleanup_FailsAud07 [737 ms]
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56076
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.CancelReleaseQuiesced_ProducesNoLeakPass [904 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.RecognizedPendingCleanup_IsNotTreatedAsLeak [912 ms]
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56091
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56102
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Control_DriverCoherenceAndIdentity_AreStorageEnforced [664 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.NoDriverTerminal_ProducesUniquenessAndReleasePasses [749 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Negative_DriverTripDisagreement_FailsAud04 [530 ms]
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56116
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Control_MatchingTerminalIdentity_IsStorageEnforced [492 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Negative_StuckCleanupObligation_FailsAud07 [828 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Control_UnreachableTripAuthority_IsBlockedNotPass [8 s]
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:53719
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:53730
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+[testcontainers.org 00:00:25.08] Delete Docker container e22ae5734bdb
+[testcontainers.org 00:00:25.08] Delete Docker container 7b4d6815c396
+[testcontainers.org 00:00:25.08] Delete Docker container 3c1e12dd5d47
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Negative_MissingTerminalIntent_FailsAud06 [543 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.Negative_ContradictoryMatchingTerminalFacts_FailsAud06 [495 ms]
+  Passed RideHailing.B12Audit.Tests.AuditScenarioTests.DriverLifecycleOnly_ReportsAuthorityDispositions [201 ms]
+[xUnit.net 00:00:26.81]   Finished:    RideHailing.B12Audit.Tests
+
+Test Run Successful.
+Total tests: 16
+     Passed: 16
+ Total time: 27.4924 Seconds
+
+=== Auditor result summary ===
+          "status": "PASS",
+          "status": "PASS",
+          "status": "NOT_RUN",
+          "status": "PASS",
+          "status": "NOT_RUN",
+Artifacts:
+  /d/rh-w12-evidence/auditor-final/auditor-results.json
+  /d/rh-w12-evidence/auditor-final/auditor-results.md
+  /d/rh-w12-evidence/auditor-final/negative-controls.md
