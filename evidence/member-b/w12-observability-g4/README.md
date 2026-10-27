@@ -9,12 +9,12 @@ based on verified W11 head `3ba3724e7e7df378e8c234af685c027ad9d26863`
 
 | Item | Value |
 |---|---|
-| Tested B code head | `7bc4510cbf524406d545b7529c938414b85f9c9c` |
-| Tested tree | `27ba100e59bec471489a5f7cdfaa5dc7c54361b9` |
-| Formal full solution | 1099 passed, 1 skipped, 0 failed (1100 total) |
+| Tested B code head | `3f7aa18d26739085b4b8d82b06290233cf76a40f` |
+| Tested tree | `208b4e74e4fca0d1d7dd4c883bff96c9a2a3fae1` |
+| Formal full solution | 1101 passed, 1 skipped, 0 failed (1102 total) |
 | W12 focused | 19/19 |
-| B auditor | 14 runs / 12 negative controls; positive AUD-01/02/04/06/07/08 PASS; AUD-03/05 NOT RUN (A/C) |
-| W11 critical campaign | five consecutive passes at the audit commit; production `src/` tree identical to the final head |
+| B auditor | 16 runs / 14 negative controls; positive AUD-01/02/04/06/07/08 PASS; AUD-03/05 NOT RUN (A/C) |
+| W11 critical campaign | five consecutive passes at the audit commit `60f5cd4`; production `src/` tree identical to the tested head |
 | Overall G4 | **FAIL/BLOCKED — SEC-AUTH-01 Critical open; DSI-021 NOT RUN** |
 
 ## What landed in Phase 2
