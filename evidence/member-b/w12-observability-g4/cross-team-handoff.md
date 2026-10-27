@@ -71,9 +71,10 @@ executable from the B worktree unless marked as A/C-owned.
   committed reserve (exit 137), starts a new container on the same PostgreSQL/
   RabbitMQ, and reconciles the persisted attempt/identity.
 - **Five-pass campaign** re-runs REL-01/02 plus CON-02/04 and REL-12/13/14 with
-  fresh containers and identities on the B tested source. The Phase 2 summary
-  is in `test-output/w11-critical-regression.txt`; raw campaign details are
-  retained under the W11 evidence bundle. The campaign ran at the audit commit
+  fresh containers and identities. The Phase 2 summary is in
+  `test-output/w11-critical-regression.txt`; the machine-readable campaign
+  summary is `g4/w11-five-pass-summary.json`. Raw campaign logs are not tracked.
+  The campaign ran at the audit commit
   `60f5cd4018b259c7f483984baf288e500732c493`; the final code commit adds only
   auditor tests/fix, and the production `src/` subtree is identical
   (`0a2dab00e04a8ef2b43076472ec5c03641feab5c`). The final full-solution
