@@ -459,8 +459,26 @@ public sealed class BInvariantAuditor(
 
             if (TerminalTripStates.Contains(trip.State))
             {
+                var pending = openCleanup.FirstOrDefault(c =>
+                    c.TripId == trip.TripId
+                    && c.Kind == "ReleaseReservation"
+                    && c.DriverId == driver.DriverId
+                    && c.ReservationId == referenceReservation);
+                if (pending is not null && now - pending.CreatedAt <= _policy.PendingCleanupAge)
+                {
+                    if (!findings.Any(f => f.Code == "RECOGNIZED_PENDING_CLEANUP"
+                                           && f.Record == trip.TripId.ToString("D")))
+                    {
+                        findings.Add(new AuditFinding("RECOGNIZED_PENDING_CLEANUP",
+                            "Cleanup is durably recognized and still within policy; not counted as a leak.",
+                            trip.TripId.ToString("D")));
+                    }
+
+                    continue;
+                }
+
                 findings.Add(new AuditFinding("DRIVER_POINTS_AT_TERMINAL_TRIP",
-                    "Driver current reservation/trip points at a terminal Trip.",
+                    "Driver current reservation/trip points at a terminal Trip without a fresh recognized cleanup.",
                     $"{driver.DriverId:D}/{referenceTrip:D}"));
                 continue;
             }

@@ -51,7 +51,7 @@ public sealed class AuditScenario : IAsyncDisposable
     private readonly MatchingTerminalizer _terminalizer;
     private readonly MatchingReserveOrchestrator _orchestrator;
 
-    public ScenarioClock Clock { get; } = new(new DateTimeOffset(2026, 10, 27, 8, 0, 0, TimeSpan.Zero));
+    public ScenarioClock Clock { get; } = new(DateTimeOffset.UtcNow.AddMinutes(-5));
     public AuditDatabaseSet Databases => _databases;
     public DriverRepository Drivers => _drivers;
 
