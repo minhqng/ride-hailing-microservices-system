@@ -1,0 +1,14 @@
+Test run for D:\rh-w12b\tests\Unit\RideHailing.DriverService.UnitTests\bin\Release\net10.0\RideHailing.DriverService.UnitTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.14)
+[xUnit.net 00:00:00.51]   Discovering: RideHailing.DriverService.UnitTests
+[xUnit.net 00:00:00.58]   Discovered:  RideHailing.DriverService.UnitTests
+[xUnit.net 00:00:00.61]   Starting:    RideHailing.DriverService.UnitTests
+[xUnit.net 00:00:00.68]   Finished:    RideHailing.DriverService.UnitTests
+  Passed RideHailing.DriverService.UnitTests.DriverMetricSemanticsTests.StaleRelease_OnlyCoversTokenAndRoundFencing [18 ms]
+  Passed RideHailing.DriverService.UnitTests.DriverMetricSemanticsTests.ReasonClasses_AreBoundedAndNeverEchoRawCodes [1 ms]
+
+Test Run Successful.
+Total tests: 2
+     Passed: 2
+ Total time: 2.3723 Seconds
