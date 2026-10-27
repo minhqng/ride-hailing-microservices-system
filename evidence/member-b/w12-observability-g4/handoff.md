@@ -3,16 +3,16 @@
 ## Current state
 
 Branch `feature/B-W12-observability-g4` on verified W11 HEAD `3ba3724`.
-PR `<PR_URL>` targets `feature/B-W11-deterministic-faults` while W11 PR #44
+PR https://github.com/minhqng/ride-hailing-microservices-system/pull/45 targets `feature/B-W11-deterministic-faults` while W11 PR #44
 remains open.
 
 - Implementation commit: `4f523d10de592a5bd05585abb19f68b540e8b867`, tree `629a53e7146f3e01a9a4042d8479cdeb293e5c6f`.
-- Evidence commit: `<EVIDENCE_SHA>`.
+- Evidence commit: `3f2ed52` (bundle) + final metadata commit on this PR head.
 - Full local regression: 1083 passed, 1 skipped, 0 failed.
 - W12 focused proofs: 19/19.
 - Independent fresh-context review: completed; P1 findings fixed, remaining
   P2 trade-offs recorded below.
-- GitHub CI: `<CI_STATUS>`.
+- GitHub CI: `NOT TRIGGERED` — `ci.yml` `pull_request.branches` excludes `feature/B-W11-deterministic-faults`; 0 check runs. No green claim.
 
 **Verdict: `B-W12 PHASE 1: CODE VERIFIED — SECURITY/EXTERNAL GATES REMAIN`.**
 
@@ -60,7 +60,7 @@ Walk A/C through metric semantics, the reserve/reconcile span chain, and the
 | Service-side authorization once contract exists | B | Not implementable without the shared contract; B owns the Driver/Matching enforcement follow-up. |
 | Internal route network isolation | C (Compose/Gateway) + lead | Driver 8102 / Matching 8104 are host-published; internal routes are directly reachable. |
 | W12 PR review / merge | B + A/C | PR open; do not merge automatically. |
-| GitHub Actions | leader | `<CI_STATUS>`; billing-blocked runs are not green. |
+| GitHub Actions | leader | `NOT TRIGGERED` — `ci.yml` `pull_request.branches` excludes `feature/B-W11-deterministic-faults`; 0 check runs. No green claim; billing-blocked runs are also not green. |
 | Peer rerun | A/C + B | PENDING; AI review is not a substitute. |
 | G4 auditor / final acceptance | B + lead | Not run in Phase 1. |
 

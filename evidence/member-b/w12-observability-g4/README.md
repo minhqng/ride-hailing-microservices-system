@@ -10,8 +10,8 @@ branch, not `main`.
 | Item | Value |
 |---|---|
 | Implementation commit | `4f523d10de592a5bd05585abb19f68b540e8b867` |
-| Evidence commit | `<EVIDENCE_SHA>` |
-| PR | `<PR_URL>` |
+| Evidence commit | `3f2ed52` (bundle) + final metadata commit on this PR head |
+| PR | https://github.com/minhqng/ride-hailing-microservices-system/pull/45 |
 | Tested source | `4f523d10de592a5bd05585abb19f68b540e8b867` (evidence adds docs only) |
 | W12 focused proofs | 19/19 passed |
 | Full solution regression | 1083 passed, 1 skipped, 0 failed |
@@ -88,8 +88,9 @@ the hash, and removed from GEO as non-indexable.
 - No G4 acceptance, no W13 performance work, no invariant-auditor run.
 - No authorization PASS; SEC-AUTH-01..04 remain open cross-team findings.
 - No durable cross-restart trace linkage.
-- Remote CI status is reported separately after publication; a billing-blocked
-  run is not green.
+- Remote CI did **not trigger** for this stacked PR: `ci.yml`
+  `pull_request.branches` excludes the W11 base. Zero check runs is not green;
+  a billing-blocked run would also not be green.
 
 ## Evidence map
 
