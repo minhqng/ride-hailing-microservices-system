@@ -4,8 +4,8 @@
   "source": {
     "repository": "minhqng/ride-hailing-microservices-system",
     "branch": "feature/B-W12-observability-g4",
-    "commit": "7bc4510cbf524406d545b7529c938414b85f9c9c",
-    "tree": "27ba100e59bec471489a5f7cdfaa5dc7c54361b9",
+    "commit": "3f7aa18d26739085b4b8d82b06290233cf76a40f",
+    "tree": "208b4e74e4fca0d1d7dd4c883bff96c9a2a3fae1",
     "base": "3ba3724e7e7df378e8c234af685c027ad9d26863",
     "sourceStatusAtStart": ""
   },
@@ -31,12 +31,12 @@
     "warningDetail": "14 warnings, 0 errors: C-owned Payment nullable warnings (CS8604), pre-existing Driver test snapshot type-conflict warnings (CS0436) and xUnit analyzer style warnings in ReserveTraceContinuityTests. The new B12 audit project contributed no warnings; no build or test failure."
   },
   "fullSolution": {
-    "total": 1100,
-    "passed": 1099,
+    "total": 1102,
+    "passed": 1101,
     "failed": 0,
     "skipped": 1,
     "skipDetail": "IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState skipped because RIDE_AUTH_FIXTURE is absent (SYSTEM_AUTH_PENDING). The skip is not counted as verification.",
-    "baselinePriorRun": "1083 passed / 1 skipped at fb19013 (Phase 1); Phase 2 adds 16 auditor tests and preserves the baseline."
+    "baselinePriorRun": "1083 passed / 1 skipped at fb19013 (Phase 1); Phase 2 adds 18 auditor tests and preserves the baseline."
   },
   "lanes": {
     "identity_integration": {
@@ -94,9 +94,9 @@
       "total": 28
     },
     "b12_audit": {
-      "passed": 16,
+      "passed": 18,
       "failed": 0,
-      "total": 16
+      "total": 18
     },
     "system_tests": {
       "discovered": 0,
@@ -133,8 +133,8 @@
     "note": "The campaign ran at the audit commit; the final code commit adds only auditor tests/fix. The production src/ subtree is identical and the final full-solution regression re-executed the W11 component tests."
   },
   "auditor": {
-    "runs": 14,
-    "negativeControls": 12,
+    "runs": 16,
+    "negativeControls": 14,
     "positiveChecks": {
       "PASS": 31,
       "LOCAL_PROXY_PASS": 0,
@@ -148,7 +148,8 @@
   },
   "initialFailures": [],
   "subsequentFixes": [
-    "AUD-04 recognized-pending cleanup handling was clarified during self-review before publication; the final scenario proves fresh recognized cleanup is not a leak while stale/false cleanup still fails."
+    "AUD-04 recognized-pending cleanup handling was clarified during self-review; fresh recognized cleanup is not a leak in mid-flight observation while stale/false cleanup fails.",
+    "Independent review found that observation modes were recorded but not enforced. The fix rejects fresh open cleanup in post-scenario modes and requires pending=0 in relay-quiesced mode; two seeded controls prove both behaviors. No production code changed."
   ],
   "assertionsWeakened": false,
   "notes": [

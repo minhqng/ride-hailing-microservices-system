@@ -8,10 +8,9 @@
 | Branch | `feature/B-W12-observability-g4` |
 | PR | #45, base `feature/B-W11-deterministic-faults` |
 | Base | W11 head `3ba3724e7e7df378e8c234af685c027ad9d26863` (PR #44) |
-| Tested B code head | `7bc4510cbf524406d545b7529c938414b85f9c9c` |
-| Tested tree | `27ba100e59bec471489a5f7cdfaa5dc7c54361b9` |
-| Audit tooling commit | `test(audit): add B W12 authoritative G4 verification` |
-| Audit hardening commit | `fix(audit): honor pending cleanup and prove late-release fencing` (verification only) |
+| Tested B code head | `3f7aa18d26739085b4b8d82b06290233cf76a40f` |
+| Tested tree | `208b4e74e4fca0d1d7dd4c883bff96c9a2a3fae1` |
+| Audit tooling commit message | `test(audit): add B W12 authoritative G4 verification` |
 | Evidence commit message | `docs(evidence): close B W12 regression and G4 handoff` (docs/evidence only) |
 | Source status at formal start | clean |
 | A-owned evidence head | `132ecfd4ebc7f452af5e28f030bf66754e9b0df7` (unmerged A-W12) |
@@ -58,7 +57,7 @@ dotnet test RideHailing.Distributed.slnx -c Release --no-build \
 
 | Lane | Result |
 |---|---|
-| Full solution | 1099 passed, 1 skipped, 0 failed (1100 total) |
+| Full solution | 1101 passed, 1 skipped, 0 failed (1102 total) |
 | Driver unit | 131/131 |
 | Driver integration | 113/113 |
 | Matching unit | 104/104 |
@@ -67,7 +66,7 @@ dotnet test RideHailing.Distributed.slnx -c Release --no-build \
 | Trip unit | 299/299 |
 | Trip integration (W9/W10) | 162/162 (TripW09 17, TripW10 14) |
 | Payment unit / integration | 28/28, 28/28 |
-| B12 audit | 16/16 |
+| B12 audit | 18/18 |
 | System tests | 0 discovered — NOT RUN (not counted as PASS) |
 | Identity integration | 1 skipped (`RIDE_AUTH_FIXTURE` absent) — not verification |
 | W12 focused | 19/19 (2 Driver metric unit, 3 Driver metric integration, 4 Matching metrics, 4 projection metrics, 3 trace, 2 auth exposure, 1 location) |
@@ -79,8 +78,8 @@ failure. Initial failures: none. Assertions weakened: none.
 
 ## 5. W11 critical regression (five-pass campaign)
 
-- Command: `./scripts/fault/b-w11-full-campaign.sh` at the audit commit
-  (production-identical to the final tested head) with a clean tree.
+- Command: `./scripts/fault/b-w11-full-campaign.sh` on the tested head with a
+  clean tree.
 - Scenarios: REL-01, REL-02, CON-02, CON-04, REL-12, REL-13, REL-14.
 - Result: five consecutive passes; see `test-output/w11-critical-regression.txt`.
 - REL-01/02 run real Driver/Matching containers (response barrier after commit;
@@ -96,7 +95,7 @@ failure. Initial failures: none. Assertions weakened: none.
 - Statuses: AUD-01/02/04/06/07/08 PASS on applicable positive runs; AUD-03
   NOT RUN (A dependency); AUD-05 NOT RUN (C dependency); empty/unreachable
   controls produce NOT RUN/BLOCKED.
-- Negative controls: 12 isolated controls; every seeded corruption detected;
+- Negative controls: 14 isolated controls; every seeded corruption detected;
   constraint-enforced guards demonstrated without bypass.
 - Authority: Driver and Matching DBs are B-owned; Trip DB is real and used for
   cross-service agreement; Payment DB is absent.
