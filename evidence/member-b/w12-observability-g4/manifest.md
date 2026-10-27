@@ -10,8 +10,8 @@
 | W11 PR | #44, open, base `main` `86062af028d01b86f07b1c902f040a41c41fe57f` |
 | Implementation commit | `4f523d10de592a5bd05585abb19f68b540e8b867` |
 | Implementation tree | `629a53e7146f3e01a9a4042d8479cdeb293e5c6f` |
-| Evidence commit | `<EVIDENCE_SHA>` |
-| Evidence tree | `<EVIDENCE_TREE>` |
+| Evidence commit | `3f2ed52` (bundle) + final metadata commit on this PR head |
+| Evidence tree | `bbbbad0b650fb3f7a549e7ca6e390aab30d99588` (bundle tree) |
 | Tested source | `4f523d10de592a5bd05585abb19f68b540e8b867` (evidence files do not affect code) |
 | Source status at final run | clean code tree; evidence added after the run |
 
@@ -102,3 +102,12 @@ integration tests, 4 Matching metrics, 4 projection metrics, 3 trace,
 ## 7. Artifact hashes
 
 `hashes.txt` records SHA-256 for every deliverable in this bundle.
+
+## 8. CI status
+
+`NOT TRIGGERED`. `.github/workflows/ci.yml` limits `pull_request.branches`
+to `main`, `MemC-*-Distributed`, `feature/A-W09-trip-outbox` and
+`feature/B-W09-driver-outbox`; the W11 stacked base
+`feature/B-W11-deterministic-faults` is not listed. The PR head therefore has
+zero check runs. This is not green, and it is not claimed as a CI pass. The
+workflow is a shared/leader-owned file and was not modified in W12.
