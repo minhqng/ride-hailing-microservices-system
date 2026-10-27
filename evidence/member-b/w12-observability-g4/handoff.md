@@ -6,7 +6,7 @@ Branch `feature/B-W12-observability-g4` on verified W11 HEAD `3ba3724`.
 PR https://github.com/minhqng/ride-hailing-microservices-system/pull/45 targets `feature/B-W11-deterministic-faults` while W11 PR #44
 remains open.
 
-- Implementation commit: `4f523d10de592a5bd05585abb19f68b540e8b867`, tree `629a53e7146f3e01a9a4042d8479cdeb293e5c6f`.
+- Implementation commit: `699a80151984ce91e3990be5621526df8bdcca56`, tree `8f80eb728cd32aff0b3b67b39354759805e231d4`.
 - Evidence commit: `3f2ed52` (bundle) + final metadata commit on this PR head.
 - Full local regression: 1083 passed, 1 skipped, 0 failed.
 - W12 focused proofs: 19/19.
