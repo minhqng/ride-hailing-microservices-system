@@ -32,6 +32,7 @@ using StackExchange.Redis;
 var builder = WebApplication.CreateBuilder(args);
 RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("matching-service");
+builder.AddMatchingTelemetry();
 builder.Services.AddHealthChecks();
 
 var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres")
@@ -49,7 +50,8 @@ builder.Services.AddSingleton<IOutboxStore>(sp => sp.GetRequiredService<NpgsqlOu
 builder.Services.AddSingleton(sp => new MatchingTerminalizer(
     sp.GetRequiredService<NpgsqlDataSource>(),
     sp.GetRequiredService<NpgsqlOutboxStore>(),
-    sp.GetRequiredService<TimeProvider>()));
+    sp.GetRequiredService<TimeProvider>(),
+    sp.GetRequiredService<MatchingMetrics>()));
 builder.Services.AddSingleton(_ =>
 {
     var cs = builder.Configuration["Redis__ConnectionString"]
@@ -74,10 +76,12 @@ builder.Services.AddHttpClient<IDriverClient, HttpDriverClient>((_, http) =>
 builder.Services.AddScoped(sp => new MatchingReserveOrchestrator(
     sp.GetRequiredService<MatchingAttemptRepository>(),
     sp.GetRequiredService<IDriverClient>(),
-    sp.GetRequiredService<MatchingTerminalizer>()));
+    sp.GetRequiredService<MatchingTerminalizer>(),
+    metrics: sp.GetRequiredService<MatchingMetrics>()));
 
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
-builder.Services.AddSingleton(_ => new MatchingAttemptRepository(postgresConnectionString));
+builder.Services.AddSingleton(sp => new MatchingAttemptRepository(
+    postgresConnectionString, sp.GetRequiredService<MatchingMetrics>()));
 
 RabbitMqOptions BrokerOptions()
 {
@@ -152,7 +156,9 @@ using (var bootLogs = LoggerFactory.Create(logging => logging.AddConsole()))
 if (mux is not null)
 {
     builder.Services.AddSingleton(mux);
-    builder.Services.AddSingleton<RedisProjectionUpdater>();
+    builder.Services.AddSingleton(sp => new RedisProjectionUpdater(
+        sp.GetRequiredService<IConnectionMultiplexer>(),
+        metrics: sp.GetRequiredService<MatchingMetrics>()));
     builder.Services.AddSingleton<DriverProjectionHandler>();
     builder.Services.AddHostedService<DriverProjectionConsumer>();
 }
