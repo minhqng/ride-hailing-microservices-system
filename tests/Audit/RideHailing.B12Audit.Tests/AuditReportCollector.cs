@@ -234,7 +234,7 @@ public sealed class AuditReportCollector
                     ? "—"
                     : string.Join(", ", check.Findings.Select(f => $"`{f.Code}`"));
                 sb.AppendLine(
-                    $"| {check.CheckId} — {Escape(check.Requirement)} | **{check.Status}** | " +
+                    $"| {check.CheckId} — {Escape(check.Requirement)} | **{DisplayStatus(check.Status)}** | " +
                     $"{Escape(string.Join(" + ", check.AuthoritySources))} | {check.InspectedRecordCount} | " +
                     $"{codes} | {Escape(check.Limitation ?? "—")} |");
             }
@@ -250,7 +250,7 @@ public sealed class AuditReportCollector
             foreach (var check in run.Checks.Where(c => c.Findings.Count > 0))
             {
                 anyFinding = true;
-                sb.AppendLine($"### `{run.ScenarioId}` / {check.CheckId} — {check.Status}");
+                sb.AppendLine($"### `{run.ScenarioId}` / {check.CheckId} — {DisplayStatus(check.Status)}");
                 foreach (var finding in check.Findings)
                 {
                     var record = string.IsNullOrWhiteSpace(finding.Record) ? "" : $" Record: {finding.Record}.";
@@ -294,7 +294,7 @@ public sealed class AuditReportCollector
         {
             sb.AppendLine(
                 $"| `{control.ControlId}` | {Escape(control.TargetCheck)} | {Escape(control.SeededCondition)} | " +
-                $"{Escape(control.Expected)} | **{Escape(control.Observed)}** | {Escape(control.Isolation)} | " +
+                $"{Escape(control.Expected)} | **{Escape(DisplayText(control.Observed))}** | {Escape(control.Isolation)} | " +
                 $"{Escape(control.Notes)} |");
         }
 
@@ -305,6 +305,12 @@ public sealed class AuditReportCollector
     private static string Escape(string value) =>
         value.Replace("|", "\\|", StringComparison.Ordinal).Replace("\r", " ", StringComparison.Ordinal)
             .Replace("\n", " ", StringComparison.Ordinal);
+
+    private static string DisplayStatus(AuditStatus status) =>
+        status.ToString().Replace("_", " ", StringComparison.Ordinal);
+
+    private static string DisplayText(string value) =>
+        value.Replace("NOT_RUN", "NOT RUN", StringComparison.Ordinal);
 
     private static bool IsControlMode(string observationMode) =>
         observationMode.Contains("CONTROL", StringComparison.OrdinalIgnoreCase)
