@@ -9,10 +9,10 @@ branch, not `main`.
 
 | Item | Value |
 |---|---|
-| Implementation commit | `4f523d10de592a5bd05585abb19f68b540e8b867` |
+| Implementation commit | `699a80151984ce91e3990be5621526df8bdcca56` |
 | Evidence commit | `3f2ed52` (bundle) + final metadata commit on this PR head |
 | PR | https://github.com/minhqng/ride-hailing-microservices-system/pull/45 |
-| Tested source | `4f523d10de592a5bd05585abb19f68b540e8b867` (evidence adds docs only) |
+| Tested source | `699a80151984ce91e3990be5621526df8bdcca56` (evidence adds docs only) |
 | W12 focused proofs | 19/19 passed |
 | Full solution regression | 1083 passed, 1 skipped, 0 failed |
 
