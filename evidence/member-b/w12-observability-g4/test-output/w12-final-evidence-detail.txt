@@ -1,0 +1,150 @@
+Test run for D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0\RideHailing.MatchingService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0\RideHailing.MatchingService.IntegrationTests.dll
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.14)
+[xUnit.net 00:00:00.11]   Discovering: RideHailing.MatchingService.IntegrationTests
+[xUnit.net 00:00:00.18]   Discovered:  RideHailing.MatchingService.IntegrationTests
+[xUnit.net 00:00:00.21]   Starting:    RideHailing.MatchingService.IntegrationTests
+[testcontainers.org 00:00:00.14] Connected to Docker:
+  Host: npipe://./pipe/docker_engine
+  Server Version: 29.8.2
+  Kernel Version: 6.18.54.1-microsoft-standard-WSL2
+  API Version: 1.56
+  Operating System: Docker Desktop
+  Total Memory: 7.36 GB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+[testcontainers.org 00:00:00.56] Docker container f27dead1df31 created
+[testcontainers.org 00:00:00.57] Docker container 51b196d80be8 created
+[testcontainers.org 00:00:00.59] Docker container 7a9f07292d83 created
+[testcontainers.org 00:00:00.59] Docker container a8890bc96c76 created
+[testcontainers.org 00:00:00.60] Docker container c5d3327b6031 created
+[testcontainers.org 00:00:00.66] Start Docker container 7a9f07292d83
+[testcontainers.org 00:00:00.66] Start Docker container f27dead1df31
+[testcontainers.org 00:00:00.67] Start Docker container c5d3327b6031
+[testcontainers.org 00:00:00.66] Start Docker container 51b196d80be8
+[testcontainers.org 00:00:00.66] Start Docker container a8890bc96c76
+[testcontainers.org 00:00:01.06] Wait for Docker container 51b196d80be8 to complete readiness checks
+[testcontainers.org 00:00:01.11] Wait for Docker container 7a9f07292d83 to complete readiness checks
+[testcontainers.org 00:00:01.15] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7a9f07292d83
+[testcontainers.org 00:00:01.16] Wait for Docker container a8890bc96c76 to complete readiness checks
+[testcontainers.org 00:00:01.19] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container a8890bc96c76
+[testcontainers.org 00:00:01.26] Wait for Docker container c5d3327b6031 to complete readiness checks
+[testcontainers.org 00:00:01.29] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container c5d3327b6031
+[testcontainers.org 00:00:01.31] Wait for Docker container f27dead1df31 to complete readiness checks
+[testcontainers.org 00:00:01.34] Execute "redis-cli ping" at Docker container f27dead1df31
+[testcontainers.org 00:00:01.43] Docker container f27dead1df31 ready
+[testcontainers.org 00:00:02.38] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7a9f07292d83
+[testcontainers.org 00:00:02.38] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container a8890bc96c76
+[testcontainers.org 00:00:02.46] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container c5d3327b6031
+[testcontainers.org 00:00:03.60] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container a8890bc96c76
+[testcontainers.org 00:00:03.60] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7a9f07292d83
+[testcontainers.org 00:00:03.67] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container c5d3327b6031
+[testcontainers.org 00:00:04.74] Execute "pg_isready --host localhost --dbname matching_db --username matching_app" at Docker container a8890bc96c76
+[testcontainers.org 00:00:04.74] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container 7a9f07292d83
+[testcontainers.org 00:00:04.80] Execute "pg_isready --host localhost --dbname driver_db --username driver_app" at Docker container c5d3327b6031
+[testcontainers.org 00:00:04.85] Docker container 7a9f07292d83 ready
+[testcontainers.org 00:00:04.86] Docker container a8890bc96c76 ready
+[testcontainers.org 00:00:04.91] Docker container c5d3327b6031 ready
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62883
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62885
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62888
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0
+  Passed RideHailing.MatchingService.IntegrationTests.ReserveTraceContinuityTests.Rejected_Reserve_And_Stale_Release_Are_Classified_On_Their_Own_Spans [562 ms]
+  Standard Output Messages:
+ REJECT trace=9c6cc79ca37f0d13d83a6cdcf83f658b reserveOutcomes=won,conflict releaseOutcome=conflict httpStatuses=200,409,409
+
+
+  Passed RideHailing.MatchingService.IntegrationTests.ReserveTraceContinuityTests.SuccessfulReserve_Produces_One_Parent_Chain_To_The_Driver_Transaction [243 ms]
+  Standard Output Messages:
+ trace=2662a68291796704b99ac13e6a36b3cd round=6fc6124dfd83428b attempt=aa6174f7cd823824 http=821d5705a9a0db67 server=46020146b5d64b57 driverTxn=0032cf2f613efb85
+
+
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+[testcontainers.org 00:00:08.14] Delete Docker container a8890bc96c76
+[testcontainers.org 00:00:08.14] Delete Docker container 7a9f07292d83
+  Passed RideHailing.MatchingService.IntegrationTests.ReserveTraceContinuityTests.LostResponse_Classifies_Unknown_Without_Fabricating_A_Success_Then_Resolves_SameReservation [2 s]
+  Standard Output Messages:
+ REL01 trace=484669c9a330c84e3c21f4949a245764 round=34f78300b45371de attempt=8db6e0ad2b2d2326 http=ce4f76beb94d7459 driverTxn=a516b9330255c3d8 reconcile=ccbb076cf70866dd reservation=aa0501ca-d9af-4559-a4a6-c26c20548bd7 attemptOutcome=Unknown driverTxnOutcome=won finalRound=RESERVED
+
+
+[testcontainers.org 00:00:09.37] Docker container 51b196d80be8 ready
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62898
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Passed RideHailing.MatchingService.IntegrationTests.DriverLocationIngressTests.Invalid_Location_Data_Is_Rejected_Without_Mutation_Publication_Or_Projection_Corruption [4 s]
+  Standard Output Messages:
+ driver=457057b2-df09-421b-8d49-430c0528c8e8 acceptedSeq=10 invalidCases=18 noPublication=true projectionSeq=10 geoStable=true polarLatitude=86 accepted=true geoMemberRemoved=true
+
+
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:59406
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:59408
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+[testcontainers.org 00:00:14.21] Delete Docker container c5d3327b6031
+[testcontainers.org 00:00:14.22] Delete Docker container 51b196d80be8
+[testcontainers.org 00:00:14.22] Delete Docker container f27dead1df31
+[xUnit.net 00:00:15.17]   Finished:    RideHailing.MatchingService.IntegrationTests
+  Passed RideHailing.MatchingService.IntegrationTests.DriverAuthorizationExposureTests.Exposure_Unauthenticated_Caller_Mutates_Driver_And_Creates_Outbox_Intent [83 ms]
+  Standard Output Messages:
+ EXPOSURE SEC-01/02: unauthenticated POST online accepted; driver=0b9ffd56-afac-499b-8cf6-e8515b5665d5 version 1->2 and DriverAvailableV1 Outbox intent committed. Unauthenticated create/read/offline also accepted.
+
+
+  Passed RideHailing.MatchingService.IntegrationTests.DriverAuthorizationExposureTests.Exposure_Spoofed_Actor_Headers_Mutate_Another_Driver_And_Internal_Reserve [67 ms]
+  Standard Output Messages:
+ EXPOSURE SEC-02/03/04: spoofed X-Driver-Id/X-Role and unsigned Bearer are ignored, not rejected; Driver A's claimed identity can mutate Driver B; rider role performs a Driver operation; internal reserve/release/reconcile are unauthenticated. Every accepted call changed state and/or Outbox state.
+
+
+
+Test Run Successful.
+Total tests: 6
+     Passed: 6
+ Total time: 15.9345 Seconds
