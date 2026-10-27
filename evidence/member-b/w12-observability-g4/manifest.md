@@ -8,11 +8,11 @@
 | Branch | `feature/B-W12-observability-g4` |
 | Base | W11 HEAD `3ba3724e7e7df378e8c234af685c027ad9d26863` |
 | W11 PR | #44, open, base `main` `86062af028d01b86f07b1c902f040a41c41fe57f` |
-| Implementation commit | `4f523d10de592a5bd05585abb19f68b540e8b867` |
-| Implementation tree | `629a53e7146f3e01a9a4042d8479cdeb293e5c6f` |
+| Implementation commit | `699a80151984ce91e3990be5621526df8bdcca56` |
+| Implementation tree | `8f80eb728cd32aff0b3b67b39354759805e231d4` |
 | Evidence commit | `3f2ed52` (bundle) + final metadata commit on this PR head |
 | Evidence tree | `bbbbad0b650fb3f7a549e7ca6e390aab30d99588` (bundle tree) |
-| Tested source | `4f523d10de592a5bd05585abb19f68b540e8b867` (evidence files do not affect code) |
+| Tested source | `699a80151984ce91e3990be5621526df8bdcca56` (evidence files do not affect code) |
 | Source status at final run | clean code tree; evidence added after the run |
 
 ## 2. Environment
