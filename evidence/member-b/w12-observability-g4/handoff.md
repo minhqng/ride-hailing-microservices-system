@@ -7,8 +7,8 @@
 Branch `feature/B-W12-observability-g4`, PR
 [#45](https://github.com/minhqng/ride-hailing-microservices-system/pull/45)
 against the W11 branch (PR #44, base `main`). Tested B code:
-`7bc4510cbf524406d545b7529c938414b85f9c9c` (tree
-`27ba100e59bec471489a5f7cdfaa5dc7c54361b9`). Evidence is a docs/evidence-only
+`3f7aa18d26739085b4b8d82b06290233cf76a40f` (tree
+`208b4e74e4fca0d1d7dd4c883bff96c9a2a3fae1`). Evidence is a docs/evidence-only
 commit after the tested head.
 
 **Verdict: `B-W12 DELIVERABLES COMPLETE — G4 SECURITY BLOCKED`.**
@@ -23,7 +23,7 @@ commit after the tested head.
 | B-W12-04 Reserve/reconcile tracing | COMPLETE — in-process chain; durable cross-restart traceparent is a recorded limitation |
 | B-W12-05 Driver authz/spoofing | OPEN — SECURITY DEPENDENCY (`SYSTEM_AUTH_PENDING`; SEC-AUTH-01..04) |
 | B-W12-06 Invalid location | COMPLETE |
-| B-W12-07 Formal full regression | COMPLETE — 1099 passed / 1 skipped / 0 failed; no B-owned regression |
+| B-W12-07 Formal full regression | COMPLETE — 1101 passed / 1 skipped / 0 failed; no B-owned regression |
 | B-W12-08 Authoritative auditor | COMPLETE — executable AUD-01..08, honest AUD-03/05 NOT RUN, non-vacuous controls |
 | B-W12-09 G4 assessment | COMPLETE — red verdict (security + DSI-021 evidence gap) |
 | B-W12-10 Cross-team handoff | COMPLETE — HANDOFF DELIVERED / SIGN-OFF PENDING |
