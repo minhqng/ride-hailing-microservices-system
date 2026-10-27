@@ -43,6 +43,8 @@
 // second terminal result for the same round. Cancellation by the caller
 // propagates; only transport uncertainty becomes UNKNOWN. Programming/
 // contract defects stay loud.
+using System.Diagnostics;
+using RideHailing.MatchingService.Application.Matching;
 using RideHailing.MatchingService.Infrastructure.DriverClient;
 using RideHailing.MatchingService.Infrastructure.Persistence;
 
@@ -79,7 +81,8 @@ public sealed record RoundReserveResult(
     Guid? DriverId,
     Guid? ReservationId,
     string? Code,
-    string? ResultMessageId = null);
+    string? ResultMessageId = null,
+    bool Replay = false);
 
 public sealed class MatchingReserveOrchestrator
 {
@@ -88,19 +91,22 @@ public sealed class MatchingReserveOrchestrator
     private readonly MatchingTerminalizer _terminalizer;
     private readonly int _maxReserveAttempts;
     private readonly int _maxReconcileAttempts;
+    private readonly MatchingMetrics? _metrics;
 
     public MatchingReserveOrchestrator(
         MatchingAttemptRepository attempts,
         IDriverClient driver,
         MatchingTerminalizer terminalizer,
         int maxReserveAttempts = 3,
-        int maxReconcileAttempts = 3)
+        int maxReconcileAttempts = 3,
+        MatchingMetrics? metrics = null)
     {
         _attempts = attempts;
         _driver = driver;
         _terminalizer = terminalizer ?? throw new ArgumentNullException(nameof(terminalizer));
         _maxReserveAttempts = maxReserveAttempts;
         _maxReconcileAttempts = maxReconcileAttempts;
+        _metrics = metrics;
     }
 
     /// <summary>
@@ -113,6 +119,41 @@ public sealed class MatchingReserveOrchestrator
         IReadOnlyList<Guid> candidates,
         string inputMessageId,
         CancellationToken ct = default)
+    {
+        using var activity = MatchingTelemetry.Activities.StartActivity(
+            "matching.round.execute", ActivityKind.Internal);
+        activity?.SetTag("trip.id", tripId);
+        activity?.SetTag("matching.round", round);
+
+        var started = Stopwatch.GetTimestamp();
+        var outcome = "error";
+        try
+        {
+            var result = await ExecuteRoundCoreAsync(tripId, round, candidates, inputMessageId, ct);
+            outcome = result.Outcome.ToString();
+            activity?.SetTag("matching.round.outcome", outcome);
+            activity?.SetTag("matching.round.replay", result.Replay);
+            _metrics?.RoundObserved(outcome, result.Replay);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            _metrics?.RoundObserved("error", false);
+            throw;
+        }
+        finally
+        {
+            _metrics?.RoundDuration(Stopwatch.GetElapsedTime(started), outcome);
+        }
+    }
+
+    private async Task<RoundReserveResult> ExecuteRoundCoreAsync(
+        Guid tripId,
+        int round,
+        IReadOnlyList<Guid> candidates,
+        string inputMessageId,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(candidates);
         if (tripId == Guid.Empty)
@@ -129,7 +170,8 @@ public sealed class MatchingReserveOrchestrator
         if (roundRow.Status == MatchingRoundStatuses.Reserved)
         {
             return new RoundReserveResult(
-                RoundOutcome.Reserved, roundRow.SelectedDriverId, roundRow.SelectedReservationId, null);
+                RoundOutcome.Reserved, roundRow.SelectedDriverId, roundRow.SelectedReservationId, null,
+                Replay: true);
         }
 
         if (roundRow.Status == MatchingRoundStatuses.NoDriver)
@@ -138,13 +180,16 @@ public sealed class MatchingReserveOrchestrator
             // result_message_id, repair a missing intent under that SAME
             // identity if necessary, and never start a new attempt sequence.
             var replay = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
-            return MapTerminal(replay);
+            return MapTerminal(replay) with { Replay = true };
         }
 
         if (roundRow.Status != MatchingRoundStatuses.Processing)
         {
-            return new RoundReserveResult(RoundOutcome.Refused, null, null, roundRow.Status);
+            return new RoundReserveResult(
+                RoundOutcome.Refused, null, null, roundRow.Status, Replay: true);
         }
+
+        _metrics?.CandidateCount(candidates.Count);
 
         for (var ordinal = 0; ordinal < candidates.Count; ordinal++)
         {
@@ -238,6 +283,43 @@ public sealed class MatchingReserveOrchestrator
         Guid driverId,
         CancellationToken ct = default)
     {
+        using var activity = MatchingTelemetry.Activities.StartActivity(
+            "matching.attempt.reserve", ActivityKind.Internal);
+        activity?.SetTag("trip.id", tripId);
+        activity?.SetTag("matching.round", round);
+        activity?.SetTag("matching.attempt.ordinal", ordinal);
+        activity?.SetTag("driver.id", driverId);
+
+        try
+        {
+            var result = await ExecuteAttemptCoreAsync(tripId, round, ordinal, driverId, ct);
+            activity?.SetTag("matching.attempt.outcome", result.Outcome.ToString());
+            if (result.ReservationId != Guid.Empty)
+            {
+                activity?.SetTag("reservation.id", result.ReservationId);
+            }
+
+            if (result.Outcome == AttemptOutcome.Unknown)
+            {
+                activity?.SetTag("matching.unknown.reason", result.Code ?? "UNKNOWN");
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            throw;
+        }
+    }
+
+    private async Task<AttemptResult> ExecuteAttemptCoreAsync(
+        Guid tripId,
+        int round,
+        int ordinal,
+        Guid driverId,
+        CancellationToken ct)
+    {
         // Public entry: the round row must exist first (FK). Fresh message
         // ids converge on PK conflict, so duplicate workers share the round.
         // Legacy/internal seam (not the W8 broker path): no envelope identity
@@ -296,6 +378,36 @@ public sealed class MatchingReserveOrchestrator
         int ordinal,
         CancellationToken ct = default)
     {
+        using var activity = MatchingTelemetry.Activities.StartActivity(
+            "matching.attempt.reconcile", ActivityKind.Internal);
+        activity?.SetTag("trip.id", tripId);
+        activity?.SetTag("matching.round", round);
+        activity?.SetTag("matching.attempt.ordinal", ordinal);
+
+        try
+        {
+            var result = await ReconcileCoreAsync(tripId, round, ordinal, ct);
+            activity?.SetTag("matching.reconcile.outcome", result.Outcome.ToString());
+            if (result.ReservationId != Guid.Empty)
+            {
+                activity?.SetTag("reservation.id", result.ReservationId);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            throw;
+        }
+    }
+
+    private async Task<AttemptResult> ReconcileCoreAsync(
+        Guid tripId,
+        int round,
+        int ordinal,
+        CancellationToken ct)
+    {
         var row = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
         if (row is null)
         {
@@ -332,8 +444,11 @@ public sealed class MatchingReserveOrchestrator
             }
             catch (Exception ex) when (IsTransport(ex, ct))
             {
+                _metrics?.Reconcile("transport_failure");
                 continue;
             }
+
+            _metrics?.Reconcile(ToOutcomeCode(truth.Outcome));
 
             switch (truth.Outcome)
             {
@@ -500,7 +615,9 @@ public sealed class MatchingReserveOrchestrator
             {
                 // Pre-effect failure: nothing could have been sent yet for
                 // this call, but the attempt is unresolved — stay IN_FLIGHT
-                // (the guard treats it like UNKNOWN) and stop.
+                // (the guard treats it like UNKNOWN) and stop. It is not a
+                // committed UNKNOWN reserve transition, so it is not counted
+                // by matching_unknown_total.
                 return new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "VERSION_READ_FAILED");
             }
 
@@ -544,11 +661,16 @@ public sealed class MatchingReserveOrchestrator
                 if (!authorized)
                 {
                     var denied = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
-                    return await MapDurableTerminalAsync(tripId, round, denied, ct)
-                        ?? new AttemptResult(
-                            AttemptOutcome.Unknown,
-                            denied?.ReservationId ?? row.ReservationId,
-                            "DISPATCH_FENCE_DENIED");
+                    var mapped = await MapDurableTerminalAsync(tripId, round, denied, ct);
+                    if (mapped is not null)
+                    {
+                        return mapped;
+                    }
+
+                    return new AttemptResult(
+                        AttemptOutcome.Unknown,
+                        denied?.ReservationId ?? row.ReservationId,
+                        "DISPATCH_FENCE_DENIED");
                 }
 
                 call = await _driver.ReserveAsync(
@@ -562,6 +684,11 @@ public sealed class MatchingReserveOrchestrator
                     tripId, round, ordinal,
                     [MatchingAttemptStates.InFlight, MatchingAttemptStates.Ready],
                     MatchingAttemptStates.Unknown, "RESERVE_TRANSPORT", ct);
+                if (ambiguous is null)
+                {
+                    _metrics?.Unknown("reserve_transport");
+                }
+
                 return ambiguous
                     ?? new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "RESERVE_TRANSPORT");
             }
@@ -618,6 +745,11 @@ public sealed class MatchingReserveOrchestrator
                 tripId, round, ordinal,
                 [MatchingAttemptStates.InFlight, MatchingAttemptStates.Ready],
                 MatchingAttemptStates.Unknown, "RESERVE_CONTENTION", ct);
+            if (exhausted is null)
+            {
+                _metrics?.Unknown("reserve_contention");
+            }
+
             return exhausted
                 ?? new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "RESERVE_CONTENTION");
         }

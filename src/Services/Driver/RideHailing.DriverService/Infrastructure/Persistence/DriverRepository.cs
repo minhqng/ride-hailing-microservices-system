@@ -1,9 +1,11 @@
 // B-W03-07: Npgsql raw repository (chốt ③). Plain upsert/load; no OCC yet (W6).
 // B-W09-02: every authoritative Try* mutation records its required Driver
 // event through C's shared Outbox store on the SAME connection/transaction.
+using System.Diagnostics;
 using Npgsql;
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Outbox;
+using RideHailing.DriverService.Infrastructure.Telemetry;
 using RideHailing.Messaging.Outbox;
 
 namespace RideHailing.DriverService.Infrastructure.Persistence;
@@ -12,11 +14,14 @@ public sealed partial class DriverRepository
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly DriverOutboxWriter _outbox;
+    private readonly DriverMetrics? _metrics;
 
-    public DriverRepository(NpgsqlDataSource dataSource, NpgsqlOutboxStore outboxStore)
+    public DriverRepository(
+        NpgsqlDataSource dataSource, NpgsqlOutboxStore outboxStore, DriverMetrics? metrics = null)
     {
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _outbox = new DriverOutboxWriter(outboxStore);
+        _metrics = metrics;
     }
 
     public async Task EnsureTablesAsync(CancellationToken ct = default)
@@ -128,11 +133,69 @@ public sealed partial class DriverRepository
     /// is backstopped by ux_drivers_reservation_id and reported as conflict.
     /// matchingRound (W08 hardening): provenance for DriverReservedV1 — recorded
     /// on the win so restart/replay publication carries the SAME generation.
+    ///
+    /// B-W12-01/04: instrumented entry. The success counter is emitted only
+    /// after the core returns, which is after COMMIT; conflicts are counted
+    /// only when the domain rule or the reservation-identity backstop rejected
+    /// them. Database/transport exceptions propagate without a domain metric.
     /// </summary>
     public async Task<ReserveResult> TryReserveAsync(
         Guid driverId, Guid tripId, Guid reservationId, int expectedVersion,
         int? matchingRound = null,
         CancellationToken ct = default)
+    {
+        using var activity = DriverTelemetry.Activities.StartActivity("driver.reserve", ActivityKind.Internal);
+        activity?.SetTag("trip.id", tripId);
+        activity?.SetTag("reservation.id", reservationId);
+        if (matchingRound.HasValue)
+        {
+            activity?.SetTag("matching.round", matchingRound.Value);
+        }
+
+        try
+        {
+            var result = await TryReserveCoreAsync(
+                driverId, tripId, reservationId, expectedVersion, matchingRound, ct);
+
+            var outcome = result.Outcome switch
+            {
+                ReserveOutcome.Won => "won",
+                ReserveOutcome.Replayed => "replayed",
+                ReserveOutcome.Conflict => "conflict",
+                ReserveOutcome.DriverNotFound => "driver_not_found",
+                _ => "unknown",
+            };
+            activity?.SetTag("driver.reserve.outcome", outcome);
+
+            // Only a committed NEW reservation is a success effect. A
+            // same-reservation replay already held the effect and must not
+            // inflate the success counter.
+            if (result.Outcome == ReserveOutcome.Won)
+            {
+                _metrics?.ReserveSucceeded();
+            }
+            else if (result.Outcome == ReserveOutcome.Conflict)
+            {
+                _metrics?.ReserveConflict(DriverMetrics.ReserveReasonClass(result.ConflictCode));
+            }
+            else if (result.Outcome == ReserveOutcome.DriverNotFound)
+            {
+                _metrics?.ReserveConflict("driver_not_found");
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            throw;
+        }
+    }
+
+    private async Task<ReserveResult> TryReserveCoreAsync(
+        Guid driverId, Guid tripId, Guid reservationId, int expectedVersion,
+        int? matchingRound,
+        CancellationToken ct)
     {
         if (driverId == Guid.Empty || tripId == Guid.Empty || reservationId == Guid.Empty)
         {
@@ -254,6 +317,48 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
+    /// B-W12-01/04: instrumented exact-token release. A conflict means the
+    /// current reservation fenced this stale release (DSI-004); an
+    /// AVAILABLE-no-refs replay is an idempotent success and is never counted
+    /// as a second mutation.
+    /// </summary>
+    public async Task<DriverMutationResult> TryReleaseAsync(
+        Guid driverId, Guid tripId, Guid reservationId,
+        CancellationToken ct = default)
+    {
+        using var activity = DriverTelemetry.Activities.StartActivity("driver.release", ActivityKind.Internal);
+        activity?.SetTag("trip.id", tripId);
+        activity?.SetTag("reservation.id", reservationId);
+
+        try
+        {
+            var result = await TryReleaseCoreAsync(driverId, tripId, reservationId, ct);
+            activity?.SetTag("driver.release.outcome", result.Outcome switch
+            {
+                DriverMutationOutcome.Applied => "applied",
+                DriverMutationOutcome.Unchanged => "noop",
+                DriverMutationOutcome.Conflict => "conflict",
+                DriverMutationOutcome.DriverNotFound => "driver_not_found",
+                _ => "unknown",
+            });
+
+            if (result.Outcome == DriverMutationOutcome.Conflict
+                && DriverMetrics.IsStaleReleaseBlocked(result.ConflictCode))
+            {
+                _metrics?.StaleReleaseBlocked(
+                    DriverMetrics.ReleaseReasonClass(result.ConflictCode));
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// B-W07-01/02: exact-token release under the same row-lock discipline as
     /// reserve (DSI-004 fencing, DSI-033 exact identity, R-06). The domain
     /// decides on the fresh locked row: exact token frees (effect), coherent
@@ -261,9 +366,9 @@ public sealed partial class DriverRepository
     /// conflicts without mutation. No version parameter: token equality on
     /// the locked row is the complete guard.
     /// </summary>
-    public async Task<DriverMutationResult> TryReleaseAsync(
+    private async Task<DriverMutationResult> TryReleaseCoreAsync(
         Guid driverId, Guid tripId, Guid reservationId,
-        CancellationToken ct = default)
+        CancellationToken ct)
     {
         if (driverId == Guid.Empty || tripId == Guid.Empty || reservationId == Guid.Empty)
         {

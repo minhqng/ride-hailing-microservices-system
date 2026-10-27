@@ -1,8 +1,10 @@
 // B-W04-02/03/04: Matching-owned projection updater (StackExchange.Redis, no EF).
 // Best-effort degraded behavior (B-W04-08): connection failure -> Degraded result,
 // never throws to the caller. The Driver API path never blocks on Redis.
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Sockets;
+using RideHailing.MatchingService.Application.Matching;
 using StackExchange.Redis;
 
 namespace RideHailing.MatchingService.Application.Projection;
@@ -13,11 +15,14 @@ public sealed class RedisProjectionUpdater
 
     private readonly IConnectionMultiplexer _mux;
     private readonly string _functionName;
+    private readonly MatchingMetrics? _metrics;
 
-    public RedisProjectionUpdater(IConnectionMultiplexer mux, string? functionName = null)
+    public RedisProjectionUpdater(
+        IConnectionMultiplexer mux, string? functionName = null, MatchingMetrics? metrics = null)
     {
         _mux = mux;
         _functionName = functionName ?? FunctionName;
+        _metrics = metrics;
     }
 
     public static async Task<IConnectionMultiplexer> ConnectAsync(string configuration)
@@ -48,7 +53,7 @@ public sealed class RedisProjectionUpdater
 
         return CallAsync(update.DriverId,
             update.DerivedStatus, update.AggregateVersion.ToString(),
-            "", "", "", "", "", receipt);
+            "", "", "", "", "", ProjectionSection.State, receipt);
     }
 
     public Task<ProjectionResult> ApplyLocationAsync(LocationProjectionUpdate update, ProjectionReceipt? receipt = null)
@@ -69,17 +74,19 @@ public sealed class RedisProjectionUpdater
             update.Latitude.ToString("R", CultureInfo.InvariantCulture),
             update.SessionId,
             update.SequenceNo.ToString(CultureInfo.InvariantCulture),
-            update.CapturedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture), receipt);
+            update.CapturedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture),
+            ProjectionSection.Location, receipt);
     }
 
     private async Task<ProjectionResult> CallAsync(
         Guid driverId,
         string status, string version,
-        string lon, string lat, string session, string seq, string capturedAt, ProjectionReceipt? receipt)
+        string lon, string lat, string session, string seq, string capturedAt,
+        ProjectionSection section, ProjectionReceipt? receipt)
     {
         try
         {
-            return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt, receipt)
+            return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt, section, receipt)
                 .ConfigureAwait(false);
         }
         catch (RedisServerException ex) when (IsFunctionMissing(ex))
@@ -98,7 +105,7 @@ public sealed class RedisProjectionUpdater
 
             try
             {
-                return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt, receipt)
+                return await InvokeAsync(driverId, status, version, lon, lat, session, seq, capturedAt, section, receipt)
                     .ConfigureAwait(false);
             }
             catch (Exception retry) when (IsDegradation(retry))
@@ -115,15 +122,29 @@ public sealed class RedisProjectionUpdater
     private async Task<ProjectionResult> InvokeAsync(
         Guid driverId,
         string status, string version,
-        string lon, string lat, string session, string seq, string capturedAt, ProjectionReceipt? receipt)
+        string lon, string lat, string session, string seq, string capturedAt,
+        ProjectionSection section, ProjectionReceipt? receipt)
     {
         var db = _mux.GetDatabase();
-        var raw = await db.ExecuteAsync("FCALL", _functionName, 3,
-            RedisProjectionKeys.ProjectionKey(driverId),
-            RedisProjectionKeys.GeoKey,
-            receipt?.Key ?? "driver:projection:receipt:unused",
-            RedisProjectionKeys.Member(driverId),
-            status, version, lon, lat, session, seq, capturedAt, receipt?.Fingerprint ?? "");
+        var operation = section == ProjectionSection.State ? "state" : "location";
+        var elapsed = Stopwatch.StartNew();
+        RedisResult raw;
+        try
+        {
+            raw = await db.ExecuteAsync("FCALL", _functionName, 3,
+                RedisProjectionKeys.ProjectionKey(driverId),
+                RedisProjectionKeys.GeoKey,
+                receipt?.Key ?? "driver:projection:receipt:unused",
+                RedisProjectionKeys.Member(driverId),
+                status, version, lon, lat, session, seq, capturedAt, receipt?.Fingerprint ?? "");
+        }
+        catch (Exception ex)
+        {
+            // Transport/dependency failure is degraded/retry, never stale.
+            _metrics?.ProjectionFailed(operation, elapsed.Elapsed, IsDegradation(ex));
+            throw;
+        }
+
         // Explicit protocol validation: a foreign library registered under our
         // function name may return a non-array or a short array. That is a
         // clean Degraded (no proven effect), detected here rather than via
@@ -131,24 +152,37 @@ public sealed class RedisProjectionUpdater
         // retain their fail-loud meaning for genuine programming bugs.
         if (raw.Resp2Type != ResultType.Array)
         {
-            return ProjectionResult.DegradedResult();
+            var malformed = ProjectionResult.DegradedResult();
+            _metrics?.ProjectionObserved(operation, malformed, elapsed.Elapsed);
+            return malformed;
         }
 
         var res = (RedisResult[])raw!;
         if (res.Length != 3)
         {
-            return ProjectionResult.DegradedResult();
+            var malformed = ProjectionResult.DegradedResult();
+            _metrics?.ProjectionObserved(operation, malformed, elapsed.Elapsed);
+            return malformed;
         }
 
         if (string.Equals((string?)res[0], "content-conflict", StringComparison.Ordinal))
         {
+            _metrics?.ProjectionConflict(operation, elapsed.Elapsed);
             throw new ArgumentException("MESSAGE_ID_CONTENT_CONFLICT");
         }
 
-        return new ProjectionResult(
+        var result = new ProjectionResult(
             Parse((string?)res[0]),
             Parse((string?)res[1]),
             string.Equals((string?)res[2], "added", StringComparison.Ordinal));
+        _metrics?.ProjectionObserved(operation, result, elapsed.Elapsed);
+        return result;
+    }
+
+    private enum ProjectionSection
+    {
+        State,
+        Location,
     }
 
     // Missing-function detection: Redis 8 answers FCALL against an unloaded

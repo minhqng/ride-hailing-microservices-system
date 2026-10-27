@@ -20,6 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- W12 metrics/security proofs host the real Driver endpoints on Kestrel. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Driver\RideHailing.DriverService\RideHailing.DriverService.csproj" />
     <!-- Test-only agreement with the exact A producer snapshot; services remain independent. -->
     <ProjectReference Include="..\..\..\src\Services\Trip\RideHailing.TripService\RideHailing.TripService.csproj" />

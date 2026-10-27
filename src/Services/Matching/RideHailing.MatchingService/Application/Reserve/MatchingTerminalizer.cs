@@ -21,6 +21,7 @@
 // read serializes with it as well.
 using System.Text.Json;
 using Npgsql;
+using RideHailing.MatchingService.Application.Matching;
 using RideHailing.MatchingService.Application.Messaging;
 using RideHailing.MatchingService.Infrastructure.Persistence;
 using RideHailing.Messaging.Contracts;
@@ -55,15 +56,18 @@ public sealed class MatchingTerminalizer
     private readonly NpgsqlDataSource _dataSource;
     private readonly NpgsqlOutboxStore _outbox;
     private readonly TimeProvider _clock;
+    private readonly MatchingMetrics? _metrics;
 
     public MatchingTerminalizer(
         NpgsqlDataSource dataSource,
         NpgsqlOutboxStore outbox,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        MatchingMetrics? metrics = null)
     {
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
         _clock = clock ?? TimeProvider.System;
+        _metrics = metrics;
     }
 
     /// <summary>
@@ -220,6 +224,11 @@ public sealed class MatchingTerminalizer
 
         await EnsureOutboxIntentAsync(conn, tx, message, ct);
         await tx.CommitAsync(ct);
+
+        // B-W12-02: one committed NEW terminal decision. The replay branch above
+        // returns before this point, so relay duplicates and terminal replays
+        // never mint a second business metric.
+        _metrics?.NoDriver();
 
         return new MatchingTerminalResult(
             MatchingTerminalOutcome.NoDriver, ResultMessageId: expectedIdentity);
