@@ -33,6 +33,19 @@ public sealed class BInvariantAuditor(
     private static readonly string[] TerminalTripStates = ["COMPLETED", "CANCELLED", "MATCH_FAILED"];
     private static readonly string[] UnresolvedAttemptStates = ["READY", "IN_FLIGHT", "UNKNOWN"];
 
+    // Business quiescence: post-scenario observations require every B-owned
+    // release obligation to be complete. Mid-flight observation is the only
+    // mode in which a fresh recognized cleanup is not counted as a leak.
+    private static bool IsBusinessQuiesced(string observationMode) =>
+        observationMode.StartsWith("POST_SCENARIO", StringComparison.OrdinalIgnoreCase)
+        && !observationMode.Contains("MID_FLIGHT", StringComparison.OrdinalIgnoreCase);
+
+    // Relay quiescence is stricter and only claimed when the shared Outbox
+    // relay actually ran for the scenario. The default audit harness does not
+    // run the relay, so it uses *_NO_RELAY modes and applies the age policy.
+    private static bool IsRelayQuiesced(string observationMode) =>
+        observationMode.Contains("RELAY_QUIESCED", StringComparison.OrdinalIgnoreCase);
+
     private readonly AuditPolicy _policy = policy ?? new AuditPolicy();
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
@@ -68,7 +81,7 @@ public sealed class BInvariantAuditor(
             await ExecuteAsync(runId, scenarioId, observationMode, "AUD-04",
                 "Driver–Trip exact reservation identity agreement",
                 ["driver_db", "trip_db"],
-                ct => RunAud04Async(ct)),
+                ct => RunAud04Async(observationMode, ct)),
             await ExecuteAsync(runId, scenarioId, observationMode, "AUD-05",
                 "Payment logical effect uniqueness",
                 ["payment_db (C-owned)"],
@@ -82,11 +95,11 @@ public sealed class BInvariantAuditor(
             await ExecuteAsync(runId, scenarioId, observationMode, "AUD-07",
                 "No leaked pre-start Driver reservation after quiescence",
                 ["trip_db", "driver_db"],
-                ct => RunAud07Async(ct)),
+                ct => RunAud07Async(observationMode, ct)),
             await ExecuteAsync(runId, scenarioId, observationMode, "AUD-08",
                 "Outbox/attempt unresolved state and age",
                 ["driver_db", "matching_db"],
-                ct => RunAud08Async(ct)),
+                ct => RunAud08Async(observationMode, ct)),
         };
 
         return new AuditRun(
@@ -324,7 +337,7 @@ public sealed class BInvariantAuditor(
     }
 
     // ---------------------------------------------------------------- AUD-04
-    private async Task<CheckOutcome> RunAud04Async(CancellationToken ct)
+    private async Task<CheckOutcome> RunAud04Async(string observationMode, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(TripConnectionString))
         {
@@ -357,6 +370,7 @@ public sealed class BInvariantAuditor(
         var tripsById = trips.ToDictionary(t => t.TripId);
         var openCleanup = cleanup.Where(c => c.CompletedAt is null).ToArray();
         var now = _clock.GetUtcNow();
+        var quiesced = IsBusinessQuiesced(observationMode);
 
         foreach (var trip in trips.Where(t => t.AssignedDriverId is not null))
         {
@@ -415,6 +429,12 @@ public sealed class BInvariantAuditor(
                             "Terminal Trip still holds a live Driver reservation without a durable cleanup obligation.",
                             trip.TripId.ToString("D")));
                     }
+                    else if (quiesced)
+                    {
+                        findings.Add(new AuditFinding("UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+                            "Business-quiesced observation still holds a Driver reservation with an open release obligation.",
+                            trip.TripId.ToString("D")));
+                    }
                     else if (now - open.CreatedAt > _policy.PendingCleanupAge)
                     {
                         findings.Add(new AuditFinding("STUCK_CLEANUP_OBLIGATION",
@@ -424,7 +444,7 @@ public sealed class BInvariantAuditor(
                     else
                     {
                         findings.Add(new AuditFinding("RECOGNIZED_PENDING_CLEANUP",
-                            "Cleanup is durably recognized and still within policy; not counted as a leak.",
+                            "Cleanup is durably recognized and still within policy; not counted as a leak in mid-flight observation.",
                             trip.TripId.ToString("D")));
                     }
                 }
@@ -464,13 +484,21 @@ public sealed class BInvariantAuditor(
                     && c.Kind == "ReleaseReservation"
                     && c.DriverId == driver.DriverId
                     && c.ReservationId == referenceReservation);
+                if (pending is not null && quiesced)
+                {
+                    findings.Add(new AuditFinding("UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+                        "Business-quiesced observation still points a Driver reservation at a terminal Trip with an open release obligation.",
+                        $"{driver.DriverId:D}/{referenceTrip:D}"));
+                    continue;
+                }
+
                 if (pending is not null && now - pending.CreatedAt <= _policy.PendingCleanupAge)
                 {
                     if (!findings.Any(f => f.Code == "RECOGNIZED_PENDING_CLEANUP"
                                            && f.Record == trip.TripId.ToString("D")))
                     {
                         findings.Add(new AuditFinding("RECOGNIZED_PENDING_CLEANUP",
-                            "Cleanup is durably recognized and still within policy; not counted as a leak.",
+                            "Cleanup is durably recognized and still within policy; not counted as a leak in mid-flight observation.",
                             trip.TripId.ToString("D")));
                     }
 
@@ -715,7 +743,7 @@ public sealed class BInvariantAuditor(
     }
 
     // ---------------------------------------------------------------- AUD-07
-    private async Task<CheckOutcome> RunAud07Async(CancellationToken ct)
+    private async Task<CheckOutcome> RunAud07Async(string observationMode, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(TripConnectionString))
         {
@@ -740,6 +768,7 @@ public sealed class BInvariantAuditor(
 
         var findings = new List<AuditFinding>();
         var now = _clock.GetUtcNow();
+        var quiesced = IsBusinessQuiesced(observationMode);
         var openCleanup = cleanup.Where(c => c.CompletedAt is null).ToArray();
 
         foreach (var trip in trips)
@@ -762,6 +791,12 @@ public sealed class BInvariantAuditor(
                         "Terminal Trip still holds an active Driver reservation with no open cleanup obligation.",
                         $"{trip.TripId:D}/{driver.DriverId:D}"));
                 }
+                else if (quiesced)
+                {
+                    findings.Add(new AuditFinding("UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+                        "Business-quiesced observation still holds a Driver reservation with an open release obligation.",
+                        $"{trip.TripId:D}/{driver.DriverId:D}"));
+                }
                 else if (now - open.CreatedAt > _policy.PendingCleanupAge)
                 {
                     findings.Add(new AuditFinding("STUCK_CLEANUP_OBLIGATION",
@@ -771,7 +806,7 @@ public sealed class BInvariantAuditor(
                 else
                 {
                     findings.Add(new AuditFinding("RECOGNIZED_PENDING_CLEANUP",
-                        "Cleanup is durably recognized and still within policy; not counted as a leak.",
+                        "Cleanup is durably recognized and still within policy; not counted as a leak in mid-flight observation.",
                         $"{trip.TripId:D}/{driver.DriverId:D}"));
                 }
             }
@@ -787,11 +822,12 @@ public sealed class BInvariantAuditor(
             findings,
             trips.Count == 0
                 ? "No terminal Trip in this scenario; leak PASS would be vacuous."
-                : "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks.");
+                : "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. " +
+                  "Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations.");
     }
 
     // ---------------------------------------------------------------- AUD-08
-    private async Task<CheckOutcome> RunAud08Async(CancellationToken ct)
+    private async Task<CheckOutcome> RunAud08Async(string observationMode, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(MatchingConnectionString))
         {
@@ -815,11 +851,20 @@ public sealed class BInvariantAuditor(
 
         var findings = new List<AuditFinding>();
         var now = _clock.GetUtcNow();
+        var relayQuiesced = IsRelayQuiesced(observationMode);
 
         foreach (var (source, rows) in new[] { ("driver", driverOutbox), ("matching", matchingOutbox) })
         {
             foreach (var row in rows.Where(r => r.Status == "PENDING"))
             {
+                if (relayQuiesced)
+                {
+                    findings.Add(new AuditFinding("PENDING_OUTBOX_AT_QUIESCENCE",
+                        $"{source} Outbox row is PENDING in a relay-quiesced observation (pending must be 0).",
+                        $"{row.MessageId}/{row.MessageType}"));
+                    continue;
+                }
+
                 var age = now - row.OccurredAt;
                 if (row.ClaimedAt is not null && now - row.ClaimedAt.Value <= _policy.PendingOutboxAge)
                 {
@@ -886,9 +931,13 @@ public sealed class BInvariantAuditor(
             findings,
             inspected == 0
                 ? "No Outbox/attempt/round rows inspected; PASS would be vacuous."
-                : $"Accepted policy: fresh PENDING <= {_policy.PendingOutboxAge.TotalMinutes:F0} min, " +
-                  $"unresolved attempts/rounds <= {_policy.StaleUnresolvedAge.TotalMinutes:F0} min, " +
-                  "FAILED_VISIBLE is visible-by-design and reported for review.");
+                : relayQuiesced
+                    ? "Relay-quiesced policy: any PENDING Outbox row is a violation; " +
+                      $"unresolved attempts/rounds <= {_policy.StaleUnresolvedAge.TotalMinutes:F0} min; " +
+                      "FAILED_VISIBLE is visible-by-design and reported for review."
+                    : $"Relay not executed for this observation; fresh PENDING <= {_policy.PendingOutboxAge.TotalMinutes:F0} min accepted by the age policy, " +
+                      $"unresolved attempts/rounds <= {_policy.StaleUnresolvedAge.TotalMinutes:F0} min, " +
+                      "FAILED_VISIBLE is visible-by-design and reported for review.");
     }
 
     // ------------------------------------------------------------- row readers

@@ -135,9 +135,10 @@ public sealed class AuditReportCollector
         // Negative/control runs intentionally produce FAIL (detections) and
         // BLOCKED (honesty) verdicts; keep them out of the positive-scenario
         // tally so a reader cannot mistake an expected detection for a defect.
+        var statusKeys = new[] { "PASS", "LOCAL_PROXY_PASS", "FAIL", "NOT_RUN", "BLOCKED" };
         foreach (var group in new[] { "positive", "control" })
         {
-            foreach (var status in summary.Keys.ToArray())
+            foreach (var status in statusKeys)
             {
                 summary[$"{group}:{status}"] = 0;
             }
@@ -145,7 +146,7 @@ public sealed class AuditReportCollector
 
         foreach (var run in runs)
         {
-            var group = IsControlMode(run.ObservationMode) ? "control" : "positive";
+            var group = IsControlMode(run) ? "control" : "positive";
             foreach (var check in run.Checks)
             {
                 summary[$"{group}:{check.Status}"] += 1;
@@ -162,7 +163,7 @@ public sealed class AuditReportCollector
             {
                 ["runtime"] = Environment.Version.ToString(),
                 ["os"] = Environment.OSVersion.ToString(),
-                ["observationMode"] = "POST_SCENARIO_QUIESCED",
+                ["observationMode"] = "POST_SCENARIO_B_QUIESCED_NO_RELAY / MID_FLIGHT_OBSERVATION / NEGATIVE_CONTROL_SEEDED",
                 ["driverAuthority"] = "real PostgreSQL 18.6 (Testcontainers, disposable)",
                 ["matchingAuthority"] = "real PostgreSQL 18.6 (Testcontainers, disposable)",
                 ["tripAuthority"] = "real PostgreSQL 18.6 (Testcontainers, disposable)",
@@ -312,7 +313,9 @@ public sealed class AuditReportCollector
     private static string DisplayText(string value) =>
         value.Replace("NOT_RUN", "NOT RUN", StringComparison.Ordinal);
 
-    private static bool IsControlMode(string observationMode) =>
-        observationMode.Contains("CONTROL", StringComparison.OrdinalIgnoreCase)
-        || observationMode.StartsWith("EMPTY_DATASET", StringComparison.OrdinalIgnoreCase);
+    private static bool IsControlMode(AuditRun run) =>
+        run.ScenarioId.StartsWith("negative-", StringComparison.OrdinalIgnoreCase)
+        || run.ScenarioId.StartsWith("control-", StringComparison.OrdinalIgnoreCase)
+        || run.ObservationMode.Contains("CONTROL", StringComparison.OrdinalIgnoreCase)
+        || run.ObservationMode.StartsWith("EMPTY_DATASET", StringComparison.OrdinalIgnoreCase);
 }
