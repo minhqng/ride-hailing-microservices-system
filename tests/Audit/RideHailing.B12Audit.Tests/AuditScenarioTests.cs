@@ -157,6 +157,83 @@ public sealed class AuditScenarioTests
         Assert.Equal(AuditStatus.NOT_RUN, Check(run, "AUD-08").Status);
     }
 
+    [Fact]
+    public async Task LateReleaseFenced_KeepsNewerReservation()
+    {
+        var db = await _fixture.CreateDatabasesAsync("late_release");
+        await using var scenario = await AuditScenario.CreateAsync(db);
+        var driver = await scenario.SeedAvailableDriverAsync();
+
+        var rider1 = Guid.NewGuid();
+        var trip1 = await scenario.CreateTripAsync(rider1, "b12-late-release-1");
+        await scenario.StartMatchingAsync(trip1, rider1);
+        var first = await scenario.ReserveAsync(trip1, 1, [driver.DriverId]);
+        Assert.Equal(RoundOutcome.Reserved, first.Outcome);
+        var r1 = first.ReservationId!.Value;
+        await scenario.RecordReservationAsync(trip1, driver.DriverId, r1, 1);
+        await scenario.CancelAsync(trip1, rider1);
+        Assert.Equal(DriverMutationOutcome.Applied,
+            (await scenario.ReleaseDriverAsync(driver.DriverId, trip1, r1)).Outcome);
+        var cleanup1 = await scenario.LoadOpenCleanupAsync(trip1);
+        var release1 = Assert.Single(cleanup1, c => c.Kind == "ReleaseReservation");
+        await scenario.ConfirmCleanupAsync(trip1, release1.Key, CleanupAuthorityResult.Released);
+
+        var rider2 = Guid.NewGuid();
+        var trip2 = await scenario.CreateTripAsync(rider2, "b12-late-release-2");
+        await scenario.StartMatchingAsync(trip2, rider2);
+        var second = await scenario.ReserveAsync(trip2, 1, [driver.DriverId]);
+        Assert.Equal(RoundOutcome.Reserved, second.Outcome);
+        var r2 = second.ReservationId!.Value;
+        await scenario.RecordReservationAsync(trip2, driver.DriverId, r2, 1);
+
+        var late = await scenario.ReleaseDriverAsync(driver.DriverId, trip1, r1);
+        Assert.Equal(DriverMutationOutcome.Conflict, late.Outcome);
+        Assert.Equal(DriverErrors.StaleReservation, late.ConflictCode);
+
+        var current = await scenario.Drivers.LoadAsync(driver.DriverId);
+        Assert.NotNull(current);
+        Assert.Equal(DriverStatus.Reserved, current!.Status);
+        Assert.Equal(trip2, current.ReservedTripId);
+        Assert.Equal(r2, current.ReservationId);
+
+        var run = await RunAuditAsync(db, "late-release-fenced");
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-01").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-02").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-04").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-06").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-07").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-08").Status);
+    }
+
+    [Fact]
+    public async Task RecognizedPendingCleanup_IsNotTreatedAsLeak()
+    {
+        var db = await _fixture.CreateDatabasesAsync("pending_cleanup");
+        await using var scenario = await AuditScenario.CreateAsync(db);
+        var driver = await scenario.SeedAvailableDriverAsync();
+        var rider = Guid.NewGuid();
+        var trip = await scenario.CreateTripAsync(rider, "b12-pending-cleanup");
+        await scenario.StartMatchingAsync(trip, rider);
+        var reserved = await scenario.ReserveAsync(trip, 1, [driver.DriverId]);
+        Assert.Equal(RoundOutcome.Reserved, reserved.Outcome);
+        await scenario.RecordReservationAsync(trip, driver.DriverId, reserved.ReservationId!.Value, 1);
+        await scenario.CancelAsync(trip, rider);
+
+        var cleanup = await scenario.LoadOpenCleanupAsync(trip);
+        Assert.Contains(cleanup, c => c.Kind == "ReleaseReservation");
+
+        var run = await RunAuditAsync(db, "recognized-pending-cleanup", "MID_FLIGHT_OBSERVATION");
+        var aud04 = Check(run, "AUD-04");
+        var aud07 = Check(run, "AUD-07");
+        Assert.Equal(AuditStatus.PASS, aud04.Status);
+        Assert.Equal(AuditStatus.PASS, aud07.Status);
+        Assert.Contains(aud04.Findings, f => f.Code == "RECOGNIZED_PENDING_CLEANUP");
+        Assert.Contains(aud07.Findings, f => f.Code == "RECOGNIZED_PENDING_CLEANUP");
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-01").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-06").Status);
+        Assert.Equal(AuditStatus.PASS, Check(run, "AUD-08").Status);
+    }
+
     // ------------------------------------------------------------ negative
     [Fact]
     public async Task Negative_ContradictoryMatchingTerminalFacts_FailsAud06()
