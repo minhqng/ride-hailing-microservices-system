@@ -153,7 +153,7 @@
   ],
   "assertionsWeakened": false,
   "notes": [
-    "The full solution run includes the new B12 auditor project (14 tests).",
+    "The full solution run includes the new B12 auditor project (18 tests).",
     "System tests discover zero tests and are not counted as PASS.",
     "The formal run executed against the committed audit head; evidence is stored in an evidence-only commit."
   ],
