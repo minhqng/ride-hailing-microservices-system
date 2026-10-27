@@ -104,7 +104,7 @@ public sealed class AuditScenarioTests
         var releaseIntent = Assert.Single(cleanup, c => c.Kind == "ReleaseReservation");
         await scenario.ConfirmCleanupAsync(trip, releaseIntent.Key, CleanupAuthorityResult.Released);
 
-        var run = await RunAuditAsync(db, "cancel-release-quiesced", "POST_SCENARIO_QUIESCED_B_SCOPE");
+        var run = await RunAuditAsync(db, "cancel-release-quiesced", "POST_SCENARIO_B_QUIESCED_NO_RELAY");
         Assert.Equal(AuditStatus.PASS, Check(run, "AUD-01").Status);
         Assert.Equal(AuditStatus.PASS, Check(run, "AUD-02").Status);
         Assert.Equal(AuditStatus.PASS, Check(run, "AUD-04").Status);
@@ -146,7 +146,7 @@ public sealed class AuditScenarioTests
 
         var auditor = new BInvariantAuditor(
             db.DriverConnectionString, matchingConnectionString: null, tripConnectionString: null);
-        var run = await auditor.RunAsync("driver-lifecycle", "POST_SCENARIO_QUIESCED");
+        var run = await auditor.RunAsync("driver-lifecycle", "POST_SCENARIO_B_QUIESCED_NO_RELAY");
         _fixture.Report.AddRun(run);
 
         Assert.Equal(AuditStatus.PASS, Check(run, "AUD-01").Status);
@@ -424,6 +424,62 @@ public sealed class AuditScenarioTests
             "Age policy: 15 min for pending outbox, unresolved attempts and PROCESSING rounds.");
     }
 
+    [Fact]
+    public async Task Negative_FreshCleanupUnderQuiescence_Fails()
+    {
+        var db = await _fixture.CreateDatabasesAsync("neg_fresh_cleanup");
+        await using var scenario = await AuditScenario.CreateAsync(db);
+        var driver = await scenario.SeedAvailableDriverAsync();
+        var rider = Guid.NewGuid();
+        var trip = await scenario.CreateTripAsync(rider, "b12-neg-fresh-cleanup");
+        await scenario.StartMatchingAsync(trip, rider);
+        var reserved = await scenario.ReserveAsync(trip, 1, [driver.DriverId]);
+        await scenario.RecordReservationAsync(trip, driver.DriverId, reserved.ReservationId!.Value, 1);
+        await scenario.CancelAsync(trip, rider);
+
+        // The release obligation is fresh but still open while the Driver is
+        // reserved; a business-quiesced observation must not accept that.
+        var run = await RunAuditAsync(db, "negative-fresh-cleanup-quiesced",
+            "POST_SCENARIO_B_QUIESCED_NO_RELAY");
+        var aud04 = Check(run, "AUD-04");
+        var aud07 = Check(run, "AUD-07");
+        Assert.Equal(AuditStatus.FAIL, aud04.Status);
+        Assert.Equal(AuditStatus.FAIL, aud07.Status);
+        Assert.Contains(aud04.Findings, f => f.Code == "UNRESOLVED_CLEANUP_AT_QUIESCENCE");
+        Assert.Contains(aud07.Findings, f => f.Code == "UNRESOLVED_CLEANUP_AT_QUIESCENCE");
+        RecordControl("NEG-07C", "AUD-04/AUD-07",
+            "Fresh open release obligation and a still-RESERVED Driver at business quiescence.",
+            "AUD-04 and AUD-07 FAIL; recognized pending is only acceptable in mid-flight observation.",
+            $"AUD-04={aud04.Status}, AUD-07={aud07.Status} / UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+            "isolated Trip + Driver databases (neg_fresh_cleanup)",
+            "Proves the observation mode is enforced, not merely recorded.");
+    }
+
+    [Fact]
+    public async Task Negative_FreshPendingUnderRelayQuiescence_Fails()
+    {
+        var db = await _fixture.CreateDatabasesAsync("neg_relay_pending");
+        await ExecuteAsync(db.DriverConnectionString, """
+            INSERT INTO outbox_messages
+                (message_id, message_type, schema_version, correlation_id, payload_json,
+                 exchange, routing_key, occurred_at, status, attempt_count, next_attempt_at)
+            VALUES ('fresh-relay-pending', 'DriverReservedV1', 1, 'neg-corr', '{}'::jsonb,
+                    'ride.events', 'driver.test', now(), 'PENDING', 0, now());
+            """);
+
+        var run = await RunAuditAsync(db, "negative-fresh-pending-relay-quiesced",
+            "POST_SCENARIO_RELAY_QUIESCED");
+        var check = Check(run, "AUD-08");
+        Assert.Equal(AuditStatus.FAIL, check.Status);
+        Assert.Contains(check.Findings, f => f.Code == "PENDING_OUTBOX_AT_QUIESCENCE");
+        RecordControl("NEG-08B", "AUD-08",
+            "Fresh PENDING Outbox row in a relay-quiesced observation.",
+            "AUD-08 FAIL: quiesced relay state requires pending = 0.",
+            $"{check.Status} / PENDING_OUTBOX_AT_QUIESCENCE",
+            "isolated Driver database (neg_relay_pending)",
+            "Complements the age-policy control: no-relay modes accept fresh pending within policy, relay-quiesced modes do not.");
+    }
+
     // ------------------------------------------------------------ controls
     [Fact]
     public async Task Control_DriverCoherenceAndIdentity_AreStorageEnforced()
@@ -533,7 +589,7 @@ public sealed class AuditScenarioTests
     }
 
     // ------------------------------------------------------------- helpers
-    private async Task<AuditRun> RunAuditAsync(AuditDatabaseSet db, string scenarioId, string mode = "POST_SCENARIO_QUIESCED")
+    private async Task<AuditRun> RunAuditAsync(AuditDatabaseSet db, string scenarioId, string mode = "POST_SCENARIO_B_QUIESCED_NO_RELAY")
     {
         var auditor = new BInvariantAuditor(
             db.DriverConnectionString, db.MatchingConnectionString, db.TripConnectionString);
