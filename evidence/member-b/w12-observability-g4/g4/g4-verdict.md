@@ -11,8 +11,8 @@ is successful execution of B-W12-09. A green team G4 is **not** claimed.
 |---|---|
 | Repository | `minhqng/ride-hailing-microservices-system` |
 | Branch | `feature/B-W12-observability-g4` |
-| B tested head | `7bc4510cbf524406d545b7529c938414b85f9c9c` |
-| B tested tree | `27ba100e59bec471489a5f7cdfaa5dc7c54361b9` |
+| B tested head | `3f7aa18d26739085b4b8d82b06290233cf76a40f` |
+| B tested tree | `208b4e74e4fca0d1d7dd4c883bff96c9a2a3fae1` |
 | Base | W11 head `3ba3724e7e7df378e8c234af685c027ad9d26863` (PR #44) |
 | PR | #45 (base `feature/B-W11-deterministic-faults`) |
 | A-owned evidence head | `132ecfd4ebc7f452af5e28f030bf66754e9b0df7` (unmerged A-W12) |
@@ -42,14 +42,14 @@ is successful execution of B-W12-09. A green team G4 is **not** claimed.
 
 ## What is green (B-owned scope)
 
-- Formal Release build and full solution tests: **1099 passed, 1 skipped, 0
-  failed** (1083 baseline + 16 audit; the only skip is the Identity
+- Formal Release build and full solution tests: **1101 passed, 1 skipped, 0
+  failed** (1083 baseline + 18 audit; the only skip is the Identity
   `RIDE_AUTH_FIXTURE` absent case, not counted as verification).
 - Auditor: AUD-01/02/04/06/07/08 PASS on real scenario final states; negative
   controls detect every seeded violation; constraint-enforced guards are
   demonstrated, not bypassed; empty/unreachable datasets produce NOT RUN/BLOCKED.
 - W11 critical campaign: five consecutive passes of REL-01/02, CON-02/04,
-  REL-12/13/14 on the B tested source (see
+  REL-12/13/14 at the audit commit `60f5cd4` (production `src/` tree identical to the tested head; see
   `test-output/w11-critical-regression.txt`).
 - All seven architectural prohibitions have executable B-owned proofs.
 - AUD-03 (Trip) and AUD-05 (Payment) are **NOT RUN** with named A/C
