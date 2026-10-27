@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "task": "B-W12-07 formal full regression",
+  "source": {
+    "repository": "minhqng/ride-hailing-microservices-system",
+    "branch": "feature/B-W12-observability-g4",
+    "commit": "7bc4510cbf524406d545b7529c938414b85f9c9c",
+    "tree": "27ba100e59bec471489a5f7cdfaa5dc7c54361b9",
+    "base": "3ba3724e7e7df378e8c234af685c027ad9d26863",
+    "sourceStatusAtStart": ""
+  },
+  "environment": {
+    "host": "Windows 10.0.26200 x64, Git Bash",
+    "dotnetSdk": "10.0.403",
+    "dockerEngine": "29.8.2 (Docker Desktop, WSL2)",
+    "postgresql": "postgres:18.6 (Testcontainers)",
+    "rabbitmq": "rabbitmq:4.3.6-management",
+    "redis": "redis:8.10.2",
+    "testcontainers": "4.15.0"
+  },
+  "commands": {
+    "build": "dotnet build RideHailing.Distributed.slnx -c Release",
+    "fullSolution": "dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger \"console;verbosity=normal\"",
+    "w11Campaign": "./scripts/fault/b-w11-full-campaign.sh (clean tree, five passes)",
+    "auditor": "./scripts/audit/b-w12-g4.sh"
+  },
+  "build": {
+    "result": "PASS",
+    "errors": 0,
+    "warnings": 14,
+    "warningDetail": "14 warnings, 0 errors: C-owned Payment nullable warnings (CS8604), pre-existing Driver test snapshot type-conflict warnings (CS0436) and xUnit analyzer style warnings in ReserveTraceContinuityTests. The new B12 audit project contributed no warnings; no build or test failure."
+  },
+  "fullSolution": {
+    "total": 1100,
+    "passed": 1099,
+    "failed": 0,
+    "skipped": 1,
+    "skipDetail": "IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState skipped because RIDE_AUTH_FIXTURE is absent (SYSTEM_AUTH_PENDING). The skip is not counted as verification.",
+    "baselinePriorRun": "1083 passed / 1 skipped at fb19013 (Phase 1); Phase 2 adds 16 auditor tests and preserves the baseline."
+  },
+  "lanes": {
+    "identity_integration": {
+      "passed": 0,
+      "skipped": 1,
+      "failed": 0,
+      "total": 1,
+      "note": "known Identity auth skip; not a PASS"
+    },
+    "driver_unit": {
+      "passed": 131,
+      "failed": 0,
+      "total": 131
+    },
+    "driver_integration": {
+      "passed": 113,
+      "failed": 0,
+      "total": 113
+    },
+    "matching_unit": {
+      "passed": 104,
+      "failed": 0,
+      "total": 104
+    },
+    "matching_integration": {
+      "passed": 158,
+      "failed": 0,
+      "total": 158
+    },
+    "platform_outbox_dedup_integration": {
+      "passed": 60,
+      "failed": 0,
+      "total": 60
+    },
+    "trip_unit": {
+      "passed": 299,
+      "failed": 0,
+      "total": 299
+    },
+    "trip_integration": {
+      "passed": 162,
+      "failed": 0,
+      "total": 162,
+      "trip_w9": 17,
+      "trip_w10": 14
+    },
+    "payment_unit": {
+      "passed": 28,
+      "failed": 0,
+      "total": 28
+    },
+    "payment_integration": {
+      "passed": 28,
+      "failed": 0,
+      "total": 28
+    },
+    "b12_audit": {
+      "passed": 16,
+      "failed": 0,
+      "total": 16
+    },
+    "system_tests": {
+      "discovered": 0,
+      "result": "NOT RUN",
+      "note": "no tests available; zero discovered is not counted as PASS"
+    }
+  },
+  "w12Focused": {
+    "passed": 19,
+    "failed": 0,
+    "total": 19,
+    "breakdown": {
+      "DriverMetricSemanticsTests": 2,
+      "DriverMetricsTests": 3,
+      "MatchingMetricsTests": 4,
+      "ProjectionMetricsTests": 4,
+      "ReserveTraceContinuityTests": 3,
+      "DriverAuthorizationExposureTests": 2,
+      "DriverLocationIngressTests": 1
+    },
+    "securityCaveat": "DriverAuthorizationExposureTests reproduce unauthorised success; they are vulnerability evidence, not an authorization PASS."
+  },
+  "w11Critical": {
+    "status": "PASS",
+    "campaignSummary": "g4/w11-five-pass-summary.json",
+    "runId": "w11-campaign",
+    "sourceHead": "60f5cd4018b259c7f483984baf288e500732c493",
+    "sourceTree": "07d2498c7432dca04643060317e38f52759b7c1c",
+    "sourceStatus": "",
+    "passes": 5,
+    "acceptance": "5/5 consecutive passes",
+    "productionTreeIdenticalToFinal": true,
+    "srcTree": "0a2dab00e04a8ef2b43076472ec5c03641feab5c",
+    "note": "The campaign ran at the audit commit; the final code commit adds only auditor tests/fix. The production src/ subtree is identical and the final full-solution regression re-executed the W11 component tests."
+  },
+  "auditor": {
+    "runs": 14,
+    "negativeControls": 12,
+    "positiveChecks": {
+      "PASS": 31,
+      "LOCAL_PROXY_PASS": 0,
+      "FAIL": 0,
+      "NOT_RUN": 17,
+      "BLOCKED": 0
+    },
+    "aud03": "NOT RUN \u2014 A-owned Trip authority; source/scenario provenance differs",
+    "aud05": "NOT RUN \u2014 C-owned Payment authority",
+    "evidence": "auditor/auditor-results.json, auditor/auditor-results.md, auditor/negative-controls.md"
+  },
+  "initialFailures": [],
+  "subsequentFixes": [
+    "AUD-04 recognized-pending cleanup handling was clarified during self-review before publication; the final scenario proves fresh recognized cleanup is not a leak while stale/false cleanup still fails."
+  ],
+  "assertionsWeakened": false,
+  "notes": [
+    "The full solution run includes the new B12 auditor project (14 tests).",
+    "System tests discover zero tests and are not counted as PASS.",
+    "The formal run executed against the committed audit head; evidence is stored in an evidence-only commit."
+  ],
+  "finalHeadAddsTestsOnly": true
+}

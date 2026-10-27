@@ -1,0 +1,259 @@
+{
+  "runId": "w11-campaign",
+  "timestampUtc": "2026-10-27T04:11:08.893Z",
+  "sourceHead": "60f5cd4018b259c7f483984baf288e500732c493",
+  "sourceTree": "07d2498c7432dca04643060317e38f52759b7c1c",
+  "sourceStatus": "",
+  "passes": 5,
+  "acceptance": "5/5 consecutive passes",
+  "driverImageId": "sha256:da2c70e2e592ba3d9de4501d8c37ecf08a20b8cee6b0a43a8be0ad532309214d",
+  "matchingImageId": "sha256:6ad2ff998a311db5fc15a132766a5f41cd3c923d88c6fa951149838d19da01ef",
+  "matrix": {
+    "REL-01": {
+      "test": "LostReserveResponse/container",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 133,
+          "ids": "REL01 trip=a1f7c280-9b2a-4307-8609-c7570f4d6897 driver=f095e6fb-bc43-43ab-a987-d31d3f922c33 R=df68b33f-504d-4a2a-826b-e350006fe449; REL02 trip=33e20503-614f-4bae-88ee-90578348c0cd driver=f1c032f8-1819-4cf0-92ca-ee2af655166e R=53699440-349e-4409-a359-e2098c1e13a9 pid=64025->65302 exit=137"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 72,
+          "ids": "REL01 trip=40f7686e-b6ac-43d7-abdf-962ffe0955f8 driver=3ed7ea1a-d831-44ee-9b4c-007526e3d295 R=2bb5868f-039a-45cd-953b-e6ea9f64f6af; REL02 trip=8e9666ca-b617-442a-a20e-8b3ffb3bf14c driver=09c98c47-4708-4f32-aedb-7476f91f8f15 R=4306efa8-16e9-4ac3-8b2d-592c957ee2c9 pid=77066->78310 exit=137"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 71,
+          "ids": "REL01 trip=e1fec3c5-aac9-480e-b598-18855dcfa792 driver=a70d9f4c-b265-45ad-9dbd-8c9523ba01d4 R=bb8be10d-7e95-4fcb-8f56-99245eecb97e; REL02 trip=84215ee7-3297-406e-bf1c-e86e60fc0e91 driver=8616ce66-8314-4def-a859-bf8ff5af643c R=70366b2f-78c0-43cc-9a3c-9172ae87e4ea pid=87666->89046 exit=137"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 81,
+          "ids": "REL01 trip=ba30ba11-8f52-419d-8a9b-d3c08f4c7ec8 driver=36dc07f5-1d03-444a-a7bd-05371736cc05 R=f5505f9e-6ce9-43dd-a194-1d89639144d2; REL02 trip=c72d2f5e-fb86-4063-bf69-309eb79b6b26 driver=88e27a1b-d843-43ba-a406-021253bc3bba R=06995268-272a-46c4-84d0-abd837a886ae pid=96894->98204 exit=137"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 130,
+          "ids": "REL01 trip=b1681daf-f2e5-499a-87f4-513fc7a2e432 driver=3844dbc6-05d2-4f7c-9828-a2eb27dc6b2d R=2b832e1d-f072-43a3-9cfc-5f59f8507836; REL02 trip=f6c573a4-b97a-49c9-b8a5-6eb0ba919034 driver=1bf0241c-8988-4c8f-a9b1-d45ce7993883 R=d5b678f9-5224-492a-a2c7-00aa145e1b1e pid=8391->9596 exit=137"
+        }
+      ]
+    },
+    "REL-02": {
+      "test": "MatchingSIGKILL/container",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 133,
+          "ids": "REL01 trip=a1f7c280-9b2a-4307-8609-c7570f4d6897 driver=f095e6fb-bc43-43ab-a987-d31d3f922c33 R=df68b33f-504d-4a2a-826b-e350006fe449; REL02 trip=33e20503-614f-4bae-88ee-90578348c0cd driver=f1c032f8-1819-4cf0-92ca-ee2af655166e R=53699440-349e-4409-a359-e2098c1e13a9 pid=64025->65302 exit=137"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 72,
+          "ids": "REL01 trip=40f7686e-b6ac-43d7-abdf-962ffe0955f8 driver=3ed7ea1a-d831-44ee-9b4c-007526e3d295 R=2bb5868f-039a-45cd-953b-e6ea9f64f6af; REL02 trip=8e9666ca-b617-442a-a20e-8b3ffb3bf14c driver=09c98c47-4708-4f32-aedb-7476f91f8f15 R=4306efa8-16e9-4ac3-8b2d-592c957ee2c9 pid=77066->78310 exit=137"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 71,
+          "ids": "REL01 trip=e1fec3c5-aac9-480e-b598-18855dcfa792 driver=a70d9f4c-b265-45ad-9dbd-8c9523ba01d4 R=bb8be10d-7e95-4fcb-8f56-99245eecb97e; REL02 trip=84215ee7-3297-406e-bf1c-e86e60fc0e91 driver=8616ce66-8314-4def-a859-bf8ff5af643c R=70366b2f-78c0-43cc-9a3c-9172ae87e4ea pid=87666->89046 exit=137"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 81,
+          "ids": "REL01 trip=ba30ba11-8f52-419d-8a9b-d3c08f4c7ec8 driver=36dc07f5-1d03-444a-a7bd-05371736cc05 R=f5505f9e-6ce9-43dd-a194-1d89639144d2; REL02 trip=c72d2f5e-fb86-4063-bf69-309eb79b6b26 driver=88e27a1b-d843-43ba-a406-021253bc3bba R=06995268-272a-46c4-84d0-abd837a886ae pid=96894->98204 exit=137"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 130,
+          "ids": "REL01 trip=b1681daf-f2e5-499a-87f4-513fc7a2e432 driver=3844dbc6-05d2-4f7c-9828-a2eb27dc6b2d R=2b832e1d-f072-43a3-9cfc-5f59f8507836; REL02 trip=f6c573a4-b97a-49c9-b8a5-6eb0ba919034 driver=1bf0241c-8988-4c8f-a9b1-d45ce7993883 R=d5b678f9-5224-492a-a2c7-00aa145e1b1e pid=8391->9596 exit=137"
+        }
+      ]
+    },
+    "CON-02": {
+      "test": "both-schedules",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 21,
+          "ids": " W11 CON-04-direct driver=ec40a9e5-6c10-4ee0-b221-ef050a40de03 r1=a98295ed-e155-40b7-9497-748c5779827c r2=08dcaf96-48e1-44f8-8c49-2bce9ccd34e4 trip2=c1ffa15f-0c4a-4181-8534-4e1468cd3562 lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=d91e9d3c-f6c3-485d-b17e-11323682a297 lostReservation=d23c5980-3bab-40f6-a77b-ce8fc6edaf94 finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=33; W11 CON-02 schedule=reserve-wins barrier=reached driver=dc1862f2-67ff-4908-aba0-23508834049c reservation=64ca94b8-34f3-4c9d-8c34-05fb5e534a7b finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=14; W11 CON-04-broker driver=c688dcaa-2b31-42e6-a9e3-0053693192c7 r1=caed25ae-1c22-4e67-9a99-29b33a1e8b59 r2=650866b5-eb14-459c-b0e1-99c71f661d18 trip2=21bcb69b-3b82-48c1-a0eb-9bbb2241cb6d lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 19,
+          "ids": " W11 CON-04-direct driver=f2dbc15b-665e-4d01-bb4e-b60b86f373ad r1=bc5bd2be-b12b-4abd-9c84-000775a9101b r2=cd9a6011-03f6-4098-9299-5b0ed95931b7 trip2=79f81b6c-8967-4c0d-80a2-7d14ceb7afdd lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=dcd0b7ad-4dcb-44f8-a47f-b18210baf9d4 lostReservation=9009d274-15e6-4900-a032-51360d033a3b finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=39; W11 CON-02 schedule=reserve-wins barrier=reached driver=d5bee761-62fb-46d2-8eb9-bbbbc7df2066 reservation=55cfabae-4fa7-4f87-8160-e04cce5a8e15 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=19; W11 CON-04-broker driver=71aecc85-783a-4d72-8d9e-4ec9828758e2 r1=e65ae4fc-c6a5-4510-9360-fb0934795c5d r2=afd395ea-9b62-4d22-8bbe-9a32a7c39ea2 trip2=482dc842-2650-4b46-a583-a80ec5599401 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 18,
+          "ids": " W11 CON-04-direct driver=a5fbcc2e-301d-4c4e-b8c2-8af97cb93279 r1=05e1cc6d-72f2-4a78-b5d1-34a0c789066f r2=de4e2587-f7af-48af-8486-489590f0545d trip2=d0ce65fe-e376-4b02-ab30-2f488ec36cf1 lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=31fb84e7-af80-4cad-8222-671d69bf7ac2 lostReservation=926757e9-8223-4ac0-a7ad-30457e340e27 finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=17; W11 CON-02 schedule=reserve-wins barrier=reached driver=b8ad41b5-5e12-4cec-b093-cffe082ee386 reservation=7875dbe7-e93f-4886-8943-fac8cad84a47 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=10; W11 CON-04-broker driver=e9765e4f-5ed1-4360-9a68-fe21f2543ff4 r1=033c10e8-e017-48c6-adad-a937276ef70e r2=0952e15e-26ce-4a83-96ac-800b853e3673 trip2=88a38c9d-9e2c-4cf0-bdbc-a96fa407a5e4 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 25,
+          "ids": " W11 CON-04-direct driver=5f280ee3-6e2e-4e38-a447-5cab6f6f5e7a r1=e07832a3-a5e8-409b-ac67-fd5a88a1f54b r2=f22721c6-3f3a-4cf0-b60b-86d4dd88a547 trip2=7eddece2-5765-40c9-9a74-83164ba6812b lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=858dfeec-8692-4fd2-8e8f-15b53d403677 lostReservation=b126b7cf-63c0-41f2-9c65-76c6b09635e1 finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=26; W11 CON-02 schedule=reserve-wins barrier=reached driver=2ebaf582-cc78-42e8-989b-8e472f4a22f9 reservation=b96e8c7a-a2f8-4625-b0ce-7c2eb1240801 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=16; W11 CON-04-broker driver=c46572a8-02e0-4389-9642-714a52f631b0 r1=07f97720-4ca3-45f1-8dc5-cfb2adc11a66 r2=7edcc8e0-5ba5-422b-b563-45451174d09b trip2=1a049cd5-ac4c-4dc3-a797-38b6b7c98706 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 28,
+          "ids": " W11 CON-04-direct driver=368ea628-c667-4d12-a129-6f8ea49e0fa2 r1=650d4edd-5564-4d4b-9ca7-515df24fbb0d r2=a4eafa2f-52d6-4139-9ca4-7c2b2828eca6 trip2=7ee30b3a-c877-4199-83a4-4af759e6c82a lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=12c36b1d-6d99-474a-8938-68b7eca8bab3 lostReservation=95e24c58-5498-426a-90a7-153118fb7a8f finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=35; W11 CON-02 schedule=reserve-wins barrier=reached driver=db3cff1e-1976-4d29-8b5d-28db497fe770 reservation=a1115df1-7a66-4d32-b099-0d97ee59aaf6 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=24; W11 CON-04-broker driver=46ba04a8-fedb-4e01-9042-891af136cd4d r1=7c179f4f-87a0-429c-9fbb-f6e2375d964c r2=94b12d4c-0b84-4e94-98b7-a709a89f09c3 trip2=83abc2cd-0212-424f-9f77-adcb4a56f7ea lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        }
+      ]
+    },
+    "CON-04": {
+      "test": "direct+broker",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 21,
+          "ids": " W11 CON-04-direct driver=ec40a9e5-6c10-4ee0-b221-ef050a40de03 r1=a98295ed-e155-40b7-9497-748c5779827c r2=08dcaf96-48e1-44f8-8c49-2bce9ccd34e4 trip2=c1ffa15f-0c4a-4181-8534-4e1468cd3562 lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=d91e9d3c-f6c3-485d-b17e-11323682a297 lostReservation=d23c5980-3bab-40f6-a77b-ce8fc6edaf94 finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=33; W11 CON-02 schedule=reserve-wins barrier=reached driver=dc1862f2-67ff-4908-aba0-23508834049c reservation=64ca94b8-34f3-4c9d-8c34-05fb5e534a7b finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=14; W11 CON-04-broker driver=c688dcaa-2b31-42e6-a9e3-0053693192c7 r1=caed25ae-1c22-4e67-9a99-29b33a1e8b59 r2=650866b5-eb14-459c-b0e1-99c71f661d18 trip2=21bcb69b-3b82-48c1-a0eb-9bbb2241cb6d lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 19,
+          "ids": " W11 CON-04-direct driver=f2dbc15b-665e-4d01-bb4e-b60b86f373ad r1=bc5bd2be-b12b-4abd-9c84-000775a9101b r2=cd9a6011-03f6-4098-9299-5b0ed95931b7 trip2=79f81b6c-8967-4c0d-80a2-7d14ceb7afdd lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=dcd0b7ad-4dcb-44f8-a47f-b18210baf9d4 lostReservation=9009d274-15e6-4900-a032-51360d033a3b finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=39; W11 CON-02 schedule=reserve-wins barrier=reached driver=d5bee761-62fb-46d2-8eb9-bbbbc7df2066 reservation=55cfabae-4fa7-4f87-8160-e04cce5a8e15 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=19; W11 CON-04-broker driver=71aecc85-783a-4d72-8d9e-4ec9828758e2 r1=e65ae4fc-c6a5-4510-9360-fb0934795c5d r2=afd395ea-9b62-4d22-8bbe-9a32a7c39ea2 trip2=482dc842-2650-4b46-a583-a80ec5599401 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 18,
+          "ids": " W11 CON-04-direct driver=a5fbcc2e-301d-4c4e-b8c2-8af97cb93279 r1=05e1cc6d-72f2-4a78-b5d1-34a0c789066f r2=de4e2587-f7af-48af-8486-489590f0545d trip2=d0ce65fe-e376-4b02-ab30-2f488ec36cf1 lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=31fb84e7-af80-4cad-8222-671d69bf7ac2 lostReservation=926757e9-8223-4ac0-a7ad-30457e340e27 finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=17; W11 CON-02 schedule=reserve-wins barrier=reached driver=b8ad41b5-5e12-4cec-b093-cffe082ee386 reservation=7875dbe7-e93f-4886-8943-fac8cad84a47 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=10; W11 CON-04-broker driver=e9765e4f-5ed1-4360-9a68-fe21f2543ff4 r1=033c10e8-e017-48c6-adad-a937276ef70e r2=0952e15e-26ce-4a83-96ac-800b853e3673 trip2=88a38c9d-9e2c-4cf0-bdbc-a96fa407a5e4 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 25,
+          "ids": " W11 CON-04-direct driver=5f280ee3-6e2e-4e38-a447-5cab6f6f5e7a r1=e07832a3-a5e8-409b-ac67-fd5a88a1f54b r2=f22721c6-3f3a-4cf0-b60b-86d4dd88a547 trip2=7eddece2-5765-40c9-9a74-83164ba6812b lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=858dfeec-8692-4fd2-8e8f-15b53d403677 lostReservation=b126b7cf-63c0-41f2-9c65-76c6b09635e1 finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=26; W11 CON-02 schedule=reserve-wins barrier=reached driver=2ebaf582-cc78-42e8-989b-8e472f4a22f9 reservation=b96e8c7a-a2f8-4625-b0ce-7c2eb1240801 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=16; W11 CON-04-broker driver=c46572a8-02e0-4389-9642-714a52f631b0 r1=07f97720-4ca3-45f1-8dc5-cfb2adc11a66 r2=7edcc8e0-5ba5-422b-b563-45451174d09b trip2=1a049cd5-ac4c-4dc3-a797-38b6b7c98706 lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 28,
+          "ids": " W11 CON-04-direct driver=368ea628-c667-4d12-a129-6f8ea49e0fa2 r1=650d4edd-5564-4d4b-9ca7-515df24fbb0d r2=a4eafa2f-52d6-4139-9ca4-7c2b2828eca6 trip2=7ee30b3a-c877-4199-83a4-4af759e6c82a lateDisposition=Conflict reason=STALE_RESERVATION finalVersion=5 releaseIntentsR1=1 releaseIntentsR2=0; W11 CON-02 schedule=offline-wins barrier=reached driver=12c36b1d-6d99-474a-8938-68b7eca8bab3 lostReservation=95e24c58-5498-426a-90a7-153118fb7a8f finalVersion=3 offlineIntents=1 reservedIntents=0 elapsedMs=35; W11 CON-02 schedule=reserve-wins barrier=reached driver=db3cff1e-1976-4d29-8b5d-28db497fe770 reservation=a1115df1-7a66-4d32-b099-0d97ee59aaf6 finalVersion=3 reservedIntents=1 offlineIntents=0 elapsedMs=24; W11 CON-04-broker driver=46ba04a8-fedb-4e01-9042-891af136cd4d r1=7c179f4f-87a0-429c-9fbb-f6e2375d964c r2=94b12d4c-0b84-4e94-98b7-a709a89f09c3 trip2=83abc2cd-0212-424f-9f77-adcb4a56f7ea lateDisposition=Rejected reason=STALE_RESERVATION replayDisposition=Applied finalVersion=5 releaseIntentsR2=0;"
+        }
+      ]
+    },
+    "REL-12": {
+      "test": "handler+broker",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 32,
+          "ids": " W11 REL-13 driver=79188552-dfc4-4194-aa1c-064ab4a59d1c authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=150; W11 REL-12 driver=c8bf0fe0-9487-4dba-97b0-eee36676d574 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=22; W11 REL-14 driverSurvives=7b7a51e0-8cd3-4101-b4f4-5542b169dcb2 driverRebuilt=a577bcf3-5363-41b6-97ac-020fb8ef16e2 outageTrip=dd39d4bf-0c12-4c2c-8d10-cf956883a491 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7487; W11 REL-13-broker driver=ead4fb7e-9f09-4927-ac38-94753ef8d6c9 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=3131; W11 REL-12-broker driver=98bb9fb2-d21f-46a7-be03-b133ab80bef7 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2736;"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 26,
+          "ids": " W11 REL-13 driver=cb998f07-8ec7-4b8f-b971-46e08e739a3e authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=160; W11 REL-12 driver=89ca31cc-96a1-4295-b2b9-d56ae6637228 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=69; W11 REL-14 driverSurvives=5c1a2ab8-9cd6-44dc-a254-717fbd81a034 driverRebuilt=e4237e83-d2cb-46f7-987d-d2b0e03dc0da outageTrip=de54b2ca-21f5-4505-9e09-41d109b2b6e3 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7460; W11 REL-13-broker driver=d524dbfc-7784-4ba9-9859-6774bca63e7a authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2531; W11 REL-12-broker driver=532ed1f7-6b85-496a-9aba-5097b81eb9a4 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2171;"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 24,
+          "ids": " W11 REL-13 driver=2fbf2f80-1e73-4080-9a6b-c15bc5c62650 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=133; W11 REL-12 driver=3c5ea4f1-081a-42cd-a798-a88f33f1cdc0 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=28; W11 REL-14 driverSurvives=7a2d46e2-dc16-458f-a349-bd31de8b6334 driverRebuilt=087bc02b-6acb-4a1e-92fc-b66c77f4f750 outageTrip=0270d597-6eb6-43cf-9d55-7b312092079f partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7518; W11 REL-13-broker driver=51c1b61f-eecd-448b-b621-085031b329db authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2077; W11 REL-12-broker driver=b5b80058-3792-4a27-a7ea-d5cb0d57c2b3 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2097;"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 48,
+          "ids": " W11 REL-13 driver=4bef1381-5699-41fd-822e-73530ddc03d8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=379; W11 REL-12 driver=a8c9ea25-f4ca-49bd-b211-0e9be0da609e appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=153; W11 REL-14 driverSurvives=21f7fa40-2ee3-49fb-84aa-30caae7934dd driverRebuilt=9f2c1b8a-f99a-4013-9f82-e3a7d4148b97 outageTrip=23b518b7-237e-4f85-8ed7-7c4ba52a0443 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=9356; W11 REL-13-broker driver=47c4b278-9443-4127-ab1f-28b9f278b2e8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=5250; W11 REL-12-broker driver=69df2b3d-c2c4-4d14-9593-51009e5a5825 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2501;"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 33,
+          "ids": " W11 REL-13 driver=f0b17f61-7562-4584-ac7b-bcdd4113769e authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=150; W11 REL-12 driver=bd44d1d0-a9ee-4ba7-b80c-3afade253268 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=36; W11 REL-14 driverSurvives=b387d184-e17f-46f4-a6ae-2c88e23c4b65 driverRebuilt=77610ac7-5b53-4732-a9c0-8def517d847d outageTrip=2bc8c0a6-77a3-4686-8908-0c8edf00bf7d partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7939; W11 REL-13-broker driver=69dbc0b4-1e55-4481-9804-21faf9db9dc3 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2595; W11 REL-12-broker driver=d1416217-7351-472a-840d-b6c47a3d2bb2 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2306;"
+        }
+      ]
+    },
+    "REL-13": {
+      "test": "handler+broker",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 32,
+          "ids": " W11 REL-13 driver=79188552-dfc4-4194-aa1c-064ab4a59d1c authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=150; W11 REL-12 driver=c8bf0fe0-9487-4dba-97b0-eee36676d574 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=22; W11 REL-14 driverSurvives=7b7a51e0-8cd3-4101-b4f4-5542b169dcb2 driverRebuilt=a577bcf3-5363-41b6-97ac-020fb8ef16e2 outageTrip=dd39d4bf-0c12-4c2c-8d10-cf956883a491 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7487; W11 REL-13-broker driver=ead4fb7e-9f09-4927-ac38-94753ef8d6c9 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=3131; W11 REL-12-broker driver=98bb9fb2-d21f-46a7-be03-b133ab80bef7 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2736;"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 26,
+          "ids": " W11 REL-13 driver=cb998f07-8ec7-4b8f-b971-46e08e739a3e authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=160; W11 REL-12 driver=89ca31cc-96a1-4295-b2b9-d56ae6637228 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=69; W11 REL-14 driverSurvives=5c1a2ab8-9cd6-44dc-a254-717fbd81a034 driverRebuilt=e4237e83-d2cb-46f7-987d-d2b0e03dc0da outageTrip=de54b2ca-21f5-4505-9e09-41d109b2b6e3 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7460; W11 REL-13-broker driver=d524dbfc-7784-4ba9-9859-6774bca63e7a authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2531; W11 REL-12-broker driver=532ed1f7-6b85-496a-9aba-5097b81eb9a4 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2171;"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 24,
+          "ids": " W11 REL-13 driver=2fbf2f80-1e73-4080-9a6b-c15bc5c62650 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=133; W11 REL-12 driver=3c5ea4f1-081a-42cd-a798-a88f33f1cdc0 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=28; W11 REL-14 driverSurvives=7a2d46e2-dc16-458f-a349-bd31de8b6334 driverRebuilt=087bc02b-6acb-4a1e-92fc-b66c77f4f750 outageTrip=0270d597-6eb6-43cf-9d55-7b312092079f partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7518; W11 REL-13-broker driver=51c1b61f-eecd-448b-b621-085031b329db authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2077; W11 REL-12-broker driver=b5b80058-3792-4a27-a7ea-d5cb0d57c2b3 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2097;"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 48,
+          "ids": " W11 REL-13 driver=4bef1381-5699-41fd-822e-73530ddc03d8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=379; W11 REL-12 driver=a8c9ea25-f4ca-49bd-b211-0e9be0da609e appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=153; W11 REL-14 driverSurvives=21f7fa40-2ee3-49fb-84aa-30caae7934dd driverRebuilt=9f2c1b8a-f99a-4013-9f82-e3a7d4148b97 outageTrip=23b518b7-237e-4f85-8ed7-7c4ba52a0443 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=9356; W11 REL-13-broker driver=47c4b278-9443-4127-ab1f-28b9f278b2e8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=5250; W11 REL-12-broker driver=69df2b3d-c2c4-4d14-9593-51009e5a5825 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2501;"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 33,
+          "ids": " W11 REL-13 driver=f0b17f61-7562-4584-ac7b-bcdd4113769e authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=150; W11 REL-12 driver=bd44d1d0-a9ee-4ba7-b80c-3afade253268 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=36; W11 REL-14 driverSurvives=b387d184-e17f-46f4-a6ae-2c88e23c4b65 driverRebuilt=77610ac7-5b53-4732-a9c0-8def517d847d outageTrip=2bc8c0a6-77a3-4686-8908-0c8edf00bf7d partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7939; W11 REL-13-broker driver=69dbc0b4-1e55-4481-9804-21faf9db9dc3 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2595; W11 REL-12-broker driver=d1416217-7351-472a-840d-b6c47a3d2bb2 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2306;"
+        }
+      ]
+    },
+    "REL-14": {
+      "test": "real-partition+recovery",
+      "passes": [
+        {
+          "pass": 1,
+          "result": "PASS",
+          "elapsedSeconds": 32,
+          "ids": " W11 REL-13 driver=79188552-dfc4-4194-aa1c-064ab4a59d1c authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=150; W11 REL-12 driver=c8bf0fe0-9487-4dba-97b0-eee36676d574 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=22; W11 REL-14 driverSurvives=7b7a51e0-8cd3-4101-b4f4-5542b169dcb2 driverRebuilt=a577bcf3-5363-41b6-97ac-020fb8ef16e2 outageTrip=dd39d4bf-0c12-4c2c-8d10-cf956883a491 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7487; W11 REL-13-broker driver=ead4fb7e-9f09-4927-ac38-94753ef8d6c9 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=3131; W11 REL-12-broker driver=98bb9fb2-d21f-46a7-be03-b133ab80bef7 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2736;"
+        },
+        {
+          "pass": 2,
+          "result": "PASS",
+          "elapsedSeconds": 26,
+          "ids": " W11 REL-13 driver=cb998f07-8ec7-4b8f-b971-46e08e739a3e authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=160; W11 REL-12 driver=89ca31cc-96a1-4295-b2b9-d56ae6637228 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=69; W11 REL-14 driverSurvives=5c1a2ab8-9cd6-44dc-a254-717fbd81a034 driverRebuilt=e4237e83-d2cb-46f7-987d-d2b0e03dc0da outageTrip=de54b2ca-21f5-4505-9e09-41d109b2b6e3 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7460; W11 REL-13-broker driver=d524dbfc-7784-4ba9-9859-6774bca63e7a authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2531; W11 REL-12-broker driver=532ed1f7-6b85-496a-9aba-5097b81eb9a4 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2171;"
+        },
+        {
+          "pass": 3,
+          "result": "PASS",
+          "elapsedSeconds": 24,
+          "ids": " W11 REL-13 driver=2fbf2f80-1e73-4080-9a6b-c15bc5c62650 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=133; W11 REL-12 driver=3c5ea4f1-081a-42cd-a798-a88f33f1cdc0 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=28; W11 REL-14 driverSurvives=7a2d46e2-dc16-458f-a349-bd31de8b6334 driverRebuilt=087bc02b-6acb-4a1e-92fc-b66c77f4f750 outageTrip=0270d597-6eb6-43cf-9d55-7b312092079f partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7518; W11 REL-13-broker driver=51c1b61f-eecd-448b-b621-085031b329db authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2077; W11 REL-12-broker driver=b5b80058-3792-4a27-a7ea-d5cb0d57c2b3 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2097;"
+        },
+        {
+          "pass": 4,
+          "result": "PASS",
+          "elapsedSeconds": 48,
+          "ids": " W11 REL-13 driver=4bef1381-5699-41fd-822e-73530ddc03d8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=379; W11 REL-12 driver=a8c9ea25-f4ca-49bd-b211-0e9be0da609e appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=153; W11 REL-14 driverSurvives=21f7fa40-2ee3-49fb-84aa-30caae7934dd driverRebuilt=9f2c1b8a-f99a-4013-9f82-e3a7d4148b97 outageTrip=23b518b7-237e-4f85-8ed7-7c4ba52a0443 partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=9356; W11 REL-13-broker driver=47c4b278-9443-4127-ab1f-28b9f278b2e8 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=5250; W11 REL-12-broker driver=69df2b3d-c2c4-4d14-9593-51009e5a5825 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2501;"
+        },
+        {
+          "pass": 5,
+          "result": "PASS",
+          "elapsedSeconds": 33,
+          "ids": " W11 REL-13 driver=f0b17f61-7562-4584-ac7b-bcdd4113769e authoritativeSeq=20 staleSeq=19 foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale duplicate=converged lat=10.85 staleOutcome=Stale elapsedMs=150; W11 REL-12 driver=bd44d1d0-a9ee-4ba7-b80c-3afade253268 appliedVersion=10 staleVersion=9 finalStatus=RESERVED finalVersion=10 geo=absent staleOutcome=Stale elapsedMs=36; W11 REL-14 driverSurvives=b387d184-e17f-46f4-a6ae-2c88e23c4b65 driverRebuilt=77610ac7-5b53-4732-a9c0-8def517d847d outageTrip=2bc8c0a6-77a3-4686-8908-0c8edf00bf7d partition=closed degraded=true candidates=0 attempts=0 driverUnchanged=true survived=True eventReplayReconstructed=true recovered=true elapsedMs=7939; W11 REL-13-broker driver=69dbc0b4-1e55-4481-9804-21faf9db9dc3 authoritativeSeq=20 staleSeq=19 foreignSession=rejected lat=10.8 receipts=4/4 ordered=true elapsedMs=2595; W11 REL-12-broker driver=d1416217-7351-472a-840d-b6c47a3d2bb2 staleVersion=9 finalVersion=10 finalStatus=RESERVED geo=absent receipts=4/4 ordered=true elapsedMs=2306;"
+        }
+      ]
+    }
+  },
+  "result": "PASS"
+}
