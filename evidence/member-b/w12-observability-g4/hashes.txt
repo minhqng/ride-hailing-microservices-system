@@ -1,0 +1,16 @@
+0b8b3c8fc4f811001094dd86142beaa654d8e05fc428bb621938e03c24237a0d *./README.md
+e3190ca9e66bf687bd350dcf743a1e87256e0be413bd3807a5eb2c9e569ce3b6 *./handoff.md
+c014b79c3a9fcdad4d5f30338fd29d26941e53835fbb6c54d50e30e9b46edcc2 *./manifest.md
+076e73a9dae69ed5f6822eac4d02787d8e195dae560169b450c12e2d26ba8832 *./metrics/measured-values.md
+488db052bd2b7dc69a5429f03259bee0b17424f04f19ce6704cf3da841add674 *./metrics/semantics.md
+46c5958af647cc6d5a70bac287ec57f7bde094056e1c48b6192aa0f0c27aa0c7 *./security/http-probes.txt
+bbc48fc1707966bc91c1b88b7121900050a0cf311f4f31cf063d179e38403fb8 *./security/inventory.md
+1b7392bd2b2ca7d7104c9361b190fdac0ad0bb5d993b23c762f59aebf7e019a0 *./security/secret-scan.txt
+12b37fbd11cb78de396853d498630723c470a4e979f0f2ba39875ee7baba4e9e *./test-output/full-build.txt
+d13c83ee227ea1fe3156200748da187d807c56c5e377a70a97bdee1363494b42 *./test-output/full-solution.txt
+6e3f0310c916c8199b70d82171c828ff077a397c19907fe620559e6791b4bd7b *./test-output/w12-final-driver-metrics.txt
+7d41544305a7802f7bef15abd8f2886f2a935801b6eeed494af7bd5268b73d6c *./test-output/w12-final-evidence-detail.txt
+d11854e20da11a00d9c6f02408f057d7723e87c96e01a40e5586783e7b5fc660 *./test-output/w12-final-focused-matching.txt
+7b5545c68a4959f9b335506e231541cb9268bf94ea2b9c4f8f0df313be50eec0 *./test-output/w12-final-unit-driver.txt
+31ef69dac646588634340ce540740aa8eb1115ef9009c6c7522e9d1511db7634 *./traces/proof-matrix.md
+d3dc58007589af839cc0894ab19fcc6954a863b9d97eb448de0aea0cd87b6ba7 *./traces/reserve-trace.txt
