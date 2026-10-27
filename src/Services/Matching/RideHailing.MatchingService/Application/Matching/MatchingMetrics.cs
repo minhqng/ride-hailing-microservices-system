@@ -4,9 +4,9 @@
 //
 // Semantics are deliberately split by truth source:
 //   matching.round.duration      one orchestration REQUEST (including replay).
-//   matching.round.candidate_count observed durable snapshot size per live round.
+//   matching.round.candidate_count offered candidate-sequence length per live round.
 //   matching.attempt.created_total durable NEW matching_attempts row.
-//   matching.unknown_total       newly observed unresolved reserve outcome.
+//   matching.unknown_total       committed UNKNOWN transition (transport/contention).
 //   matching.reconcile_total     actual authoritative poll (including failures).
 //   matching.no_driver_total     committed NEW NO_DRIVER terminal decision.
 using System.Diagnostics.Metrics;
