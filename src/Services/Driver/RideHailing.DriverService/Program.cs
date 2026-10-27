@@ -8,6 +8,7 @@ using RideHailing.DriverService.Application.Messaging;
 using RideHailing.DriverService.Infrastructure.Faults;
 using RideHailing.DriverService.Infrastructure.Outbox;
 using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.DriverService.Infrastructure.Telemetry;
 using RideHailing.Messaging.Outbox;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Observability;
@@ -15,6 +16,8 @@ using RideHailing.Observability;
 var builder = WebApplication.CreateBuilder(args);
 RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("driver-service");
+builder.AddDriverTelemetry();
+DriverIngressLimits.Apply(builder);
 builder.Services.AddHealthChecks();
 builder.Services.Configure<LocationIngressOptions>(builder.Configuration.GetSection("Location"));
 
@@ -30,7 +33,11 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 builder.Services.AddSingleton(NpgsqlDataSource.Create(connectionString));
 builder.Services.AddSingleton<NpgsqlOutboxStore>();
 builder.Services.AddSingleton<IOutboxStore>(sp => sp.GetRequiredService<NpgsqlOutboxStore>());
-builder.Services.AddSingleton<DriverRepository>();
+builder.Services.AddSingleton<DriverMetrics>();
+builder.Services.AddSingleton(sp => new DriverRepository(
+    sp.GetRequiredService<NpgsqlDataSource>(),
+    sp.GetRequiredService<NpgsqlOutboxStore>(),
+    sp.GetRequiredService<DriverMetrics>()));
 builder.Services.AddSingleton<DriverCommandHandler>();
 builder.Services.AddSingleton<LocationAcceptor>();
 builder.Services.AddSingleton(sp => DriverFaultPoint.FromEnvironment(
