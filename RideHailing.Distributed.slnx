@@ -29,6 +29,9 @@
     <Project Path="src/Workers/Notification/RideHailing.NotificationWorker/RideHailing.NotificationWorker.csproj" />
   </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/Audit/">
+    <Project Path="tests/Audit/RideHailing.B12Audit.Tests/RideHailing.B12Audit.Tests.csproj" />
+  </Folder>
   <Folder Name="/tests/Integration/">
     <Project Path="tests/Integration/RideHailing.DriverService.IntegrationTests/RideHailing.DriverService.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.IdentityService.IntegrationTests/RideHailing.IdentityService.IntegrationTests.csproj" />

@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The audit scenario host runs the REAL Driver endpoints on Kestrel. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- B-W12-08: test-scope auditor over the B-owned Driver/Matching authority
+         databases, plus the real Trip store for cross-service agreement.
+         Production services remain independent; this project is verification
+         tooling only (Doc 03 §11.1). -->
+    <ProjectReference Include="..\..\..\src\Services\Driver\RideHailing.DriverService\RideHailing.DriverService.csproj" />
+    <ProjectReference Include="..\..\..\src\Services\Matching\RideHailing.MatchingService\RideHailing.MatchingService.csproj" />
+    <ProjectReference Include="..\..\..\src\Services\Trip\RideHailing.TripService\RideHailing.TripService.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
