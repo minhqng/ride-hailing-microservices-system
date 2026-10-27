@@ -78,8 +78,8 @@ failure. Initial failures: none. Assertions weakened: none.
 
 ## 5. W11 critical regression (five-pass campaign)
 
-- Command: `./scripts/fault/b-w11-full-campaign.sh` on the tested head with a
-  clean tree.
+- Command: `./scripts/fault/b-w11-full-campaign.sh` at the audit commit
+  (production-identical to the final tested head) with a clean tree.
 - Scenarios: REL-01, REL-02, CON-02, CON-04, REL-12, REL-13, REL-14.
 - Result: five consecutive passes; see `test-output/w11-critical-regression.txt`.
 - REL-01/02 run real Driver/Matching containers (response barrier after commit;
