@@ -1,0 +1,46 @@
+Test run for D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Release\net10.0\RideHailing.MatchingService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+Test run for D:\rh-w12b\tests\Integration\RideHailing.PaymentService.IntegrationTests\bin\Release\net10.0\RideHailing.PaymentService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Integration\RideHailing.Platform.IntegrationTests\bin\Release\net10.0\RideHailing.Platform.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Integration\RideHailing.IdentityService.IntegrationTests\bin\Release\net10.0\RideHailing.IdentityService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Integration\RideHailing.DriverService.IntegrationTests\bin\Release\net10.0\RideHailing.DriverService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\System\RideHailing.SystemTests\bin\Release\net10.0\RideHailing.SystemTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Unit\RideHailing.PaymentService.UnitTests\bin\Release\net10.0\RideHailing.PaymentService.UnitTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Unit\RideHailing.DriverService.UnitTests\bin\Release\net10.0\RideHailing.DriverService.UnitTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Unit\RideHailing.MatchingService.UnitTests\bin\Release\net10.0\RideHailing.MatchingService.UnitTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Unit\RideHailing.TripService.UnitTests\bin\Release\net10.0\RideHailing.TripService.UnitTests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\rh-w12b\tests\Integration\RideHailing.TripService.IntegrationTests\bin\Release\net10.0\RideHailing.TripService.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   131, Skipped:     0, Total:   131, Duration: 488 ms - RideHailing.DriverService.UnitTests.dll (net10.0)
+No test is available in D:\rh-w12b\tests\System\RideHailing.SystemTests\bin\Release\net10.0\RideHailing.SystemTests.dll. Make sure that test discoverer & executors are registered and platform & framework version settings are appropriate and try again.
+
+[xUnit.net 00:00:00.65]     RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState [SKIP]
+  Skipped RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState [1 ms]
+
+Skipped! - Failed:     0, Passed:     0, Skipped:     1, Total:     1, Duration: 8 ms - RideHailing.IdentityService.IntegrationTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 281 ms - RideHailing.MatchingService.UnitTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   299, Skipped:     0, Total:   299, Duration: 871 ms - RideHailing.TripService.UnitTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    28, Skipped:     0, Total:    28, Duration: 2 s - RideHailing.PaymentService.UnitTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    28, Skipped:     0, Total:    28, Duration: 22 s - RideHailing.PaymentService.IntegrationTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   158, Skipped:     0, Total:   158, Duration: 1 m 5 s - RideHailing.MatchingService.IntegrationTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    60, Skipped:     0, Total:    60, Duration: 1 m 5 s - RideHailing.Platform.IntegrationTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   113, Skipped:     0, Total:   113, Duration: 1 m 21 s - RideHailing.DriverService.IntegrationTests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   162, Skipped:     0, Total:   162, Duration: 1 m 37 s - RideHailing.TripService.IntegrationTests.dll (net10.0)
