@@ -1,0 +1,42 @@
+# W11 critical regression on the W12 source
+
+Executed with `./scripts/fault/b-w11-full-campaign.sh` on a clean tree.
+
+| Field | Value |
+|---|---|
+| Campaign | `w11-campaign` |
+| Timestamp (UTC) | 2026-10-27T04:11:08.893Z |
+| Source head | `60f5cd4018b259c7f483984baf288e500732c493` |
+| Source tree | `07d2498c7432dca04643060317e38f52759b7c1c` |
+| Source status at start | clean |
+| Production `src/` tree | `0a2dab00e04a8ef2b43076472ec5c03641feab5c` |
+| Passes | 5 |
+| Acceptance | 5/5 consecutive passes |
+| Driver image | `sha256:da2c70e2e592ba3d9de4501d8c37ecf08a20b8cee6b0a43a8be0ad532309214d` |
+| Matching image | `sha256:6ad2ff998a311db5fc15a132766a5f41cd3c923d88c6fa951149838d19da01ef` |
+
+## Five-pass matrix
+
+| Scenario | Test | Pass 1 | Pass 2 | Pass 3 | Pass 4 | Pass 5 |
+| --- | --- | --- | --- | --- | --- | --- |
+| REL-01 | LostReserveResponse/container | PASS | PASS | PASS | PASS | PASS |
+| REL-02 | MatchingSIGKILL/container | PASS | PASS | PASS | PASS | PASS |
+| CON-02 | both-schedules | PASS | PASS | PASS | PASS | PASS |
+| CON-04 | direct+broker | PASS | PASS | PASS | PASS | PASS |
+| REL-12 | handler+broker | PASS | PASS | PASS | PASS | PASS |
+| REL-13 | handler+broker | PASS | PASS | PASS | PASS | PASS |
+| REL-14 | real-partition+recovery | PASS | PASS | PASS | PASS | PASS |
+
+## Representative pass-5 identities
+
+- **REL-01**: REL01 trip=b1681daf-f2e5-499a-87f4-513fc7a2e432 driver=3844dbc6-05d2-4f7c-9828-a2eb27dc6b2d R=2b832e1d-f072-43a3-9cfc-5f59f8507836; REL02 trip=f6c573a4-b97a-49c9-b8a5-6eb0ba919034 driver=1bf0241c-8988-4c8f-a9b1-d45ce7993883 R=d5b678f9-5224-492a-a2c7-00aa145e1b1e pid=8391->9596 exit=137
+- **REL-02**: REL01 trip=b1681daf-f2e5-499a-87f4-513fc7a2e432 driver=3844dbc6-05d2-4f7c-9828-a2eb27dc6b2d R=2b832e1d-f072-43a3-9cfc-5f59f8507836; REL02 trip=f6c573a4-b97a-49c9-b8a5-6eb0ba919034 driver=1bf0241c-8988-4c8f-a9b1-d45ce7993883 R=d5b678f9-5224-492a-a2c7-00aa145e1b1e pid=8391->9596 exit=137
+
+## Assertions
+
+- REL-01 and REL-02 ran real Driver/Matching containers, PostgreSQL, RabbitMQ and Redis; no transport stub was used for the decisive call.
+- REL-02 used SIGKILL and a real process exit 137, then a NEW Matching container against the same databases.
+- CON-02/04 and REL-12/13/14 ran deterministic barriers/network gates, not sleep-based race oracles.
+- W12 instrumentation did not break the W11 fault proofs: all seven scenarios passed in all five consecutive passes.
+- The source tree was clean at campaign start.
+- The campaign ran at the audit commit; the final code commit adds only auditor tests/fix. The production `src/` subtree is identical (`0a2dab00e04a8ef2b43076472ec5c03641feab5c`), and the final full-solution regression re-executed the W11 component tests.
