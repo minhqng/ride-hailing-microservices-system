@@ -130,7 +130,8 @@
     "acceptance": "5/5 consecutive passes",
     "productionTreeIdenticalToFinal": true,
     "srcTree": "0a2dab00e04a8ef2b43076472ec5c03641feab5c",
-    "note": "The campaign ran at the audit commit; the final code commit adds only auditor tests/fix. The production src/ subtree is identical and the final full-solution regression re-executed the W11 component tests."
+    "note": "The campaign ran at the audit commit; the final code commit adds only auditor tests/fix. The production src/ subtree is identical and the final full-solution regression re-executed the W11 component tests.",
+    "recoveryTrigger": "harness-only (Testing seam); unattended recovery NOT IMPLEMENTED (B-REC-01)"
   },
   "auditor": {
     "runs": 16,
@@ -142,8 +143,8 @@
       "NOT_RUN": 17,
       "BLOCKED": 0
     },
-    "aud03": "NOT RUN \u2014 A-owned Trip authority; source/scenario provenance differs",
-    "aud05": "NOT RUN \u2014 C-owned Payment authority",
+    "aud03": "NOT RUN — A-owned Trip authority; source/scenario provenance differs",
+    "aud05": "NOT RUN — C-owned Payment authority",
     "evidence": "auditor/auditor-results.json, auditor/auditor-results.md, auditor/negative-controls.md"
   },
   "initialFailures": [],
@@ -157,5 +158,31 @@
     "System tests discover zero tests and are not counted as PASS.",
     "The formal run executed against the committed audit head; evidence is stored in an evidence-only commit."
   ],
-  "finalHeadAddsTestsOnly": true
+  "finalHeadAddsTestsOnly": true,
+  "bOwnedGaps": [
+    {
+      "id": "B-REC-01",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "summary": "Production Matching has no caller of ExecuteRoundAsync/ReconcileAsync outside the Testing-only endpoints; no unattended restart/redelivery reconcile trigger. W11 REL-01/02/DSL-001 are PARTIAL.",
+      "owner": "B",
+      "blocks": [
+        "REL-01",
+        "REL-02",
+        "DSL-001",
+        "W13"
+      ]
+    },
+    {
+      "id": "DSI-021",
+      "severity": "MEDIUM",
+      "status": "NOT RUN",
+      "summary": "Stage monotonicity S0->S1->S2 not implemented; current_stage is always S0; requires lead disposition or W13 implementation.",
+      "owner": "B + lead",
+      "blocks": [
+        "G4",
+        "W13"
+      ]
+    }
+  ]
 }
