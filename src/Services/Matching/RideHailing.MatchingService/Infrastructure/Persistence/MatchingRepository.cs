@@ -18,17 +18,20 @@ public sealed class MatchingRepository
     public sealed record RoundRow(
         Guid TripId, int Round, string InputMessageId, string Status,
         string Stage, bool CancelRequested, string RankingConfigVersion,
-        string? SnapshotHash, string? SnapshotJson, int CandidateCount, int NextAttemptOrdinal);
+        string? SnapshotHash, string? SnapshotJson, int CandidateCount, int NextAttemptOrdinal,
+        bool AutoExecute = false);
 
     public sealed record AttemptRow(
-        Guid TripId, int Round, int Ordinal, Guid DriverId, Guid ReservationId, string State);
+        Guid TripId, int Round, int Ordinal, Guid DriverId, Guid ReservationId, string State,
+        string Stage = "S0");
 
     public async Task<RoundRow?> LoadRoundAsync(Guid tripId, int round, CancellationToken ct = default)
     {
         const string Sql = """
             SELECT trip_id, matching_round, input_message_id, status, current_stage,
                    cancel_requested, ranking_config_version, candidate_snapshot_hash,
-                   candidate_snapshot_json, candidate_count, next_attempt_ordinal
+                   candidate_snapshot_json, candidate_count, next_attempt_ordinal,
+                   auto_execute
             FROM matching_rounds WHERE trip_id = @t AND matching_round = @r;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -48,16 +51,19 @@ public sealed class MatchingRepository
             reader.GetString(6),
             reader.IsDBNull(7) ? null : reader.GetString(7),
             reader.IsDBNull(8) ? null : reader.GetString(8),
-            reader.GetInt32(9), reader.GetInt32(10));
+            reader.GetInt32(9), reader.GetInt32(10), reader.GetBoolean(11));
     }
 
     public async Task InsertRoundAsync(
         Guid tripId, int round, string inputMessageId, string rankingConfigVersion,
+        double? pickupLongitude = null, double? pickupLatitude = null,
         CancellationToken ct = default)
     {
         const string Sql = """
-            INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status, ranking_config_version)
-            VALUES (@t, @r, @m, 'PROCESSING', @v);
+            INSERT INTO matching_rounds
+                (trip_id, matching_round, input_message_id, status, ranking_config_version,
+                 pickup_longitude, pickup_latitude)
+            VALUES (@t, @r, @m, 'PROCESSING', @v, @lon, @lat);
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -66,6 +72,8 @@ public sealed class MatchingRepository
         cmd.Parameters.AddWithValue("r", round);
         cmd.Parameters.AddWithValue("m", inputMessageId);
         cmd.Parameters.AddWithValue("v", rankingConfigVersion);
+        cmd.Parameters.AddWithValue("lon", (object?)pickupLongitude ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("lat", (object?)pickupLatitude ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
@@ -77,7 +85,7 @@ public sealed class MatchingRepository
             UPDATE matching_rounds
             SET candidate_snapshot_hash = @h, candidate_snapshot_json = @j,
                 candidate_count = @c, next_attempt_ordinal = @n, updated_at = now()
-            WHERE trip_id = @t AND matching_round = @r;
+            WHERE trip_id = @t AND matching_round = @r AND auto_execute = FALSE;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -99,7 +107,7 @@ public sealed class MatchingRepository
         Guid tripId, int round, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state
+            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, stage
             FROM matching_attempts WHERE trip_id = @t AND matching_round = @r ORDER BY ordinal;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -113,7 +121,8 @@ public sealed class MatchingRepository
         {
             rows.Add(new AttemptRow(
                 reader.GetGuid(0), reader.GetInt32(1), reader.GetInt32(2),
-                reader.GetGuid(3), reader.GetGuid(4), reader.GetString(5)));
+                reader.GetGuid(3), reader.GetGuid(4), reader.GetString(5),
+                reader.GetString(6)));
         }
 
         return rows;
@@ -142,6 +151,7 @@ public sealed class MatchingRepository
             SELECT 1 FROM matching_rounds
             WHERE trip_id = @t AND matching_round = @r
               AND status = 'PROCESSING' AND cancel_requested = FALSE
+              AND auto_execute = FALSE
             FOR SHARE;
             """;
         await using (var lockCommand = new NpgsqlCommand(LockRound, conn, tx))

@@ -17,6 +17,7 @@ public sealed class RabbitMqOptions
     public int Port { get; set; } = 5672;
     public string RideRequestedQueue { get; set; } = "matching.ride-requested.q";
     public string DriverProjectionQueue { get; set; } = "matching.driver-projection.q";
+    public string CancelMatchingQueue { get; set; } = "matching.commands.q";
     public ushort Prefetch { get; set; } = 16;
     public int MaxRedeliveries { get; set; } = 3;
     public bool ConsumersEnabled { get; set; } = true;
@@ -29,7 +30,9 @@ public sealed class RabbitMqOptions
             return "RabbitMq:Host must not be empty.";
         }
 
-        if (string.IsNullOrWhiteSpace(RideRequestedQueue) || string.IsNullOrWhiteSpace(DriverProjectionQueue))
+        if (string.IsNullOrWhiteSpace(RideRequestedQueue)
+            || string.IsNullOrWhiteSpace(DriverProjectionQueue)
+            || string.IsNullOrWhiteSpace(CancelMatchingQueue))
         {
             return "RabbitMq queue names must not be empty.";
         }

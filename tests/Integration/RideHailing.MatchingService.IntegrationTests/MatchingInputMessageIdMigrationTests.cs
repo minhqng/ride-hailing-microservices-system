@@ -126,6 +126,9 @@ public sealed class MatchingInputMessageIdMigrationTests
             await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("002_matching_round_status.sql"));
             await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("003_matching_snapshot.sql"));
             await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("004_matching_input_message_id_text.sql"));
+            await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("005_matching_attempt_driver_unique.sql"));
+            await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("006_matching_terminal_result_identity.sql"));
+            await ExecuteAsync(conn, MatchingPostgresDatabase.LoadMigrationScript("007_matching_production_work.sql"));
 
             // Column is now TEXT NOT NULL.
             await using (var type = new NpgsqlCommand(

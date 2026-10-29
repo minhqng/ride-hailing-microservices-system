@@ -2,7 +2,8 @@
 // W5 scope: identity + PROCESSING lifecycle + snapshot/ordinal bookkeeping.
 // Terminal transitions (RESERVED/NO_DRIVER/...) need reserve outcomes (W6)
 // and Outbox atomicity (W9): they do NOT exist here by design.
-// Stage stays S0: advancement needs UNKNOWN semantics (W7).
+// The in-memory aggregate starts at S0; durable progression lives on the
+// persisted round row and is driven by the production worker (DSI-021).
 namespace RideHailing.MatchingService.Domain.Matching;
 
 public enum MatchingRoundStatus
