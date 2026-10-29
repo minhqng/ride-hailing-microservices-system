@@ -117,9 +117,9 @@
       "proofName": "W11 five-pass campaign REL-01; LostReserveResponseHttpTests.LostReserveResponse_KeepsUnknownThenReconcilesSameReservationOverRealHttp",
       "sourceSHA": "60f5cd4018b259c7f483984baf288e500732c493",
       "authorityChecked": "real Driver/Matching containers + PostgreSQL + RabbitMQ",
-      "result": "PASS",
+      "result": "PARTIAL",
       "evidencePath": "evidence/member-b/w12-observability-g4/test-output/w11-critical-regression.txt; evidence/member-b/w11-fault-proofs/README.md",
-      "limitation": "Fault is Testing-only and bounded; no automatic unattended recovery claim.",
+      "limitation": "Post-commit response-loss and same-R reconciliation are proven over real HTTP, but the production Matching runtime has no caller of ExecuteRoundAsync/ReconcileAsync: reconciliation is invoked by the Testing-only seam. Unattended recovery is NOT IMPLEMENTED (B-REC-01).",
       "owner": "B"
     },
     {
@@ -128,9 +128,9 @@
       "proofName": "W11 five-pass campaign REL-02 (SIGKILL, exit 137, restart); CrashAfterReserveRecoveryTests",
       "sourceSHA": "60f5cd4018b259c7f483984baf288e500732c493",
       "authorityChecked": "real Matching process + PostgreSQL + RabbitMQ",
-      "result": "PASS",
+      "result": "PARTIAL",
       "evidencePath": "evidence/member-b/w12-observability-g4/test-output/w11-critical-regression.txt; evidence/member-b/w11-fault-proofs/README.md",
-      "limitation": "Restarted process uses the W11 explicit reconcile trigger; unattended recovery worker is not claimed.",
+      "limitation": "SIGKILL/restart, persisted IN_FLIGHT and same-R reconcile are proven, but the recovery trigger is the Testing-only reconcile endpoint; no production restart/redelivery trigger exists. Unattended recovery is NOT IMPLEMENTED (B-REC-01).",
       "owner": "B"
     },
     {
@@ -392,9 +392,9 @@
       "proofName": "W11 five-pass REL-01/02; B12 AUD-08 quiescence policy (fresh pending vs stuck unresolved)",
       "sourceSHA": "60f5cd4018b259c7f483984baf288e500732c493",
       "authorityChecked": "real containers + driver/matching Outbox and attempt ages",
-      "result": "PASS",
+      "result": "PARTIAL",
       "evidencePath": "evidence/member-b/w12-observability-g4/test-output/w11-critical-regression.txt; evidence/member-b/w12-observability-g4/auditor/auditor-results.json (AUD-08)",
-      "limitation": "The auditor FAILs seeded stale pending rows; scenario runs are fresh and resolvable.",
+      "limitation": "No automatic eventual resolution: an UNKNOWN/IN_FLIGHT attempt is resolved only by the Testing reconcile seam; AUD-08 detects stale rows (FAIL) but does not resolve them. Liveness is PARTIAL (B-REC-01).",
       "owner": "B"
     },
     {
@@ -468,10 +468,40 @@
     }
   ],
   "summary": {
-    "PASS": 34,
-    "PARTIAL": 1,
+    "PASS": 31,
+    "PARTIAL": 4,
     "NOT RUN": 1,
     "prohibition:PASS": 7
   },
-  "overallResult": "FAIL/BLOCKED \u2014 SEC-AUTH-01 CRITICAL remains open; DSI-021 evidence NOT RUN"
+  "overallResult": "FAIL/BLOCKED — SEC-AUTH-01 CRITICAL remains open; B-REC-01 production reserve/reconcile trigger absent; DSI-021 evidence NOT RUN",
+  "scopeNotes": [
+    "PASS includes 4 A-owned rows (CON-05, REL-03, DSI-016, DSI-030) cited from the unmerged A-W12 branch and not re-executed by B; B re-verifies only its release half through AUD-04/07.",
+    "REL-01/REL-02/DSL-001 are PARTIAL: the recovery logic is proven under the Testing-only harness; the production Matching runtime has no reserve execution or unattended reconcile trigger (B-REC-01)."
+  ],
+  "bOwnedGaps": [
+    {
+      "id": "B-REC-01",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "summary": "Production Matching reserve/reconcile trigger absent; no caller of ExecuteRoundAsync/ReconcileAsync outside Testing endpoints; unattended recovery NOT IMPLEMENTED.",
+      "owner": "B",
+      "blocks": [
+        "REL-01",
+        "REL-02",
+        "DSL-001",
+        "W13"
+      ]
+    },
+    {
+      "id": "DSI-021",
+      "severity": "MEDIUM",
+      "status": "NOT RUN",
+      "summary": "Stage monotonicity S0->S1->S2 is not implemented; current_stage is always S0; requires lead disposition or W13 implementation.",
+      "owner": "B + lead",
+      "blocks": [
+        "G4",
+        "W13"
+      ]
+    }
+  ]
 }

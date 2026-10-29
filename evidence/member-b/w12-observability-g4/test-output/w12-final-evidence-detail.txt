@@ -12,7 +12,7 @@ D:\rh-w12b\tests\Integration\RideHailing.MatchingService.IntegrationTests\bin\Re
   API Version: 1.56
   Operating System: Docker Desktop
   Total Memory: 7.36 GB
-  Labels: 
+  Labels:
     com.docker.desktop.address=npipe://\\.\pipe\docker_cli
 [testcontainers.org 00:00:00.56] Docker container f27dead1df31 created
 [testcontainers.org 00:00:00.57] Docker container 51b196d80be8 created
