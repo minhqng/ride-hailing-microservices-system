@@ -35,7 +35,8 @@ public sealed record MatchingAttemptRow(
     Guid ReservationId,
     string State,
     string? LastErrorCode,
-    int? MaxDispatchedVersion);
+    int? MaxDispatchedVersion,
+    string Stage = "S0");
 
 public sealed record MatchingRoundRow(
     Guid TripId,
@@ -43,7 +44,17 @@ public sealed record MatchingRoundRow(
     string Status,
     Guid? SelectedDriverId,
     Guid? SelectedReservationId,
-    Guid? ResultMessageId);
+    Guid? ResultMessageId,
+    string InputMessageId = "",
+    string CurrentStage = "S0",
+    bool CancelRequested = false,
+    bool AutoExecute = false,
+    double? PickupLongitude = null,
+    double? PickupLatitude = null,
+    string? SnapshotJson = null,
+    string? WorkErrorCode = null,
+    DateTimeOffset? WorkCheckedAt = null,
+    string? StageEvaluated = null);
 
 public sealed class MatchingAttemptRepository
 {
@@ -72,7 +83,119 @@ public sealed class MatchingAttemptRepository
     /// ACKing a second effect or hot-looping transiently.
     /// </summary>
     public async Task<MatchingRoundRow> EnsureRoundAsync(
-        Guid tripId, int round, string inputMessageId, CancellationToken ct = default)
+        Guid tripId, int round, string inputMessageId, CancellationToken ct = default) =>
+        await EnsureRoundCoreAsync(tripId, round, inputMessageId, null, null, ct);
+
+    /// <summary>
+    /// B-REC-01 durable intake: the canonical RideRequestedV1 commits the
+    /// pickup center, the auto-execute obligation and any cancellation that
+    /// overtook this message in the SAME transaction, before the consumer
+    /// ACKs. A crash after ACK therefore leaves work that the autonomous
+    /// worker can discover and execute; no in-memory queue is involved.
+    /// Duplicate deliveries converge; the first pickup identity wins (never
+    /// overwritten by a replay), while a late production intake may upgrade a
+    /// locally created row so the work is not silently ignored.
+    /// </summary>
+    public async Task<MatchingRoundRow> EnsureProductionRoundAsync(
+        Guid tripId, int round, string inputMessageId,
+        double pickupLongitude, double pickupLatitude, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(inputMessageId))
+        {
+            throw new ArgumentException("inputMessageId must not be empty.", nameof(inputMessageId));
+        }
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        // Same namespace as CancelMatchingRoundV1: intake and cancel cannot
+        // interleave between "is a cancel pending?" and round visibility.
+        await using (var lockCmd = new NpgsqlCommand(
+            "SELECT pg_advisory_xact_lock(hashtextextended(@key, 0));", conn, tx))
+        {
+            lockCmd.Parameters.AddWithValue("key", MatchingAdvisoryKeys.Cancel(tripId, round));
+            await lockCmd.ExecuteNonQueryAsync(ct);
+        }
+
+        bool pendingCancel;
+        await using (var cancelCmd = new NpgsqlCommand("""
+            SELECT EXISTS (
+                SELECT 1 FROM matching_cancel_intents
+                WHERE trip_id = @trip AND matching_round = @round);
+            """, conn, tx))
+        {
+            cancelCmd.Parameters.AddWithValue("trip", tripId);
+            cancelCmd.Parameters.AddWithValue("round", round);
+            pendingCancel = (bool)(await cancelCmd.ExecuteScalarAsync(ct))!;
+        }
+
+        const string Insert = """
+            INSERT INTO matching_rounds
+                (trip_id, matching_round, input_message_id, status,
+                 pickup_longitude, pickup_latitude, auto_execute, cancel_requested)
+            VALUES (@trip, @round, @msg, 'PROCESSING', @lon, @lat, TRUE, @cancel)
+            ON CONFLICT (trip_id, matching_round) DO NOTHING;
+            """;
+        int inserted;
+        try
+        {
+            await using var cmd = new NpgsqlCommand(Insert, conn, tx);
+            cmd.Parameters.AddWithValue("trip", tripId);
+            cmd.Parameters.AddWithValue("round", round);
+            cmd.Parameters.AddWithValue("msg", inputMessageId);
+            cmd.Parameters.AddWithValue("lon", pickupLongitude);
+            cmd.Parameters.AddWithValue("lat", pickupLatitude);
+            cmd.Parameters.AddWithValue("cancel", pendingCancel);
+            inserted = await cmd.ExecuteNonQueryAsync(ct);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
+            && string.Equals(ex.ConstraintName, "ux_matching_rounds_input_message_id", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Input message '{inputMessageId}' is already assigned to a different matching round.", ex);
+        }
+
+        if (inserted == 0)
+        {
+            const string Upgrade = """
+                UPDATE matching_rounds
+                SET pickup_longitude = COALESCE(pickup_longitude, @lon),
+                    pickup_latitude = COALESCE(pickup_latitude, @lat),
+                    auto_execute = TRUE,
+                    cancel_requested = cancel_requested OR @cancel,
+                    updated_at = now()
+                WHERE trip_id = @trip AND matching_round = @round
+                  AND status = 'PROCESSING';
+                """;
+            await using var upgrade = new NpgsqlCommand(Upgrade, conn, tx);
+            upgrade.Parameters.AddWithValue("trip", tripId);
+            upgrade.Parameters.AddWithValue("round", round);
+            upgrade.Parameters.AddWithValue("lon", pickupLongitude);
+            upgrade.Parameters.AddWithValue("lat", pickupLatitude);
+            upgrade.Parameters.AddWithValue("cancel", pendingCancel);
+            await upgrade.ExecuteNonQueryAsync(ct);
+        }
+
+        if (pendingCancel)
+        {
+            await using var consume = new NpgsqlCommand("""
+                UPDATE matching_cancel_intents SET consumed_at = now()
+                WHERE trip_id = @trip AND matching_round = @round AND consumed_at IS NULL;
+                """, conn, tx);
+            consume.Parameters.AddWithValue("trip", tripId);
+            consume.Parameters.AddWithValue("round", round);
+            await consume.ExecuteNonQueryAsync(ct);
+        }
+
+        await tx.CommitAsync(ct);
+        return (await LoadRoundAsync(tripId, round, ct))!;
+    }
+
+    private async Task<MatchingRoundRow> EnsureRoundCoreAsync(
+        Guid tripId, int round, string inputMessageId,
+        double? pickupLongitude, double? pickupLatitude,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(inputMessageId))
         {
@@ -80,8 +203,10 @@ public sealed class MatchingAttemptRepository
         }
 
         const string Insert = """
-            INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status)
-            VALUES (@trip, @round, @msg, 'PROCESSING');
+            INSERT INTO matching_rounds
+                (trip_id, matching_round, input_message_id, status,
+                 pickup_longitude, pickup_latitude)
+            VALUES (@trip, @round, @msg, 'PROCESSING', @lon, @lat);
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -91,6 +216,8 @@ public sealed class MatchingAttemptRepository
             cmd.Parameters.AddWithValue("trip", tripId);
             cmd.Parameters.AddWithValue("round", round);
             cmd.Parameters.AddWithValue("msg", inputMessageId);
+            cmd.Parameters.AddWithValue("lon", (object?)pickupLongitude ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("lat", (object?)pickupLatitude ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync(ct);
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
@@ -114,7 +241,10 @@ public sealed class MatchingAttemptRepository
     {
         const string Sql = """
             SELECT trip_id, matching_round, status, selected_driver_id, selected_reservation_id,
-                   result_message_id
+                   result_message_id, input_message_id, current_stage, cancel_requested,
+                   auto_execute, pickup_longitude, pickup_latitude,
+                   candidate_snapshot_json::text, work_error_code, work_checked_at,
+                   stage_evaluated
             FROM matching_rounds WHERE trip_id = @trip AND matching_round = @round;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -132,7 +262,22 @@ public sealed class MatchingAttemptRepository
             reader.GetGuid(0), reader.GetInt32(1), reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetGuid(3),
             reader.IsDBNull(4) ? null : reader.GetGuid(4),
-            reader.IsDBNull(5) ? null : reader.GetGuid(5));
+            reader.IsDBNull(5) ? null : reader.GetGuid(5),
+            reader.GetString(6), reader.GetString(7), reader.GetBoolean(8),
+            reader.GetBoolean(9),
+            reader.IsDBNull(10) ? null : reader.GetDouble(10),
+            reader.IsDBNull(11) ? null : reader.GetDouble(11),
+            reader.IsDBNull(12) ? null : reader.GetString(12),
+            reader.IsDBNull(13) ? null : reader.GetString(13),
+            reader.IsDBNull(14) ? null : ReadTimestamp(reader, 14),
+            reader.IsDBNull(15) ? null : reader.GetString(15));
+    }
+
+    private static DateTimeOffset ReadTimestamp(NpgsqlDataReader reader, int ordinal)
+    {
+        var value = reader.GetFieldValue<DateTime>(ordinal);
+        return new DateTimeOffset(
+            value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc));
     }
 
     /// <summary>
@@ -174,12 +319,12 @@ public sealed class MatchingAttemptRepository
     /// </summary>
     public async Task<(bool Inserted, MatchingAttemptRow? Row)> EnsureInflightAttemptAsync(
         Guid tripId, int round, int ordinal, Guid driverId, Guid reservationId,
-        CancellationToken ct = default)
+        CancellationToken ct = default, string stage = "S0")
     {
         const string Insert = """
             INSERT INTO matching_attempts
-                (trip_id, matching_round, ordinal, driver_id, reservation_id, state)
-            VALUES (@trip, @round, @ordinal, @driver, @reservation, 'IN_FLIGHT');
+                (trip_id, matching_round, ordinal, driver_id, reservation_id, state, stage)
+            VALUES (@trip, @round, @ordinal, @driver, @reservation, 'IN_FLIGHT', @stage);
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -199,6 +344,7 @@ public sealed class MatchingAttemptRepository
             cmd.Parameters.AddWithValue("ordinal", ordinal);
             cmd.Parameters.AddWithValue("driver", driverId);
             cmd.Parameters.AddWithValue("reservation", reservationId);
+            cmd.Parameters.AddWithValue("stage", stage);
             await cmd.ExecuteNonQueryAsync(ct);
             await tx.CommitAsync(ct);
 
@@ -209,7 +355,7 @@ public sealed class MatchingAttemptRepository
 
             return (true, new MatchingAttemptRow(
                 tripId, round, ordinal, driverId, reservationId,
-                MatchingAttemptStates.InFlight, null, null));
+                MatchingAttemptStates.InFlight, null, null, stage));
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
             && string.Equals(ex.ConstraintName, "matching_attempts_pkey", StringComparison.Ordinal))
@@ -228,7 +374,7 @@ public sealed class MatchingAttemptRepository
         Guid tripId, int round, int ordinal, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code, max_dispatched_version
+            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code, max_dispatched_version, stage
             FROM matching_attempts
             WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal;
             """;
@@ -251,7 +397,7 @@ public sealed class MatchingAttemptRepository
         Guid tripId, int round, CancellationToken ct = default)
     {
         const string Sql = """
-            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code, max_dispatched_version
+            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code, max_dispatched_version, stage
             FROM matching_attempts
             WHERE trip_id = @trip AND matching_round = @round
             ORDER BY ordinal;
@@ -271,10 +417,159 @@ public sealed class MatchingAttemptRepository
         return rows;
     }
 
+    public async Task<IReadOnlyList<MatchingAttemptRow>> LoadAttemptsByStageAsync(
+        Guid tripId, int round, string stage, CancellationToken ct = default)
+    {
+        const string Sql = """
+            SELECT trip_id, matching_round, ordinal, driver_id, reservation_id, state, last_error_code,
+                   max_dispatched_version, stage
+            FROM matching_attempts
+            WHERE trip_id = @trip AND matching_round = @round AND stage = @stage
+            ORDER BY ordinal;
+            """;
+        var rows = new List<MatchingAttemptRow>();
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        cmd.Parameters.AddWithValue("stage", stage);
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            rows.Add(ReadAttempt(reader));
+        }
+
+        return rows;
+    }
+
+    /// <summary>DSI-017/022 guard: any IN_FLIGHT/UNKNOWN attempt in the round.</summary>
+    public async Task<bool> HasUnresolvedAsync(
+        Guid tripId, int round, CancellationToken ct = default)
+    {
+        const string Sql = """
+            SELECT EXISTS (
+                SELECT 1 FROM matching_attempts
+                WHERE trip_id = @trip AND matching_round = @round
+                  AND state IN ('IN_FLIGHT', 'UNKNOWN'));
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        return (bool)(await cmd.ExecuteScalarAsync(ct))!;
+    }
+
     /// <summary>
-    /// DSI-017 guard read: any IN_FLIGHT/UNKNOWN attempt except the identified
-    /// (ordinal, driver) pair blocks a NEW reserve. The pair itself may resume.
+    /// Durable worker bookkeeping: records this check instant and the last
+    /// execution error, so the dispatcher's backoff survives restart and a
+    /// dependency outage is visible without inventing a terminal outcome.
     /// </summary>
+    public async Task SetWorkCheckAsync(
+        Guid tripId, int round, DateTimeOffset checkedAt, string? errorCode,
+        CancellationToken ct = default)
+    {
+        const string Sql = """
+            UPDATE matching_rounds
+            SET work_checked_at = @at, work_error_code = @err
+            WHERE trip_id = @trip AND matching_round = @round;
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        cmd.Parameters.AddWithValue("at", checkedAt);
+        cmd.Parameters.AddWithValue("err", (object?)errorCode ?? DBNull.Value);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task SetAttemptLastCheckedAsync(
+        Guid tripId, int round, int ordinal, DateTimeOffset checkedAt,
+        CancellationToken ct = default)
+    {
+        const string Sql = """
+            UPDATE matching_attempts
+            SET last_checked_at = @at, updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round AND ordinal = @ordinal
+              AND state IN ('IN_FLIGHT', 'UNKNOWN');
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(Sql, conn);
+        cmd.Parameters.AddWithValue("trip", tripId);
+        cmd.Parameters.AddWithValue("round", round);
+        cmd.Parameters.AddWithValue("ordinal", ordinal);
+        cmd.Parameters.AddWithValue("at", checkedAt);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>
+    /// Closes READY attempts at a cancellation boundary (no effect was sent),
+    /// then marks the round CANCELLED only when no unresolved or reserved
+    /// effect remains. An unresolved attempt keeps the round PROCESSING so it
+    /// is still reconciled; a reservation that committed wins (Trip performs
+    /// exact cleanup per Doc 02 §12.9).
+    /// </summary>
+    public async Task<bool> TryMarkRoundCancelledAsync(
+        Guid tripId, int round, CancellationToken ct = default)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        const string Lock = """
+            SELECT 1 FROM matching_rounds
+            WHERE trip_id = @trip AND matching_round = @round
+              AND status = 'PROCESSING' AND cancel_requested = TRUE
+            FOR UPDATE;
+            """;
+        await using (var lockCmd = new NpgsqlCommand(Lock, conn, tx))
+        {
+            lockCmd.Parameters.AddWithValue("trip", tripId);
+            lockCmd.Parameters.AddWithValue("round", round);
+            if (await lockCmd.ExecuteScalarAsync(ct) is null)
+            {
+                await tx.RollbackAsync(ct);
+                return false;
+            }
+        }
+
+        const string CancelReady = """
+            UPDATE matching_attempts
+            SET state = 'CANCELLED',
+                last_error_code = COALESCE(last_error_code, 'CANCEL_REQUESTED'),
+                updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round AND state = 'READY';
+            """;
+        await using (var cancelCmd = new NpgsqlCommand(CancelReady, conn, tx))
+        {
+            cancelCmd.Parameters.AddWithValue("trip", tripId);
+            cancelCmd.Parameters.AddWithValue("round", round);
+            await cancelCmd.ExecuteNonQueryAsync(ct);
+        }
+
+        const string CancelRound = """
+            UPDATE matching_rounds SET status = 'CANCELLED', updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round
+              AND status = 'PROCESSING' AND cancel_requested = TRUE
+              AND NOT EXISTS (
+                  SELECT 1 FROM matching_attempts a
+                  WHERE a.trip_id = @trip AND a.matching_round = @round
+                    AND a.state IN ('IN_FLIGHT', 'UNKNOWN', 'RESERVED'));
+            """;
+        int rows;
+        await using (var roundCmd = new NpgsqlCommand(CancelRound, conn, tx))
+        {
+            roundCmd.Parameters.AddWithValue("trip", tripId);
+            roundCmd.Parameters.AddWithValue("round", round);
+            rows = await roundCmd.ExecuteNonQueryAsync(ct);
+        }
+
+        await tx.CommitAsync(ct);
+        return rows == 1;
+    }
     public async Task<bool> HasOtherUnresolvedAsync(
         Guid tripId, int round, int ordinal, Guid driverId,
         CancellationToken ct = default)
@@ -525,5 +820,6 @@ public sealed class MatchingAttemptRepository
         reader.GetGuid(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetGuid(3),
         reader.GetGuid(4), reader.GetString(5),
         reader.IsDBNull(6) ? null : reader.GetString(6),
-        reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetInt32(7) : null);
+        reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetInt32(7) : null,
+        reader.FieldCount > 8 && !reader.IsDBNull(8) ? reader.GetString(8) : "S0");
 }

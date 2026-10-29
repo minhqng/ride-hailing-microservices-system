@@ -1,15 +1,15 @@
-// B-W08-01/02: RideRequestedV1 consumer logic (Doc 02 §12.7, DSR-009).
-// Lookup-or-create the durable round keyed by (tripId, matchingRound);
-// duplicate delivery resumes the same round with the same identities — never
-// a new candidate sequence, never new reservation IDs (orchestrator owns
-// attempts; this handler performs NO reserve calls — candidates arrive via a
-// future pipeline, and reserve execution stays in W7-tested code paths).
+// B-W08-01/02 + B-REC-01: RideRequestedV1 durable intake.
+// The handler commits the round, the canonical pickup center and the
+// auto-execute obligation BEFORE the consumer ACKs. The autonomous worker
+// (MatchingWorkDispatcher) is the production execution trigger; this handler
+// deliberately makes no reserve call. Duplicate delivery resumes the same
+// round with the same identities — never a new candidate sequence, never new
+// reservation IDs. A CancelMatchingRoundV1 that overtook this message is
+// applied from its durable tombstone in the same intake.
 // Contract (A payload unchanged, C envelope authoritative): tripId +
-// matchingRound come from the payload; the input message identity comes from
-// envelope.MessageId verbatim (opaque string, never parsed as GUID, never
-// transformed). Unknown extra payload fields are ignored (forward-compatible
-// tolerant reader); a payload-embedded inputMessageId is NOT required and,
-// if present, is ignored.
+// matchingRound + pickup come from the payload; the input message identity
+// comes from envelope.MessageId verbatim (opaque string, never parsed as
+// GUID, never transformed). A payload-embedded inputMessageId is ignored.
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -19,6 +19,13 @@ using RideHailing.Messaging.Contracts;
 
 namespace RideHailing.MatchingService.Application.Messaging;
 
+public sealed record RideRequestedPayload(
+    Guid TripId,
+    int MatchingRound,
+    double PickupLongitude,
+    double PickupLatitude,
+    string InputMessageId);
+
 public sealed class RideRequestedHandler
 {
     public static readonly System.Diagnostics.ActivitySource Activities = MatchingTelemetry.Activities;
@@ -26,11 +33,16 @@ public sealed class RideRequestedHandler
     private const string ExpectedMessageType = "RideRequestedV1";
 
     private readonly MatchingAttemptRepository _rounds;
+    private readonly MatchingWorkRepository? _work;
     private readonly ILogger<RideRequestedHandler> _logger;
 
-    public RideRequestedHandler(MatchingAttemptRepository rounds, ILogger<RideRequestedHandler> logger)
+    public RideRequestedHandler(
+        MatchingAttemptRepository rounds,
+        ILogger<RideRequestedHandler> logger,
+        MatchingWorkRepository? work = null)
     {
         _rounds = rounds;
+        _work = work;
         _logger = logger;
     }
 
@@ -43,13 +55,24 @@ public sealed class RideRequestedHandler
             throw new ArgumentException($"Unexpected message type '{envelope.MessageType}'.");
         }
 
-        var (tripId, matchingRound, inputMessageId) = ReadPayload(envelope);
+        var payload = ReadProductionPayload(envelope);
 
-        var round = await _rounds.EnsureRoundAsync(tripId, matchingRound, inputMessageId, ct);
-        activity?.SetTag("matching.round", $"{tripId:N}/{matchingRound}");
+        var round = await _rounds.EnsureProductionRoundAsync(
+            payload.TripId,
+            payload.MatchingRound,
+            payload.InputMessageId,
+            payload.PickupLongitude,
+            payload.PickupLatitude,
+            ct);
+        if (_work is not null)
+        {
+            await _work.ApplyPendingCancelAsync(payload.TripId, payload.MatchingRound, ct);
+        }
+
+        activity?.SetTag("matching.round", $"{payload.TripId:N}/{payload.MatchingRound}");
         _logger.LogInformation(
-            "Consumed {MessageType} for trip {TripId} round {Round}: round {Status}.",
-            envelope.MessageType, tripId, matchingRound, round.Status);
+            "Consumed {MessageType} for trip {TripId} round {Round}: round {Status}, auto-execute recorded.",
+            envelope.MessageType, payload.TripId, payload.MatchingRound, round.Status);
         return HandlerOutcome.Done;
     }
 
@@ -57,6 +80,19 @@ public sealed class RideRequestedHandler
         BrokerEnvelope.Parse(body);
 
     public static (Guid TripId, int MatchingRound, string InputMessageId) ReadPayload(
+        MessageEnvelope<JsonElement> envelope)
+    {
+        var payload = ReadProductionPayload(envelope);
+        return (payload.TripId, payload.MatchingRound, payload.InputMessageId);
+    }
+
+    /// <summary>
+    /// Production payload reader: identity plus the pickup center Matching
+    /// needs to discover candidates after a restart. Dropoff and requestedAt
+    /// remain A-owned fields Matching does not consume; extra properties stay
+    /// forward-compatible.
+    /// </summary>
+    public static RideRequestedPayload ReadProductionPayload(
         MessageEnvelope<JsonElement> envelope)
     {
         if (string.IsNullOrWhiteSpace(envelope.MessageId))
@@ -82,10 +118,35 @@ public sealed class RideRequestedHandler
             throw new ArgumentException("RideRequestedV1 requires matchingRound >= 1.");
         }
 
+        if (!payload.TryGetProperty("pickup", out var pickupEl) || pickupEl.ValueKind != JsonValueKind.Object
+            || !TryReadCoordinate(pickupEl, "longitude", -180, 180, out var longitude)
+            || !TryReadCoordinate(pickupEl, "latitude", -90, 90, out var latitude))
+        {
+            throw new ArgumentException("RideRequestedV1 requires a finite pickup longitude/latitude.");
+        }
+
         // The input message identity is the envelope's MessageId preserved
         // byte-for-byte (decoded .NET string). No parsing, trimming, casing,
         // hashing, or UUID derivation: opaque string identity.
-        return (tripId, matchingRound, envelope.MessageId);
+        return new RideRequestedPayload(
+            tripId, matchingRound, longitude, latitude, envelope.MessageId);
+    }
+
+    private static bool TryReadCoordinate(
+        JsonElement parent, string name, double min, double max, out double value)
+    {
+        value = 0;
+        if (!parent.TryGetProperty(name, out var element)
+            || element.ValueKind != JsonValueKind.Number
+            || !element.TryGetDouble(out value)
+            || !double.IsFinite(value)
+            || value < min
+            || value > max)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static Activity? StartActivity(IDictionary<string, object?> headers)

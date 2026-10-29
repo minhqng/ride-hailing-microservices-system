@@ -10,7 +10,8 @@ public static class CandidateRanker
 {
     public static IReadOnlyList<RankedCandidate> Rank(
         IReadOnlyList<EligibleCandidate> candidates,
-        MatchingPolicy policy)
+        MatchingPolicy policy,
+        int? maxCandidates = null)
     {
         ArgumentNullException.ThrowIfNull(candidates);
         ArgumentNullException.ThrowIfNull(policy);
@@ -40,7 +41,7 @@ public static class CandidateRanker
         var bounded = scored
             .OrderBy(x => x.Score)
             .ThenBy(x => x.Candidate.DriverId)
-            .Take(Math.Max(0, policy.MaxCandidates))
+            .Take(Math.Max(0, maxCandidates ?? policy.MaxCandidates))
             .Select((x, i) => new RankedCandidate(
                 i, x.Candidate.DriverId, x.Candidate.DistanceKm, x.Score,
                 x.Candidate.DriverAggregateVersion, x.Candidate.CapturedAt))
@@ -74,6 +75,7 @@ public static class CandidateRanker
                 .Append(c.DistanceKm.ToString("R", CultureInfo.InvariantCulture)).Append(':')
                 .Append(c.Score.ToString("R", CultureInfo.InvariantCulture)).Append(':')
                 .Append(c.Version).Append(':')
+                .Append(c.Stage).Append(':')
                 .Append(c.CapturedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture)).Append(';');
         }
 

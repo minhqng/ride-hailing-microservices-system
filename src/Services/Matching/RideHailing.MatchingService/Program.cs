@@ -1,11 +1,11 @@
 // Matching service (Owner B). W4: Redis GEO projection ownership (derived only).
-// W8: broker consumption (RideRequestedV1 round lookup/create; Driver
+// W8: broker consumption (RideRequestedV1 durable intake; Driver
 // state/location events into the derived projection) with manual ACK after
 // durable effect. W9: NO_DRIVER terminal state and MatchingFailedV1 Outbox
 // intent commit in one transaction; C's shared relay publishes committed
-// intents. No reserve execution from broker messages (candidates come from a
-// future pipeline); no broker retry/DLQ mechanics beyond bounded requeue
-// (C platform scope).
+// intents. B-REC-01: the intake persists pickup + auto_execute before ACK and
+// MatchingWorkDispatcher autonomously executes reserve/reconcile/stages.
+// Broker retry/DLQ mechanics beyond bounded requeue remain C platform scope.
 // Startup loads the Lua function best-effort; the service still boots if Redis is down.
 // Calls self-heal a missing function library (reload-once-and-retry on the
 // missing-function server error), so recovery needs no restart after Redis
@@ -51,8 +51,7 @@ builder.Services.AddSingleton(sp => new MatchingTerminalizer(
     sp.GetRequiredService<NpgsqlDataSource>(),
     sp.GetRequiredService<NpgsqlOutboxStore>(),
     sp.GetRequiredService<TimeProvider>(),
-    sp.GetRequiredService<MatchingMetrics>()));
-builder.Services.AddSingleton(_ =>
+    sp.GetRequiredService<MatchingMetrics>()));builder.Services.AddSingleton(_ =>
 {
     var cs = builder.Configuration["Redis__ConnectionString"]
         ?? Environment.GetEnvironmentVariable("Redis__ConnectionString")
@@ -64,6 +63,14 @@ builder.Services.AddSingleton(sp => new CandidateDiscovery(
 builder.Services.AddSingleton<MatchingMetrics>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<MatchingRoundService>();
+builder.Services.AddSingleton(sp => new MatchingWorkRepository(
+    postgresConnectionString, sp.GetRequiredService<MatchingMetrics>()));
+builder.Services.AddSingleton(sp => new MatchingStageService(
+    sp.GetRequiredService<MatchingAttemptRepository>(),
+    sp.GetRequiredService<MatchingWorkRepository>(),
+    sp.GetRequiredService<CandidateDiscovery>(),
+    sp.GetRequiredService<MatchingMetrics>(),
+    sp.GetRequiredService<TimeProvider>()));
 builder.Services.AddHttpClient<IDriverClient, HttpDriverClient>((_, http) =>
 {
     var baseUrl = builder.Configuration["Services:DriverBaseUrl"]
@@ -78,6 +85,26 @@ builder.Services.AddScoped(sp => new MatchingReserveOrchestrator(
     sp.GetRequiredService<IDriverClient>(),
     sp.GetRequiredService<MatchingTerminalizer>(),
     metrics: sp.GetRequiredService<MatchingMetrics>()));
+
+// B-REC-01: the autonomous production trigger. The broker intake commits
+// durable work before ACK; this hosted worker discovers it from PostgreSQL
+// and drives reserve/reconcile/terminalization without any test-only call.
+builder.Services.AddOptions<MatchingWorkerOptions>()
+    .Bind(builder.Configuration.GetSection(MatchingWorkerOptions.SectionName))
+    .Validate(o => o.Validate() is null, "Invalid Matching worker configuration.")
+    .ValidateOnStart();
+builder.Services.AddSingleton(sp => new MatchingWorkDispatcher(
+    sp.GetRequiredService<IServiceScopeFactory>(),
+    sp.GetRequiredService<MatchingAttemptRepository>(),
+    sp.GetRequiredService<MatchingWorkRepository>(),
+    sp.GetRequiredService<MatchingStageService>(),
+    sp.GetRequiredService<MatchingTerminalizer>(),
+    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MatchingPolicy>>(),
+    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MatchingWorkerOptions>>(),
+    sp.GetRequiredService<TimeProvider>(),
+    postgresConnectionString,
+    sp.GetRequiredService<ILogger<MatchingWorkDispatcher>>()));
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MatchingWorkDispatcher>());
 
 builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection(RabbitMqOptions.SectionName));
 builder.Services.AddSingleton(sp => new MatchingAttemptRepository(
@@ -108,6 +135,11 @@ builder.Services.AddSingleton(_ => new ConnectionFactory
 });
 builder.Services.AddSingleton<RideRequestedHandler>();
 builder.Services.AddHostedService<RideRequestedConsumer>();
+
+// B-REC-01: canonical cancellation input (Doc 02 §12.9). The durable intent
+// survives a cancel arriving before its RideRequestedV1.
+builder.Services.AddSingleton<CancelMatchingRoundHandler>();
+builder.Services.AddHostedService<CancelMatchingRoundConsumer>();
 
 // W9: C's shared Outbox relay publishes only committed intents. Matching owns
 // only the intent creation (same transaction as the NO_DRIVER row) and this
@@ -227,3 +259,7 @@ catch (Exception ex)
 }
 
 app.Run();
+
+// Minimal-host accessibility for WebApplicationFactory<Program> integration
+// proofs (same pattern as the Trip service). No production behavior.
+public partial class Program;

@@ -73,8 +73,14 @@ public class BrokerDecisionsTests
             "RideRequestedV1",
             Guid.NewGuid().ToString("N"),
             System.Text.Json.JsonDocument.Parse(
-                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":2,\"futureField\":1}}").RootElement,
+                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":2,\"pickup\":{{\"latitude\":10.8,\"longitude\":106.6}},\"futureField\":1}}").RootElement,
             messageId: messageId);
+        var payload = RideRequestedHandler.ReadProductionPayload(good);
+        Assert.Equal(trip, payload.TripId);
+        Assert.Equal(2, payload.MatchingRound);
+        Assert.Equal(messageId, payload.InputMessageId);
+        Assert.Equal(106.6, payload.PickupLongitude);
+        Assert.Equal(10.8, payload.PickupLatitude);
         var (t, round, m) = RideRequestedHandler.ReadPayload(good);
         Assert.Equal(trip, t);
         Assert.Equal(2, round);
@@ -92,13 +98,11 @@ public class BrokerDecisionsTests
             "RideRequestedV1",
             Guid.NewGuid().ToString("N"),
             System.Text.Json.JsonDocument.Parse(
-                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":1,\"inputMessageId\":\"{Guid.NewGuid():N}\"}}").RootElement,
+                $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":1,\"pickup\":{{\"latitude\":10.8,\"longitude\":106.6}},\"inputMessageId\":\"{Guid.NewGuid():N}\"}}").RootElement,
             messageId: envelopeId);
         var (_, _, m) = RideRequestedHandler.ReadPayload(env);
         Assert.Equal(envelopeId, m);
-    }
-
-    [Fact]
+    }    [Fact]
     public void RideRequested_Payload_Rejects_Bad_Shapes()
     {
         static System.Text.Json.JsonElement Obj(string json) =>
@@ -110,22 +114,32 @@ public class BrokerDecisionsTests
                 "RideRequestedV1", Guid.NewGuid().ToString("N"), payload, messageId: messageId);
 
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
-            Env(Obj("{\"tripId\":\"00000000-0000-0000-0000-000000000000\",\"matchingRound\":1}"))));
+            Env(Obj("{\"tripId\":\"00000000-0000-0000-0000-000000000000\",\"matchingRound\":1,\"pickup\":{\"latitude\":10.8,\"longitude\":106.6}}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
-            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":0}"))));
+            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":0,\"pickup\":{\"latitude\":10.8,\"longitude\":106.6}}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
             Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\"}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
             Env(System.Text.Json.JsonDocument.Parse("[1,2]").RootElement)));
+        // Pickup is the durable discovery center: missing/out-of-range/NaN is
+        // a permanent payload defect, never silently defaulted.
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
+            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1}"))));
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
+            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1,\"pickup\":{\"latitude\":91,\"longitude\":106.6}}"))));
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
+            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1,\"pickup\":{\"latitude\":10.8,\"longitude\":181}}"))));
+        Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
+            Env(Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1,\"pickup\":{\"latitude\":\"10.8\",\"longitude\":106.6}}"))));
         // Invalid/missing envelope messageId is rejected even with a valid payload.
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
             new RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>(
                 "", "RideRequestedV1", 1, DateTimeOffset.UtcNow, Guid.NewGuid().ToString("N"), null,
-                Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1}"))));
+                Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1,\"pickup\":{\"latitude\":10.8,\"longitude\":106.6}}"))));
         Assert.Throws<ArgumentException>(() => RideRequestedHandler.ReadPayload(
             new RideHailing.Messaging.Contracts.MessageEnvelope<System.Text.Json.JsonElement>(
                 "   ", "RideRequestedV1", 1, DateTimeOffset.UtcNow, Guid.NewGuid().ToString("N"), null,
-                Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1}"))));
+                Obj("{\"tripId\":\"" + Guid.NewGuid().ToString("N") + "\",\"matchingRound\":1,\"pickup\":{\"latitude\":10.8,\"longitude\":106.6}}"))));
     }
 
     [Fact]

@@ -33,5 +33,27 @@ public sealed class MatchingPolicy
 
     public string RankingConfigVersion { get; set; } = DefaultRankingConfigVersion;
 
+    /// <summary>
+    /// Progressive search stages (DSI-021). Empty keeps the frozen W5
+    /// single-stage behavior (S0 only, using SearchRadiusKm/MaxCandidates).
+    /// </summary>
+    public List<MatchingStagePolicy> Stages { get; set; } = [];
+
+    /// <summary>
+    /// The stages a round may traverse. Legacy/unit configurations remain
+    /// single-stage; production configuration binds an explicit S0..S2 list.
+    /// </summary>
+    public IReadOnlyList<MatchingStagePolicy> EffectiveStages() =>
+        Stages.Count > 0
+            ? Stages
+            : [new MatchingStagePolicy { Name = "S0", SearchRadiusKm = SearchRadiusKm, MaxCandidates = MaxCandidates }];
+
+    public MatchingStagePolicy Stage(string name) =>
+        EffectiveStages().FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.Ordinal))
+        ?? throw new InvalidOperationException($"Unknown matching stage '{name}'.");
+
+    public bool IsFinalStage(string name) =>
+        string.Equals(EffectiveStages()[^1].Name, name, StringComparison.Ordinal);
+
     public static MatchingPolicy FrozenW5Baseline() => new();
 }
