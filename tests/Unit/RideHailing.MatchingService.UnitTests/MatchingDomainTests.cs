@@ -141,6 +141,67 @@ public sealed class MatchingPolicyTests
     }
 }
 
+public sealed class MatchingStagePolicyTests
+{
+    private static MatchingPolicy ThreeStages() => new()
+    {
+        Stages =
+        [
+            new MatchingStagePolicy { Name = "S0", SearchRadiusKm = 5, MaxCandidates = 20 },
+            new MatchingStagePolicy { Name = "S1", SearchRadiusKm = 8, MaxCandidates = 20 },
+            new MatchingStagePolicy { Name = "S2", SearchRadiusKm = 12, MaxCandidates = 20 },
+        ],
+    };
+
+    [Fact]
+    public void Three_Stage_Config_Is_Monotonic_And_Valid()
+    {
+        var policy = ThreeStages();
+        Assert.Null(MatchingPolicyValidator.Validate(policy));
+        Assert.Equal(["S0", "S1", "S2"], policy.EffectiveStages().Select(s => s.Name));
+        Assert.False(policy.IsFinalStage("S0"));
+        Assert.False(policy.IsFinalStage("S1"));
+        Assert.True(policy.IsFinalStage("S2"));
+    }
+
+    [Fact]
+    public void Empty_Stages_Preserve_Single_Stage_Legacy_Behavior()
+    {
+        var policy = MatchingPolicy.FrozenW5Baseline();
+        var stage = Assert.Single(policy.EffectiveStages());
+        Assert.Equal("S0", stage.Name);
+        Assert.Equal(policy.SearchRadiusKm, stage.SearchRadiusKm);
+        Assert.Equal(policy.MaxCandidates, stage.MaxCandidates);
+        Assert.True(policy.IsFinalStage("S0"));
+    }
+
+    [Fact]
+    public void Non_Contiguous_Names_Are_Rejected()
+    {
+        var policy = ThreeStages();
+        policy.Stages[1].Name = "S2";
+        Assert.NotNull(MatchingPolicyValidator.Validate(policy));
+    }
+
+    [Fact]
+    public void Non_Increasing_Radii_Are_Rejected()
+    {
+        var equal = ThreeStages();
+        equal.Stages[1].SearchRadiusKm = equal.Stages[0].SearchRadiusKm;
+        Assert.NotNull(MatchingPolicyValidator.Validate(equal));
+
+        var shrinking = ThreeStages();
+        shrinking.Stages[2].SearchRadiusKm = 1;
+        Assert.NotNull(MatchingPolicyValidator.Validate(shrinking));
+    }
+
+    [Fact]
+    public void Unknown_Stage_Is_Loud()
+    {
+        Assert.Throws<InvalidOperationException>(() => ThreeStages().Stage("S9"));
+    }
+}
+
 public sealed class MatchingRoundTests
 {
     [Fact]

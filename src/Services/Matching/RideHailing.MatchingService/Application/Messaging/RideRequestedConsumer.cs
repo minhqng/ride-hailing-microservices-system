@@ -1,7 +1,9 @@
 // B-W08-01/02: RideRequestedV1 broker consumer (BackgroundService).
 // Subscribes matching.ride-requested.q with manual ACK; each delivery runs
-// RideRequestedHandler (durable round lookup/create) to completion before
-// ACK. Crash-before-ACK redelivers; duplicate delivery converges by PK.
+// RideRequestedHandler (durable intake: round + pickup + auto-execute) to
+// completion before ACK. Crash-before-ACK redelivers; duplicate delivery
+// converges by PK. Execution is owned by MatchingWorkDispatcher, so ACK can
+// never lose unfinished work.
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

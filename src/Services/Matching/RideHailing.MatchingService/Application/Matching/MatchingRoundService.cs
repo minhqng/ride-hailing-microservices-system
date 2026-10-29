@@ -82,7 +82,8 @@ public sealed class MatchingRoundService
             .Select(a => a.DriverId)
             .ToHashSet();
         var byDriver = new Dictionary<Guid, MatchingRepository.AttemptRow>();
-        foreach (var a in attempts)
+        foreach (var a in attempts.Where(a =>
+            string.Equals(a.Stage, round.Stage, StringComparison.Ordinal)))
         {
             byDriver.TryAdd(a.DriverId, a);
         }
@@ -111,7 +112,10 @@ public sealed class MatchingRoundService
                     "Matching round has an unreadable candidate snapshot.");
             }
 
-            if (stored.Count > 0)
+            var stageStored = stored
+                .Where(e => string.Equals(e.ResolvedStage, round.Stage, StringComparison.Ordinal))
+                .ToList();
+            if (stageStored.Count > 0)
             {
                 // Frozen-sequence replay (Doc 02 §12.7): the round's logical
                 // candidate order and attempt identities were decided by the
@@ -122,7 +126,7 @@ public sealed class MatchingRoundService
                 // (§12.5); anything else stays put even if the Redis hint no
                 // longer lists it, so no READY identity is ever orphaned from
                 // its snapshot. No discovery runs, nothing is stored.
-                var replay = stored
+                var replay = stageStored
                     .Where(e => !rejected.Contains(e.DriverId))
                     .Select(e => new RoundCandidate(e.Ordinal, e.DriverId, e.ReservationId, e.DistanceKm))
                     .ToList();
@@ -138,17 +142,30 @@ public sealed class MatchingRoundService
             // below. The first non-empty result freezes the sequence.
         }
 
+        if (!string.Equals(round.Stage, "S0", StringComparison.Ordinal))
+        {
+            // Production stage advancement owns later snapshots. The
+            // internal/demo compute seam must never overwrite a frozen
+            // multi-stage sequence with a fresh S0-style list.
+            throw new InvalidOperationException(
+                "Matching round is beyond S0; later stages are worker-owned.");
+        }
+
+        var stagePolicy = policy.Stages is { Count: > 0 } ? policy.Stage(round.Stage) : null;
+        var searchRadiusKm = stagePolicy?.SearchRadiusKm ?? policy.SearchRadiusKm;
+        var stageMaxCandidates = stagePolicy?.MaxCandidates ?? policy.MaxCandidates;
+
         var sw = Stopwatch.StartNew();
         IReadOnlyList<EnrichedCandidate> discovered;
         try
         {
             // Overflow-safe: (long) product first, then clamp to the hard cap.
             var count = Math.Min(
-                (long)policy.MaxCandidates * policy.DiscoveryOversample,
+                (long)stageMaxCandidates * policy.DiscoveryOversample,
                 policy.DiscoveryHardCap);
             discovered = await _discovery.DiscoverAsync(
                 request.PickupLongitude, request.PickupLatitude,
-                policy.SearchRadiusKm, (int)Math.Max(1L, count), ct);
+                searchRadiusKm, (int)Math.Max(1L, count), ct);
         }
         catch (Exception ex) when (ex is RedisException
             or SocketException
@@ -197,7 +214,7 @@ public sealed class MatchingRoundService
         _metrics.StaleFiltered(stale);
         _metrics.Excluded(excluded);
 
-        var ranked = CandidateRanker.Rank(eligible, policy);
+        var ranked = CandidateRanker.Rank(eligible, policy, stageMaxCandidates);
 
         var nextOrdinal = round.NextAttemptOrdinal;
         if (attempts.Count > 0)
@@ -224,7 +241,7 @@ public sealed class MatchingRoundService
             outputs.Add(new RoundCandidate(row.Ordinal, row.DriverId, row.ReservationId, c.DistanceKm));
             snapshots.Add(new SnapshotEntry(
                 row.Ordinal, c.DriverId, row.ReservationId, c.DistanceKm,
-                c.Score, c.DriverAggregateVersion, c.CapturedAt));
+                c.Score, c.DriverAggregateVersion, c.CapturedAt, round.Stage));
         }
 
         var hash = CandidateRanker.SnapshotHash(
@@ -238,6 +255,7 @@ public sealed class MatchingRoundService
             score = s.Score,
             version = s.Version,
             capturedAt = s.CapturedAt,
+            stage = s.Stage,
         }));
 
         await _repo.StoreSnapshotAsync(
@@ -261,7 +279,11 @@ public sealed class MatchingRoundService
         int Ordinal,
         Guid DriverId,
         Guid ReservationId,
-        double DistanceKm);
+        double DistanceKm,
+        string? Stage = null)
+    {
+        public string ResolvedStage => string.IsNullOrWhiteSpace(Stage) ? "S0" : Stage;
+    }
 
     /// <summary>
     /// Inserts one READY attempt, converging with concurrent duplicate computes:
@@ -361,6 +383,14 @@ public sealed class MatchingRoundService
                     "Matching round cancellation was requested; W5 starts no new attempts on it.");
             }
 
+            if (existing.AutoExecute)
+            {
+                // Production work is worker-owned. The internal/demo seam must
+                // never race the autonomous worker or mint a second sequence.
+                throw new InvalidOperationException(
+                    "Matching round is worker-owned; the internal compute seam cannot drive it.");
+            }
+
             return existing;
         }
 
@@ -373,7 +403,8 @@ public sealed class MatchingRoundService
             // convergence below reuses the winner verbatim.
             await _repo.InsertRoundAsync(
                 request.TripId, request.MatchingRound, Guid.NewGuid().ToString("D"),
-                policy.RankingConfigVersion, ct);
+                policy.RankingConfigVersion,
+                request.PickupLongitude, request.PickupLatitude, ct);
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
             && string.Equals(ex.ConstraintName, "matching_rounds_pkey", StringComparison.Ordinal))

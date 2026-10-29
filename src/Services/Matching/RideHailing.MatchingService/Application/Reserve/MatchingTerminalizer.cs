@@ -49,6 +49,8 @@ public static class MatchingTerminalReasons
     public const string UnresolvedAttempt = "UNRESOLVED_ATTEMPT";
     public const string SnapshotIncomplete = "SNAPSHOT_INCOMPLETE";
     public const string RoundNotFound = "ROUND_NOT_FOUND";
+    public const string StageNotFinal = "STAGE_NOT_FINAL";
+    public const string StageNotEvaluated = "STAGE_NOT_EVALUATED";
 }
 
 public sealed class MatchingTerminalizer
@@ -76,8 +78,17 @@ public sealed class MatchingTerminalizer
     /// the persisted identity is reused and a missing intent is repaired with
     /// that same identity (never a new logical result).
     /// </summary>
+    public Task<MatchingTerminalResult> TryTerminalizeNoDriverAsync(
+        Guid tripId, int matchingRound, CancellationToken ct = default) =>
+        TryTerminalizeNoDriverAsync(tripId, matchingRound, terminalStage: null, ct);
+
+    /// <summary>
+    /// terminalStage is the final configured stage (DSI-021). When supplied,
+    /// NO_DRIVER is legal only when the round is already at that stage and its
+    /// discovery completed; prior stages may never terminalize early.
+    /// </summary>
     public async Task<MatchingTerminalResult> TryTerminalizeNoDriverAsync(
-        Guid tripId, int matchingRound, CancellationToken ct = default)
+        Guid tripId, int matchingRound, string? terminalStage, CancellationToken ct = default)
     {
         if (tripId == Guid.Empty)
         {
@@ -162,6 +173,22 @@ public sealed class MatchingTerminalizer
             await tx.RollbackAsync(ct);
             return new MatchingTerminalResult(
                 MatchingTerminalOutcome.Refused, Reason: MatchingTerminalReasons.CancelRequested);
+        }
+
+        if (terminalStage is not null
+            && !string.Equals(round.CurrentStage, terminalStage, StringComparison.Ordinal))
+        {
+            await tx.RollbackAsync(ct);
+            return new MatchingTerminalResult(
+                MatchingTerminalOutcome.Refused, Reason: MatchingTerminalReasons.StageNotFinal);
+        }
+
+        if (terminalStage is not null
+            && !string.Equals(round.StageEvaluated, terminalStage, StringComparison.Ordinal))
+        {
+            await tx.RollbackAsync(ct);
+            return new MatchingTerminalResult(
+                MatchingTerminalOutcome.Refused, Reason: MatchingTerminalReasons.StageNotEvaluated);
         }
 
         if (round.ResultMessageId is not null)
@@ -306,7 +333,7 @@ public sealed class MatchingTerminalizer
         const string Sql = """
             SELECT status, cancel_requested, result_message_id, input_message_id,
                    selected_driver_id, selected_reservation_id,
-                   candidate_snapshot_json::text
+                   candidate_snapshot_json::text, current_stage, stage_evaluated
             FROM matching_rounds
             WHERE trip_id = @trip AND matching_round = @round
             FOR UPDATE;
@@ -327,7 +354,9 @@ public sealed class MatchingTerminalizer
             reader.GetString(3),
             reader.IsDBNull(4) ? null : reader.GetGuid(4),
             reader.IsDBNull(5) ? null : reader.GetGuid(5),
-            reader.IsDBNull(6) ? null : reader.GetString(6));
+            reader.IsDBNull(6) ? null : reader.GetString(6),
+            reader.GetString(7),
+            reader.IsDBNull(8) ? null : reader.GetString(8));
     }
 
     private static async Task<IReadOnlyList<AttemptTerminalState>> LoadAttemptsForUpdateAsync(
@@ -434,7 +463,9 @@ public sealed class MatchingTerminalizer
         string InputMessageId,
         Guid? SelectedDriverId,
         Guid? SelectedReservationId,
-        string? SnapshotJson);
+        string? SnapshotJson,
+        string CurrentStage,
+        string? StageEvaluated);
 
     private sealed record AttemptTerminalState(
         int Ordinal,

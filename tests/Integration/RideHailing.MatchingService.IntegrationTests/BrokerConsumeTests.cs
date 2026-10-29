@@ -97,7 +97,9 @@ public class BrokerConsumeTests
     private async Task<byte[]> RideRequestedBytesAsync(Guid trip, int round, string messageId, string? extra = null)
     {
         var payload = JsonDocument.Parse(
-            $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":{round}{extra ?? string.Empty}}}").RootElement;
+            $"{{\"tripId\":\"{trip:N}\",\"matchingRound\":{round}," +
+            "\"pickup\":{\"latitude\":10.8,\"longitude\":106.6}" +
+            $"{extra ?? string.Empty}}}").RootElement;
         var envelope = MessageEnvelope<JsonElement>.Create(
             "RideRequestedV1", Guid.NewGuid().ToString("N"), payload, messageId: messageId);
         return JsonSerializer.SerializeToUtf8Bytes(envelope, Json);

@@ -58,6 +58,8 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 
 **Workflows:** Trip→Matching `RideRequested` (async), Matching→Driver `ReserveDriver` (sync + UNKNOWN handling), Trip→Payment (async Saga), events→Notification (async). Outbox for dual-write gap, persisted Saga/MatchingRound for crash-resume.
 
+**Autonomous Matching (B-REC-01/DSI-021):** `RideRequestedV1` commits the round, pickup center and auto-execute obligation before ACK. A hosted Matching worker leases durable PROCESSING rounds from PostgreSQL, reconciles UNKNOWN with the same `reservationId`, executes READY attempts, advances S0→S1→S2 only after conclusive exhaustion, and commits `NO_DRIVER` only at the final evaluated stage. `CancelMatchingRoundV1` is durable across cross-queue reordering. See `src/Services/Matching/RideHailing.MatchingService/README.md` and `evidence/member-b/b-rec01-dsi021/README.md`.
+
 Implemented on main through W08: PG-guarded Driver reservation foundation, Trip lifecycle and single-assignment fencing, durable cancellation cleanup, opt-in Trip publication/consumption with atomic receipt dedup, Payment durable simulator, and the RabbitMQ runtime (publisher confirms, manual ACK, dedup). Planned: Trip persisted Saga, Outbox relay and automatic cleanup dispatch.
 
 Closed on this branch (W08 round-lineage hardening): `DriverReservedV1` now carries `matchingRound` from durable Driver-side provenance — a `reserved_round` column recorded on the reserve win, preserved across restart/replay, and cleared with the reservation refs on release/trip start. The round rides the Matching→Driver reserve request and the Driver→Trip event, so Trip no longer parks verified deliveries solely for a missing round; the `NeedsReview:RESERVATION_ROUND_REQUIRED` path remains only for legacy/deploy-skew payloads that omit the field. Payment outcomes remain a durable simulator skeleton awaiting Saga operation lineage.
@@ -162,3 +164,11 @@ Next: human peer review, Trip Saga persistence,
 production Outbox adoption and relay hosting, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
 and the end-to-end authenticated Trip/Saga flow. (`DriverReservedV1` matchingRound
 alignment has landed on this branch; see §3.)
+
+The B-W12 matching-recovery repair replaces the audited B-owned
+`B-REC-01`/`DSI-021` gaps with a durable worker, progressive stages and real
+process/restart/broker proofs. Measured selected regression on the repair
+source: **1119 passed, 1 env-gated skip, 0 failed** (Matching 109 unit + 171
+integration; Driver 131 + 113; Platform 60; Payment 28 + 28; Trip 299 + 162;
+B12 auditor 18; SystemTests discovers zero tests). Shared G4/SEC-AUTH and A/C
+acceptance remain separate gates.

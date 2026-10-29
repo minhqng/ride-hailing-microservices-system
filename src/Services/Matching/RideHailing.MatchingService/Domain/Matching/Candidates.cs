@@ -46,4 +46,5 @@ public sealed record SnapshotEntry(
     double DistanceKm,
     double Score,
     int Version,
-    DateTimeOffset CapturedAt);
+    DateTimeOffset CapturedAt,
+    string Stage = "S0");
