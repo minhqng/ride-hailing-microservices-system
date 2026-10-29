@@ -36,6 +36,7 @@ Executed with `./scripts/fault/b-w11-full-campaign.sh` on a clean tree.
 
 - REL-01 and REL-02 ran real Driver/Matching containers, PostgreSQL, RabbitMQ and Redis; no transport stub was used for the decisive call.
 - REL-02 used SIGKILL and a real process exit 137, then a NEW Matching container against the same databases.
+- REL-01/REL-02 recovery is invoked through the Testing-only reconcile endpoint. The recovery logic is proven; no production restart/redelivery trigger exists (B-REC-01), so REL-01/REL-02/DSL-001 are PARTIAL.
 - CON-02/04 and REL-12/13/14 ran deterministic barriers/network gates, not sleep-based race oracles.
 - W12 instrumentation did not break the W11 fault proofs: all seven scenarios passed in all five consecutive passes.
 - The source tree was clean at campaign start.

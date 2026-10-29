@@ -61,6 +61,15 @@ executable from the B worktree unless marked as A/C-owned.
   authority. A Redis outage returns `Degraded`/`Retry` with zero fabricated
   candidates or reservations; after recovery the tests prove surviving data and
   event-driven reconstruction separately (no automatic full rebuild claim).
+- **Production wiring / recovery trigger (B-REC-01).** `RideRequestedHandler`
+  creates/resumes the durable round but does not execute a reserve. There is no
+  production caller of `MatchingReserveOrchestrator.ExecuteRoundAsync` or
+  `ReconcileAsync`; only the Testing-only `MatchingTestEndpoints` invoke them,
+  and no hosted service reconciles an IN_FLIGHT/UNKNOWN attempt after a
+  restart or broker redelivery. The W11 REL-01/REL-02 proofs are therefore
+  harness-triggered. The recovery logic is proven; unattended recovery is
+  **NOT IMPLEMENTED**. Wiring the production reserve path and an unattended
+  reconcile trigger is a B-owned W13/W14 prerequisite.
 
 ## 3. Fault proof boundaries
 
@@ -70,6 +79,10 @@ executable from the B worktree unless marked as A/C-owned.
 - **REL-02** SIGKILLs the real Matching container while it is blocked on the
   committed reserve (exit 137), starts a new container on the same PostgreSQL/
   RabbitMQ, and reconciles the persisted attempt/identity.
+- **Harness-triggered vs unattended.** Both proofs invoke reconciliation
+  through the Testing-only endpoint. They prove the recovery *logic* in a real
+  process and database; they do not prove that a production restart or broker
+  redelivery would trigger it. No production trigger exists today (B-REC-01).
 - **Five-pass campaign** re-runs REL-01/02 plus CON-02/04 and REL-12/13/14 with
   fresh containers and identities. The Phase 2 summary is in
   `test-output/w11-critical-regression.txt`; the machine-readable campaign
@@ -116,6 +129,10 @@ executable from the B worktree unless marked as A/C-owned.
   negative controls prove detection; constraint-enforced guards are demonstrated
   instead of bypassed. AUD-07 reads the Driver row, so a sent/confirmed cleanup
   is never proof of release.
+- **B-REC-01 (High, B-owned).** No production reserve execution or unattended
+  reconcile trigger; REL-01/REL-02/DSL-001 are PARTIAL. The auditor's AUD-08
+  detects stale unresolved rows but does not resolve them. W13/W14 must wire
+  and retest before recovery results are accepted.
 - **Confirmed authentication vulnerability.** SEC-AUTH-01 Critical: real HTTP
   probes mutate Driver authority and create Outbox intents without any
   credential. SEC-AUTH-02 High (actor spoofing), SEC-AUTH-03 High (internal

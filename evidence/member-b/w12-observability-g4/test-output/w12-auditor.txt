@@ -25,7 +25,7 @@ A total of 1 test files matched the specified pattern.
   API Version: 1.56
   Operating System: Docker Desktop
   Total Memory: 7.36 GB
-  Labels: 
+  Labels:
     com.docker.desktop.address=npipe://\\.\pipe\docker_cli
 [testcontainers.org 00:00:00.61] Docker container 65f3b907ff24 created
 [testcontainers.org 00:00:00.61] Docker container 111b4ce2c673 created
