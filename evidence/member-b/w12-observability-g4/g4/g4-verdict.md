@@ -1,6 +1,6 @@
 # B-W12-09 — Core Release Gate G4 assessment
 
-**VERDICT: `B-W12 DELIVERABLES COMPLETE — G4 SECURITY BLOCKED`**
+**VERDICT: `B-W12 DELIVERABLES COMPLETE — G4 BLOCKED (SECURITY + B-OWNED RECOVERY TRIGGER)`**
 
 This is the intended B outcome: completing the G4 assessment with a red verdict
 is successful execution of B-W12-09. A green team G4 is **not** claimed.
@@ -32,11 +32,19 @@ is successful execution of B-W12-09. A green team G4 is **not** claimed.
    candidate design has no multi-stage transition. The invariant is vacuous in
    the current implementation but is not filled with PASS. This is a B-owned
    evidence gap requiring lead disposition.
-3. **FUN-05 — PARTIAL.** B's matching/reserve leg is green; the full happy ride
+3. **B-REC-01 — HIGH, OPEN (B-owned).** The production Matching runtime does
+   not execute reserve rounds and has no restart/redelivery-triggered
+   reconciliation: only the Testing-only `MatchingTestEndpoints` calls
+   `ExecuteRoundAsync`/`ReconcileAsync`. W11 REL-01/REL-02 prove the recovery
+   *logic* under a harness; unattended recovery is **NOT IMPLEMENTED**.
+   REL-01/REL-02/DSL-001 are therefore PARTIAL. W13/W14 must wire the
+   production reserve path and an unattended reconcile trigger before
+   accepting recovery results.
+4. **FUN-05 — PARTIAL.** B's matching/reserve leg is green; the full happy ride
    also needs A's Saga and C's Payment consumer. No full FUN-05 PASS is claimed.
-4. **A/C peer rerun and sign-off pending.** AI review is not a substitute;
+5. **A/C peer rerun and sign-off pending.** AI review is not a substitute;
    A-owned rows cite the unmerged A-W12 branch.
-5. **CI NOT TRIGGERED.** PR #45 has zero check runs because `ci.yml`
+6. **CI NOT TRIGGERED.** PR #45 has zero check runs because `ci.yml`
    `pull_request.branches` excludes the W11 base (leader-owned shared workflow;
    billing issues are not green). Zero checks is not green.
 
@@ -50,7 +58,8 @@ is successful execution of B-W12-09. A green team G4 is **not** claimed.
   demonstrated, not bypassed; empty/unreachable datasets produce NOT RUN/BLOCKED.
 - W11 critical campaign: five consecutive passes of REL-01/02, CON-02/04,
   REL-12/13/14 at the audit commit `60f5cd4` (production `src/` tree identical to the tested head; see
-  `test-output/w11-critical-regression.txt`).
+  `test-output/w11-critical-regression.txt`). REL-01/02 recovery is
+  harness-triggered; see B-REC-01.
 - All seven architectural prohibitions have executable B-owned proofs.
 - AUD-03 (Trip) and AUD-05 (Payment) are **NOT RUN** with named A/C
   dependencies; they are never reported as PASS.
@@ -63,6 +72,8 @@ is successful execution of B-W12-09. A green team G4 is **not** claimed.
   A-owned (A's AUD-08 PASS).
 - Reconciliation trace linkage requires a caller-supplied workflow/consumer span;
   traceparent is not persisted in the Matching ledger.
+- No production caller executes a Matching reserve round or reconciles an
+  unresolved attempt; the W11 proofs use the Testing-only seam (B-REC-01).
 - Release evidence is bound to the code commit above; evidence-only commits do
   not change production behavior.
 
@@ -71,8 +82,11 @@ is successful execution of B-W12-09. A green team G4 is **not** claimed.
 1. Approve and implement the shared authenticated-principal and service-identity
    contract (A Identity + C Gateway + B enforcement).
 2. Pass the reject-without-mutation matrix and re-run SEC-AUTH-01..04 tests.
-3. Resolve DSI-021 (implement/prove multi-stage monotonicity or formally retire
+3. Wire the production Matching reserve path and an unattended
+   restart/redelivery reconcile trigger, then re-run REL-01/REL-02/DSL-001
+   without the Testing seam (B-REC-01).
+4. Resolve DSI-021 (implement/prove multi-stage monotonicity or formally retire
    the stage model with lead approval).
-4. Integrate the A/C legs for FUN-05 and complete the full happy-path proof.
-5. Fix CI triggering for the stacked base and obtain green exact-head runs.
-6. Obtain A/C peer rerun and human sign-off.
+5. Integrate the A/C legs for FUN-05 and complete the full happy-path proof.
+6. Fix CI triggering for the stacked base and obtain green exact-head runs.
+7. Obtain A/C peer rerun and human sign-off.

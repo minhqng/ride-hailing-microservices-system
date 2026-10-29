@@ -347,4 +347,3 @@ Observation: `POST_SCENARIO_B_QUIESCED_NO_RELAY`; elapsed 35 ms.
 
 ### `reserved-agreement` / AUD-08 — PASS
 - `TRIP_SAGA_SCOPE`: Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A's AUD-08 PASS covers the Trip authority.
-

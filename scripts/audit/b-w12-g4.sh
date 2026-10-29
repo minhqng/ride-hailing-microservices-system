@@ -24,12 +24,21 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 2
 fi
 
+# Evidence integrity: a dirty tree means the tested binary may not match the
+# bound commit. A formal audit run requires a clean tree; ALLOW_DIRTY=1 is
+# diagnostic-only and records the dirty status in the bundle.
+SOURCE_STATUS=$(git status --porcelain)
+if [ -n "$SOURCE_STATUS" ] && [ "${ALLOW_DIRTY:-0}" != "1" ]; then
+  echo "error: working tree is dirty; commit your changes or set ALLOW_DIRTY=1 for a diagnostic run" >&2
+  exit 2
+fi
+
 OUT_DIR="${B12_AUDIT_OUTPUT_DIR:-$ROOT/evidence/member-b/w12-observability-g4/auditor}"
 mkdir -p "$OUT_DIR"
 export B12_AUDIT_OUTPUT_DIR="$OUT_DIR"
 export B12_AUDIT_SOURCE_COMMIT="${B12_AUDIT_SOURCE_COMMIT:-$(git rev-parse HEAD)}"
 export B12_AUDIT_SOURCE_TREE="${B12_AUDIT_SOURCE_TREE:-$(git rev-parse 'HEAD^{tree}')}"
-export B12_AUDIT_SOURCE_STATUS="${B12_AUDIT_SOURCE_STATUS:-$(git status --porcelain | tr '\n' ';' | cut -c1-2000)}"
+export B12_AUDIT_SOURCE_STATUS="${B12_AUDIT_SOURCE_STATUS:-$(printf '%s' "$SOURCE_STATUS" | tr '\n' ';' | cut -c1-2000)}"
 export TESTCONTAINERS_RYUK_DISABLED=true
 
 PROJECT="tests/Audit/RideHailing.B12Audit.Tests/RideHailing.B12Audit.Tests.csproj"
