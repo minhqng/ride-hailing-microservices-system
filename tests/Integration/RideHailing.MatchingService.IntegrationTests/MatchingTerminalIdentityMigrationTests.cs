@@ -59,6 +59,9 @@ public sealed class MatchingTerminalIdentityMigrationTests
             await ExecuteAsync(conn,
                 MatchingPostgresDatabase.LoadMigrationScript(
                     "006_matching_terminal_result_identity.sql"));
+            await ExecuteAsync(conn,
+                MatchingPostgresDatabase.LoadMigrationScript(
+                    "007_matching_production_work.sql"));
 
             // The legacy terminal is preserved (NOT VALID is not a silent repair).
             await using (var legacy = new NpgsqlCommand(

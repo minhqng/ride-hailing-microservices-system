@@ -66,6 +66,12 @@ public sealed record AttemptResult(
     Guid ReservationId,
     string? Code);
 
+/// <summary>
+/// One durable attempt identity to drive. The ordinal is the ledger ordinal,
+/// not a list index: stage-expanded rounds continue ordinals across stages.
+/// </summary>
+public sealed record AttemptTarget(int Ordinal, Guid DriverId);
+
 public enum RoundOutcome
 {
     Reserved,
@@ -112,24 +118,52 @@ public sealed class MatchingReserveOrchestrator
     /// <summary>
     /// Serial round executor (B-W07-10 guard lives here): at most one
     /// in-flight/unknown attempt per round, conclusive outcomes only advance.
+    /// The legacy entry accepts a driver list whose indexes are ordinals
+    /// (single-stage W5/W11 callers); production stages use
+    /// <see cref="ExecuteRoundTargetsAsync"/> so ledger ordinals survive.
     /// </summary>
-    public async Task<RoundReserveResult> ExecuteRoundAsync(
+    public Task<RoundReserveResult> ExecuteRoundAsync(
         Guid tripId,
         int round,
         IReadOnlyList<Guid> candidates,
         string inputMessageId,
+        CancellationToken ct = default) =>
+        ExecuteRoundTargetsAsync(
+            tripId,
+            round,
+            candidates.Select((driverId, ordinal) => new AttemptTarget(ordinal, driverId)).ToList(),
+            inputMessageId,
+            terminalStage: null,
+            ct);
+
+    /// <summary>
+    /// Drives an ordered list of durable attempt identities. terminalStage
+    /// limits the legal NO_DRIVER decision to the final configured stage
+    /// (DSI-021); null preserves the legacy single-stage behavior.
+    /// </summary>
+    public async Task<RoundReserveResult> ExecuteRoundTargetsAsync(
+        Guid tripId,
+        int round,
+        IReadOnlyList<AttemptTarget> candidates,
+        string inputMessageId,
+        string? terminalStage,
         CancellationToken ct = default)
     {
         using var activity = MatchingTelemetry.Activities.StartActivity(
             "matching.round.execute", ActivityKind.Internal);
         activity?.SetTag("trip.id", tripId);
         activity?.SetTag("matching.round", round);
+        if (terminalStage is not null)
+        {
+            activity?.SetTag("matching.round.stage", terminalStage);
+        }
 
         var started = Stopwatch.GetTimestamp();
         var outcome = "error";
         try
         {
-            var result = await ExecuteRoundCoreAsync(tripId, round, candidates, inputMessageId, ct);
+            var result = await ExecuteRoundCoreAsync(
+                tripId, round, candidates, inputMessageId, terminalStage, ct);
             outcome = result.Outcome.ToString();
             activity?.SetTag("matching.round.outcome", outcome);
             activity?.SetTag("matching.round.replay", result.Replay);
@@ -151,8 +185,9 @@ public sealed class MatchingReserveOrchestrator
     private async Task<RoundReserveResult> ExecuteRoundCoreAsync(
         Guid tripId,
         int round,
-        IReadOnlyList<Guid> candidates,
+        IReadOnlyList<AttemptTarget> candidates,
         string inputMessageId,
+        string? terminalStage,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -164,6 +199,12 @@ public sealed class MatchingReserveOrchestrator
         if (round < 1)
         {
             throw new ArgumentException("round must be >= 1.", nameof(round));
+        }
+
+        if (candidates.Select(c => c.Ordinal).Distinct().Count() != candidates.Count
+            || candidates.Any(c => c.Ordinal < 0 || c.DriverId == Guid.Empty))
+        {
+            throw new ArgumentException("Attempt targets must carry unique non-negative ordinals and non-empty drivers.", nameof(candidates));
         }
 
         var roundRow = await _attempts.EnsureRoundAsync(tripId, round, inputMessageId, ct);
@@ -179,7 +220,8 @@ public sealed class MatchingReserveOrchestrator
             // Exact replay of a completed round: reuse the persisted
             // result_message_id, repair a missing intent under that SAME
             // identity if necessary, and never start a new attempt sequence.
-            var replay = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
+            var replay = await _terminalizer.TryTerminalizeNoDriverAsync(
+                tripId, round, terminalStage, ct);
             return MapTerminal(replay) with { Replay = true };
         }
 
@@ -189,11 +231,20 @@ public sealed class MatchingReserveOrchestrator
                 RoundOutcome.Refused, null, null, roundRow.Status, Replay: true);
         }
 
+        if (roundRow.CancelRequested)
+        {
+            // Doc 02 §12.9: start no new candidate attempt on a cancelled
+            // round; only an already durable unresolved effect may reconcile.
+            return new RoundReserveResult(
+                RoundOutcome.Refused, null, null, MatchingTerminalReasons.CancelRequested);
+        }
+
         _metrics?.CandidateCount(candidates.Count);
 
-        for (var ordinal = 0; ordinal < candidates.Count; ordinal++)
+        foreach (var target in candidates.OrderBy(c => c.Ordinal))
         {
-            var driverId = candidates[ordinal];
+            var ordinal = target.Ordinal;
+            var driverId = target.DriverId;
             if (await _attempts.HasOtherUnresolvedAsync(tripId, round, ordinal, driverId, ct))
             {
                 return new RoundReserveResult(
@@ -231,18 +282,19 @@ public sealed class MatchingReserveOrchestrator
                 case AttemptOutcome.Blocked:
                     return new RoundReserveResult(RoundOutcome.BlockedOnUnknown, null, null, attempt.Code);
                 case AttemptOutcome.RoundTerminal:
-                    var terminal = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
+                    var terminal = await _terminalizer.TryTerminalizeNoDriverAsync(
+                        tripId, round, terminalStage, ct);
                     return MapTerminal(terminal);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(attempt));
             }
         }
 
-        // Every candidate in this bounded list is conclusively REJECTED. W9
-        // performs the only legal terminal transition: NO_DRIVER and its
-        // MatchingFailedV1 Outbox intent in one transaction, guarded against
-        // unresolved reservations, cancellation and concurrent new work.
-        var exhausted = await _terminalizer.TryTerminalizeNoDriverAsync(tripId, round, ct);
+        // Every candidate in this bounded list is conclusively REJECTED. Only
+        // the final configured stage may commit the terminal transition:
+        // NO_DRIVER and its MatchingFailedV1 Outbox intent in one transaction.
+        var exhausted = await _terminalizer.TryTerminalizeNoDriverAsync(
+            tripId, round, terminalStage, ct);
         return MapTerminal(exhausted);
     }
 
@@ -326,14 +378,22 @@ public sealed class MatchingReserveOrchestrator
         // is available here, so a locally generated placeholder is used. It
         // is stored verbatim as TEXT, never overwrites an existing round's
         // saved broker identity, and is distinct from envelope.MessageId.
-        await _attempts.EnsureRoundAsync(tripId, round, Guid.NewGuid().ToString("D"), ct);
+        var roundRow = await _attempts.EnsureRoundAsync(
+            tripId, round, Guid.NewGuid().ToString("D"), ct);
+        if (roundRow.CancelRequested
+            || !string.Equals(roundRow.Status, MatchingRoundStatuses.Processing, StringComparison.Ordinal))
+        {
+            return new AttemptResult(
+                AttemptOutcome.RoundTerminal, Guid.Empty, roundRow.Status);
+        }
+
         if (await _attempts.HasOtherUnresolvedAsync(tripId, round, ordinal, driverId, ct))
         {
             return new AttemptResult(AttemptOutcome.Blocked, Guid.Empty, "UNRESOLVED_ATTEMPT");
         }
 
         var ensured = await _attempts.EnsureInflightAttemptAsync(
-            tripId, round, ordinal, driverId, Guid.NewGuid(), ct);
+            tripId, round, ordinal, driverId, Guid.NewGuid(), ct, roundRow.CurrentStage);
         if (ensured.Row is null)
         {
             var current = await _attempts.LoadRoundAsync(tripId, round, ct);
@@ -342,6 +402,25 @@ public sealed class MatchingReserveOrchestrator
         }
 
         var row = ensured.Row;
+        if (row.State == MatchingAttemptStates.Ready)
+        {
+            // Doc 02 §12.4: the exact reservation intent must be durable as
+            // IN_FLIGHT BEFORE the remote call. Stage snapshots create READY
+            // rows with their reservation identity; a duplicate worker may
+            // have already moved the row, so re-read durable truth and fail
+            // closed if the transition did not persist.
+            await _attempts.TryTransitionAsync(
+                tripId, round, ordinal,
+                [MatchingAttemptStates.Ready], MatchingAttemptStates.InFlight,
+                null, ct);
+            row = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct) ?? row;
+            if (row.State == MatchingAttemptStates.Ready)
+            {
+                return new AttemptResult(
+                    AttemptOutcome.Unknown, row.ReservationId, "DISPATCH_STATE_NOT_PERSISTED");
+            }
+        }
+
         return row.State switch
         {
             MatchingAttemptStates.Reserved => await RepairRoundAndReportAsync(tripId, round, row, ct),
@@ -378,6 +457,31 @@ public sealed class MatchingReserveOrchestrator
         int ordinal,
         CancellationToken ct = default)
     {
+        return await ReconcileWithPolicyAsync(tripId, round, ordinal, allowReserve: true, ct);
+    }
+
+    /// <summary>
+    /// Query-only reconciliation for a cancelled round: an unresolved
+    /// write-ahead attempt may have reached Driver, but starting a new
+    /// reservation call is forbidden after cancellation (Doc 02 §12.9).
+    /// IN_FLIGHT becomes UNKNOWN durably, then polls the same reservation id.
+    /// </summary>
+    public async Task<AttemptResult> ReconcileObservedAsync(
+        Guid tripId,
+        int round,
+        int ordinal,
+        CancellationToken ct = default)
+    {
+        return await ReconcileWithPolicyAsync(tripId, round, ordinal, allowReserve: false, ct);
+    }
+
+    private async Task<AttemptResult> ReconcileWithPolicyAsync(
+        Guid tripId,
+        int round,
+        int ordinal,
+        bool allowReserve,
+        CancellationToken ct)
+    {
         using var activity = MatchingTelemetry.Activities.StartActivity(
             "matching.attempt.reconcile", ActivityKind.Internal);
         activity?.SetTag("trip.id", tripId);
@@ -386,7 +490,7 @@ public sealed class MatchingReserveOrchestrator
 
         try
         {
-            var result = await ReconcileCoreAsync(tripId, round, ordinal, ct);
+            var result = await ReconcileCoreAsync(tripId, round, ordinal, allowReserve, ct);
             activity?.SetTag("matching.reconcile.outcome", result.Outcome.ToString());
             if (result.ReservationId != Guid.Empty)
             {
@@ -406,6 +510,7 @@ public sealed class MatchingReserveOrchestrator
         Guid tripId,
         int round,
         int ordinal,
+        bool allowReserve,
         CancellationToken ct)
     {
         var row = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
@@ -427,11 +532,37 @@ public sealed class MatchingReserveOrchestrator
 
         if (row.State is MatchingAttemptStates.Ready or MatchingAttemptStates.InFlight)
         {
-            // Possibly dispatched but crashed before recording the outcome
-            // (IN_FLIGHT is write-ahead identity, not proof of never-called).
-            // Resume with the SAME reservation identity; same-R replay on the
-            // Driver is idempotent, never a new logical attempt (DSI-018).
-            return await CallReserveAsync(tripId, round, ordinal, row, ct);
+            if (allowReserve)
+            {
+                // Possibly dispatched but crashed before recording the outcome
+                // (IN_FLIGHT is write-ahead identity, not proof of never-called).
+                // Resume with the SAME reservation identity; same-R replay on the
+                // Driver is idempotent, never a new logical attempt (DSI-018).
+                return await CallReserveAsync(tripId, round, ordinal, row, ct);
+            }
+
+            if (row.State == MatchingAttemptStates.Ready)
+            {
+                // No remote effect was possible before a dispatch fence.
+                return new AttemptResult(
+                    AttemptOutcome.Unknown, row.ReservationId, "READY_NOT_DISPATCHED");
+            }
+
+            if (row.State == MatchingAttemptStates.InFlight)
+            {
+                // Cancellation: no new remote dispatch is allowed. Convert the
+                // write-ahead intent into the durable unresolved state so the
+                // existing query-only fencing can resolve it.
+                await _attempts.TryTransitionAsync(
+                    tripId, round, ordinal,
+                    [MatchingAttemptStates.InFlight], MatchingAttemptStates.Unknown,
+                    "CANCEL_RECONCILE", ct);
+                row = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct) ?? row;
+                if (row.State != MatchingAttemptStates.Unknown)
+                {
+                    return new AttemptResult(AttemptOutcome.Unknown, row.ReservationId, "CANCEL_RECONCILE");
+                }
+            }
         }
 
         // UNKNOWN: poll authoritative truth with the same R.

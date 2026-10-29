@@ -1711,6 +1711,50 @@ not performance.
 
 ---
 
+## 21.4 B-REC-01 production execution and DSI-021 stages (forward repair)
+
+The W12 audit found that the durable Matching ledger had no autonomous
+execution trigger and that `current_stage` never left S0. The forward repair on
+the W12 layer closes both B-owned gaps without changing the canonical semantics:
+
+```text
+RideRequestedV1 intake
+  → round + pickup + auto_execute + cancel tombstone committed
+  → ACK
+  → MatchingWorkDispatcher (PG due-round scan + per-round advisory lease)
+  → same-R reconcile (IN_FLIGHT/UNKNOWN first, no next Driver)
+  → atomic stage snapshot + READY attempt identities
+  → serial reserve orchestration
+  → durable S0 → S1 → S2 advancement
+  → final-stage NO_DRIVER + Outbox, or RESERVED
+```
+
+Rules preserved:
+
+- The broker ACK never owns unfinished work: the round row is the durable work
+  item, and `auto_execute` distinguishes production work from W5/W11 seams.
+- `CancelMatchingRoundV1` is consumed with a durable intent that survives
+  cross-queue reordering; cancellation never starts a new candidate and an
+  already committed reservation stays authoritative.
+- Stage advancement is conditional on all stage attempts/entries being
+  conclusive `REJECTED`, no `IN_FLIGHT`/`UNKNOWN`/`RESERVED` effect, and no
+  cancellation. `NO_DRIVER` is legal only at the final configured stage after
+  its discovery completed.
+- The frozen snapshot is appended per stage; existing identity/ordering is
+  never rewritten. Attempt ordinals continue across stages.
+- A Redis/Driver outage is retried with durable backoff (`work_checked_at`,
+  `work_error_code`), never converted into a terminal result.
+
+Proof owner: `ProductionMatchingWorkflowTests`, `ProductionMatchingStageTests`,
+`MatchingStageGateTests` (real Matching process, real PostgreSQL/Redis/RabbitMQ,
+real Driver Kestrel). Evidence:
+`evidence/member-b/b-rec01-dsi021/README.md`.
+
+W13 prerequisites are B-technically ready after this repair; shared G4 and
+SEC-AUTH gates remain separately tracked.
+
+---
+
 # 22. Week 13 — Performance campaign
 **Planned: 14 h**
 
