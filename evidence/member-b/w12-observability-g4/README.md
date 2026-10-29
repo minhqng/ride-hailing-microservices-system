@@ -1,5 +1,10 @@
 # B-W12 Phase 2 — Formal regression, authoritative audit, G4 and handoff
 
+> Historical audit state at the W12 head. The B-owned `B-REC-01` and `DSI-021`
+> gaps below were repaired forward on the same B-W12 layer; see
+> [B-REC-01/DSI-021 evidence](../b-rec01-dsi021/README.md). SEC-AUTH-01..04 and
+> the A/C gates recorded here remain independent of that repair.
+
 **Verdict: `B-W12 DELIVERABLES COMPLETE — G4 BLOCKED (SECURITY + B-OWNED RECOVERY TRIGGER)`**
 
 Branch `feature/B-W12-observability-g4`, PR

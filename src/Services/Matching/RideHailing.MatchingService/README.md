@@ -116,7 +116,51 @@ See [W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
   capability, ranking version). Capability feed pending (projection carries
   no vehicle data; non-null requirement safely excludes).
 
+## B-REC-01 — autonomous production execution (forward repair on W12)
+
+`RideRequestedV1` is a durable intake, not an execution shortcut:
+
+1. `RideRequestedHandler` parses the canonical payload (`tripId`,
+   `matchingRound`, `pickup`) and commits the round, pickup center,
+   `auto_execute = TRUE`, input envelope identity and any pending
+   `CancelMatchingRoundV1` tombstone in ONE transaction before ACK.
+2. `MatchingWorkDispatcher` (hosted service) scans `PROCESSING` auto-execute
+   rounds from PostgreSQL, takes a per-round `pg_try_advisory_lock` lease, and
+   drives the durable state machine. A crashed process drops its session lease;
+   recovery is the next scan, never an in-memory queue or test endpoint.
+3. Unresolved `IN_FLIGHT`/`UNKNOWN` attempts are reconciled first with the SAME
+   `reservationId`; no new Driver is attempted while unresolved. READY rows are
+   transitioned to write-ahead `IN_FLIGHT` before the remote call.
+4. `CancelMatchingRoundV1` is consumed from `matching.commands.q`. A durable
+   tombstone survives a cancel overtaking its ride request; the worker starts no
+   new attempt and reconciles an unresolved effect query-only. A committed
+   reservation remains authoritative (Trip owns exact cleanup).
+
+`MatchingWorkRepository` owns the durable coordination: bounded due-round
+discovery with `work_checked_at` backoff, atomic stage-snapshot + READY attempt
+creation, and conditional stage advancement. Worker failures record
+`work_error_code` and leave the round PROCESSING; a Redis/Driver outage is never
+converted into `NO_DRIVER`.
+
+## DSI-021 — progressive stages
+
+`Matching:Stages` is deployment configuration (`S0..Sn`, strictly increasing
+radii). Production ships S0/S1/S2 at 5/8/12 km. The round row persists
+`current_stage` and `stage_evaluated`; each attempt row carries its logical
+stage. A stage advances only when every frozen entry and attempt in that stage
+is conclusively `REJECTED`, no unresolved/reserved effect exists, and the round
+is still PROCESSING. `NO_DRIVER` is legal only at the final configured stage
+whose discovery completed. The frozen snapshot is appended per stage; existing
+entries and reservation identities are never rewritten.
+
+Proofs: `ProductionMatchingWorkflowTests`, `ProductionMatchingStageTests` and
+`MatchingStageGateTests` in the Matching integration project run the real
+Matching process against real PostgreSQL/Redis/RabbitMQ and real Driver Kestrel
+endpoints. See
+[B-REC-01/DSI-021 evidence](../../../../evidence/member-b/b-rec01-dsi021/README.md).
+
 ## NOT implemented (later weeks)
 
-- End-to-end automatic dispatch/recovery orchestration remains separate from the
-  tested reserve/reconciliation application entry points.
+- W13 performance experiments (E01/E02/E03) and W14 HA validation are not started.
+- The internal `POST /internal/matching/rounds` seam remains a W5 demo trigger;
+  production rounds are worker-owned and it does not initiate reserve work.
