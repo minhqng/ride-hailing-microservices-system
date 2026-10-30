@@ -1,3 +1,5 @@
+> Historical verification: the current reservation-safety repair and final-source evidence supersede this bundle's readiness assessment. See [reservation-reconciliation safety](../w12-reconciliation-safety/README.md). Earlier measurements retain their original source binding.
+
 # B-REC-01 / DSI-021 — Production Matching recovery and stage correctness
 
 **Verdict: `B PRODUCTION MATCHING RECOVERY AND STAGES GREEN — SHARED G4 GATES TRACKED`**

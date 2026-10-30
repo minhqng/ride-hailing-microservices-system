@@ -1,0 +1,962 @@
+[
+  {
+    "pass": 1,
+    "summary": {
+      "runId": "rhw11b-20261030t015517z-1107",
+      "timestampUtc": "2026-10-30T01:56:45Z",
+      "sourceHead": "ea6b650cda90dd30ccf19f42e6e369d59d27b8d9",
+      "sourceTree": "f903ec135ff8d26ae5a922bbb1a9106595b691ed",
+      "sourceStatus": "",
+      "driverImage": "rhw11b-driver:local",
+      "driverImageId": "sha256:c6cd510e5d06d8ada4ae408743b2cde0b9a87c6dfb6d6b9e88a3f9fbabf1725f",
+      "matchingImage": "rhw11b-matching:local",
+      "matchingImageId": "sha256:e0513b5b65c11e6ce181f091e30cafee224bdca054cd861e331fe6bbbd0788c3",
+      "rel01": {
+        "tripId": "c2cde655-e263-4b4b-8240-2ad21b22f542",
+        "driverId": "952b2f50-d983-45af-9998-c889b7cb0457",
+        "nextDriverId": "6b1f496f-b469-411d-93f9-4ef0798a0c0c",
+        "reservationId": "190da4c4-5309-44c0-83e1-20663c1061be",
+        "driverVersion": 3,
+        "httpStatusAfterTimeout": "200",
+        "result": "PASS"
+      },
+      "rel02": {
+        "tripId": "2b4c282a-29d6-4b8d-82d9-7da00eb801a5",
+        "driverId": "bb9d998c-1bec-49a5-92cc-cb2623551e17",
+        "nextDriverId": "cbffb8dc-61e2-4998-97b8-fac77129e6dd",
+        "reservationId": "6b4a5148-fc1e-4bc7-9ade-407d5f43541a",
+        "driverVersion": 3,
+        "killedContainerId": "debcd647e671b4cb70fafc219909c979494313a076773440d6a472b4b0026f59",
+        "killedPid": 43217,
+        "killedExitCode": 137,
+        "restartedContainerId": "ac2c3d3b4cc84bcf43c191f8ec02b7dcd0f85ad89df502abed3887d09f77e5c9",
+        "restartedPid": 43818,
+        "result": "PASS"
+      }
+    },
+    "snapshots": {
+      "rel01-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "c496a2358f520145235b9e922c7df636",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:56:06.008531+00:00"
+        },
+        {
+          "message_id": "293ca9c0fe5bce1c3405f14a47714a26",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:56:06.022922+00:00"
+        },
+        {
+          "message_id": "000c89782fc256ace25a66ef60c69b89",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "190da4c4-5309-44c0-83e1-20663c1061be",
+          "matching_round": "1",
+          "trip_id": "c2cde655-e263-4b4b-8240-2ad21b22f542",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:56:07.052255+00:00"
+        }
+      ],
+      "rel01-final-attempts-matching-outbox.json": [],
+      "rel01-final-attempts-round.json": [
+        {
+          "trip_id": "c2cde655-e263-4b4b-8240-2ad21b22f542",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "952b2f50-d983-45af-9998-c889b7cb0457",
+          "selected_reservation_id": "190da4c4-5309-44c0-83e1-20663c1061be",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T01:56:15.11273+00:00"
+        }
+      ],
+      "rel01-final-attempts.json": [
+        {
+          "trip_id": "c2cde655-e263-4b4b-8240-2ad21b22f542",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "952b2f50-d983-45af-9998-c889b7cb0457",
+          "reservation_id": "190da4c4-5309-44c0-83e1-20663c1061be",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T01:56:15.108692+00:00"
+        }
+      ],
+      "rel01-final-drivers.json": [
+        {
+          "driver_id": "6b1f496f-b469-411d-93f9-4ef0798a0c0c",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T01:56:04.256851+00:00"
+        },
+        {
+          "driver_id": "952b2f50-d983-45af-9998-c889b7cb0457",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "c2cde655-e263-4b4b-8240-2ad21b22f542",
+          "reservation_id": "190da4c4-5309-44c0-83e1-20663c1061be",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T01:56:06.908353+00:00"
+        }
+      ],
+      "rel02-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "aa004923ef591b7b93c0a77442837b8e",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:56:21.090733+00:00"
+        },
+        {
+          "message_id": "75583dbddf4bd0fb7582eeb8378f169e",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:56:21.09863+00:00"
+        },
+        {
+          "message_id": "8a34bc5a0a095588cc290115a8a068e1",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "6b4a5148-fc1e-4bc7-9ade-407d5f43541a",
+          "matching_round": "1",
+          "trip_id": "2b4c282a-29d6-4b8d-82d9-7da00eb801a5",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:56:26.135958+00:00"
+        }
+      ],
+      "rel02-final-attempts-matching-outbox.json": [],
+      "rel02-final-attempts-round.json": [
+        {
+          "trip_id": "2b4c282a-29d6-4b8d-82d9-7da00eb801a5",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "bb9d998c-1bec-49a5-92cc-cb2623551e17",
+          "selected_reservation_id": "6b4a5148-fc1e-4bc7-9ade-407d5f43541a",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T01:56:40.363718+00:00"
+        }
+      ],
+      "rel02-final-attempts.json": [
+        {
+          "trip_id": "2b4c282a-29d6-4b8d-82d9-7da00eb801a5",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "bb9d998c-1bec-49a5-92cc-cb2623551e17",
+          "reservation_id": "6b4a5148-fc1e-4bc7-9ade-407d5f43541a",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T01:56:40.359869+00:00"
+        }
+      ],
+      "rel02-final-drivers.json": [
+        {
+          "driver_id": "bb9d998c-1bec-49a5-92cc-cb2623551e17",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "2b4c282a-29d6-4b8d-82d9-7da00eb801a5",
+          "reservation_id": "6b4a5148-fc1e-4bc7-9ade-407d5f43541a",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T01:56:25.261241+00:00"
+        },
+        {
+          "driver_id": "cbffb8dc-61e2-4998-97b8-fac77129e6dd",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T01:56:20.952734+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "pass": 2,
+    "summary": {
+      "runId": "rhw11b-20261030t015735z-2346",
+      "timestampUtc": "2026-10-30T01:58:27Z",
+      "sourceHead": "ea6b650cda90dd30ccf19f42e6e369d59d27b8d9",
+      "sourceTree": "f903ec135ff8d26ae5a922bbb1a9106595b691ed",
+      "sourceStatus": "",
+      "driverImage": "rhw11b-driver:local",
+      "driverImageId": "sha256:c6cd510e5d06d8ada4ae408743b2cde0b9a87c6dfb6d6b9e88a3f9fbabf1725f",
+      "matchingImage": "rhw11b-matching:local",
+      "matchingImageId": "sha256:e0513b5b65c11e6ce181f091e30cafee224bdca054cd861e331fe6bbbd0788c3",
+      "rel01": {
+        "tripId": "56d3d3f1-860a-429c-b8e9-dc8a5ef8eacc",
+        "driverId": "83103c95-36ad-49f7-b47d-50e1b75f1f09",
+        "nextDriverId": "64a2e22c-3cc6-4847-8c2a-9eda9622d215",
+        "reservationId": "de7ae4cf-5c8b-4d6e-baf0-d196a52223a8",
+        "driverVersion": 3,
+        "httpStatusAfterTimeout": "200",
+        "result": "PASS"
+      },
+      "rel02": {
+        "tripId": "e63be5cd-019d-4741-a6d2-faffb47aabed",
+        "driverId": "07c56ff4-1fc7-4dd7-8051-a196d1fa4259",
+        "nextDriverId": "bee5b298-3754-4bcd-b7c5-3472c1fecd30",
+        "reservationId": "7d6f95a0-1e8b-489a-a2d5-e9a80c5c0151",
+        "driverVersion": 3,
+        "killedContainerId": "bdd7afa820213b77175d8048cdff198b8e2f0f8f063547a3c12fc7618d9b94d8",
+        "killedPid": 48664,
+        "killedExitCode": 137,
+        "restartedContainerId": "fa56cac60fe36c409d16eb51191679a8b8d48faeb8de0af15bb4117668fca80a",
+        "restartedPid": 49266,
+        "result": "PASS"
+      }
+    },
+    "snapshots": {
+      "rel01-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "e4997e42eb6c0169540fe4fe8794b506",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:57:46.454035+00:00"
+        },
+        {
+          "message_id": "2ef014aa6598a533f2511d4f72896838",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:57:46.465731+00:00"
+        },
+        {
+          "message_id": "10d3d6cc0fce1dcf0ba60351d59612cb",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "de7ae4cf-5c8b-4d6e-baf0-d196a52223a8",
+          "matching_round": "1",
+          "trip_id": "56d3d3f1-860a-429c-b8e9-dc8a5ef8eacc",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:57:47.50204+00:00"
+        }
+      ],
+      "rel01-final-attempts-matching-outbox.json": [],
+      "rel01-final-attempts-round.json": [
+        {
+          "trip_id": "56d3d3f1-860a-429c-b8e9-dc8a5ef8eacc",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "83103c95-36ad-49f7-b47d-50e1b75f1f09",
+          "selected_reservation_id": "de7ae4cf-5c8b-4d6e-baf0-d196a52223a8",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T01:57:55.676959+00:00"
+        }
+      ],
+      "rel01-final-attempts.json": [
+        {
+          "trip_id": "56d3d3f1-860a-429c-b8e9-dc8a5ef8eacc",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "83103c95-36ad-49f7-b47d-50e1b75f1f09",
+          "reservation_id": "de7ae4cf-5c8b-4d6e-baf0-d196a52223a8",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T01:57:55.672789+00:00"
+        }
+      ],
+      "rel01-final-drivers.json": [
+        {
+          "driver_id": "64a2e22c-3cc6-4847-8c2a-9eda9622d215",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T01:57:44.484202+00:00"
+        },
+        {
+          "driver_id": "83103c95-36ad-49f7-b47d-50e1b75f1f09",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "56d3d3f1-860a-429c-b8e9-dc8a5ef8eacc",
+          "reservation_id": "de7ae4cf-5c8b-4d6e-baf0-d196a52223a8",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T01:57:47.237379+00:00"
+        }
+      ],
+      "rel02-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "6b86aea8d4fd2e33f826100b513253c7",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:58:01.554968+00:00"
+        },
+        {
+          "message_id": "f1d0f5e2de3d369208a5d223bbf764d4",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:58:02.571273+00:00"
+        },
+        {
+          "message_id": "7daa01fbd07e3eb867f0d535e0b94a87",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "7d6f95a0-1e8b-489a-a2d5-e9a80c5c0151",
+          "matching_round": "1",
+          "trip_id": "e63be5cd-019d-4741-a6d2-faffb47aabed",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:58:06.596363+00:00"
+        }
+      ],
+      "rel02-final-attempts-matching-outbox.json": [],
+      "rel02-final-attempts-round.json": [
+        {
+          "trip_id": "e63be5cd-019d-4741-a6d2-faffb47aabed",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "07c56ff4-1fc7-4dd7-8051-a196d1fa4259",
+          "selected_reservation_id": "7d6f95a0-1e8b-489a-a2d5-e9a80c5c0151",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T01:58:22.307593+00:00"
+        }
+      ],
+      "rel02-final-attempts.json": [
+        {
+          "trip_id": "e63be5cd-019d-4741-a6d2-faffb47aabed",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "07c56ff4-1fc7-4dd7-8051-a196d1fa4259",
+          "reservation_id": "7d6f95a0-1e8b-489a-a2d5-e9a80c5c0151",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T01:58:22.302807+00:00"
+        }
+      ],
+      "rel02-final-drivers.json": [
+        {
+          "driver_id": "07c56ff4-1fc7-4dd7-8051-a196d1fa4259",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "e63be5cd-019d-4741-a6d2-faffb47aabed",
+          "reservation_id": "7d6f95a0-1e8b-489a-a2d5-e9a80c5c0151",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T01:58:06.073113+00:00"
+        },
+        {
+          "driver_id": "bee5b298-3754-4bcd-b7c5-3472c1fecd30",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T01:58:01.912591+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "pass": 3,
+    "summary": {
+      "runId": "rhw11b-20261030t015918z-3539",
+      "timestampUtc": "2026-10-30T02:00:09Z",
+      "sourceHead": "ea6b650cda90dd30ccf19f42e6e369d59d27b8d9",
+      "sourceTree": "f903ec135ff8d26ae5a922bbb1a9106595b691ed",
+      "sourceStatus": "",
+      "driverImage": "rhw11b-driver:local",
+      "driverImageId": "sha256:c6cd510e5d06d8ada4ae408743b2cde0b9a87c6dfb6d6b9e88a3f9fbabf1725f",
+      "matchingImage": "rhw11b-matching:local",
+      "matchingImageId": "sha256:e0513b5b65c11e6ce181f091e30cafee224bdca054cd861e331fe6bbbd0788c3",
+      "rel01": {
+        "tripId": "154801ee-7f30-444e-825e-48ff85cd3eae",
+        "driverId": "8abe90c4-e96f-434e-b38a-dea2f4fa1b05",
+        "nextDriverId": "8fd582b6-22c8-4e24-8a7a-a2b804e828fc",
+        "reservationId": "b11b9198-4b9c-422b-90cc-8f4294e2ca09",
+        "driverVersion": 3,
+        "httpStatusAfterTimeout": "200",
+        "result": "PASS"
+      },
+      "rel02": {
+        "tripId": "f822af41-1767-4517-847e-3d5e59981644",
+        "driverId": "06fd1470-4a9c-4b8d-937a-f5318c3bf5e6",
+        "nextDriverId": "21bb0e6e-16e5-482b-883e-fac651771f8c",
+        "reservationId": "dca8b7d8-0d63-47a3-bd6d-cdc580f4d26e",
+        "driverVersion": 3,
+        "killedContainerId": "6a7fd2ef702f310e9fdc01b9e6a13742a07a6c96976994a0b63fb91a9a1ff560",
+        "killedPid": 54073,
+        "killedExitCode": 137,
+        "restartedContainerId": "666ab73d9a6c06eacdc051e1e5cae5dcd05705f69b8aa479d471b7823b3da384",
+        "restartedPid": 54678,
+        "result": "PASS"
+      }
+    },
+    "snapshots": {
+      "rel01-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "7f584d999a1ad52edb3e0159ff6b44a3",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:59:28.985071+00:00"
+        },
+        {
+          "message_id": "0b3283bf05165c68d1a17199dd1f27f0",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:59:28.999988+00:00"
+        },
+        {
+          "message_id": "05e81f9e5fe425d412e599df599f2899",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "b11b9198-4b9c-422b-90cc-8f4294e2ca09",
+          "matching_round": "1",
+          "trip_id": "154801ee-7f30-444e-825e-48ff85cd3eae",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:59:30.039575+00:00"
+        }
+      ],
+      "rel01-final-attempts-matching-outbox.json": [],
+      "rel01-final-attempts-round.json": [
+        {
+          "trip_id": "154801ee-7f30-444e-825e-48ff85cd3eae",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "8abe90c4-e96f-434e-b38a-dea2f4fa1b05",
+          "selected_reservation_id": "b11b9198-4b9c-422b-90cc-8f4294e2ca09",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T01:59:38.253213+00:00"
+        }
+      ],
+      "rel01-final-attempts.json": [
+        {
+          "trip_id": "154801ee-7f30-444e-825e-48ff85cd3eae",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "8abe90c4-e96f-434e-b38a-dea2f4fa1b05",
+          "reservation_id": "b11b9198-4b9c-422b-90cc-8f4294e2ca09",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T01:59:38.240579+00:00"
+        }
+      ],
+      "rel01-final-drivers.json": [
+        {
+          "driver_id": "8abe90c4-e96f-434e-b38a-dea2f4fa1b05",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "154801ee-7f30-444e-825e-48ff85cd3eae",
+          "reservation_id": "b11b9198-4b9c-422b-90cc-8f4294e2ca09",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T01:59:29.732624+00:00"
+        },
+        {
+          "driver_id": "8fd582b6-22c8-4e24-8a7a-a2b804e828fc",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T01:59:26.910601+00:00"
+        }
+      ],
+      "rel02-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "33b66cfb64b4a0b32d7a70544baecf41",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:59:44.081454+00:00"
+        },
+        {
+          "message_id": "4b5dc82d670a075b45b0826dd1ba23f0",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:59:45.104552+00:00"
+        },
+        {
+          "message_id": "435e32e9dc583bf9369f0150e5bc187a",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "dca8b7d8-0d63-47a3-bd6d-cdc580f4d26e",
+          "matching_round": "1",
+          "trip_id": "f822af41-1767-4517-847e-3d5e59981644",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T01:59:49.131074+00:00"
+        }
+      ],
+      "rel02-final-attempts-matching-outbox.json": [],
+      "rel02-final-attempts-round.json": [
+        {
+          "trip_id": "f822af41-1767-4517-847e-3d5e59981644",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "06fd1470-4a9c-4b8d-937a-f5318c3bf5e6",
+          "selected_reservation_id": "dca8b7d8-0d63-47a3-bd6d-cdc580f4d26e",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T02:00:04.314572+00:00"
+        }
+      ],
+      "rel02-final-attempts.json": [
+        {
+          "trip_id": "f822af41-1767-4517-847e-3d5e59981644",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "06fd1470-4a9c-4b8d-937a-f5318c3bf5e6",
+          "reservation_id": "dca8b7d8-0d63-47a3-bd6d-cdc580f4d26e",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T02:00:04.31082+00:00"
+        }
+      ],
+      "rel02-final-drivers.json": [
+        {
+          "driver_id": "06fd1470-4a9c-4b8d-937a-f5318c3bf5e6",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "f822af41-1767-4517-847e-3d5e59981644",
+          "reservation_id": "dca8b7d8-0d63-47a3-bd6d-cdc580f4d26e",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T01:59:48.900762+00:00"
+        },
+        {
+          "driver_id": "21bb0e6e-16e5-482b-883e-fac651771f8c",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T01:59:44.343376+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "pass": 4,
+    "summary": {
+      "runId": "rhw11b-20261030t020059z-4732",
+      "timestampUtc": "2026-10-30T02:01:52Z",
+      "sourceHead": "ea6b650cda90dd30ccf19f42e6e369d59d27b8d9",
+      "sourceTree": "f903ec135ff8d26ae5a922bbb1a9106595b691ed",
+      "sourceStatus": "",
+      "driverImage": "rhw11b-driver:local",
+      "driverImageId": "sha256:c6cd510e5d06d8ada4ae408743b2cde0b9a87c6dfb6d6b9e88a3f9fbabf1725f",
+      "matchingImage": "rhw11b-matching:local",
+      "matchingImageId": "sha256:e0513b5b65c11e6ce181f091e30cafee224bdca054cd861e331fe6bbbd0788c3",
+      "rel01": {
+        "tripId": "e6bda1a9-7389-40ce-9984-34a0327c6f6e",
+        "driverId": "c5699fd0-76fb-463a-b24c-04019eb190f6",
+        "nextDriverId": "ac1b548b-8ec2-488e-bb3c-2845e1ab6ce3",
+        "reservationId": "aff47b50-d3db-40eb-8c0f-52c97de730cc",
+        "driverVersion": 3,
+        "httpStatusAfterTimeout": "200",
+        "result": "PASS"
+      },
+      "rel02": {
+        "tripId": "a38cff4d-6ff7-4493-a555-b6dd30e68207",
+        "driverId": "2de3b3c0-077c-4e5e-8547-158c4114b714",
+        "nextDriverId": "e63aea4c-f484-4ee2-92ab-fe8fd2c685d7",
+        "reservationId": "47019989-c025-4630-9153-ed11193cb0bb",
+        "driverVersion": 3,
+        "killedContainerId": "c5250b7f04fb5214380c7f47f73b08528dc85f9f651d00022267830ee6030348",
+        "killedPid": 59545,
+        "killedExitCode": 137,
+        "restartedContainerId": "c0e90e3583c880b5969674d334c17af2c9620210da7f1d5f0d3f54b27e99ba04",
+        "restartedPid": 60143,
+        "result": "PASS"
+      }
+    },
+    "snapshots": {
+      "rel01-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "9647527a856b04eadea5f9be2231fe61",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:01:10.668904+00:00"
+        },
+        {
+          "message_id": "c88a3d4111009f298800b40182961837",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:01:10.683564+00:00"
+        },
+        {
+          "message_id": "5deca393375c4004bfd0e47bd9383c26",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "aff47b50-d3db-40eb-8c0f-52c97de730cc",
+          "matching_round": "1",
+          "trip_id": "e6bda1a9-7389-40ce-9984-34a0327c6f6e",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:01:11.711029+00:00"
+        }
+      ],
+      "rel01-final-attempts-matching-outbox.json": [],
+      "rel01-final-attempts-round.json": [
+        {
+          "trip_id": "e6bda1a9-7389-40ce-9984-34a0327c6f6e",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "c5699fd0-76fb-463a-b24c-04019eb190f6",
+          "selected_reservation_id": "aff47b50-d3db-40eb-8c0f-52c97de730cc",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T02:01:20.312409+00:00"
+        }
+      ],
+      "rel01-final-attempts.json": [
+        {
+          "trip_id": "e6bda1a9-7389-40ce-9984-34a0327c6f6e",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "c5699fd0-76fb-463a-b24c-04019eb190f6",
+          "reservation_id": "aff47b50-d3db-40eb-8c0f-52c97de730cc",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T02:01:20.307757+00:00"
+        }
+      ],
+      "rel01-final-drivers.json": [
+        {
+          "driver_id": "ac1b548b-8ec2-488e-bb3c-2845e1ab6ce3",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T02:01:08.780032+00:00"
+        },
+        {
+          "driver_id": "c5699fd0-76fb-463a-b24c-04019eb190f6",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "e6bda1a9-7389-40ce-9984-34a0327c6f6e",
+          "reservation_id": "aff47b50-d3db-40eb-8c0f-52c97de730cc",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T02:01:11.581937+00:00"
+        }
+      ],
+      "rel02-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "07017348cdf56d3fae2709062b6ef558",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:01:26.756107+00:00"
+        },
+        {
+          "message_id": "af612da5256f0fc0e1bf79548ad5c510",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:01:26.770005+00:00"
+        },
+        {
+          "message_id": "bdaa025dc02a62d660a7f4bbeb381df2",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "47019989-c025-4630-9153-ed11193cb0bb",
+          "matching_round": "1",
+          "trip_id": "a38cff4d-6ff7-4493-a555-b6dd30e68207",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:01:31.797492+00:00"
+        }
+      ],
+      "rel02-final-attempts-matching-outbox.json": [],
+      "rel02-final-attempts-round.json": [
+        {
+          "trip_id": "a38cff4d-6ff7-4493-a555-b6dd30e68207",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "2de3b3c0-077c-4e5e-8547-158c4114b714",
+          "selected_reservation_id": "47019989-c025-4630-9153-ed11193cb0bb",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T02:01:46.808954+00:00"
+        }
+      ],
+      "rel02-final-attempts.json": [
+        {
+          "trip_id": "a38cff4d-6ff7-4493-a555-b6dd30e68207",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "2de3b3c0-077c-4e5e-8547-158c4114b714",
+          "reservation_id": "47019989-c025-4630-9153-ed11193cb0bb",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T02:01:46.804248+00:00"
+        }
+      ],
+      "rel02-final-drivers.json": [
+        {
+          "driver_id": "2de3b3c0-077c-4e5e-8547-158c4114b714",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "a38cff4d-6ff7-4493-a555-b6dd30e68207",
+          "reservation_id": "47019989-c025-4630-9153-ed11193cb0bb",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T02:01:30.971735+00:00"
+        },
+        {
+          "driver_id": "e63aea4c-f484-4ee2-92ab-fe8fd2c685d7",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T02:01:26.368346+00:00"
+        }
+      ]
+    }
+  },
+  {
+    "pass": 5,
+    "summary": {
+      "runId": "rhw11b-20261030t020242z-5943",
+      "timestampUtc": "2026-10-30T02:03:33Z",
+      "sourceHead": "ea6b650cda90dd30ccf19f42e6e369d59d27b8d9",
+      "sourceTree": "f903ec135ff8d26ae5a922bbb1a9106595b691ed",
+      "sourceStatus": "",
+      "driverImage": "rhw11b-driver:local",
+      "driverImageId": "sha256:c6cd510e5d06d8ada4ae408743b2cde0b9a87c6dfb6d6b9e88a3f9fbabf1725f",
+      "matchingImage": "rhw11b-matching:local",
+      "matchingImageId": "sha256:e0513b5b65c11e6ce181f091e30cafee224bdca054cd861e331fe6bbbd0788c3",
+      "rel01": {
+        "tripId": "a04ff11f-7e1e-4906-b3dd-5083c1e48b09",
+        "driverId": "8a4a1c26-af7d-4a49-bada-12f1ef20cda8",
+        "nextDriverId": "f447c49c-5681-4999-8795-2dad895892fe",
+        "reservationId": "c32d06bc-2de4-4a7f-a05e-cec79c9688ca",
+        "driverVersion": 3,
+        "httpStatusAfterTimeout": "200",
+        "result": "PASS"
+      },
+      "rel02": {
+        "tripId": "7528f4cb-26cc-4396-bb4a-6ebe7b877b1c",
+        "driverId": "65efa16f-fd65-45e2-8867-21f06154f9c4",
+        "nextDriverId": "f0996e4f-9127-4a4d-9c81-3c0bca93d1e1",
+        "reservationId": "d2282175-a788-4861-aef0-cf5b8f6cf049",
+        "driverVersion": 3,
+        "killedContainerId": "dfef36062b73bbfb8ec73b1d2cf172a128f5e9997a568b6c44d1f8ec5fd270e0",
+        "killedPid": 64951,
+        "killedExitCode": 137,
+        "restartedContainerId": "228320cba6271b17ee1b39c6fc744a84a2263802cd8301e8c93f5a7bf2f91242",
+        "restartedPid": 65553,
+        "result": "PASS"
+      }
+    },
+    "snapshots": {
+      "rel01-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "8521bc42c72a437e0e1406b8ac3d48bb",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:02:53.035235+00:00"
+        },
+        {
+          "message_id": "7981ada9ced2e6afc740a382fd328b21",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:02:53.050694+00:00"
+        },
+        {
+          "message_id": "e03460655df1e94faa347a9bf492582c",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "c32d06bc-2de4-4a7f-a05e-cec79c9688ca",
+          "matching_round": "1",
+          "trip_id": "a04ff11f-7e1e-4906-b3dd-5083c1e48b09",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:02:54.075711+00:00"
+        }
+      ],
+      "rel01-final-attempts-matching-outbox.json": [],
+      "rel01-final-attempts-round.json": [
+        {
+          "trip_id": "a04ff11f-7e1e-4906-b3dd-5083c1e48b09",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "8a4a1c26-af7d-4a49-bada-12f1ef20cda8",
+          "selected_reservation_id": "c32d06bc-2de4-4a7f-a05e-cec79c9688ca",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T02:03:02.196489+00:00"
+        }
+      ],
+      "rel01-final-attempts.json": [
+        {
+          "trip_id": "a04ff11f-7e1e-4906-b3dd-5083c1e48b09",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "8a4a1c26-af7d-4a49-bada-12f1ef20cda8",
+          "reservation_id": "c32d06bc-2de4-4a7f-a05e-cec79c9688ca",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T02:03:02.192428+00:00"
+        }
+      ],
+      "rel01-final-drivers.json": [
+        {
+          "driver_id": "8a4a1c26-af7d-4a49-bada-12f1ef20cda8",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "a04ff11f-7e1e-4906-b3dd-5083c1e48b09",
+          "reservation_id": "c32d06bc-2de4-4a7f-a05e-cec79c9688ca",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T02:02:53.743663+00:00"
+        },
+        {
+          "driver_id": "f447c49c-5681-4999-8795-2dad895892fe",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T02:02:51.027876+00:00"
+        }
+      ],
+      "rel02-final-attempts-driver-outbox.json": [
+        {
+          "message_id": "f9d0e47818ff048ef7f09c798b880cd4",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:03:08.125754+00:00"
+        },
+        {
+          "message_id": "d1bce24199731e5d0ba207f314a78ace",
+          "message_type": "DriverAvailableV1",
+          "status": "PUBLISHED",
+          "reservation_id": null,
+          "matching_round": null,
+          "trip_id": null,
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:03:09.139122+00:00"
+        },
+        {
+          "message_id": "284934f3b8671416715f8f81188809a6",
+          "message_type": "DriverReservedV1",
+          "status": "PUBLISHED",
+          "reservation_id": "d2282175-a788-4861-aef0-cf5b8f6cf049",
+          "matching_round": "1",
+          "trip_id": "7528f4cb-26cc-4396-bb4a-6ebe7b877b1c",
+          "attempt_count": 0,
+          "published_at": "2026-10-30T02:03:13.1573+00:00"
+        }
+      ],
+      "rel02-final-attempts-matching-outbox.json": [],
+      "rel02-final-attempts-round.json": [
+        {
+          "trip_id": "7528f4cb-26cc-4396-bb4a-6ebe7b877b1c",
+          "matching_round": 1,
+          "status": "RESERVED",
+          "selected_driver_id": "65efa16f-fd65-45e2-8867-21f06154f9c4",
+          "selected_reservation_id": "d2282175-a788-4861-aef0-cf5b8f6cf049",
+          "result_message_id": null,
+          "updated_at": "2026-10-30T02:03:28.470631+00:00"
+        }
+      ],
+      "rel02-final-attempts.json": [
+        {
+          "trip_id": "7528f4cb-26cc-4396-bb4a-6ebe7b877b1c",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "65efa16f-fd65-45e2-8867-21f06154f9c4",
+          "reservation_id": "d2282175-a788-4861-aef0-cf5b8f6cf049",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "max_dispatched_version": 2,
+          "updated_at": "2026-10-30T02:03:28.466969+00:00"
+        }
+      ],
+      "rel02-final-drivers.json": [
+        {
+          "driver_id": "65efa16f-fd65-45e2-8867-21f06154f9c4",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "7528f4cb-26cc-4396-bb4a-6ebe7b877b1c",
+          "reservation_id": "d2282175-a788-4861-aef0-cf5b8f6cf049",
+          "reserved_round": 1,
+          "updated_at": "2026-10-30T02:03:12.640201+00:00"
+        },
+        {
+          "driver_id": "f0996e4f-9127-4a4d-9c81-3c0bca93d1e1",
+          "status": "AVAILABLE",
+          "version": 2,
+          "reserved_trip_id": null,
+          "reservation_id": null,
+          "reserved_round": null,
+          "updated_at": "2026-10-30T02:03:08.234761+00:00"
+        }
+      ]
+    }
+  }
+]
