@@ -35,7 +35,8 @@ public static class PlatformBootstrap
                     "Microsoft.AspNetCore.Server.Kestrel",
                     "RideHailing.Messaging",
                     "RideHailing.Payment",
-                    "RideHailing.Notification");
+                    "RideHailing.Notification",
+                    "RideHailing.Trip");
                 if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
                     m.AddOtlpExporter();
             });
