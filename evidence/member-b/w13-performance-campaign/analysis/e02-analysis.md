@@ -5,7 +5,8 @@ Acceptance: **NO**
 Runs: 1 · reportGrade: False · G4 green: False
 
 ## Reasons
-- 1 run(s) are BLOCKED; blocked runs never provide performance evidence
+- 1 run(s) have no achieved workload data
+- 1 run(s) did not complete with PASS: ['BLOCKED']
 
 ## Groups
 No measured groups.

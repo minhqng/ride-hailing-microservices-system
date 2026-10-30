@@ -5,8 +5,8 @@
   "acceptance": false,
   "note": "Functional harness smoke only. This is not a report-grade benchmark and must never be used as performance acceptance.",
   "source": {
-    "commit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
-    "tree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+    "commit": "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a",
+    "tree": "4033938a500e6373e59f3d346a0bc0481a5e2744",
     "dirty": false
   },
   "g4": {
@@ -15,7 +15,7 @@
     "blockers": 15
   },
   "E01": {
-    "runId": "W13-E01-20261030T031444Z-051520e9",
+    "runId": "W13-E01-20261030T034725Z-05155ab6",
     "status": "PASS",
     "points": [
       {
@@ -25,9 +25,9 @@
         "systemErrorCount": 0,
         "unexpectedCount": 0,
         "sampleCount": 1,
-        "p50Ms": 7.696899934671819,
-        "p95Ms": 7.696899934671819,
-        "wallMs": 19.89210001192987,
+        "p50Ms": 6.2689000042155385,
+        "p95Ms": 6.2689000042155385,
+        "wallMs": 7.430900004692376,
         "barrierSpreadMs": 0.0,
         "aud01": "PASS"
       },
@@ -38,10 +38,10 @@
         "systemErrorCount": 0,
         "unexpectedCount": 0,
         "sampleCount": 2,
-        "p50Ms": 8.390899980440736,
-        "p95Ms": 16.390700009651482,
-        "wallMs": 17.459499998949468,
-        "barrierSpreadMs": 0.0906,
+        "p50Ms": 8.631000062450767,
+        "p95Ms": 15.529499971307814,
+        "wallMs": 16.836500028148293,
+        "barrierSpreadMs": 0.0851,
         "aud01": "PASS"
       },
       {
@@ -51,17 +51,17 @@
         "systemErrorCount": 0,
         "unexpectedCount": 0,
         "sampleCount": 10,
-        "p50Ms": 16.961000044830143,
-        "p95Ms": 23.60970003064722,
-        "wallMs": 43.80039998795837,
-        "barrierSpreadMs": 0.8877,
+        "p50Ms": 13.514899997971952,
+        "p95Ms": 19.23410000745207,
+        "wallMs": 22.59159996174276,
+        "barrierSpreadMs": 0.7346,
         "aud01": "PASS"
       }
     ],
     "totalSamples": 13
   },
   "E02": {
-    "runId": "W13-E02-20261030T031621Z-05167996",
+    "runId": "W13-E02-20261030T034905Z-0516017e",
     "status": "BLOCKED",
     "reason": "AUTH_TOKEN_UNAVAILABLE",
     "configured": {
@@ -82,7 +82,7 @@
       "gatewayProbe": {
         "reachable": true,
         "status": 404,
-        "elapsedMs": 90.95019998494536,
+        "elapsedMs": 98.73869991861284,
         "bodySnippet": "",
         "unauthenticatedMutationRejected": false,
         "unauthenticatedMutationAccepted": false
@@ -90,7 +90,7 @@
       "tripDirectProbe": {
         "reachable": true,
         "status": 401,
-        "elapsedMs": 28.002799954265356,
+        "elapsedMs": 35.876099951565266,
         "bodySnippet": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.2\",\"title\":\"Authentication required.\",\"status\":401,\"code\":\"UNAUTHORIZED\"}",
         "unauthenticatedMutationRejected": true,
         "unauthenticatedMutationAccepted": false
@@ -99,8 +99,8 @@
   },
   "E03": {
     "runIds": [
-      "W13-E03-20261030T031627Z-0518a3ac",
-      "W13-E03-20261030T031738Z-0519bb47"
+      "W13-E03-20261030T034911Z-0518e62f",
+      "W13-E03-20261030T035023Z-051918bd"
     ],
     "statuses": [
       "PASS",
@@ -113,13 +113,16 @@
         "configuredRatePerSecond": 5.0,
         "roundsCreated": 25,
         "uniqueMessages": 25,
-        "achievedSendRatePerSecond": 5.186937862960608,
-        "p50IntakeLatencyMs": 20.355,
-        "p95IntakeLatencyMs": 46.828,
-        "queuePeakMessages": 0,
+        "achievedSendRatePerSecond": 4.976511364059575,
+        "p50IntakeLatencyMs": 19.456999999999997,
+        "p95IntakeLatencyMs": 39.538,
+        "queuePeakMessages": 1,
         "redeliveryDelta": 0,
         "perReplicaConsumedLines": [
           40
+        ],
+        "perReplicaMeasuredConsumed": [
+          25
         ],
         "attemptCount": "0",
         "assertions": {
@@ -133,6 +136,8 @@
           "noDuplicateInputIds": true,
           "queueDrained": true,
           "allReplicasConsumedWork": true,
+          "measuredDistributionTotalMatches": true,
+          "zeroMissingLatencySamples": true,
           "duplicateIntakeSuppressed": true,
           "workerIsolation": true
         }
@@ -143,14 +148,18 @@
         "configuredRatePerSecond": 5.0,
         "roundsCreated": 25,
         "uniqueMessages": 25,
-        "achievedSendRatePerSecond": 5.181646987696378,
-        "p50IntakeLatencyMs": 22.273,
-        "p95IntakeLatencyMs": 26.549,
+        "achievedSendRatePerSecond": 4.975880711949845,
+        "p50IntakeLatencyMs": 22.783,
+        "p95IntakeLatencyMs": 40.876999999999995,
         "queuePeakMessages": 0,
         "redeliveryDelta": 0,
         "perReplicaConsumedLines": [
           20,
           20
+        ],
+        "perReplicaMeasuredConsumed": [
+          12,
+          13
         ],
         "attemptCount": "0",
         "assertions": {
@@ -164,6 +173,8 @@
           "noDuplicateInputIds": true,
           "queueDrained": true,
           "allReplicasConsumedWork": true,
+          "measuredDistributionTotalMatches": true,
+          "zeroMissingLatencySamples": true,
           "duplicateIntakeSuppressed": true,
           "workerIsolation": true
         }
@@ -177,7 +188,7 @@
     "campaign": "NOT_ACCEPTED"
   },
   "auditor": {
-    "run": "18/18 PASS on the same clean source",
+    "run": "18/18 audit tests PASS on the same clean source; see auditor/regression.txt",
     "positiveScenarios": {
       "PASS": 31,
       "FAIL": 0,
