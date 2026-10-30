@@ -15,7 +15,8 @@ overall G4 green.
 | Branch | `feature/B-W12-matching-recovery` |
 | Historical W11 PR | #44 at `3ba3724e7e7df378e8c234af685c027ad9d26863` (untouched) |
 | Historical W12 PR | #45 at `4aea3f5` (base for this repair) |
-| Final repair head/tree | PENDING (bound after the final commit) |
+| Final repair head | `b4cf93c2e318b32fd191bd8ef9dae8030ec3335d` |
+| Final repair tree | `109f8c7aee39259d68f309236706436c2e420e05` |
 
 ## 1. Canonical ledger reconstructed before editing
 
@@ -198,7 +199,7 @@ Additional regression proofs retained:
 | Production proof classes | 13/13 PASS |
 | Driver unit | 131/131 PASS |
 | Driver integration | 113/113 PASS |
-| B12 auditor | 18/18 PASS |
+| B12 auditor (final source) | 18/18 PASS — see `auditor-final.md` |
 | Platform integration | 60/60 PASS |
 | Payment integration / unit | 28/28, 28/28 PASS |
 | Trip integration / unit | 162/162, 299/299 PASS |
@@ -208,7 +209,37 @@ Additional regression proofs retained:
 | Compose config | PASS (`docker compose config --quiet`) |
 | Secret/hygiene scan | PASS, no findings in the changed/new surface |
 | Migration from empty + 005/006 upgrade | PASS (Matching migration/integration tests) |
-| W11 critical campaign, five consecutive passes | PENDING — rerun on the final commit |
+| W11 critical campaign, five consecutive passes | **5/5 PASS** on `b4cf93c`, clean source status — see `w11-five-pass/` |
+
+### W11 five-pass campaign (final source)
+
+Run `five-pass-20261029t125402z` on commit `b4cf93c` with an empty
+`sourceStatus`. All seven required scenarios passed in all five consecutive
+passes:
+
+```text
+REL-01  LostReserveResponse/container        5/5 PASS
+REL-02  MatchingSIGKILL/container            5/5 PASS
+CON-02  both schedules                       5/5 PASS
+CON-04  direct + real broker                 5/5 PASS
+REL-12  handler + real broker                5/5 PASS
+REL-13  handler + real broker                5/5 PASS
+REL-14  real partition + recovery            5/5 PASS
+```
+
+Machine-readable matrix: `w11-five-pass/five-pass-summary.json`; per-pass
+scenario/test/result/identities: `w11-five-pass/scenarios.tsv`. The campaign's
+REL-02 remains the existing harness-triggered container proof; the new
+`Restart_Recovers_Acked_Work_Without_Any_Manual_Trigger` proof covers the
+production worker path independently. No old five-pass evidence was reused for
+the new production behavior.
+
+### Final auditor regression
+
+The B12 auditor was rerun on `b4cf93c` (clean tree) and all 18 audit tests
+passed. Positive scenarios: 31 PASS, 0 FAIL, 17 NOT RUN (A/C-owned), 0 BLOCKED.
+Negative controls detected exactly as designed (11 expected FAIL, 4 expected
+BLOCKED). This is not an overall G4 green claim; see `auditor-final.md`.
 
 Exact commands:
 
@@ -219,7 +250,15 @@ dotnet test tests/Integration/RideHailing.MatchingService.IntegrationTests -c Re
 bash scripts/fault/b-w11-full-campaign.sh
 ```
 
-## 7. Remaining B-owned findings
+## 7. Verdict and remaining gates
+
+**`B PRODUCTION MATCHING RECOVERY AND STAGES GREEN — SHARED G4 GATES TRACKED`**
+
+B-owned B-REC-01 and DSI-021 are closed on the W12 repair layer with
+production-path proofs. Overall G4 is not green: SEC-AUTH-01..04 and the A/C
+acceptance gates remain independent.
+
+## 8. Remaining B-owned findings
 
 - `POST /internal/matching/rounds` remains an unauthenticated internal demo
   seam. It cannot initiate production work (`auto_execute` stays false), but it
@@ -232,7 +271,7 @@ bash scripts/fault/b-w11-full-campaign.sh
 - Legacy rows with a NULL dispatch fence stay UNKNOWN on AVAILABLE/incompatible
   outcomes (existing W7 conservative rule).
 
-## 8. A/C/lead dependencies
+## 9. A/C/lead dependencies
 
 - `SEC-AUTH-01..04` remain open until approved shared principal/service-identity
   contracts exist. This repair does not add fake JWT validation, trust unsigned
@@ -244,7 +283,7 @@ bash scripts/fault/b-w11-full-campaign.sh
 - Overall G4 remains blocked by shared security and A/C acceptance; B-owned
   recovery/stage technical readiness is green on this layer.
 
-## 9. Evidence hygiene
+## 10. Evidence hygiene
 
 Only this curated README is added for the repair. Raw process logs and
 container logs remain gitignored. The historical W12 audit README is not
