@@ -41,6 +41,33 @@ def synthetic_resource_shape(manifest: dict) -> None:
         for name in names]
 
 
+class ProvenanceTests(unittest.TestCase):
+    def test_uri_userinfo_is_redacted_before_source_evidence(self) -> None:
+        self.assertEqual("https://<redacted>@github.com/team/repo.git",
+            lib._redact_string("https://account:private-token@github.com/team/repo.git"))
+        self.assertEqual("amqp://<redacted>@localhost/vhost",
+            lib._redact_string("amqp://username:password@localhost/vhost"))
+
+    def test_g4_green_requires_every_check_and_verified_source(self) -> None:
+        # A valid certificate must be able to turn green; any failed check still blocks.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "g4.json"
+            evidence = {"schemaVersion": 1, "sourceCommit": "a" * 40,
+                        "verdict": "GREEN", "blockers": [], "checks": {
+                key: "PASS" for key in ("bOwnedCorrectness", "securityBaseline",
+                    "aCorrectnessAcceptance", "cCorrectnessAcceptance", "authoritativeAuditor",
+                    "productionApiSurface", "brokerSurface", "stableEnvironment")}}
+            lib.write_json(path, evidence)
+            import subprocess
+            with patch.object(lib, "EVIDENCE_ROOT", root), patch.object(lib, "run",
+                    return_value=subprocess.CompletedProcess([], 0, "a" * 40, "")):
+                self.assertTrue(lib.g4_readiness(path)["green"])
+                evidence["checks"]["securityBaseline"] = "FAIL"
+                lib.write_json(path, evidence)
+                self.assertFalse(lib.g4_readiness(path)["green"])
+
+
 class PercentileTests(unittest.TestCase):
     def test_nearest_rank(self) -> None:
         values = [float(value) for value in range(1, 11)]
