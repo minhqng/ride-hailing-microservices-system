@@ -93,8 +93,10 @@ public sealed class MatchingAttemptRepository
     /// ACKs. A crash after ACK therefore leaves work that the autonomous
     /// worker can discover and execute; no in-memory queue is involved.
     /// Duplicate deliveries converge; the first pickup identity wins (never
-    /// overwritten by a replay), while a late production intake may upgrade a
-    /// locally created row so the work is not silently ignored.
+    /// overwritten by a replay). A row created by the demo/test seam is never
+    /// adopted: its caller-selected pickup/candidates are not production
+    /// authority, so the intake rejects it without mutating or executing it
+    /// (L3 origin provenance).
     /// </summary>
     public async Task<MatchingRoundRow> EnsureProductionRoundAsync(
         Guid tripId, int round, string inputMessageId,
@@ -158,15 +160,49 @@ public sealed class MatchingAttemptRepository
 
         if (inserted == 0)
         {
+            // L3 origin gate: only a round created by canonical production
+            // intake may be upgraded and executed. A demo/test round
+            // (auto_execute = FALSE) may carry caller-selected pickup and
+            // candidate identities; adopting it would make the production
+            // worker execute non-canonical state. The row is locked while the
+            // origin is read so a concurrent demo create cannot slip between
+            // the PK conflict and this decision. Rejection is a permanent
+            // input conflict (poison classification: no hot loop), and it
+            // mutates nothing — no pickup overwrite, no cancel apply, no work.
+            const string Origin = """
+                SELECT auto_execute FROM matching_rounds
+                WHERE trip_id = @trip AND matching_round = @round
+                FOR UPDATE;
+                """;
+            bool productionOrigin;
+            await using (var origin = new NpgsqlCommand(Origin, conn, tx))
+            {
+                origin.Parameters.AddWithValue("trip", tripId);
+                origin.Parameters.AddWithValue("round", round);
+                var value = await origin.ExecuteScalarAsync(ct);
+                if (value is not bool flag)
+                {
+                    throw new InvalidOperationException(
+                        $"MATCHING_ROUND_ORIGIN_UNKNOWN: round {tripId:D}/{round} disappeared during production intake.");
+                }
+
+                productionOrigin = flag;
+            }
+
+            if (!productionOrigin)
+            {
+                throw new InvalidOperationException(
+                    $"MATCHING_ROUND_ORIGIN_CONFLICT: round {tripId:D}/{round} was created by the demo/test seam and cannot be adopted by production intake.");
+            }
+
             const string Upgrade = """
                 UPDATE matching_rounds
                 SET pickup_longitude = COALESCE(pickup_longitude, @lon),
                     pickup_latitude = COALESCE(pickup_latitude, @lat),
-                    auto_execute = TRUE,
                     cancel_requested = cancel_requested OR @cancel,
                     updated_at = now()
                 WHERE trip_id = @trip AND matching_round = @round
-                  AND status = 'PROCESSING';
+                  AND status = 'PROCESSING' AND auto_execute = TRUE;
                 """;
             await using var upgrade = new NpgsqlCommand(Upgrade, conn, tx);
             upgrade.Parameters.AddWithValue("trip", tripId);

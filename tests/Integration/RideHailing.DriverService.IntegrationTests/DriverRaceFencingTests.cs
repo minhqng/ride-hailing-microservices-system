@@ -347,4 +347,73 @@ public class DriverRaceFencingTests
         Assert.Equal(ReservationQueryOutcome.NotFound, query.Outcome);
         Assert.Null(query.Version);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Query_Reservation_HistoricalLifecycleIdentity_IsOwned(bool completed)
+    {
+        // L1: once the reservation was consumed by STARTED/COMPLETED the
+        // live row no longer carries reservation_id. The durable lifecycle
+        // effect is the exact identity that proves the reservation committed;
+        // ON_TRIP/AVAILABLE must never turn that into a non-commit report.
+        var repo = Repo();
+        var driverId = await SeedAvailableDriverAsync(repo);
+        var start = (await repo.LoadAsync(driverId))!;
+        var trip = Guid.NewGuid();
+        var reservation = Guid.NewGuid();
+        Assert.Equal(ReserveOutcome.Won,
+            (await repo.TryReserveAsync(driverId, trip, reservation, start.Version, matchingRound: 1)).Outcome);
+        Assert.Equal("Applied",
+            (await repo.TryMarkTripStartedAsync(driverId, trip, reservation)).Disposition);
+        if (completed)
+        {
+            Assert.Equal("Applied",
+                (await repo.TryMarkTripCompletedAsync(driverId, trip, reservation)).Disposition);
+            Assert.Equal(DriverStatus.Available, (await repo.LoadAsync(driverId))!.Status);
+        }
+        else
+        {
+            Assert.Equal(DriverStatus.OnTrip, (await repo.LoadAsync(driverId))!.Status);
+        }
+
+        var owned = await repo.QueryReservationAsync(driverId, reservation);
+        Assert.Equal(ReservationQueryOutcome.OwnedByThisReservation, owned.Outcome);
+        Assert.NotNull(owned.Version);
+
+        // Ownership is exact: a different reservation is never claimed from
+        // the historical effect, and the current status alone decides.
+        var foreign = await repo.QueryReservationAsync(driverId, Guid.NewGuid());
+        Assert.Equal(
+            completed ? ReservationQueryOutcome.NotCommittedOrAvailable : ReservationQueryOutcome.OnTrip,
+            foreign.Outcome);
+    }
+
+    [Fact]
+    public async Task Query_Reservation_StartedIdentity_IsOwned_EvenAfterANewReservationExists()
+    {
+        // Exact stored identity beats current status: a later reservation on
+        // the same Driver must not hide the earlier committed identity.
+        var repo = Repo();
+        var driverId = await SeedAvailableDriverAsync(repo);
+        var start = (await repo.LoadAsync(driverId))!;
+        var trip = Guid.NewGuid();
+        var reservation = Guid.NewGuid();
+        Assert.Equal(ReserveOutcome.Won,
+            (await repo.TryReserveAsync(driverId, trip, reservation, start.Version, matchingRound: 1)).Outcome);
+        await repo.TryMarkTripStartedAsync(driverId, trip, reservation);
+        await repo.TryMarkTripCompletedAsync(driverId, trip, reservation);
+        var available = (await repo.LoadAsync(driverId))!;
+        var nextTrip = Guid.NewGuid();
+        var nextReservation = Guid.NewGuid();
+        Assert.Equal(ReserveOutcome.Won,
+            (await repo.TryReserveAsync(driverId, nextTrip, nextReservation, available.Version, matchingRound: 2)).Outcome);
+
+        var historical = await repo.QueryReservationAsync(driverId, reservation);
+        Assert.Equal(ReservationQueryOutcome.OwnedByThisReservation, historical.Outcome);
+        var current = await repo.QueryReservationAsync(driverId, nextReservation);
+        Assert.Equal(ReservationQueryOutcome.OwnedByThisReservation, current.Outcome);
+        var foreign = await repo.QueryReservationAsync(driverId, Guid.NewGuid());
+        Assert.Equal(ReservationQueryOutcome.ReservedByOther, foreign.Outcome);
+    }
 }

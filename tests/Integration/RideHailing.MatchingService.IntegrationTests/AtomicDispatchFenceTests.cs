@@ -1,16 +1,19 @@
-// W07 atomic dispatch-reconcile fence — two-worker race proof.
+// W07 atomic dispatch-reconcile fence, re-scoped for the W12 L1 rule: an
+// UNKNOWN attempt (or IN_FLIGHT with a durable dispatch fence) is NEVER
+// dispatched; it is reconciled against Driver authority first.
 //
-// Hypothesis under test: ReconcileAsync concludes UNKNOWN -> REJECTED from a
-// CACHED max_dispatched_version while TryTransitionAsync only checks attempt
-// state, and RecordDispatchAsync authorizes unconditionally (void). Two
-// workers on the SAME attempt row can therefore produce the forbidden
-// combination: conclusive REJECTED + an outstanding newly-authorized
-// ReserveDriver(R) that commits afterwards.
-//
-// Both tests use REAL PostgreSQL on both sides (matching_db attempt/round
-// rows, driver_db reservation truth). The stub IDriverClient only schedules
-// the HTTP boundary via deterministic gates; every commit/version oracle is
-// a real DriverRepository read. No sleeps.
+// The historical race (a cached negative conclusion racing a newly
+// authorized dispatch of the SAME ambiguous attempt) required replaying an
+// attempt that may already have committed. That replay is now structurally
+// prevented. These tests prove the replacement invariants with REAL
+// PostgreSQL on both sides (matching_db attempt/round rows, driver_db
+// reservation truth):
+//   1. concurrent workers on an UNKNOWN attempt issue zero version reads and
+//      zero reserve sends, and atomically converge on one conclusive result;
+//   2. a terminal attempt denies late execution before any Driver call, while
+//      the next candidate still advances normally.
+// The stub IDriverClient only schedules the HTTP boundary; every
+// commit/version oracle is a real DriverRepository read. No sleeps.
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
 using RideHailing.MatchingService.Application.Reserve;
@@ -162,153 +165,79 @@ public sealed class AtomicDispatchFenceTests
     }
 
     [Fact]
-    public async Task DispatchFence_Wins_StaleReconcileMustNotReject()
+    public async Task UnknownAttempt_IsNeverDispatched_ConcurrentWorkersConcludeOnce()
     {
-        // Order under test: B records fence V2 (authorized, pre-send pause),
-        // then A attempts a negative conclusion from its STALE cached fence
-        // V1 while observing the same AVAILABLE@V2.
-        //
-        // Safe outcome: A cannot conclude (V2 > V1 is stale proof, V2 > V2 is
-        // not); R1 stays unresolved; B's authorized dispatch commits; a
-        // follow-up reconcile converges R1 to RESERVED. Exactly one durable
-        // reservation for the trip (D1/R1); D2 untouched.
-        var (trip, d1, d2, r1, v1, v2) = await SetupStaleFenceAsync();
+        // Setup: R1 is UNKNOWN with a durable fence at V1, and the Driver has
+        // since advanced to AVAILABLE@V2. Two workers execute the SAME
+        // attempt concurrently. Neither may read a version or send a
+        // Reserve; both must converge on the single authoritative negative.
+        var (trip, d1, d2, _, v1, v2) = await SetupStaleFenceAsync();
         var driverRepo = _drivers.CreateRepository();
+        var versionReads = 0;
+        var reserveSends = 0;
+        var queries = 0;
 
-        var enteredA = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var gateA = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var enteredB = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var gateB = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var stubAQueryCalls = 0;
-
-        var stubA = new StubDriverClient
+        var stub = new StubDriverClient
         {
-            OnVersion = async (id, ct) =>
+            OnVersion = (_, _) =>
             {
-                var d = await driverRepo.LoadAsync(id, ct);
-                return d is null ? null : new DriverVersionRead(d.Version, d.Status.ToString().ToUpperInvariant());
+                Interlocked.Increment(ref versionReads);
+                return Task.FromResult<DriverVersionRead?>(new DriverVersionRead(v2, "AVAILABLE"));
             },
-            OnReserve = (_, _) => throw new InvalidOperationException("reconcile path must not dispatch"),
+            OnReserve = (_, _) =>
+            {
+                Interlocked.Increment(ref reserveSends);
+                throw new InvalidOperationException("an ambiguous attempt must never be dispatched");
+            },
             OnQuery = async (id, rid, ct) =>
             {
-                if (Interlocked.Increment(ref stubAQueryCalls) == 1)
-                {
-                    enteredA.SetResult();
-                    await gateA.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
-                }
-
+                Interlocked.Increment(ref queries);
                 return MapResult(await driverRepo.QueryReservationAsync(id, rid, ct));
             },
         };
-        var stubB = new StubDriverClient
+
+        using var barrier = new Barrier(2);
+        var runs = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
         {
-            OnVersion = async (id, ct) =>
-            {
-                var d = await driverRepo.LoadAsync(id, ct);
-                return d is null ? null : new DriverVersionRead(d.Version, d.Status.ToString().ToUpperInvariant());
-            },
-            OnReserve = async (req, ct) =>
-            {
-                enteredB.SetResult();
-                await gateB.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
-                return await RealReserveAsync(driverRepo, req, ct);
-            },
-            OnQuery = async (id, rid, ct) => MapResult(await driverRepo.QueryReservationAsync(id, rid, ct)),
-        };
+            barrier.SignalAndWait(TimeSpan.FromSeconds(30));
+            return await Orchestrator(stub).ExecuteAttemptAsync(trip, 1, 0, d1);
+        })));
 
-        // A loads R1 (cached max = V1) and parks inside the truth query.
-        var reconciling = Task.Run(() => Orchestrator(stubA).ReconcileAsync(trip, 1, 0));
-        await enteredA.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.All(runs, r =>
+        {
+            Assert.Equal(AttemptOutcome.Rejected, r.Outcome);
+            Assert.Equal("NOT_COMMITTED_OR_AVAILABLE", r.Code);
+        });
+        Assert.Equal(0, versionReads);
+        Assert.Equal(0, reserveSends);
+        Assert.True(queries >= 1);
 
-        // B resumes the same attempt: fresh version V2, records fence V2,
-        // then parks BEFORE sending ReserveDriver.
-        var dispatching = Task.Run(() => Orchestrator(stubB).ExecuteAttemptAsync(trip, 1, 0, d1));
-        await enteredB.Task.WaitAsync(TimeSpan.FromSeconds(30));
-        var fenced = await Attempts().LoadAttemptAsync(trip, 1, 0);
-        Assert.Equal(v2, fenced!.MaxDispatchedVersion);
+        var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
+        Assert.Equal(MatchingAttemptStates.Rejected, row.State);
+        Assert.Equal("NOT_COMMITTED_OR_AVAILABLE", row.LastErrorCode);
+        Assert.Equal(v1, row.MaxDispatchedVersion);
 
-        // A observes AVAILABLE@V2 but proves only V2 > V1(stale): must NOT conclude.
-        gateA.SetResult();
-        var aResult = await reconciling;
-        _out.WriteLine($"A reconcile outcome: {aResult.Outcome} ({aResult.Code})");
-        Assert.True(
-            aResult.Outcome is AttemptOutcome.Unknown or AttemptOutcome.NeedsReview,
-            $"stale fence V1={v1} must not conclusively reject against durable fence V2={v2}, got {aResult.Outcome}");
-
-        // B's authorized dispatch commits for real.
-        gateB.SetResult();
-        var bResult = await dispatching;
-        Assert.Equal(AttemptOutcome.Reserved, bResult.Outcome);
-        Assert.Equal(r1, bResult.ReservationId);
-
+        // No authoritative Driver effect anywhere: D1 is free at V2, D2 is
+        // untouched, and the stale fence proves R1 cannot commit later.
         var d1After = await driverRepo.LoadAsync(d1);
-        Assert.Equal(DriverStatus.Reserved, d1After!.Status);
-        Assert.Equal(r1, d1After.ReservationId);
-
-        // Follow-up reconcile converges the committed R1; nothing else exists.
-        var converged = await Orchestrator(new StubDriverClient
-        {
-            OnVersion = async (id, ct) =>
-            {
-                var d = await driverRepo.LoadAsync(id, ct);
-                return d is null ? null : new DriverVersionRead(d.Version, d.Status.ToString().ToUpperInvariant());
-            },
-            OnReserve = (req, ct) => RealReserveAsync(driverRepo, req, ct),
-            OnQuery = async (id, rid, ct) => MapResult(await driverRepo.QueryReservationAsync(id, rid, ct)),
-        }).ReconcileAsync(trip, 1, 0);
-        Assert.Equal(AttemptOutcome.Reserved, converged.Outcome);
-        Assert.Equal(r1, converged.ReservationId);
-
-        var attempts = await Attempts().LoadAttemptsAsync(trip, 1);
-        var row = Assert.Single(attempts);
-        Assert.Equal(MatchingAttemptStates.Reserved, row.State);
-        Assert.Equal(r1, row.ReservationId);
-
-        var finalD1 = await driverRepo.LoadAsync(d1);
-        Assert.Equal(DriverStatus.Reserved, finalD1!.Status);
-        Assert.Equal(r1, finalD1.ReservationId);
-        var finalD2 = await driverRepo.LoadAsync(d2);
-        Assert.Equal(DriverStatus.Available, finalD2!.Status);
-        Assert.Null(finalD2.ReservationId);
-        var round = await Attempts().LoadRoundAsync(trip, 1);
-        Assert.Equal(d1, round!.SelectedDriverId);
-        Assert.Equal(r1, round.SelectedReservationId);
+        Assert.Equal(DriverStatus.Available, d1After!.Status);
+        Assert.Equal(v2, d1After.Version);
+        Assert.Null(d1After.ReservationId);
+        var d2After = await driverRepo.LoadAsync(d2);
+        Assert.Equal(DriverStatus.Available, d2After!.Status);
+        Assert.Null(d2After.ReservationId);
     }
 
     [Fact]
-    public async Task NegativeConclusion_Wins_LateDispatchDeniedBeforeSend()
+    public async Task RejectedAttempt_LateExecutionDeniedBeforeAnyDriverCall_NextCandidateAdvances()
     {
-        // Mirror order: A conclusively rejects R1 first (no newer fence
-        // exists, AVAILABLE@V2 > V1 is valid proof), then a stale worker B
-        // that loaded R1 while UNKNOWN attempts RecordDispatch.
-        //
-        // Safe outcome: B is denied BEFORE any remote send (zero Reserve
-        // calls, no Driver effect); R1 stays properly terminal; the next
-        // candidate D2 may advance normally.
-        var (trip, d1, d2, r1, v1, v2) = await SetupStaleFenceAsync();
+        // R1 is terminally REJECTED by valid fenced proof. A late worker that
+        // resumes the same attempt must not read a version, query, or send;
+        // it reports the durable terminal. D2 then advances normally, so the
+        // repair does not conservatively block every legitimate rejection.
+        var (trip, d1, d2, r1, _, v2) = await SetupStaleFenceAsync();
         var driverRepo = _drivers.CreateRepository();
 
-        var enteredB = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var gateB = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var stubB = new StubDriverClient
-        {
-            OnVersion = async (id, ct) =>
-            {
-                enteredB.SetResult();
-                await gateB.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
-                var d = await driverRepo.LoadAsync(id, ct);
-                return d is null ? null : new DriverVersionRead(d.Version, d.Status.ToString().ToUpperInvariant());
-            },
-            OnReserve = (req, ct) => RealReserveAsync(driverRepo, req, ct),
-            OnQuery = async (id, rid, ct) => MapResult(await driverRepo.QueryReservationAsync(id, rid, ct)),
-        };
-
-        // B loads R1 while UNKNOWN and parks inside the version read.
-        var dispatching = Task.Run(() => Orchestrator(stubB).ExecuteAttemptAsync(trip, 1, 0, d1));
-        await enteredB.Task.WaitAsync(TimeSpan.FromSeconds(30));
-
-        // A conclusively rejects with valid proof (durable fence still V1).
         var live = new StubDriverClient
         {
             OnVersion = async (id, ct) =>
@@ -321,24 +250,38 @@ public sealed class AtomicDispatchFenceTests
         };
         var aResult = await Orchestrator(live).ReconcileAsync(trip, 1, 0);
         Assert.Equal(AttemptOutcome.Rejected, aResult.Outcome);
+        Assert.Equal(r1, aResult.ReservationId);
         var rejected = await Attempts().LoadAttemptAsync(trip, 1, 0);
         Assert.Equal(MatchingAttemptStates.Rejected, rejected!.State);
 
-        // B resumes: its dispatch authorization must fail before any send.
-        gateB.SetResult();
-        var bResult = await dispatching;
-        _out.WriteLine($"B resume outcome: {bResult.Outcome} ({bResult.Code}) sends={stubB.ReserveSends}");
-        Assert.Equal(0, stubB.ReserveSends);
+        var lateVersionReads = 0;
+        var lateSends = 0;
+        var late = new StubDriverClient
+        {
+            OnVersion = (_, _) =>
+            {
+                Interlocked.Increment(ref lateVersionReads);
+                throw new InvalidOperationException("terminal attempts must not read a version");
+            },
+            OnReserve = (_, _) =>
+            {
+                Interlocked.Increment(ref lateSends);
+                throw new InvalidOperationException("terminal attempts must not dispatch");
+            },
+            OnQuery = (_, _, _) => throw new InvalidOperationException("terminal attempts must not query"),
+        };
+        var bResult = await Orchestrator(late).ExecuteAttemptAsync(trip, 1, 0, d1);
         Assert.Equal(AttemptOutcome.Rejected, bResult.Outcome);
         Assert.Equal(r1, bResult.ReservationId);
+        Assert.Equal(0, lateVersionReads);
+        Assert.Equal(0, lateSends);
 
-        // No new Driver effect from the denied dispatch.
         var d1After = await driverRepo.LoadAsync(d1);
         Assert.Equal(DriverStatus.Available, d1After!.Status);
         Assert.Equal(v2, d1After.Version);
         Assert.Null(d1After.ReservationId);
 
-        // R1 stays properly terminal; D2 advances normally (single winner).
+        // R1 stays terminal; D2 advances normally (single winner).
         var d2Attempt = await Orchestrator(live).ExecuteAttemptAsync(trip, 1, 1, d2);
         Assert.Equal(AttemptOutcome.Reserved, d2Attempt.Outcome);
         var finalD2 = await driverRepo.LoadAsync(d2);

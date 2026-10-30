@@ -87,7 +87,18 @@ public sealed class MatchingMetrics
             new KeyValuePair<string, object?>("outcome", outcome),
             new KeyValuePair<string, object?>("replay", replay));
 
-    public void AttemptCreated() => _attemptCreated.Add(1);
+    /// <summary>
+    /// Counts committed NEW logical attempt identities. Call only after the
+    /// storage commit; replays and healed rows that reuse a frozen identity
+    /// are never counted.
+    /// </summary>
+    public void AttemptCreated(long count = 1)
+    {
+        if (count > 0)
+        {
+            _attemptCreated.Add(count);
+        }
+    }
 
     public void Unknown(string reason) =>
         _unknown.Add(1, new KeyValuePair<string, object?>("reason", reason));

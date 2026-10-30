@@ -115,11 +115,12 @@ public class DriverClientMappingTests
     }
 
     [Fact]
-    public async Task Reserve_404_Maps_NotFound()
+    public async Task Reserve_Structured404_Maps_NotFound()
     {
         var stub = new StubHandler
         {
-            Responder = _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            Responder = _ => JsonResponse(
+                HttpStatusCode.NotFound, new { code = "DRIVER_NOT_FOUND" }),
         };
         var client = Client(stub, out _);
 
@@ -127,6 +128,28 @@ public class DriverClientMappingTests
 
         Assert.Equal(DriverReserveOutcomeKind.Rejected, result.Kind);
         Assert.Equal("DRIVER_NOT_FOUND", result.Code);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("<html>proxy route not found</html>")]
+    [InlineData("{\"code\":\"SOMETHING_ELSE\"}")]
+    public async Task Reserve_Bare404_Throws_Never_Conclusive(string body)
+    {
+        // A 404 without the Driver-domain body may be a proxy/route failure;
+        // treating it as DRIVER_NOT_FOUND would advance to the next candidate
+        // while the original reservation may already be committed.
+        var stub = new StubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+            },
+        };
+        var client = Client(stub, out _);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2)));
     }
 
     [Fact]
@@ -270,15 +293,38 @@ public class DriverClientMappingTests
     }
 
     [Fact]
-    public async Task VersionRead_404_Maps_Null()
+    public async Task VersionRead_Structured404_Maps_Null()
     {
         var stub = new StubHandler
         {
-            Responder = _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            Responder = _ => JsonResponse(
+                HttpStatusCode.NotFound, new { code = "DRIVER_NOT_FOUND" }),
         };
         var client = Client(stub, out _);
 
         Assert.Null(await client.TryGetDriverVersionAsync(Guid.NewGuid()));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("<html>proxy route not found</html>")]
+    [InlineData("{\"code\":\"SOMETHING_ELSE\"}")]
+    public async Task VersionRead_Bare404_Throws_Never_Conclusive(string body)
+    {
+        // L2: the version read precedes dispatch. A provenance-free 404 must
+        // stay transport uncertainty; only a structured Driver-domain 404 may
+        // conclude "driver does not exist".
+        var stub = new StubHandler
+        {
+            Responder = _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "text/plain"),
+            },
+        };
+        var client = Client(stub, out _);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.TryGetDriverVersionAsync(Guid.NewGuid()));
     }
 
     [Fact]
