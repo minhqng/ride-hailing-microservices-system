@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source-bound E04 recovery run",
+  "type": "object",
+  "required": ["schemaVersion", "experiment", "runId", "group", "repeat", "plannedRepeats", "mode", "synthetic", "source", "sourceAfter", "g4", "status", "configuration", "environment", "fingerprint", "interruption", "steadyElapsed", "artifacts", "auditor", "duplicateReceipt", "driverBefore"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "experiment": {"const": "E04"},
+    "runId": {"type": "string", "pattern": "^W14-E04-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$"},
+    "group": {"type": "string", "minLength": 1},
+    "repeat": {"type": "integer", "minimum": 1},
+    "plannedRepeats": {"type": "integer", "minimum": 1},
+    "mode": {"enum": ["smoke", "report"]},
+    "synthetic": {"type": "boolean"},
+    "status": {"enum": ["PASS", "FAIL", "INCOMPLETE"]},
+    "source": {"$ref": "#/$defs/source"},
+    "sourceAfter": {"$ref": "#/$defs/source"},
+    "configuration": {"type": "object", "required": ["rate", "outageSeconds", "baselineSeconds", "recoveryTimeout", "seed", "consumerCount", "prefetch", "dataset", "outage", "reset"]},
+    "environment": {"type": "object"},
+    "fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "g4": {"type": "object", "required": ["green", "verdict", "blockers"]},
+    "artifacts": {"type": "object", "required": ["samples", "receipts", "final-state"], "additionalProperties": {"$ref": "#/$defs/artifact"}},
+    "interruption": {"type": "object", "required": ["start", "end", "startUtc", "endUtc"]},
+    "steadyElapsed": {"type": "number", "exclusiveMinimum": 0},
+    "auditor": {"type": "object", "required": ["sourceCommit", "sourceTree", "checks"]},
+    "duplicateReceipt": {"type": "object", "required": ["messageId", "confirmed"]},
+    "driverBefore": {"type": "array"}
+  },
+  "$defs": {
+    "source": {"type": "object", "required": ["commit", "tree", "dirty", "statusDigest"], "properties": {"commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "tree": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "dirty": {"type": "boolean"}, "statusDigest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}},
+    "artifact": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}
+  }
+}
