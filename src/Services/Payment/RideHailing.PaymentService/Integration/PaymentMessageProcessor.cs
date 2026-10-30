@@ -3,11 +3,13 @@ using Npgsql;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Dedup;
 using RideHailing.Messaging.Outbox;
+using RideHailing.Messaging.Observability;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Messaging.Topology;
 using RideHailing.PaymentService.Application.Payment;
 using RideHailing.PaymentService.Domain;
 using RideHailing.PaymentService.Infrastructure;
+using RideHailing.PaymentService.Observability;
 
 namespace RideHailing.PaymentService.Integration.Payment;
 
@@ -32,6 +34,7 @@ public sealed class PaymentMessageProcessor(
 
     public async Task ProcessAsync(MessageEnvelope<JsonElement> envelope, CancellationToken token)
     {
+        var metricStarted = PaymentMetrics.Start();
         try
         {
             envelope.Validate();
@@ -71,7 +74,12 @@ public sealed class PaymentMessageProcessor(
             logger.LogInformation(
                 "Payment command {MessageType} {MessageId} key {OperationKey} completed as {State}; applied={Applied}.",
                 envelope.MessageType, envelope.MessageId, command.OperationKey,
-                executionResult.Operation.State, executionResult.Applied);
+                executionResult.Operation.State, executionResult.MessageApplied);
+            // This path owns the caller transaction instead of using
+            // ProcessedMessageStore.ExecuteOnceAsync, so emit the durable
+            // post-commit dedup outcome here.
+            MessagingMetrics.RecordDedup(duplicate: !executionResult.MessageApplied);
+            PaymentMetrics.Record(executionResult.Operation, executionResult.IdempotencyHit, metricStarted);
         }
         catch (PaymentConflictException)
         {

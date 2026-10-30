@@ -1,0 +1,19 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {"type":"timeseries","title":"Queue ready","id":1,"gridPos":{"h":8,"w":12,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (queue) (rabbitmq_detailed_queue_messages_ready)","legendFormat":"{{queue}}","refId":"A"}]},
+    {"type":"timeseries","title":"Queue unacked","id":2,"gridPos":{"h":8,"w":12,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (queue) (rabbitmq_detailed_queue_messages_unacked)","legendFormat":"{{queue}}","refId":"A"}]},
+    {"type":"timeseries","title":"Redelivery rate","id":3,"gridPos":{"h":8,"w":8,"x":0,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (queue) (rate(rabbitmq_detailed_queue_messages_redelivered_total[1m]))","legendFormat":"{{queue}}","refId":"A"}]},
+    {"type":"timeseries","title":"Retry and DLQ transfer rate","id":4,"gridPos":{"h":8,"w":8,"x":8,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (reason) (rate({__name__=~\"consumer_retry(_messages)?_total\"}[1m]))","legendFormat":"retry {{reason}}","refId":"A"},{"expr":"sum by (kind) (rate({__name__=~\"consumer_deadletter(_messages)?_total\"}[1m]))","legendFormat":"DLQ {{kind}}","refId":"B"}]},
+    {"type":"timeseries","title":"Dead-letter queue depth","id":5,"gridPos":{"h":8,"w":8,"x":16,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (queue) (rabbitmq_detailed_queue_messages_ready{queue=~\".*\\.dead|ride\\.quarantine\\.q\"})","legendFormat":"{{queue}}","refId":"A"}]}
+  ],
+  "schemaVersion": 41,
+  "tags": ["member-c","rabbitmq"],
+  "templating": {"list": []},
+  "time": {"from":"now-1h","to":"now"},
+  "title": "RabbitMQ Delivery Reliability",
+  "uid": "ride-rabbitmq",
+  "version": 1
+}
