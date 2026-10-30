@@ -1,0 +1,17 @@
+{
+  "preparedAt": "2026-10-30T00:00:00+07:00",
+  "branch": "feature/C-W15-freeze-report",
+  "implementation": {
+    "w12ObservabilitySecurity": "implemented; live dashboard export pending",
+    "w13PerformanceSupport": "implemented; measured runs pending",
+    "w14ReconnectQuorum": "implemented and compose-validated; live failover evidence pending",
+    "w15ReportEvidence": "implemented and deterministic checks validated",
+    "w16ReleaseRehearsal": "pending next stacked branch"
+  },
+  "environment": {
+    "composeConfigValidatedViaWsl": true,
+    "liveHaClaims": false
+  },
+  "report": "docs/member-c-reliability-report.md",
+  "secretGate": "scripts/security/scan-secrets.py"
+}

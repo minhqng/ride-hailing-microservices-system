@@ -1,0 +1,19 @@
+# Release-safe overrides. Combine with compose.yaml; never rely on the local
+# Development default when producing a release/demo claim.
+services:
+  gateway:
+    environment: { ASPNETCORE_ENVIRONMENT: Production }
+  identity:
+    environment: { ASPNETCORE_ENVIRONMENT: Production }
+  driver:
+    environment: { ASPNETCORE_ENVIRONMENT: Production }
+  trip:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TripDatabase__AutoMigrate: "false"
+  matching:
+    environment: { ASPNETCORE_ENVIRONMENT: Production }
+  payment:
+    environment: { ASPNETCORE_ENVIRONMENT: Production }
+  notification:
+    environment: { DOTNET_ENVIRONMENT: Production }
