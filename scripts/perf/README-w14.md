@@ -112,8 +112,11 @@ ACK counters, persisted intake, terminal work, pending work, and committed/
 published Matching Outbox counts. Durable counts use one PostgreSQL statement
 snapshot. Outage resource collection runs concurrently so Docker statistics
 latency cannot prolong the controlled interruption. Actual T runs from
-observed consumer removal to restoration request; restoration/startup delay
-is reported separately through recovery observations. Analysis rejects
+the disposable Matching process kill request to restoration request. Kill
+completion and observed consumer removal are recorded separately; command
+and broker observation latency bound fault timing precision. Consumer removal
+must fit inside the requested fault budget. Restoration/startup delay is
+reported separately through recovery observations. Analysis rejects
 an actual T differing from configured T by more than 1 second or 10%, whichever
 is greater, and requires the configured minimum healthy baseline interval.
 Outstanding logical work is confirmed
