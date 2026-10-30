@@ -1,3 +1,5 @@
+> Historical verification: the current reservation-safety repair and final-source evidence supersede this bundle's readiness assessment. See [reservation-reconciliation safety](../w12-reconciliation-safety/README.md). Earlier measurements retain their original source binding.
+
 # B-W12 Phase 2 — Formal regression, authoritative audit, G4 and handoff
 
 > Historical audit state at the W12 head. The B-owned `B-REC-01` and `DSI-021`
