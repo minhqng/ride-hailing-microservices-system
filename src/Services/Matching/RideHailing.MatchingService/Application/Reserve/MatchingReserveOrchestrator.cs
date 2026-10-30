@@ -402,6 +402,20 @@ public sealed class MatchingReserveOrchestrator
         }
 
         var row = ensured.Row;
+        if (!ensured.Inserted
+            && (row.State == MatchingAttemptStates.Unknown
+                || (row.State == MatchingAttemptStates.InFlight
+                    && row.MaxDispatchedVersion.HasValue)))
+        {
+            // L1 recovery gate: an UNKNOWN attempt, or an IN_FLIGHT attempt
+            // whose durable dispatch fence was written BEFORE the remote call,
+            // may already have crossed the remote-effect boundary (committed
+            // and possibly started/completed). Reconcile the exact identity
+            // before any replay; a blind replay of a consumed reservation
+            // surfaces STALE_RESERVATION and could be misread as rejection.
+            return await ReconcileCoreAsync(tripId, round, ordinal, allowReserve: true, ct);
+        }
+
         if (row.State == MatchingAttemptStates.Ready)
         {
             // Doc 02 §12.4: the exact reservation intent must be durable as
@@ -534,22 +548,63 @@ public sealed class MatchingReserveOrchestrator
         {
             if (allowReserve)
             {
-                // Possibly dispatched but crashed before recording the outcome
-                // (IN_FLIGHT is write-ahead identity, not proof of never-called).
-                // Resume with the SAME reservation identity; same-R replay on the
-                // Driver is idempotent, never a new logical attempt (DSI-018).
-                return await CallReserveAsync(tripId, round, ordinal, row, ct);
-            }
+                var possiblyDispatched = row.State == MatchingAttemptStates.InFlight
+                    && row.MaxDispatchedVersion.HasValue;
+                if (!possiblyDispatched)
+                {
+                    // READY was never offered to the transport; an IN_FLIGHT
+                    // row without a fence cannot have been sent either (the
+                    // fence commits before the remote call). Same-R replay is
+                    // the canonical idempotent resume here (DSI-005/018).
+                    return await CallReserveAsync(tripId, round, ordinal, row, ct);
+                }
 
-            if (row.State == MatchingAttemptStates.Ready)
-            {
-                // No remote effect was possible before a dispatch fence.
-                return new AttemptResult(
-                    AttemptOutcome.Unknown, row.ReservationId, "READY_NOT_DISPATCHED");
-            }
+                // L1: the reservation may already have committed. Reconcile
+                // the SAME reservation identity before any replay. The
+                // write-ahead intent becomes the durable ambiguous state so
+                // the authoritative query loop below owns the decision.
+                if (await _attempts.TryTransitionAsync(
+                        tripId, round, ordinal,
+                        [MatchingAttemptStates.InFlight], MatchingAttemptStates.Unknown,
+                        "RECOVERY_RECONCILE", ct))
+                {
+                    row = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct) ?? row;
+                }
+                else
+                {
+                    // A concurrent worker/fence already moved the row. Report
+                    // durable truth; never dispatch a second reserve.
+                    var concurrent = await _attempts.LoadAttemptAsync(tripId, round, ordinal, ct);
+                    var mapped = await MapDurableTerminalAsync(tripId, round, concurrent, ct);
+                    if (mapped is not null)
+                    {
+                        return mapped;
+                    }
 
-            if (row.State == MatchingAttemptStates.InFlight)
+                    if (concurrent is null)
+                    {
+                        return new AttemptResult(
+                            AttemptOutcome.Unknown, Guid.Empty, "ATTEMPT_VANISHED");
+                    }
+
+                    if (concurrent.State == MatchingAttemptStates.InFlight)
+                    {
+                        return new AttemptResult(
+                            AttemptOutcome.Unknown, concurrent.ReservationId, "RECOVERY_IN_PROGRESS");
+                    }
+
+                    row = concurrent;
+                }
+            }
+            else
             {
+                if (row.State == MatchingAttemptStates.Ready)
+                {
+                    // No remote effect was possible before a dispatch fence.
+                    return new AttemptResult(
+                        AttemptOutcome.Unknown, row.ReservationId, "READY_NOT_DISPATCHED");
+                }
+
                 // Cancellation: no new remote dispatch is allowed. Convert the
                 // write-ahead intent into the durable unresolved state so the
                 // existing query-only fencing can resolve it.
@@ -844,6 +899,23 @@ public sealed class MatchingReserveOrchestrator
 
             if (!string.Equals(call.Code, "STALE_VERSION", StringComparison.Ordinal))
             {
+                if (string.Equals(call.Code, "STALE_RESERVATION", StringComparison.Ordinal))
+                {
+                    // L1: the Driver history guard refuses an identity that
+                    // already produced a STARTED/COMPLETED lifecycle effect.
+                    // That proves the reservation may have committed; it is
+                    // never a universal no-effect rejection. Persist the
+                    // ambiguity so the next recovery pass reconciles the
+                    // exact identity (OWNED_BY_THIS_RESERVATION for the same R).
+                    var identity = await TryConcludeAsync(
+                        tripId, round, ordinal,
+                        [MatchingAttemptStates.InFlight, MatchingAttemptStates.Unknown, MatchingAttemptStates.Ready],
+                        MatchingAttemptStates.Unknown, "RESERVE_STALE_IDENTITY", ct);
+                    return identity
+                        ?? new AttemptResult(
+                            AttemptOutcome.Unknown, row.ReservationId, "RESERVE_STALE_IDENTITY");
+                }
+
                 if (alreadyAmbiguous
                     && string.Equals(call.Code, "DRIVER_NOT_FOUND", StringComparison.Ordinal))
                 {

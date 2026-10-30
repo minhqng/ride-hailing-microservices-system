@@ -543,11 +543,13 @@ public class ReserveWorkflowTests
         Assert.Equal(RoundOutcome.BlockedOnUnknown, blocked.Outcome);
         var persistedR = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).ReservationId;
 
-        // Round-level resume converges the same way: the guard sees the
-        // unresolved attempt and blocks without new effects.
+        // Round-level resume reconciles the same unresolved identity (never a
+        // replay and never D2). The stub's query is inconclusive at the
+        // recorded fence, so the bounded reconciliation becomes visible
+        // review with the SAME reservation and one row.
         var second = Orchestrator(stub);
         var roundResume = await second.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
-        Assert.Equal(RoundOutcome.BlockedOnUnknown, roundResume.Outcome);
+        Assert.Equal(RoundOutcome.NeedsReview, roundResume.Outcome);
         Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
 
         var resumed = await second.ReconcileAsync(trip, 1, 0);
@@ -700,8 +702,12 @@ public class ReserveWorkflowTests
         phase = 1;
         var callsBefore = stub.Calls.Count;
         var second = await Orchestrator(stub).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
-        Assert.Equal(RoundOutcome.BlockedOnUnknown, second.Outcome);
-        Assert.Equal("PRIOR_AMBIGUITY", second.Code);
+        // Re-executing an UNKNOWN attempt reconciles the SAME reservation
+        // instead of replaying it. The stub's version is unchanged from the
+        // dispatched fence, so the bounded reconciliation is visible review,
+        // never a conclusive rejection and never D2.
+        Assert.Equal(RoundOutcome.NeedsReview, second.Outcome);
+        Assert.Equal("RECONCILE_EXHAUSTED", second.Code);
 
         var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
         Assert.Equal(MatchingAttemptStates.Unknown, row.State);
@@ -738,11 +744,14 @@ public class ReserveWorkflowTests
         };
         var result = await Orchestrator(restarted).ExecuteRoundAsync(trip, 1, [d1, d2], Guid.NewGuid().ToString("D"));
 
-        Assert.Equal(RoundOutcome.BlockedOnUnknown, result.Outcome);
+        // Reconciliation of the durable ambiguity is bounded and visible; it
+        // never replays, never rejects, and never touches D2.
+        Assert.Equal(RoundOutcome.NeedsReview, result.Outcome);
         var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
         Assert.Equal(MatchingAttemptStates.Unknown, row.State);
         Assert.Equal(persistedR, row.ReservationId);
         Assert.DoesNotContain(restarted.Calls, c => c.Contains(d2.ToString("N"), StringComparison.Ordinal));
+        Assert.DoesNotContain(restarted.Calls, c => c.StartsWith("reserve:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -978,8 +987,12 @@ public class ReserveWorkflowTests
         await using (var conn = new Npgsql.NpgsqlConnection(_matching.ConnectionString))
         {
             await conn.OpenAsync();
+            // No durable dispatch fence: simulate a fresh write-ahead row so
+            // this race still exercises the Reserve-win path (recovery of a
+            // dispatched/UNKNOWN attempt now reconciles before replay).
             await using var reset = new Npgsql.NpgsqlCommand(
-                "UPDATE matching_attempts SET state = 'IN_FLIGHT', last_error_code = NULL " +
+                "UPDATE matching_attempts SET state = 'IN_FLIGHT', last_error_code = NULL, " +
+                "max_dispatched_version = NULL " +
                 "WHERE trip_id = @trip AND matching_round = 1 AND ordinal = 0", conn);
             reset.Parameters.AddWithValue("trip", trip);
             await reset.ExecuteNonQueryAsync();

@@ -176,6 +176,9 @@ public sealed class MatchingWorkRepository
 
         if (stageEntries.Count > 0)
         {
+            // Frozen stage replay: only TRULY missing rows are healed. Healed
+            // rows reuse a frozen identity, so they are not new logical
+            // attempts and must not inflate matching.attempt.created_total.
             await EnsureAttemptsForEntriesAsync(conn, tx, tripId, round, stage, stageEntries, ct);
             await MarkStageEvaluatedAsync(conn, tx, tripId, round, stage, ct);
             await tx.CommitAsync(ct);
@@ -240,6 +243,12 @@ public sealed class MatchingWorkRepository
         }
 
         await tx.CommitAsync(ct);
+
+        // L4: the initial stage snapshot mints NEW durable attempt identities;
+        // count them only after the commit, never on a failed/rolled-back
+        // insert and never on the frozen-stage replay/heal path above.
+        _metrics?.AttemptCreated(created.Count);
+
         return new StageEnsureResult(
             StageEnsureOutcome.Ready,
             created.Select(e => new StageCandidate(
@@ -569,7 +578,6 @@ public sealed class MatchingWorkRepository
             }
 
             await InsertReadyAttemptsAsync(conn, tx, tripId, round, [entry], ct);
-            _metrics?.AttemptCreated();
         }
     }
 

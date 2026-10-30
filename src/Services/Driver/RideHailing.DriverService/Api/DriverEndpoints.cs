@@ -54,7 +54,11 @@ public static class DriverEndpoints
         app.MapGet("/drivers/{id:guid}", async (Guid id, DriverRepository repo) =>
         {
             var driver = await repo.LoadAsync(id);
-            return driver is null ? Results.NotFound() : Results.Ok(ToDto(driver));
+            // L2: structured absence. Matching's version read may conclude
+            // "no such driver" only from this body, never from a bare 404.
+            return driver is null
+                ? Results.NotFound(new { code = DriverErrors.DriverNotFound, message = "Driver not found." })
+                : Results.Ok(ToDto(driver));
         });
 
         // B-W07-04 Race-B closure: version-fenced online/offline. The blind
