@@ -43,18 +43,14 @@ var rabbitHost = builder.Configuration["RabbitMq:Host"];
 ConnectionFactory? connectionFactory = null;
 if (!string.IsNullOrWhiteSpace(rabbitHost))
 {
-    connectionFactory = new ConnectionFactory
-    {
-        HostName = rabbitHost,
-        Port = builder.Configuration.GetValue("RabbitMq:Port", AmqpTcpEndpoint.UseDefaultPort),
-        UserName = builder.Configuration["RabbitMq:Username"] ?? "ride_app",
-        Password = builder.Configuration["RabbitMq:Password"] ?? "ride_dev_pw",
-        ClientProvidedName = "payment-service",
-        // The host owns explicit consumer/publisher recovery. Automatic client recovery
-        // cannot durably buffer publishes and would compete with this lifecycle.
-        AutomaticRecoveryEnabled = false,
-        TopologyRecoveryEnabled = false,
-    };
+    connectionFactory = RabbitConnectionFactory.Create(
+        builder.Configuration["RabbitMq:Hosts"] ?? rabbitHost,
+        builder.Configuration.GetValue("RabbitMq:Port", 5672),
+        builder.Configuration["RabbitMq:Username"]
+            ?? throw new InvalidOperationException("RabbitMq:Username is required when RabbitMQ is enabled."),
+        builder.Configuration["RabbitMq:Password"]
+            ?? throw new InvalidOperationException("RabbitMq:Password is required when RabbitMQ is enabled."),
+        "payment-service");
     builder.Services.AddSingleton(connectionFactory);
     builder.Services.AddSingleton<ConfirmedPublisher>();
     using var bootstrapTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
