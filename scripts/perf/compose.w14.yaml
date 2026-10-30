@@ -1,0 +1,6 @@
+# Layered on the unchanged W13 resource freeze. No development volumes/ports.
+name: ride-hailing-w14
+services:
+  matching:
+    environment:
+      Matching__Worker__Enabled: "true"
