@@ -1,17 +1,29 @@
 {
   "preparedAt": "2026-10-28T00:00:00+07:00",
-  "branch": "feature/C-W10-W11-payment-fault-platform",
+  "updatedAt": "2026-10-30T12:18:33Z",
+  "branch": "fix/integration-a-w16-c-w16",
+  "codeCommit": {
+    "sha": "6aa5ed54c0f52cb71a15f07d72b17a6d1d409eb5",
+    "message": "fix: close reliability evidence gaps"
+  },
   "implementation": {
     "w12ObservabilitySecurity": "implemented; live dashboard and auth fixture rerun pending",
     "w13PerformanceSupport": "implemented; measured runs pending",
-    "w14ReconnectQuorum": "harness implemented; live Docker evidence pending",
+    "w14ReconnectQuorum": "harness implemented with fresh-connection, queue-drain and 2-of-3/3-of-3 quorum assertions; live Docker evidence pending",
     "w15ReportEvidence": "implemented",
-    "w16ReleaseRehearsal": "deterministic gate implemented; live rehearsal pending"
+    "w16ReleaseRehearsal": "fail-closed release overlay and deterministic gate implemented; CI validates positive and secretless renders; live rehearsal pending"
+  },
+  "validation": {
+    "releaseBuild": "PASS, 0 warnings, 0 errors",
+    "deterministicReleaseGate": "PASS (scripts/evidence/release-check.ps1)",
+    "dockerComposeRender": "not run on this host; CI validates the positive and fail-closed renders",
+    "liveHaEvidence": "not run; live REL-15/REL-16 output remains pending"
   },
   "environment": {
     "dockerCli": "unavailable",
     "liveClaims": false
   },
+  "anchorNote": "codeCommit is the product revision verified by the deterministic gate; later commits in this bundle may only update evidence metadata.",
   "report": "docs/member-c-reliability-report.md",
   "releaseGate": "scripts/evidence/release-check.ps1"
 }
