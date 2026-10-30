@@ -66,7 +66,9 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
       - run: python3 scripts/security/init-local-auth.py
+      - run: docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
       - run: docker compose -f compose.yaml -f deploy/compose/compose.ha.yaml --profile ha config --quiet
+      - run: python3 scripts/security/scan-secrets.py
   platform-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
