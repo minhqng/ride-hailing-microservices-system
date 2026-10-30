@@ -17,6 +17,8 @@ Acceptance sequence:
 ```powershell
 ./scripts/evidence/member-a-recovery-check.ps1 -MetricsOnly
 # With Docker exposed to the shell, omit -MetricsOnly to run the auditor lane.
+# Defaults require outbox_pending=0, oldest age <=60 s and failed-visible=0;
+# override explicitly for a different measured baseline.
 ```
 
 Allowed claim: **Trip Outbox/Saga recovered under the recorded broker
