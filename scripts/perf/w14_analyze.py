@@ -257,6 +257,7 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
         "predictedDrainSeconds": backlog / (mu - recovery_incoming) if mu > recovery_incoming else None,
         "observedSteadySeconds": steady - end,
         "firstSuccessfulProcessingSeconds": first["elapsed"] - end,
+        "consumerReconnectSeconds": next((s["elapsed"] - end for s in recovery if s["consumers"] > 0), None),
         "brokerZeroSeconds": broker_zero,
         "applicationTerminalSeconds": samples[-1]["elapsed"] - end,
         "redeliverDelta": samples[-1]["redeliver"] - samples[0]["redeliver"],
@@ -264,7 +265,7 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
         "confirmLatencyMs": {"n": len(latency), "p50": lib.percentile_nearest_rank(latency, 50),
                              "p95": lib.percentile_nearest_rank(latency, 95)},
         "auditor": checks,
-        "limitations": ["Empty Driver dataset proves real NO_DRIVER terminal work, not the full Trip/Saga path.",
+        "limitations": ["No available Driver: real NO_DRIVER terminal work, not the full Trip/Saga path.",
             "Queue counters are broker management samples; completion timing has polling resolution.",
             "Interval μ varies; the formula is an approximation including sampled startup/reconnect effects.",
             "Manual duplicate replay is distinct from broker redelivery; REL-15 tests prove the latter."]}

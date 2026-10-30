@@ -179,7 +179,7 @@ def run_one(args, repeat: int, group: str) -> Path:
             "baselineSeconds": args.baseline, "recoveryTimeout": args.timeout,
             "seed": args.seed, "consumerCount": 1, "prefetch": 16,
             "dataset": "one OFFLINE Driver and healthy empty Redis; real NO_DRIVER outcomes",
-            "outage": "compose stop matching; producer and broker remain running",
+            "outage": "compose kill -s SIGKILL matching; producer and broker remain running",
             "reset": "fresh W14 project volumes per repeat"}}
     lib.write_json(run_dir / "manifest.json", manifest)
     publisher = None
@@ -252,10 +252,14 @@ def run_one(args, repeat: int, group: str) -> Path:
         manifest["beforeInterruption"] = sample(started, "baseline")
         samples.append(manifest["beforeInterruption"])
         manifest["stopRequestedAtUtc"] = lib.iso()
-        lib.compose("stop", "-t", "10", "matching", check=True)
-        wait_for(lambda: queue()["consumers"] == 0, "consumer removal")
         phase["value"] = "outage"
         manifest["interruption"] = {"startUtc": lib.iso(), "start": time.monotonic() - started}
+        # Include the actual fault action in T; a graceful shutdown wait must
+        # not accumulate unmeasured backlog before the interruption clock.
+        lib.compose("kill", "-s", "SIGKILL", "matching", check=True)
+        manifest["killCommandCompletedAtUtc"] = lib.iso()
+        wait_for(lambda: queue()["consumers"] == 0, "consumer removal", timeout=args.outage)
+        manifest["consumerRemovedAtUtc"] = lib.iso()
         def capture_outage_resources():
             try:
                 manifest["resourcesDuring"] = [r for r in lib.container_stats()
@@ -264,7 +268,10 @@ def run_one(args, repeat: int, group: str) -> Path:
                 manifest["resourceCaptureError"] = type(error).__name__
         resource_thread = threading.Thread(target=capture_outage_resources, name="outage-resources")
         resource_thread.start()
-        observe_until(args.outage)
+        remaining = args.outage - (time.monotonic() - started - manifest["interruption"]["start"])
+        if remaining <= 0:
+            raise lib.HarnessError("consumer removal exceeded the requested interruption budget")
+        observe_until(remaining)
         manifest["interruption"].update(endUtc=lib.iso(), end=time.monotonic() - started)
         phase["value"] = "recovery"
         manifest["restoreRequestedAtUtc"] = lib.iso()
