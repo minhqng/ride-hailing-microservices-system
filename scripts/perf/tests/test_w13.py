@@ -5,6 +5,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 PERF_DIR = Path(__file__).resolve().parents[1]
@@ -30,6 +31,25 @@ def materialize(name: str, target: Path, **manifest_overrides) -> tuple[dict, Pa
 
 
 class PercentileTests(unittest.TestCase):
+    def test_g4_green_requires_every_check_and_verified_source(self) -> None:
+        # A valid certificate must be able to turn green; any failed check still blocks.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "g4.json"
+            evidence = {"schemaVersion": 1, "sourceCommit": "a" * 40,
+                        "verdict": "GREEN", "blockers": [], "checks": {
+                key: "PASS" for key in ("bOwnedCorrectness", "securityBaseline",
+                    "aCorrectnessAcceptance", "cCorrectnessAcceptance", "authoritativeAuditor",
+                    "productionApiSurface", "brokerSurface", "stableEnvironment")}}
+            lib.write_json(path, evidence)
+            import subprocess
+            with patch.object(lib, "EVIDENCE_ROOT", root), patch.object(lib, "run",
+                    return_value=subprocess.CompletedProcess([], 0, "a" * 40, "")):
+                self.assertTrue(lib.g4_readiness(path)["green"])
+                evidence["checks"]["securityBaseline"] = "FAIL"
+                lib.write_json(path, evidence)
+                self.assertFalse(lib.g4_readiness(path)["green"])
+
     def test_nearest_rank(self) -> None:
         values = [float(value) for value in range(1, 11)]
         self.assertEqual(lib.percentile_nearest_rank(values, 50), 5.0)

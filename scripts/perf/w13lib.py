@@ -709,8 +709,7 @@ def g4_readiness(path: Path | None = None) -> dict[str, Any]:
 
     blockers = list(evidence.get("blockers") or [])
     result["blockers"].extend(blockers)
-    if evidence.get("verdict") != "GREEN":
-        result["verdict"] = str(evidence.get("verdict") or "RED")
+    result["verdict"] = str(evidence.get("verdict") or "RED")
     if result["verdict"] == "GREEN" and not result["blockers"]:
         result["green"] = True
     return result
