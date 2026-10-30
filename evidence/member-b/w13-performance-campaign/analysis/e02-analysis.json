@@ -5,11 +5,45 @@
   "mixedReportGrade": false,
   "manifestErrors": [],
   "g4Green": false,
+  "liveG4": {
+    "green": false,
+    "verdict": "RED",
+    "evidencePath": "D:\\rh-w13b\\evidence\\member-b\\w13-performance-campaign\\g4\\g4-readiness.json",
+    "blockers": [
+      "G4 check securityBaseline is FAIL",
+      "G4 check aCorrectnessAcceptance is FAIL",
+      "G4 check cCorrectnessAcceptance is FAIL",
+      "G4 check authoritativeAuditor is NOT_RUN",
+      "G4 check productionApiSurface is FAIL",
+      "SEC-AUTH-01 CRITICAL OPEN: unauthenticated Driver mutations and Outbox creation are reproducible over real HTTP.",
+      "SEC-AUTH-02 HIGH OPEN: actor-ID spoofing is unchecked; route {id} is the only actor.",
+      "SEC-AUTH-03 HIGH OPEN: internal reserve/reconcile routes are reachable without service identity.",
+      "SEC-AUTH-04 MEDIUM OPEN: no object-level authorization binds a principal to a Driver/reservation.",
+      "SYSTEM_AUTH_PENDING: Identity service and Gateway are skeletons; no token issuance, validation, routing or authenticated integration fixture exists.",
+      "A-owned correctness acceptance is not green: A-W12 G4 matrix says G4 NOT YET GREEN; PR #43 is unmerged.",
+      "C-owned correctness acceptance is not green: C-W10/W11 PR #41 is open/unmerged; shared REL-11 DLQ lane remains pending.",
+      "Team invariant auditor is not green: B-owned AUD-01/02/04/06/07/08 PASS, but AUD-03 (A) and AUD-05 (C) are NOT RUN and no team-level PASS exists.",
+      "A/C peer reruns and human sign-off are absent.",
+      "PR #45 has zero CI check runs on its stacked base; zero checks is not green."
+    ],
+    "checks": {
+      "bOwnedCorrectness": "PASS",
+      "securityBaseline": "FAIL",
+      "aCorrectnessAcceptance": "FAIL",
+      "cCorrectnessAcceptance": "FAIL",
+      "authoritativeAuditor": "NOT_RUN",
+      "productionApiSurface": "FAIL",
+      "brokerSurface": "PASS",
+      "stableEnvironment": "PASS"
+    },
+    "checkedAtUtc": "2026-10-30T03:52:25.570934Z"
+  },
+  "manifestG4Mismatch": false,
   "sourceCommits": [
-    "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58"
+    "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a"
   ],
   "environmentFingerprints": [
-    "6964868e17cb3f3ab154a84bc1931797753fd6fbc7de307a2ec20214cb995b88"
+    "a65d37596409973597daa8a99bbb654da8cdd8fc90835bf047ba15414448fe94"
   ],
   "auditor": {
     "statuses": [
@@ -19,7 +53,8 @@
   },
   "synthetic": false,
   "reasons": [
-    "1 run(s) are BLOCKED; blocked runs never provide performance evidence"
+    "1 run(s) have no achieved workload data",
+    "1 run(s) did not complete with PASS: ['BLOCKED']"
   ],
   "missingCanonicalRates": [
     10,
@@ -30,5 +65,5 @@
   "groups": [],
   "verdict": "BLOCKED",
   "acceptance": false,
-  "generatedAtUtc": "2026-10-30T03:24:38.027513Z"
+  "generatedAtUtc": "2026-10-30T03:52:25.622936Z"
 }

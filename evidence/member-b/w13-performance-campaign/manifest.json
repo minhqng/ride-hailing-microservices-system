@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "scenario": "W13-PERF-HARNESS",
-  "runId": "W13-PERF-20261030T031900Z-smoke",
-  "commit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
-  "tree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+  "runId": "W13-PERF-20261030T040000Z-smoke",
+  "commit": "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a",
+  "tree": "4033938a500e6373e59f3d346a0bc0481a5e2744",
   "branch": "feature/B-W13-performance-campaign",
   "profile": "perf-harness-smoke",
-  "startedAtUtc": "2026-10-30T03:15:24.258289Z",
-  "finishedAtUtc": "2026-10-30T03:18:28.890022Z",
+  "startedAtUtc": "2026-10-30T03:48:08.274366Z",
+  "finishedAtUtc": "2026-10-30T03:51:14.778600Z",
   "environment": {
     "host": {
       "platform": "Windows-11-10.0.26200-SP0",
@@ -115,7 +115,6 @@
     },
     "tooling": {
       "dotnet": "10.0.403",
-      "dotnetPath": "C:\\Users\\admin\\.dotnet\\dotnet.exe",
       "python": "3.15.2",
       "k6Installed": null,
       "k6Image": {
@@ -136,7 +135,7 @@
     },
     "broker": {
       "version": "4.3.6",
-      "cluster": "rabbit@89965110c772",
+      "cluster": "rabbit@473f0e661979",
       "queueTotals": {},
       "objectTotals": {
         "channels": 0,
@@ -184,22 +183,22 @@
     "E01": {
       "verdict": "SMOKE_PASS",
       "runs": [
-        "W13-E01-20261030T031444Z-051520e9"
+        "W13-E01-20261030T034725Z-05155ab6"
       ],
       "samples": 13
     },
     "E02": {
       "verdict": "BLOCKED",
       "runs": [
-        "W13-E02-20261030T031621Z-05167996"
+        "W13-E02-20261030T034905Z-0516017e"
       ],
       "reason": "AUTH_TOKEN_UNAVAILABLE"
     },
     "E03": {
       "verdict": "SMOKE_PASS",
       "runs": [
-        "W13-E03-20261030T031627Z-0518a3ac",
-        "W13-E03-20261030T031738Z-0519bb47"
+        "W13-E03-20261030T034911Z-0518e62f",
+        "W13-E03-20261030T035023Z-051918bd"
       ],
       "samples": 50
     }
@@ -211,7 +210,7 @@
     "campaign": "NOT_ACCEPTED"
   },
   "auditor": {
-    "run": "18/18 PASS on the same clean source",
+    "run": "18/18 audit tests PASS on the same clean source; see auditor/regression.txt",
     "positiveScenarios": {
       "PASS": 31,
       "FAIL": 0,
@@ -249,6 +248,7 @@
     "auditor/auditor-results.json",
     "auditor/auditor-results.md",
     "auditor/negative-controls.md",
+    "auditor/regression.txt",
     "reproduce.sh",
     "hashes.txt"
   ]

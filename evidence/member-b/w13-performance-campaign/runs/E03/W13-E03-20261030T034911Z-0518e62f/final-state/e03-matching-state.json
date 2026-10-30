@@ -6,151 +6,151 @@
       "input_message_id": "af2f9b36-33fd-5702-9cfa-e211a8fc40f4",
       "trip_id": "81a01819-dbad-5188-9585-e4ca97408aae",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:24.486118+00"
+      "created_at": "2026-10-30 03:50:08.083244+00"
     },
     {
       "input_message_id": "3b197a2e-9e43-5edb-aa04-2359b364625b",
       "trip_id": "e8a26730-a6ee-5f64-a3fb-80ccb0b01494",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:24.686352+00"
+      "created_at": "2026-10-30 03:50:08.278795+00"
     },
     {
       "input_message_id": "b537047d-1e38-510e-b63a-a6d39824fc16",
       "trip_id": "55dd28d9-3195-58fb-9395-482e2b33928d",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:24.890537+00"
+      "created_at": "2026-10-30 03:50:08.469369+00"
     },
     {
       "input_message_id": "15629ffb-f006-5d0f-ae42-ea88fa11b4c8",
       "trip_id": "9ece2b07-9c78-509c-ae96-4060f3b4388b",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:25.113879+00"
+      "created_at": "2026-10-30 03:50:08.691688+00"
     },
     {
       "input_message_id": "9bfb3520-7b34-5639-925d-c2b40dce4db1",
       "trip_id": "21a57148-0f7e-5028-944b-61f98595f3c1",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:25.308722+00"
+      "created_at": "2026-10-30 03:50:08.869557+00"
     },
     {
       "input_message_id": "543ea60e-ca7e-54ac-b582-0d672b45e742",
       "trip_id": "f0405906-d99d-5d6f-a5bc-497acfa44012",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:25.500093+00"
+      "created_at": "2026-10-30 03:50:09.069029+00"
     },
     {
       "input_message_id": "a09f8af2-2cc5-5a78-b1d5-4638d97bd1e5",
       "trip_id": "664de4f8-596f-5269-bbcc-17f2524aec63",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:25.68633+00"
+      "created_at": "2026-10-30 03:50:09.268995+00"
     },
     {
       "input_message_id": "83b5e3fe-b612-5643-970b-c76e4be5fc69",
       "trip_id": "3d2db472-73a9-57d7-99ad-125e856145bd",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:25.914914+00"
+      "created_at": "2026-10-30 03:50:09.486936+00"
     },
     {
       "input_message_id": "8605cd9c-1dac-56ba-a358-09bc9236da5a",
       "trip_id": "81e3cccd-5f55-5716-8b51-54c76526d0bd",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:26.094269+00"
+      "created_at": "2026-10-30 03:50:09.676697+00"
     },
     {
       "input_message_id": "5197b66e-7fa0-5b29-8413-5ff19a1f7ad3",
       "trip_id": "b53fc8a8-3a3a-5419-bc34-599c1611aabf",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:26.286711+00"
+      "created_at": "2026-10-30 03:50:09.870555+00"
     },
     {
       "input_message_id": "1daf4029-5159-5468-a40e-597f174aaaeb",
       "trip_id": "d5467684-b2fd-53b4-b742-7d1af696ecb2",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:26.487316+00"
+      "created_at": "2026-10-30 03:50:10.089817+00"
     },
     {
       "input_message_id": "9c1326b8-7a5b-5457-8590-f7b42d04cfde",
       "trip_id": "c2b934dd-3827-5d5f-b485-63e77a89f4ac",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:26.687337+00"
+      "created_at": "2026-10-30 03:50:10.268681+00"
     },
     {
       "input_message_id": "a3f98588-e330-54da-b14c-ba0b546e4961",
       "trip_id": "8eadbccb-8cac-53ad-a0c4-3ab91a80381e",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:26.890823+00"
+      "created_at": "2026-10-30 03:50:10.468555+00"
     },
     {
       "input_message_id": "2f4fd5a3-b07a-5ac3-9ea9-d74ad99dfb8f",
       "trip_id": "304dcbd4-d586-5111-a9c0-8c4f9b281abc",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:27.086826+00"
+      "created_at": "2026-10-30 03:50:10.669613+00"
     },
     {
       "input_message_id": "02e1f68a-f2aa-5916-8305-cf152930c870",
       "trip_id": "e0507bd3-9b1a-5dbc-b420-d6783ebe726b",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:27.286818+00"
+      "created_at": "2026-10-30 03:50:10.868295+00"
     },
     {
       "input_message_id": "5c7f27bf-655c-5051-a035-890085a5f694",
       "trip_id": "d11934c4-3193-5c10-8ca0-f3a7dd5fd778",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:27.487339+00"
+      "created_at": "2026-10-30 03:50:11.072683+00"
     },
     {
       "input_message_id": "c70a0ffa-9da9-5329-92f2-97f15cdfddd6",
       "trip_id": "a1768ed1-03b7-5fd0-8c09-8c4ba1fabcc7",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:27.686922+00"
+      "created_at": "2026-10-30 03:50:11.269257+00"
     },
     {
       "input_message_id": "6e97bac1-927c-563b-b29a-1aab2532cc22",
       "trip_id": "34824adc-92fb-5bdb-a3a3-aa0c9a330a93",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:27.890668+00"
+      "created_at": "2026-10-30 03:50:11.469349+00"
     },
     {
       "input_message_id": "9d5f2deb-e1d3-5897-b26e-89485f4ecc39",
       "trip_id": "2ba88389-6051-557d-a332-70c5258ec242",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:28.091236+00"
+      "created_at": "2026-10-30 03:50:11.67485+00"
     },
     {
       "input_message_id": "efcd9ff5-53bc-57d8-b3e8-6a9fd59f36b5",
       "trip_id": "7277ca39-035d-5280-bb07-a8ffbf7625ef",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:28.286358+00"
+      "created_at": "2026-10-30 03:50:11.870395+00"
     },
     {
       "input_message_id": "70c14c86-1300-5ff0-81a1-62775566e404",
       "trip_id": "1dff4fbf-6e6e-54a0-9dae-bd7546f160d3",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:28.488684+00"
+      "created_at": "2026-10-30 03:50:12.069996+00"
     },
     {
       "input_message_id": "1fb564a5-e453-5ad4-8dc0-45f7ecfbef79",
       "trip_id": "b27e052b-ebdb-5160-bc95-7a666895d7db",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:28.706077+00"
+      "created_at": "2026-10-30 03:50:12.269251+00"
     },
     {
       "input_message_id": "dfa5e968-0794-5ae5-b086-7e354f9d8139",
       "trip_id": "c1889357-d7f6-53fc-9502-dda9c2dc5530",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:28.892432+00"
+      "created_at": "2026-10-30 03:50:12.469596+00"
     },
     {
       "input_message_id": "11970fee-7ba8-5d56-a751-49d2b11e9c3f",
       "trip_id": "bb0f8edd-a733-532c-9d89-aab18c0b52d9",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:29.087821+00"
+      "created_at": "2026-10-30 03:50:12.66959+00"
     },
     {
       "input_message_id": "f9ad68b1-4eec-50ed-b5b3-631c219bd75f",
       "trip_id": "0527a999-95cb-5902-816e-a036a6f3e623",
       "status": "PROCESSING",
-      "created_at": "2026-10-30 03:17:29.286526+00"
+      "created_at": "2026-10-30 03:50:12.872321+00"
     }
   ],
   "state": {
@@ -167,9 +167,11 @@
   },
   "consumerCounts": [
     {
-      "containerId": "697915e8e6c16b022b68fe3b9033c2b98a1e71129089ab53d02a927cb4938651",
+      "containerId": "39876c4c674f32ce2903879dd860eaadeddcd0585a427255a67dedef4c13f10e",
       "name": "ride-hailing-w13-matching-1",
-      "consumedLines": 40
+      "consumedLines": 40,
+      "measuredConsumedLines": 25,
+      "warmupConsumedLines": 15
     }
   ],
   "queueAfter": {
@@ -177,18 +179,18 @@
       {
         "arguments": {},
         "channel_details": {
-          "connection_name": "172.19.0.5:34312 -> 172.19.0.4:5672",
-          "name": "172.19.0.5:34312 -> 172.19.0.4:5672 (1)",
-          "node": "rabbit@26c88426ddff",
+          "connection_name": "172.19.0.5:42514 -> 172.19.0.2:5672",
+          "name": "172.19.0.5:42514 -> 172.19.0.2:5672 (1)",
+          "node": "rabbit@9a65d7c1564c",
           "number": 1,
           "peer_host": "172.19.0.5",
-          "peer_port": 34312,
+          "peer_port": 42514,
           "user": "ride_app"
         },
         "ack_required": true,
         "active": true,
         "activity_status": "up",
-        "consumer_tag": "amq.ctag-0aY9ftUL99RniXxxg5qGdA",
+        "consumer_tag": "amq.ctag-NReCpKqOK_hHeBGUCA50fA",
         "consumer_timeout": 1800000,
         "exclusive": false,
         "prefetch_count": 16,
@@ -222,16 +224,16 @@
       "max_heap_size": 0,
       "min_bin_vheap_size": 2984878,
       "min_heap_size": 233,
-      "minor_gcs": 53
+      "minor_gcs": 79
     },
     "incoming": [],
     "internal": false,
     "internal_owner": false,
-    "leader": "rabbit@26c88426ddff",
+    "leader": "rabbit@9a65d7c1564c",
     "members": [
-      "rabbit@26c88426ddff"
+      "rabbit@9a65d7c1564c"
     ],
-    "memory": 55692,
+    "memory": 42660,
     "message_bytes": 0,
     "message_bytes_dlx": 0,
     "message_bytes_persistent": 0,
@@ -241,15 +243,15 @@
     "message_stats": {
       "ack": 40,
       "ack_details": {
-        "rate": 3.4
+        "rate": 3.6
       },
       "deliver": 40,
       "deliver_details": {
-        "rate": 3.4
+        "rate": 3.6
       },
       "deliver_get": 40,
       "deliver_get_details": {
-        "rate": 3.4
+        "rate": 3.6
       },
       "deliver_no_ack": 0,
       "deliver_no_ack_details": {
@@ -269,7 +271,7 @@
       },
       "publish": 40,
       "publish_details": {
-        "rate": 3.4
+        "rate": 3.6
       },
       "redeliver": 0,
       "redeliver_details": {
@@ -281,7 +283,7 @@
     "messages_by_priority": {},
     "messages_delayed": 0,
     "messages_details": {
-      "rate": 0.0
+      "rate": -0.2
     },
     "messages_dlx": 0,
     "messages_persistent": 0,
@@ -293,24 +295,24 @@
     "messages_ready_returned": 0,
     "messages_unacknowledged": 0,
     "messages_unacknowledged_details": {
-      "rate": 0.0
+      "rate": -0.2
     },
     "name": "matching.ride-requested.q",
-    "node": "rabbit@26c88426ddff",
+    "node": "rabbit@9a65d7c1564c",
     "online": [
-      "rabbit@26c88426ddff"
+      "rabbit@9a65d7c1564c"
     ],
     "open_files": {
-      "rabbit@26c88426ddff": 0
+      "rabbit@9a65d7c1564c": 0
     },
     "operator_policy": null,
     "policy": "ride-critical-delivery",
     "publishers": 0,
-    "reductions": 130182,
+    "reductions": 123920,
     "reductions_details": {
-      "rate": 15241.0
+      "rate": 14204.0
     },
-    "single_active_consumer_tag": "amq.ctag-0aY9ftUL99RniXxxg5qGdA",
+    "single_active_consumer_tag": "amq.ctag-NReCpKqOK_hHeBGUCA50fA",
     "state": "running",
     "type": "quorum",
     "vhost": "/"

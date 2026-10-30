@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "experiment": "E02",
-  "runId": "W13-E02-20261030T031621Z-05167996",
+  "runId": "W13-E02-20261030T034905Z-0516017e",
   "reportGrade": false,
   "smoke": true,
   "source": {
-    "commit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
-    "tree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+    "commit": "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a",
+    "tree": "4033938a500e6373e59f3d346a0bc0481a5e2744",
     "branch": "feature/B-W13-performance-campaign",
     "remote": "https://github.com/minhqng/ride-hailing-microservices-system.git",
     "dirty": false,
@@ -41,7 +41,7 @@
     "resetPolicy": "fresh compose project volumes per measured run"
   },
   "environment": {
-    "capturedAtUtc": "2026-10-30T03:16:23.853266Z",
+    "capturedAtUtc": "2026-10-30T03:49:07.886798Z",
     "host": {
       "platform": "Windows-11-10.0.26200-SP0",
       "machine": "AMD64",
@@ -122,7 +122,6 @@
     },
     "tooling": {
       "dotnet": "10.0.403",
-      "dotnetPath": "C:\\Users\\admin\\.dotnet\\dotnet.exe",
       "python": "3.15.2",
       "k6Installed": null,
       "k6Image": {
@@ -172,7 +171,7 @@
           ],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=driver_dev_pw;Maximum Pool Size=20",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=<redacted>;Maximum Pool Size=20",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -207,7 +206,7 @@
           ],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=identity_dev_pw",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=<redacted>",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "ServiceInstanceId": "identity-local"
           }
@@ -219,7 +218,7 @@
           "publishedPorts": [],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=matching_dev_pw;Maximum Pool Size=20",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=<redacted>;Maximum Pool Size=20",
             "Matching__Worker__BatchSize": "16",
             "Matching__Worker__Enabled": "true",
             "Matching__Worker__MaxConcurrentRounds": "4",
@@ -239,7 +238,7 @@
           "memLimitBytes": "536870912",
           "publishedPorts": [],
           "environment": {
-            "ConnectionStrings__Postgres": "Host=postgres;Database=notification_db;Username=notification_app;Password=notification_dev_pw",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=notification_db;Username=notification_app;Password=<redacted>",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -257,7 +256,7 @@
           "environment": {
             "ASPNETCORE_ENVIRONMENT": "Development",
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=payment_dev_pw",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=<redacted>",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -293,7 +292,7 @@
             "25672"
           ],
           "environment": {
-            "RABBITMQ_DEFAULT_PASS": "ride_dev_pw",
+            "RABBITMQ_DEFAULT_PASS": "<redacted>",
             "RABBITMQ_DEFAULT_USER": "ride_app"
           }
         },
@@ -315,7 +314,7 @@
           ],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=trip_dev_pw;Maximum Pool Size=20",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=<redacted>;Maximum Pool Size=20",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -336,22 +335,22 @@
           "state": "running",
           "health": null,
           "inspect": {
-            "id": "bee14f8090dc02f84e663b22bce916338d73fa1b8908253d9d9aaea637967114",
+            "id": "1b21c37ca6a594aea938b99eed2c916beedba985709a66cc127fee794523ec16",
             "name": "ride-hailing-w13-gateway-1",
-            "image": "sha256:4fc38fb164c89a3243efdd258c5cde4adabe03a82c96d58b1e73add370c3886f",
-            "startedAt": "2026-10-30T03:16:05.001654911Z",
+            "image": "sha256:4cbb4d4ad8fc14f9030c12cd12bf7b564a1be64b01ca6b23bc57515c26cbf79c",
+            "startedAt": "2026-10-30T03:48:49.618166183Z",
             "status": "running",
             "nanoCpus": 1000000000,
             "memoryBytes": 536870912,
             "env": {
-              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
-              "Services__PaymentBaseUrl": "http://payment:8080",
               "ServiceInstanceId": "gateway-local",
-              "Services__TripBaseUrl": "http://trip:8080",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "Services__PaymentBaseUrl": "http://payment:8080",
               "Services__MatchingBaseUrl": "http://matching:8080",
               "Services__DriverBaseUrl": "http://driver:8080",
-              "ASPNETCORE_URLS": "http://+:8080",
               "Services__IdentityBaseUrl": "http://identity:8080",
+              "Services__TripBaseUrl": "http://trip:8080",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
               "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
               "APP_UID": "1654",
               "ASPNETCORE_HTTP_PORTS": "8080",
@@ -367,23 +366,23 @@
           "state": "running",
           "health": "healthy",
           "inspect": {
-            "id": "99a69761d31d11dd39c7ccde1e25288824ece4fc3718402031a8014eefc553aa",
+            "id": "543d9bd8eb9a6e7de14e6151a38f44008ac214db9ac35e87261504b14cfe2d38",
             "name": "ride-hailing-w13-postgres-1",
             "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
-            "startedAt": "2026-10-30T03:16:04.768841928Z",
+            "startedAt": "2026-10-30T03:48:49.894470333Z",
             "status": "running",
             "nanoCpus": 2000000000,
             "memoryBytes": 2147483648,
             "env": {
               "POSTGRES_DB": "postgres",
-              "DRIVER_DB_PASSWORD": "<redacted>",
-              "MATCHING_DB_PASSWORD": "<redacted>",
-              "IDENTITY_DB_PASSWORD": "<redacted>",
               "NOTIFICATION_DB_PASSWORD": "<redacted>",
+              "MATCHING_DB_PASSWORD": "<redacted>",
+              "DRIVER_DB_PASSWORD": "<redacted>",
               "POSTGRES_PASSWORD": "<redacted>",
+              "TRIP_DB_PASSWORD": "<redacted>",
               "POSTGRES_USER": "postgres",
               "PAYMENT_DB_PASSWORD": "<redacted>",
-              "TRIP_DB_PASSWORD": "<redacted>",
+              "IDENTITY_DB_PASSWORD": "<redacted>",
               "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin",
               "GOSU_VERSION": "1.19",
               "LANG": "en_US.utf8",
@@ -399,16 +398,16 @@
           "state": "running",
           "health": "healthy",
           "inspect": {
-            "id": "7302a982c2abfc54715dff8df50f01f76938a7003d3398c589f10dd953b4ca16",
+            "id": "22718d9a3daa5d83aa72785280464efe78b1a597b116e873b88cef7262ff6880",
             "name": "ride-hailing-w13-rabbitmq-1",
             "image": "sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
-            "startedAt": "2026-10-30T03:16:05.301050346Z",
+            "startedAt": "2026-10-30T03:48:49.343871176Z",
             "status": "running",
             "nanoCpus": 2000000000,
             "memoryBytes": 1073741824,
             "env": {
+              "RABBITMQ_DEFAULT_PASS": "<redacted>",
               "RABBITMQ_DEFAULT_USER": "ride_app",
-              "RABBITMQ_DEFAULT_PASS": "ride_dev_pw",
               "PATH": "/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
               "ERLANG_INSTALL_PATH_PREFIX": "/opt/erlang",
               "OPENSSL_INSTALL_PATH_PREFIX": "/opt/openssl",
@@ -430,22 +429,22 @@
           "state": "running",
           "health": null,
           "inspect": {
-            "id": "b271a71799ddf965436c5c048017a10017fef0cad05ad3f3550c432d794e550b",
+            "id": "28fa669b060f088383555cbdabff5f2109833106d704f6183bca5edf4e42537a",
             "name": "ride-hailing-w13-trip-1",
-            "image": "sha256:0de00172d383b939cc19e784c24053b7ecbb564884ccfae10ce18d8aef97c38b",
-            "startedAt": "2026-10-30T03:16:17.628622077Z",
+            "image": "sha256:678245e651c45651c7ec7a9896e47d7b5a709ec883f8d4e03bafccc3296075ed",
+            "startedAt": "2026-10-30T03:49:01.706165942Z",
             "status": "running",
             "nanoCpus": 2000000000,
             "memoryBytes": 1073741824,
             "env": {
-              "RabbitMq__Username": "ride_app",
-              "ASPNETCORE_URLS": "http://+:8080",
-              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
-              "ServiceInstanceId": "trip-local",
-              "TripMessaging__Enabled": "true",
-              "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=trip_dev_pw;Maximum Pool Size=20",
-              "TripDatabase__AutoMigrate": "true",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=<redacted>;Maximum Pool Size=20",
               "RabbitMq__Password": "<redacted>",
+              "TripDatabase__AutoMigrate": "true",
+              "RabbitMq__Username": "ride_app",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "TripMessaging__Enabled": "true",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "ServiceInstanceId": "trip-local",
               "RabbitMq__Host": "rabbitmq",
               "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
               "APP_UID": "1654",
@@ -466,7 +465,7 @@
       },
       "broker": {
         "version": "4.3.6",
-        "cluster": "rabbit@7302a982c2ab",
+        "cluster": "rabbit@22718d9a3daa",
         "queueTotals": {
           "messages": 0,
           "messages_ready": 0,
@@ -541,7 +540,7 @@
         "gatewayProbe": {
           "reachable": true,
           "status": 404,
-          "elapsedMs": 90.95019998494536,
+          "elapsedMs": 98.73869991861284,
           "bodySnippet": "",
           "unauthenticatedMutationRejected": false,
           "unauthenticatedMutationAccepted": false
@@ -549,7 +548,7 @@
         "tripDirectProbe": {
           "reachable": true,
           "status": 401,
-          "elapsedMs": 28.002799954265356,
+          "elapsedMs": 35.876099951565266,
           "bodySnippet": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.2\",\"title\":\"Authentication required.\",\"status\":401,\"code\":\"UNAUTHORIZED\"}",
           "unauthenticatedMutationRejected": true,
           "unauthenticatedMutationAccepted": false
@@ -558,7 +557,7 @@
     }
   },
   "artifacts": {
-    "runDirectory": "evidence/member-b/w13-performance-campaign/runs/E02/W13-E02-20261030T031621Z-05167996",
+    "runDirectory": "evidence/member-b/w13-performance-campaign/runs/E02/W13-E02-20261030T034905Z-0516017e",
     "commands": [
       "python scripts/perf/w13.py e02 --preflight-base-url http://127.0.0.1:18080 --k6-base-url http://gateway:8080 --endpoint /trips --rate 10 --duration 30s --seed 1302 --mode smoke"
     ],
