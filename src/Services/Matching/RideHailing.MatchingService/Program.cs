@@ -27,6 +27,7 @@ using RideHailing.MatchingService.Infrastructure.Persistence;
 using RideHailing.Messaging.Outbox;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Observability;
+using RideHailing.Messaging.Topology;
 using StackExchange.Redis;
 using RideHailing.Security;
 
@@ -127,15 +128,13 @@ RabbitMqOptions BrokerOptions()
 }
 
 var brokerOptions = BrokerOptions();
-builder.Services.AddSingleton(_ => new ConnectionFactory
-{
-    HostName = brokerOptions.Host,
-    Port = brokerOptions.Port,
-    UserName = brokerOptions.Username,
-    Password = brokerOptions.Password,
-    ClientProvidedName = "matching-service/broker-consumers",
-    AutomaticRecoveryEnabled = true,
-});
+builder.Services.AddSingleton(_ => RabbitConnectionFactory.Create(
+    brokerOptions.Hosts ?? brokerOptions.Host,
+    brokerOptions.Port,
+    brokerOptions.Username,
+    brokerOptions.Password,
+    "matching-service/broker-consumers",
+    automaticRecovery: true));
 builder.Services.AddSingleton<RideRequestedHandler>();
 builder.Services.AddHostedService<RideRequestedConsumer>();
 
