@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/scripts/" />
+  <Folder Name="/scripts/perf/">
+    <Project Path="scripts/perf/recovery-probe/recovery-probe.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/">
     <Project Path="src/BuildingBlocks/RideHailing.Contracts/RideHailing.Contracts.csproj" />

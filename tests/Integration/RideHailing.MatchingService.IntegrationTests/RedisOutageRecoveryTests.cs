@@ -147,6 +147,9 @@ public sealed class RedisOutageRecoveryTests
                 lon + 0.0001, lat + 0.0001, "rebuilt", ct);
 
             await using var shared = new SharedRedisMultiplexer($"127.0.0.1:{gate.Port}");
+            await using var projectionMux = await RedisProjectionUpdater.ConnectAsync($"127.0.0.1:{gate.Port}");
+            var interruptedProjection = new DriverProjectionHandler(
+                new RedisProjectionUpdater(projectionMux), NullLogger<DriverProjectionHandler>.Instance);
             var matchingRepo = new MatchingRepository(_matching.ConnectionString);
             var service = new MatchingRoundService(
                 matchingRepo,
@@ -170,6 +173,14 @@ public sealed class RedisOutageRecoveryTests
             Assert.Contains(before.Candidates, c => c.DriverId == driverRebuilt);
 
             await gate.StopAsync();
+
+            var interruptedLocation = Envelope("DriverLocationAcceptedV1", new
+            {
+                driverId = driverRebuilt, longitude = lon + 0.0002, latitude = lat + 0.0002,
+                sessionId = "rebuilt", sequenceNo = 2, capturedAt = DateTimeOffset.UtcNow,
+            });
+            Assert.Equal(HandlerOutcome.Retry, await DeliverAsync(interruptedProjection,
+                "driver.location-accepted.v1", interruptedLocation));
 
             var outageTrip = Guid.NewGuid();
             ComputeRoundResult outage;
@@ -241,12 +252,44 @@ public sealed class RedisOutageRecoveryTests
                 var replayHandler = new DriverProjectionHandler(
                     replayUpdater, NullLogger<DriverProjectionHandler>.Instance);
                 await ProjectAsync(replayHandler, driverRebuilt, rebuiltBefore.Version,
-                    lon + 0.0001, lat + 0.0001, "rebuilt-replay", ct);
+                    lon + 0.0001, lat + 0.0001, "rebuilt", ct);
             }
 
             var afterReplay = await service.ComputeAsync(
                 new ComputeRoundRequest(Guid.NewGuid(), 1, lon, lat), policy, ct);
             Assert.Contains(afterReplay.Candidates, c => c.DriverId == driverRebuilt);
+
+            // Reapply retained authoritative events explicitly after targeted deletion.
+            // Redis failure/replay cannot mutate Driver authority, and older sections cannot regress it.
+            Assert.Equal(HandlerOutcome.Done, await DeliverAsync(interruptedProjection,
+                "driver.location-accepted.v1", interruptedLocation));
+            var staleLocation = Envelope("DriverLocationAcceptedV1", new
+            {
+                driverId = driverRebuilt, longitude = lon + 1, latitude = lat + 1,
+                sessionId = "rebuilt", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
+            });
+            var foreignSession = Envelope("DriverLocationAcceptedV1", new
+            {
+                driverId = driverRebuilt, longitude = lon + 2, latitude = lat + 2,
+                sessionId = "foreign", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
+            });
+            var staleState = Envelope("DriverOfflineV1", new
+            {
+                driverId = driverRebuilt, status = "OFFLINE", version = rebuiltBefore.Version - 1,
+            });
+            Assert.Equal(HandlerOutcome.Done, await DeliverAsync(interruptedProjection,
+                "driver.location-accepted.v1", staleLocation));
+            Assert.Equal(HandlerOutcome.Done, await DeliverAsync(interruptedProjection,
+                "driver.location-accepted.v1", foreignSession));
+            Assert.Equal(HandlerOutcome.Done, await DeliverAsync(interruptedProjection,
+                "driver.offline.v1", staleState));
+            var projectionDb = projectionMux.GetDatabase();
+            var key = RedisProjectionKeys.ProjectionKey(driverRebuilt);
+            Assert.Equal("2", (string?)await projectionDb.HashGetAsync(key, "sequenceNo"));
+            Assert.Equal("rebuilt", (string?)await projectionDb.HashGetAsync(key, "locationSessionId"));
+            Assert.Equal("AVAILABLE", (string?)await projectionDb.HashGetAsync(key, "derivedStatus"));
+            Assert.Equal(rebuiltBefore.Version.ToString(),
+                (string?)await projectionDb.HashGetAsync(key, "driverAggregateVersion"));
 
             var survivesAfter = (await repo.LoadAsync(driverSurvives, ct))!;
             var rebuiltAfter = (await repo.LoadAsync(driverRebuilt, ct))!;
