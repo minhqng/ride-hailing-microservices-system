@@ -1,5 +1,5 @@
 import http from 'k6/http';
-import { Counter } from 'k6/metrics';
+import { Counter, Trend } from 'k6/metrics';
 import { sha256 } from 'k6/crypto';
 
 // PERF/E02 — canonical production API offered load.
@@ -57,6 +57,11 @@ const domainConflicts = new Counter('w13_domain_conflicts');
 const authFailures = new Counter('w13_auth_failures');
 const systemErrors = new Counter('w13_system_errors');
 const unexpected = new Counter('w13_unexpected');
+const latencySuccess = new Trend('w13_latency_success_ms', true);
+const latencyDomainConflict = new Trend('w13_latency_domain_conflict_ms', true);
+const latencyAuthFailure = new Trend('w13_latency_auth_failure_ms', true);
+const latencySystemError = new Trend('w13_latency_system_error_ms', true);
+const latencyUnexpected = new Trend('w13_latency_unexpected_ms', true);
 
 function hexUuid(input) {
   const hex = sha256(input, 'hex');
@@ -111,15 +116,21 @@ export default function () {
   );
   const body = parseBody(response.body);
   const code = body && typeof body === 'object' ? body.code : undefined;
+  const duration = response.timings.duration;
   if (response.status === 200 || response.status === 201) {
     success.add(1);
+    latencySuccess.add(duration);
   } else if (response.status === 409) {
     domainConflicts.add(1, { code: code || 'DOMAIN_CONFLICT' });
+    latencyDomainConflict.add(duration);
   } else if (response.status === 401 || response.status === 403) {
     authFailures.add(1, { status: String(response.status) });
+    latencyAuthFailure.add(duration);
   } else if (response.status === 0 || response.status === 429 || response.status >= 500) {
     systemErrors.add(1, { status: String(response.status) });
+    latencySystemError.add(duration);
   } else {
     unexpected.add(1, { status: String(response.status) });
+    latencyUnexpected.add(duration);
   }
 }

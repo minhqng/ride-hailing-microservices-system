@@ -67,6 +67,18 @@ class ManifestValidationTests(unittest.TestCase):
             self.assertIsNotNone(manifest)
             self.assertIn("reportGrade=true requires a green G4 gate", "\n".join(errors))
 
+    def test_pass_requires_samples(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _, run_dir = materialize("e01-smoke", Path(tmp))
+            manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+            manifest["result"]["sampleCount"] = 0
+            manifest["result"]["outcomes"] = {
+                "success": 0, "domainConflict": 0, "systemError": 0,
+                "timeout": 0, "unexpected": 0,
+            }
+            errors = lib.validate_manifest(manifest, run_dir)
+            self.assertIn("status=PASS requires at least one sample", "\n".join(errors))
+
     def test_run_directory_mismatch_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             _, run_dir = materialize("e01-smoke", Path(tmp))
@@ -74,6 +86,24 @@ class ManifestValidationTests(unittest.TestCase):
             manifest["artifacts"]["runDirectory"] = str(run_dir / "other")
             errors = lib.validate_manifest(manifest, run_dir)
             self.assertIn("artifacts.runDirectory does not match", "\n".join(errors))
+
+
+class RedactionAndGateTests(unittest.TestCase):
+    def test_secrets_are_redacted(self) -> None:
+        value = {
+            "connection": "Host=postgres;Username=driver_app;Password=driver_dev_pw;",
+            "RABBITMQ_DEFAULT_PASS": "ride_dev_pw",
+            "normal": "visible",
+        }
+        redacted = lib._redact(value)
+        self.assertNotIn("driver_dev_pw", json.dumps(redacted))
+        self.assertEqual(redacted["RABBITMQ_DEFAULT_PASS"], "<redacted>")
+        self.assertEqual(redacted["normal"], "visible")
+
+    def test_report_grade_rejects_dirty_source(self) -> None:
+        g4 = {"green": True, "blockers": [], "verdict": "GREEN"}
+        with self.assertRaises(lib.GateError):
+            lib.ensure_report_grade(g4, {"dirty": True, "statusDigest": "x"})
 
 
 class AnalyzerTests(unittest.TestCase):

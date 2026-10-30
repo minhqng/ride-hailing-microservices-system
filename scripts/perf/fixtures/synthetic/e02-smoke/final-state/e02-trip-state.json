@@ -2,6 +2,8 @@
   "synthetic": true,
   "finalState": {
     "activeTripsPerRiderViolations": "0",
-    "duplicateIdempotencyResources": "0"
+    "duplicateIdempotencyResources": "0",
+    "tripCount": "10",
+    "e02IdempotencyKeys": "10"
   }
 }
