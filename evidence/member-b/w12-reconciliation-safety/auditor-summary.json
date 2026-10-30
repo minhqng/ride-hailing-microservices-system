@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "ea6b650cda90dd30ccf19f42e6e369d59d27b8d9",
+  "sourceTree": "f903ec135ff8d26ae5a922bbb1a9106595b691ed",
+  "sourceStatus": "",
+  "generatedAt": "2026-10-30T02:05:16.8648986+00:00",
+  "summary": {
+    "PASS": 56,
+    "LOCAL_PROXY_PASS": 0,
+    "FAIL": 11,
+    "NOT_RUN": 57,
+    "BLOCKED": 4,
+    "positive:PASS": 31,
+    "positive:LOCAL_PROXY_PASS": 0,
+    "positive:FAIL": 0,
+    "positive:NOT_RUN": 17,
+    "positive:BLOCKED": 0,
+    "control:PASS": 25,
+    "control:LOCAL_PROXY_PASS": 0,
+    "control:FAIL": 11,
+    "control:NOT_RUN": 40,
+    "control:BLOCKED": 4
+  },
+  "tests": {
+    "passed": 18,
+    "failed": 0
+  },
+  "note": "FAIL/BLOCKED control rows are expected auditor detections; positive NOT_RUN rows retain A/C authority separation."
+}
