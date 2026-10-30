@@ -1,0 +1,117 @@
+{
+  "status": "SMOKE_ONLY",
+  "errors": [],
+  "runs": [
+    {
+      "confirmedPublications": 14,
+      "samples": 58,
+      "lambdaOutage": 0.4811394884255994,
+      "lambdaRecovery": 0.5177258189252275,
+      "T": 8.313597399974242,
+      "predictedBacklog": 4.0,
+      "peakReady": 4,
+      "peakUnacked": 0,
+      "peakOutstandingBusinessWork": 5,
+      "mu": 1.035451637850455,
+      "muIntervals": [
+        0.0,
+        0.0,
+        0.0,
+        9.755638807618487,
+        0.0,
+        0.0,
+        2.347654810230239,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.279952129930445,
+        0.0,
+        0.0,
+        0.0,
+        2.2790069727171107,
+        0.0,
+        0.0
+      ],
+      "muIntervalRange": [
+        0.0,
+        9.755638807618487
+      ],
+      "drainableUnderMeasuredWorkload": true,
+      "predictedDrainSeconds": 9.657621500082314,
+      "observedSteadySeconds": 8.885682200081646,
+      "firstSuccessfulProcessingSeconds": 2.9992383000208065,
+      "consumerReconnectSeconds": 7.542247400037013,
+      "brokerZeroSeconds": 7.542247400037013,
+      "applicationTerminalSeconds": 12.413369600079022,
+      "redeliverDelta": 0,
+      "explicitDuplicateDeliveries": 1,
+      "duplicateBusinessEffects": 0,
+      "confirmLatencyMs": {
+        "n": 14,
+        "p50": 11.4147,
+        "p95": 135.5074
+      },
+      "auditor": {
+        "AUD-01": "PASS",
+        "AUD-02": "PASS",
+        "AUD-03": "NOT_RUN",
+        "AUD-04": "NOT_RUN",
+        "AUD-05": "NOT_RUN",
+        "AUD-06": "PASS",
+        "AUD-07": "NOT_RUN",
+        "AUD-08": "PASS"
+      },
+      "limitations": [
+        "No available Driver: real NO_DRIVER terminal work, not the full Trip/Saga path.",
+        "Queue counters are broker management samples; completion timing has polling resolution.",
+        "Interval \u03bc varies; the formula is an approximation including sampled startup/reconnect effects.",
+        "Manual duplicate replay is distinct from broker redelivery; REL-15 tests prove the latter."
+      ]
+    }
+  ],
+  "statistics": {
+    "lambdaOutage": {
+      "runs": 1,
+      "median": 0.4811394884255994,
+      "min": 0.4811394884255994,
+      "max": 0.4811394884255994,
+      "sampleVariance": null
+    },
+    "lambdaRecovery": {
+      "runs": 1,
+      "median": 0.5177258189252275,
+      "min": 0.5177258189252275,
+      "max": 0.5177258189252275,
+      "sampleVariance": null
+    },
+    "T": {
+      "runs": 1,
+      "median": 8.313597399974242,
+      "min": 8.313597399974242,
+      "max": 8.313597399974242,
+      "sampleVariance": null
+    },
+    "peakReady": {
+      "runs": 1,
+      "median": 4,
+      "min": 4,
+      "max": 4,
+      "sampleVariance": null
+    },
+    "mu": {
+      "runs": 1,
+      "median": 1.035451637850455,
+      "min": 1.035451637850455,
+      "max": 1.035451637850455,
+      "sampleVariance": null
+    },
+    "observedSteadySeconds": {
+      "runs": 1,
+      "median": 8.885682200081646,
+      "min": 8.885682200081646,
+      "max": 8.885682200081646,
+      "sampleVariance": null
+    }
+  }
+}
