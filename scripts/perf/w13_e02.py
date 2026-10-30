@@ -36,22 +36,6 @@ def _read_tokens(path: Path) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def _copy_token_file_for_k6(source: Path, run_dir: Path) -> Path:
-    """The k6 container mounts the repository; a token file must live under it."""
-    try:
-        source.resolve().relative_to(lib.ROOT)
-        return source
-    except ValueError:
-        target = run_dir / "raw" / "tokens.txt"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-        return target
-
-
-def _relative_to_root(path: Path) -> str:
-    return path.resolve().relative_to(lib.ROOT).as_posix()
-
-
 def _duration_seconds(value: str) -> int:
     text = value.strip()
     units = {"s": 1, "m": 60, "h": 3600}
@@ -108,6 +92,9 @@ def preflight(base: str, endpoint: str, token: str, *, timeout: float = 20) -> d
         }
     )
     if status in (200, 201):
+        if not isinstance(parsed_body, dict) or not parsed_body.get("tripId"):
+            result["reason"] = "NONCANONICAL_RESPONSE_SHAPE"
+            return result
         result["ready"] = True
         return result
     if status == 409 and code in ("DOMAIN_CONFLICT", "IDEMPOTENCY_CONFLICT"):
@@ -165,7 +152,7 @@ def _trip_final_state(started_at: str) -> dict[str, Any]:
             "e02IdempotencyKeys": lib.psql_scalar(
                 "trip_db",
                 "SELECT count(*)::text FROM request_idempotency "
-                "WHERE key LIKE 'w13-e02-%';",
+                "WHERE key LIKE 'w13-e02-%' AND key NOT LIKE 'w13-e02-preflight-%';",
             ),
             "activeTripsPerRiderViolations": lib.psql_scalar(
                 "trip_db",
@@ -268,11 +255,64 @@ def _no_token_probe(base: str, endpoint: str) -> dict[str, Any]:
     }
 
 
+def _target_error(args: argparse.Namespace) -> str | None:
+    if args.endpoint != "/trips":
+        return "NONCANONICAL_ENDPOINT"
+    if args.report_grade:
+        gateway_port = os.environ.get("W13_GATEWAY_PORT", "18080")
+        if args.preflight_base_url.rstrip("/") != f"http://127.0.0.1:{gateway_port}":
+            return "NONCANONICAL_PREFLIGHT_TARGET"
+        if args.k6_base_url.rstrip("/") != "http://gateway:8080":
+            return "NONCANONICAL_K6_TARGET"
+    return None
+
+
+def _write_token_file(tokens: list[str], run_dir: Path) -> Path:
+    path = run_dir / "raw" / "tokens.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(tokens) + "\n", encoding="utf-8", newline="\n")
+    return path
+
+
+def _trend_latency(summary: dict[str, Any], metric_name: str) -> dict[str, Any]:
+    values = ((summary.get("metrics") or {}).get(metric_name) or {}).get("values") or {}
+    return {
+        "p50": values.get("p(50)"),
+        "p95": values.get("p(95)"),
+        "count": values.get("count"),
+    }
+
+
+def _trip_final_checks(final_state: dict[str, Any], success_count: int) -> dict[str, Any]:
+    if not isinstance(final_state, dict) or not final_state or final_state.get("error"):
+        return {"finalStateAvailable": False}
+    required = ("tripCount", "e02IdempotencyKeys", "activeTripsPerRiderViolations",
+                "duplicateIdempotencyResources")
+    if any(final_state.get(key) is None for key in required):
+        return {"finalStateAvailable": False}
+
+    def as_int(value: Any) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    trips = as_int(final_state.get("tripCount"))
+    idempotency = as_int(final_state.get("e02IdempotencyKeys"))
+    return {
+        "finalStateAvailable": True,
+        "activeTripsPerRiderViolationsZero": str(final_state.get("activeTripsPerRiderViolations")) == "0",
+        "duplicateIdempotencyResourcesZero": str(final_state.get("duplicateIdempotencyResources")) == "0",
+        "tripCountMatchesSuccesses": trips is not None and trips == success_count,
+        "idempotencyCountMatchesSuccesses": idempotency is not None and idempotency == success_count,
+    }
+
+
 def run(args: argparse.Namespace) -> int:
     g4 = lib.g4_readiness()
     if args.report_grade:
         try:
-            lib.ensure_report_grade(g4)
+            lib.ensure_report_grade(g4, lib.source_binding())
         except lib.GateError as exc:
             lib.print_json({"status": "BLOCKED", "reason": str(exc), "g4": g4})
             return 3
@@ -280,6 +320,10 @@ def run(args: argparse.Namespace) -> int:
             lib.print_json({"status": "INVALID", "reason": "report-grade E02 requires at least 3 repeats"})
             return 2
 
+    target_error = _target_error(args)
+    if target_error:
+        lib.print_json({"status": "BLOCKED", "reason": target_error})
+        return 3
     token_source = args.token_file or os.environ.get("W13_E02_TOKEN_FILE", "")
     token_path = Path(token_source).expanduser() if token_source else Path(os.devnull)
     tokens = _read_tokens(token_path) if token_source else []
@@ -307,6 +351,21 @@ def run(args: argparse.Namespace) -> int:
             },
             token_count=0, commands=commands,
         )
+    if not no_token_probe.get("unauthenticatedMutationRejected"):
+        return _write_blocked(
+            args, reason="AUTH_NOT_ENFORCED_AT_TARGET",
+            detail={"gatewayProbe": no_token_probe, "tripDirectProbe": trip_probe},
+            token_count=len(tokens), commands=commands,
+        )
+    if args.report_grade and len(tokens) < 2:
+        return _write_blocked(
+            args, reason="TOKEN_POOL_INSUFFICIENT",
+            detail="report-grade E02 requires at least two rider tokens: one preflight token is "
+                   "excluded so the active-Trip guard does not turn the measured workload into all-conflict.",
+            token_count=len(tokens), commands=commands,
+        )
+    preflight_token = tokens[-1]
+    load_tokens = tokens[:-1] if len(tokens) > 1 else tokens
 
     try:
         k6_image = _ensure_k6_image()
@@ -335,7 +394,7 @@ def run(args: argparse.Namespace) -> int:
                     token_count=len(tokens), commands=commands,
                 )
         environment = lib.capture_environment()
-        pre = preflight(args.preflight_base_url, args.endpoint, tokens[0], timeout=args.preflight_timeout)
+        pre = preflight(args.preflight_base_url, args.endpoint, preflight_token, timeout=args.preflight_timeout)
         if not pre.get("ready"):
             return _write_blocked(
                 args, reason=str(pre.get("reason") or "PREFLIGHT_FAILED"), detail=pre,
@@ -348,10 +407,11 @@ def run(args: argparse.Namespace) -> int:
         commands_file = run_dir / "commands.txt"
         lib.write_text(commands_file, "\n".join(commands) + "\n")
         mount_root = lib.ROOT.as_posix()
-        k6_token_path = _copy_token_file_for_k6(token_path, run_dir)
-        relative_token = _relative_to_root(k6_token_path)
-        summary_rel = f"{run_dir.relative_to(lib.ROOT).as_posix()}/raw/k6-summary.json"
-        points_rel = f"{run_dir.relative_to(lib.ROOT).as_posix()}/raw/k6-points.json"
+        k6_token_path = _write_token_file(load_tokens, run_dir)
+        relative_token = lib.container_path(k6_token_path)
+        run_relative = lib.container_path(run_dir)
+        summary_rel = f"{run_relative}/raw/k6-summary.json"
+        points_rel = f"{run_relative}/raw/k6-points.json"
         console_file = raw_dir / "k6-console.txt"
         k6_command = [
             "docker", "run", "--rm",
@@ -406,7 +466,15 @@ def run(args: argparse.Namespace) -> int:
             sample_count = success + domain_conflicts + auth_failures + system_errors + unexpected
             durations = (summary.get("metrics") or {}).get("http_req_duration") or {}
             values = durations.get("values") or {}
+            http_requests = int(_metric(summary, "http_reqs"))
             latencies = []
+            latency_by_outcome = {
+                "success": _trend_latency(summary, "w13_latency_success_ms"),
+                "domainConflict": _trend_latency(summary, "w13_latency_domain_conflict_ms"),
+                "authFailure": _trend_latency(summary, "w13_latency_auth_failure_ms"),
+                "systemError": _trend_latency(summary, "w13_latency_system_error_ms"),
+                "unexpected": _trend_latency(summary, "w13_latency_unexpected_ms"),
+            }
             samples = (
                 [{"outcome": "success"}] * success
                 + [{"outcome": "domainConflict"}] * domain_conflicts
@@ -418,7 +486,7 @@ def run(args: argparse.Namespace) -> int:
                 "configuredRatePerSecond": args.rate,
                 "achievedRatePerSecond": _metric(summary, "iterations", "rate"),
                 "iterations": iterations,
-                "httpRequests": int(_metric(summary, "http_reqs")),
+                "httpRequests": http_requests,
                 "successCount": success,
                 "domainConflictCount": domain_conflicts,
                 "systemErrorCount": system_errors,
@@ -430,8 +498,11 @@ def run(args: argparse.Namespace) -> int:
                 "vus": _metric(summary, "vus", "value"),
                 "p50Ms": values.get("p(50)"),
                 "p95Ms": values.get("p(95)"),
+                "latencyCount": http_requests,
+                "latencyByOutcome": latency_by_outcome,
                 "elapsedSeconds": elapsed,
             }
+            final_checks = _trip_final_checks(final_state, success)
             assertions = {
                 "k6SummaryPresent": True,
                 "k6ExitZero": k6_result.returncode == 0,
@@ -439,6 +510,10 @@ def run(args: argparse.Namespace) -> int:
                 "sampleCountMatchesIterations": sample_count == iterations,
                 "zeroAuthFailures": auth_failures == 0,
                 "zeroUnexpected": unexpected == 0,
+                "successesObserved": success > 0,
+                "systemErrorsZero": system_errors == 0,
+                "notAllDomainConflicts": not (iterations > 0 and domain_conflicts == iterations),
+                **final_checks,
             }
             if auth_failures > 0:
                 status, reason = "BLOCKED", "AUTH_FAILURE_DURING_LOAD"
@@ -446,8 +521,16 @@ def run(args: argparse.Namespace) -> int:
                 status, reason = "FAIL", "UNEXPECTED_OUTCOME_OR_SAMPLE_MISMATCH"
             elif k6_result.returncode != 0:
                 status, reason = "FAIL", "K6_PROCESS_FAILED"
+            elif success == 0:
+                status, reason = "FAIL", "NO_SUCCESSFUL_REQUESTS"
+            elif system_errors > 0:
+                status, reason = "FAIL", "SYSTEM_ERRORS_OBSERVED"
+            elif iterations > 0 and domain_conflicts == iterations:
+                status, reason = "FAIL", "ALL_REQUESTS_WERE_DOMAIN_CONFLICTS"
+            elif not all(final_checks.values()):
+                status, reason = "FAIL", "AUTHORITATIVE_FINAL_STATE_ASSERTION_FAILED"
             else:
-                status, reason = "PASS", "k6 open-model run completed; domain conflicts and system errors reported separately"
+                status, reason = "PASS", "k6 open-model run completed with authoritative final-state agreement"
         after = lib.capture_environment(include_observed=True)
         environment_after = {
             "capturedAtUtc": after.get("capturedAtUtc"),
@@ -473,6 +556,10 @@ def run(args: argparse.Namespace) -> int:
                 "preAllocatedVUs": args.prealloc_vus,
                 "maxVUs": args.max_vus,
                 "tokenCount": len(tokens),
+                "loadTokenCount": len(load_tokens),
+                "preflightTokenExcludedFromLoad": len(tokens) > 1,
+                "unauthenticatedProbe": no_token_probe,
+                "reportGradeTargetCanonical": args.report_grade,
                 "warmupSeconds": 0,
                 "cooldownSeconds": 0,
                 "preflight": pre,
@@ -502,7 +589,7 @@ def run(args: argparse.Namespace) -> int:
             manifest["result"]["latencyMs"] = {
                 "p50": achieved.get("p50Ms"),
                 "p95": achieved.get("p95Ms"),
-                "count": achieved.get("sampleCount"),
+                "count": achieved.get("latencyCount"),
             }
             lib.write_json(run_dir / "manifest.json", manifest)
         results.append({"runId": run_id, "status": status, "achieved": achieved})

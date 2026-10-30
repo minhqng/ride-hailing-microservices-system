@@ -297,9 +297,11 @@ def final_state(driver_id: str, winner: dict[str, Any] | None) -> dict[str, Any]
     }
 
 
-def aud01(final: dict[str, Any], winner: dict[str, Any] | None) -> dict[str, Any]:
+def aud01(final: dict[str, Any], winner: dict[str, Any] | None,
+          expected_version: int) -> dict[str, Any]:
     driver = final.get("driver") or {}
     holders = final.get("reservationHolders") or []
+    outbox = final.get("reserveOutbox") or []
     checks = {
         "driverExists": driver not in ({}, None),
         "reservedState": driver.get("status") == "RESERVED",
@@ -307,7 +309,15 @@ def aud01(final: dict[str, Any], winner: dict[str, Any] | None) -> dict[str, Any
         "oneReservationHolder": winner is not None and len(holders) == 1,
         "winnerReservationMatches": winner is not None and driver.get("reservation_id") == winner.get("reservationId"),
         "winnerTripMatches": winner is not None and driver.get("reserved_trip_id") == winner.get("tripId"),
-        "oneReserveOutboxIntent": len(final.get("reserveOutbox") or []) == 1,
+        "oneReserveOutboxIntent": len(outbox) == 1,
+        "outboxPayloadMatchesWinner": (
+            winner is not None
+            and len(outbox) == 1
+            and outbox[0].get("reservation_id") == winner.get("reservationId")
+            and outbox[0].get("trip_id") == winner.get("tripId")
+        ),
+        "driverVersionIncrementedOnce": driver.get("version") == expected_version + 1,
+        "reservedRoundRecorded": driver.get("reserved_round") == 1,
         "noLifecycleEffect": len(final.get("lifecycleEffects") or []) == 0,
     }
     status = "PASS" if all(checks.values()) else "FAIL"
@@ -331,8 +341,16 @@ def run_one(
     winners = [sample for sample in samples if sample.get("outcome") == "success"]
     winner = winners[0] if len(winners) == 1 else None
     final = final_state(driver_id, winner)
-    audit = aud01(final, winner)
+    audit = aud01(final, winner, expected_version)
     conflicts = sum(1 for sample in samples if sample.get("outcome") == "domainConflict")
+    known_conflict_codes = {
+        "DRIVER_NOT_AVAILABLE", "STALE_VERSION", "RESERVATION_ACTIVE", "STALE_RESERVATION",
+    }
+    unknown_conflicts = [
+        sample for sample in samples
+        if sample.get("outcome") == "domainConflict"
+        and sample.get("code") not in known_conflict_codes
+    ]
     system_errors = sum(1 for sample in samples if sample.get("outcome") in ("systemError", "timeout"))
     unexpected = sum(1 for sample in samples if sample.get("outcome") == "unexpected")
     checks = {
@@ -341,10 +359,14 @@ def run_one(
         "expectedConflicts": conflicts == n - 1,
         "zeroSystemErrors": system_errors == 0,
         "zeroUnexpected": unexpected == 0,
+        "knownConflictCodes": not unknown_conflicts,
         "driversReserved": (final.get("driver") or {}).get("status") == "RESERVED",
         "singleActiveReservation": len(final.get("activeReservationRows") or []) == 1,
         "singleReserveOutbox": len(final.get("reserveOutbox") or []) == 1,
         "aud01Pass": audit["status"] == "PASS",
+        "driverVersionIncrementedOnce": audit["checks"]["driverVersionIncrementedOnce"],
+        "reservedRoundRecorded": audit["checks"]["reservedRoundRecorded"],
+        "outboxPayloadMatchesWinner": audit["checks"]["outboxPayloadMatchesWinner"],
     }
     raw_samples = run_dir / "raw" / f"e01-n{n}-samples.json"
     final_file = run_dir / "final-state" / f"e01-n{n}.json"
@@ -397,7 +419,7 @@ def run(args: argparse.Namespace) -> int:
     g4 = lib.g4_readiness()
     if args.report_grade:
         try:
-            lib.ensure_report_grade(g4)
+            lib.ensure_report_grade(g4, lib.source_binding())
         except lib.GateError as exc:
             lib.print_json({"status": "BLOCKED", "reason": str(exc), "g4": g4})
             return 3
@@ -465,6 +487,7 @@ def run(args: argparse.Namespace) -> int:
         all_latencies: list[float] = []
         assertions: dict[str, Any] = {}
         started = time.perf_counter()
+        warmup_result: dict[str, Any] | None = None
         try:
             warmup_result = warmup(base, seed, repeat, args.timeout, cycles=args.warmup_cycles)
             manifest["workload"]["warmupSeconds"] = (time.perf_counter() - started)
