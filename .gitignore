@@ -9,6 +9,10 @@ TestResults/
 .idea/
 *.DotSettings.user
 
+# Python
+__pycache__/
+*.pyc
+
 # Env / secrets
 .env
 *.pfx

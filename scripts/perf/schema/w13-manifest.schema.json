@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "w13-manifest.schema.json",
+  "title": "W13 performance experiment run manifest",
+  "description": "One measured or smoke run. Report-grade runs require a green G4 gate, a clean source tree, at least three repeats and an auditor PASS at the campaign level.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "experiment",
+    "runId",
+    "reportGrade",
+    "smoke",
+    "source",
+    "g4",
+    "dataset",
+    "environment",
+    "workload",
+    "result",
+    "artifacts",
+    "limitations"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "experiment": { "enum": ["E01", "E02", "E03"] },
+    "runId": {
+      "type": "string",
+      "pattern": "^W13-(E01|E02|E03)-[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9]{4,16}$"
+    },
+    "reportGrade": { "type": "boolean" },
+    "smoke": { "type": "boolean" },
+    "source": {
+      "type": "object",
+      "required": ["commit", "tree", "branch", "remote", "dirty", "statusDigest"],
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "branch": { "type": "string" },
+        "remote": { "type": "string" },
+        "dirty": { "type": "boolean" },
+        "statusDigest": { "type": "string" }
+      }
+    },
+    "g4": {
+      "type": "object",
+      "required": ["green", "verdict", "blockers"],
+      "properties": {
+        "green": { "type": "boolean" },
+        "verdict": { "type": "string" },
+        "evidencePath": { "type": ["string", "null"] },
+        "blockers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "required": ["seed", "resetPolicy"],
+      "properties": {
+        "seed": { "type": "integer" },
+        "resetPolicy": { "type": "string" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["capturedAtUtc", "host", "docker", "configured", "observed"],
+      "properties": {
+        "capturedAtUtc": { "type": "string" },
+        "host": { "type": "object" },
+        "docker": { "type": "object" },
+        "tooling": { "type": "object" },
+        "images": { "type": "object" },
+        "configured": { "type": "object" },
+        "observed": { "type": "object" }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "required": ["model", "configured", "achieved", "datasetSeed"],
+      "properties": {
+        "model": { "type": "string" },
+        "configured": { "type": "object" },
+        "achieved": { "type": "object" },
+        "warmupSeconds": { "type": ["number", "null"] },
+        "measurementSeconds": { "type": ["number", "null"] },
+        "cooldownSeconds": { "type": ["number", "null"] },
+        "datasetSeed": { "type": "integer" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["status", "reason", "sampleCount", "outcomes", "latencyMs", "assertions"],
+      "properties": {
+        "status": { "enum": ["PASS", "FAIL", "BLOCKED", "INVALID", "INCOMPLETE"] },
+        "reason": { "type": "string" },
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "outcomes": {
+          "type": "object",
+          "required": ["success", "domainConflict", "systemError", "timeout", "unexpected"],
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "latencyMs": { "type": "object" },
+        "assertions": { "type": "object" }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["runDirectory", "commands", "rawSamples", "finalState"],
+      "properties": {
+        "runDirectory": { "type": "string" },
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "rawSamples": { "type": "array", "items": { "type": "string" } },
+        "finalState": { "type": "array", "items": { "type": "string" } },
+        "rawRetainedLocally": { "type": "boolean" }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  }
+}
