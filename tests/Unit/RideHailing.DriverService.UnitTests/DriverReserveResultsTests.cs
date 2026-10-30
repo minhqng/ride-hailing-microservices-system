@@ -70,10 +70,13 @@ public class DriverReserveResultsTests
     }
 
     [Fact]
-    public async Task NotFound_Maps_To_404()
+    public async Task NotFound_Maps_To_404_WithAuthoritativeCode()
     {
-        var (status, _) = await ExecuteAsync(
+        var (status, body) = await ExecuteAsync(
             DriverReserveResults.ToHttpResult(ReserveResult.NotFound()));
         Assert.Equal(StatusCodes.Status404NotFound, status);
+        // L2: absence is only authoritative with this domain code; a bare
+        // proxy/routing 404 carries no such provenance.
+        Assert.Contains($"\"code\":\"{DriverErrors.DriverNotFound}\"", body);
     }
 }

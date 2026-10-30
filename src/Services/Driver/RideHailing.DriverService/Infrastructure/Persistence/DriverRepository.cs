@@ -551,12 +551,25 @@ public sealed partial class DriverRepository
         }
 
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        // L1: the live drivers row clears reservation_id when the ride starts
+        // (RESERVED -> ON_TRIP) and stays cleared after completion, so status
+        // alone cannot answer "did THIS reservation commit?". The durable
+        // lifecycle ledger keeps the exact (driver_id, reservation_id) pair
+        // (and its trip) across the lifecycle; an exact match is authoritative
+        // historical ownership and must win over the current status. A
+        // different reservation/trip is never inferred from status alone.
         const string Sql = """
-            SELECT status, version, reserved_trip_id, reservation_id
-            FROM drivers WHERE driver_id = @id;
+            SELECT d.status, d.version, d.reserved_trip_id, d.reservation_id,
+                   EXISTS (
+                       SELECT 1 FROM driver_lifecycle_effects e
+                       WHERE e.driver_id = d.driver_id
+                         AND e.reservation_id = @reservation
+                         AND e.phase IN ('STARTED', 'COMPLETED'))
+            FROM drivers d WHERE d.driver_id = @id;
             """;
         await using var cmd = new NpgsqlCommand(Sql, conn);
         cmd.Parameters.AddWithValue("id", driverId);
+        cmd.Parameters.AddWithValue("reservation", reservationId);
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         if (!await reader.ReadAsync(ct))
         {
@@ -565,8 +578,13 @@ public sealed partial class DriverRepository
 
         var status = FromDb(reader.GetString(0));
         var version = reader.GetInt32(1);
-        Guid? reservedTrip = reader.IsDBNull(2) ? null : reader.GetGuid(2);
         Guid? held = reader.IsDBNull(3) ? null : reader.GetGuid(3);
+        var historicalOwnership = reader.GetBoolean(4);
+
+        if (historicalOwnership)
+        {
+            return new ReservationQuery(ReservationQueryOutcome.OwnedByThisReservation, version);
+        }
 
         ReservationQueryOutcome outcome = status switch
         {

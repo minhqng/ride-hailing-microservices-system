@@ -114,18 +114,20 @@ public sealed class MatchingMetricsTests
         var unknown = Assert.Single(await attempts.LoadAttemptsAsync(trip, 1));
         Assert.Equal(MatchingAttemptStates.Unknown, unknown.State);
 
-        // A second reserve execution on the already-UNKNOWN attempt is a
-        // replay of known uncertainty, not a second UNKNOWN transition.
+        // Executing an already-UNKNOWN attempt must reconcile the SAME
+        // reservation instead of replaying it. With the query also
+        // unavailable this is another bounded review, never a second UNKNOWN
+        // transition.
         var repeated = await Orchestrator(stub, metrics).ExecuteAttemptAsync(
             trip, 1, unknown.Ordinal, candidates[0]);
-        Assert.Equal(AttemptOutcome.Unknown, repeated.Outcome);
+        Assert.Equal(AttemptOutcome.NeedsReview, repeated.Outcome);
         Assert.Equal(1, capture.Counter("matching.unknown_total"));
         Assert.Equal(1, capture.Counter("matching.attempt.created_total"));
 
         var exhausted = await Orchestrator(stub, metrics).ReconcileAsync(
             trip, 1, unknown.Ordinal);
         Assert.Equal(AttemptOutcome.NeedsReview, exhausted.Outcome);
-        Assert.Equal(3, capture.Counter("matching.reconcile_total", "outcome=transport_failure"));
+        Assert.Equal(6, capture.Counter("matching.reconcile_total", "outcome=transport_failure"));
         Assert.Equal(1, capture.Counter("matching.unknown_total"));
 
         // Same reservation identity resolves durably; no second UNKNOWN.
@@ -141,6 +143,37 @@ public sealed class MatchingMetricsTests
         var finalRound = await attempts.LoadRoundAsync(trip, 1);
         Assert.Equal(MatchingRoundStatuses.Reserved, finalRound!.Status);
         Assert.Equal(unknown.ReservationId, finalRound.SelectedReservationId);
+    }
+
+    [Fact]
+    public async Task InitialStageSnapshot_CountsCommittedAttempts_ReplayAndHealDoNot()
+    {
+        using var capture = new MeterCapture();
+        var metrics = new MatchingMetrics();
+        var attempts = new MatchingAttemptRepository(_matching.ConnectionString, metrics);
+        var work = new MatchingWorkRepository(_matching.ConnectionString, metrics);
+        var trip = Guid.NewGuid();
+        await attempts.EnsureProductionRoundAsync(
+            trip, 1, $"l4-metric:{trip:N}", 106.7, 10.8);
+        var rankedAt = DateTimeOffset.UtcNow;
+        var seeds = new[]
+        {
+            new StageCandidateSeed(Guid.NewGuid(), Guid.NewGuid(), 0.5, 0.1, 1, rankedAt),
+            new StageCandidateSeed(Guid.NewGuid(), Guid.NewGuid(), 0.9, 0.2, 1, rankedAt),
+        };
+
+        var first = await work.EnsureStageSnapshotAsync(
+            trip, 1, "S0", seeds, "v1", rankedAt);
+        Assert.Equal(StageEnsureOutcome.Ready, first.Outcome);
+        Assert.Equal(2, first.Candidates.Count);
+        Assert.Equal(2, capture.Counter("matching.attempt.created_total"));
+
+        // Frozen-stage replay reuses the same identities: not new attempts.
+        var replay = await work.EnsureStageSnapshotAsync(
+            trip, 1, "S0", seeds, "v1", rankedAt);
+        Assert.Equal(StageEnsureOutcome.Ready, replay.Outcome);
+        Assert.Equal(2, capture.Counter("matching.attempt.created_total"));
+        Assert.Equal(2, (await attempts.LoadAttemptsAsync(trip, 1)).Count);
     }
 
     [Fact]

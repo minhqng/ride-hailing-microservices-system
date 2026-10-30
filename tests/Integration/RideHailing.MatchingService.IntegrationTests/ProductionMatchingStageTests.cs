@@ -147,6 +147,51 @@ public sealed class ProductionMatchingStageTests : ProductionMatchingTestBase
         Output.WriteLine(
             $"DSI-021 exhaustion: trip={trip} stages=S0,S1,S2 all REJECTED, one terminal intent");
     }
+
+    [Fact]
+    public async Task PersistedStageMissingFromConfiguration_IsVisible_AndNeverTerminal()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+        var ct = deadline.Token;
+        await PurgeBrokerAsync();
+        await AbandonPriorTestWorkAsync();
+        var (pickupLat, pickupLon) = NewPickup();
+        var trip = Guid.NewGuid();
+        await using (var conn = new Npgsql.NpgsqlConnection(Pg.ConnectionString))
+        {
+            await conn.OpenAsync(ct);
+            await using var seed = new Npgsql.NpgsqlCommand("""
+                INSERT INTO matching_rounds
+                    (trip_id, matching_round, input_message_id, status,
+                     pickup_longitude, pickup_latitude, auto_execute, current_stage)
+                VALUES (@trip, 1, @message, 'PROCESSING', @lon, @lat, TRUE, 'S9');
+                """, conn);
+            seed.Parameters.AddWithValue("trip", trip);
+            seed.Parameters.AddWithValue("message", $"l7-stage:{trip:N}");
+            seed.Parameters.AddWithValue("lon", pickupLon);
+            seed.Parameters.AddWithValue("lat", pickupLat);
+            await seed.ExecuteNonQueryAsync(ct);
+        }
+
+        await using var driverHost = await DriverAuthorityHost.StartAsync(
+            Drivers, DriverFaultPoint.Disabled(), ct);
+        await using var matching = await StartMatchingAsync(driverHost.BaseUrl, ct: ct);
+
+        await PollUntilAsync(async () =>
+            (await LoadRoundAsync(trip, 1))?.WorkErrorCode == "STAGE_CONFIGURATION_MISMATCH",
+            "durable stage/configuration mismatch signal", 45);
+
+        var round = (await LoadRoundAsync(trip, 1))!;
+        Assert.Equal("PROCESSING", round.Status);
+        Assert.Equal("S9", round.Stage);
+        Assert.Null(round.SelectedDriverId);
+        Assert.Null(round.SelectedReservationId);
+        Assert.Empty(await LoadAttemptsAsync(trip, 1));
+        Assert.Equal(0L, await MatchingFailedCountAsync(trip));
+
+        Output.WriteLine(
+            $"L7: trip={trip} persisted stage S9 is not configured; work stays PROCESSING with a visible error code.");
+    }
 }
 
 // Deterministic stage-gate proofs on REAL PostgreSQL: no stage advance on
@@ -332,4 +377,5 @@ public sealed class MatchingStageGateTests
         Assert.Equal("S1", restarted!.CurrentStage);
         Assert.Single(await Attempts().LoadAttemptsByStageAsync(trip, 1, "S0"));
     }
+
 }

@@ -64,6 +64,67 @@ public sealed class MatchingMigrationRepairTests
         }
     }
 
+    [Fact]
+    public async Task RepeatedMigration_KeepsUnrelatedStateSentinels_AndDropsOnlyLegacyCheck()
+    {
+        await using var conn = new NpgsqlConnection(_db.ConnectionString);
+        await conn.OpenAsync();
+
+        try
+        {
+            await ExecuteAsync(conn,
+                "ALTER TABLE matching_attempts DROP CONSTRAINT IF EXISTS chk_w12_state_sentinel");
+            await ExecuteAsync(conn,
+                "ALTER TABLE matching_attempts ADD CONSTRAINT chk_w12_state_sentinel " +
+                "CHECK (state IS NULL OR state <> 'SENTINEL_STATE')");
+
+            // Re-apply the entire forward-only chain twice (007 is idempotent).
+            await _db.ReapplyScriptsAsync();
+            await _db.ReapplyScriptsAsync();
+
+            Assert.Equal(1L, await ConstraintCountAsync(conn, "chk_w12_state_sentinel"));
+            Assert.Equal(1L, await ConstraintCountAsync(conn, "chk_matching_attempts_state"));
+            Assert.Equal(0L, await ConstraintCountAsync(conn, "matching_attempts_state_check"));
+
+            // The canonical vocabulary still accepts CANCELLED (007's reason
+            // for replacing the 001 constraint) and rejects an unknown state.
+            var trip = Guid.NewGuid();
+            var reservation = Guid.NewGuid();
+            await ExecuteAsync(conn, """
+                INSERT INTO matching_rounds (trip_id, matching_round, input_message_id, status)
+                VALUES (@trip, 1, @message, 'PROCESSING');
+                INSERT INTO matching_attempts
+                    (trip_id, matching_round, ordinal, driver_id, reservation_id, state)
+                VALUES (@trip, 1, 0, @driver, @reservation, 'CANCELLED');
+                """,
+                ("trip", trip), ("message", $"l5:{trip:N}"),
+                ("driver", Guid.NewGuid()), ("reservation", reservation));
+            await using (var bad = new NpgsqlCommand(
+                "UPDATE matching_attempts SET state = 'NOT_A_STATE' " +
+                "WHERE trip_id = @trip AND matching_round = 1", conn))
+            {
+                bad.Parameters.AddWithValue("trip", trip);
+                var ex = await Assert.ThrowsAsync<PostgresException>(() => bad.ExecuteNonQueryAsync());
+                Assert.Equal("23514", ex.SqlState);
+            }
+        }
+        finally
+        {
+            await ExecuteAsync(conn,
+                "ALTER TABLE matching_attempts DROP CONSTRAINT IF EXISTS chk_w12_state_sentinel");
+        }
+    }
+
+    private static async Task<long> ConstraintCountAsync(NpgsqlConnection conn, string name)
+    {
+        await using var cmd = new NpgsqlCommand("""
+            SELECT count(*) FROM pg_constraint
+            WHERE conname = @name AND conrelid = 'matching_attempts'::regclass;
+            """, conn);
+        cmd.Parameters.AddWithValue("name", name);
+        return (long)(await cmd.ExecuteScalarAsync())!;
+    }
+
     private static async Task ExecuteAsync(
         NpgsqlConnection connection, string sql, params (string Name, object Value)[] parameters)
     {

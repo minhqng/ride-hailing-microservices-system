@@ -89,9 +89,12 @@ See [W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
   client, no retry handlers by design), request/response/outcome contracts,
   `README.md` freeze note with open questions for A/C.
 - Mapping proven by stub-transport unit tests (no server needed): request
-  shape, 200/409 mapping, 5xx/timeout/bare-404 propagate (caller keeps
-  UNKNOWN per DSI-031; NOT_FOUND arrives only as 200-body outcome),
-  all 7 reconcile outcomes, unknown-outcome throws.
+  shape, 200/409 mapping, 5xx/timeout propagate (caller keeps UNKNOWN per
+  DSI-031); a 404 is conclusive only with the Driver-domain structured
+  `DRIVER_NOT_FOUND` body (version read and reserve), and the reservation
+  query's `NOT_FOUND` arrives only as a 200-body outcome. Bare 404s at any
+  boundary stay transport uncertainty. All 7 reconcile outcomes and
+  unknown-outcome throws are covered.
 - Driver-side `/internal/*` endpoints land in W6/W7; timeout budgets frozen there.
 
 ## Deterministic candidate pipeline (B-W05)
@@ -158,6 +161,52 @@ Proofs: `ProductionMatchingWorkflowTests`, `ProductionMatchingStageTests` and
 Matching process against real PostgreSQL/Redis/RabbitMQ and real Driver Kestrel
 endpoints. See
 [B-REC-01/DSI-021 evidence](../../../../evidence/member-b/b-rec01-dsi021/README.md).
+
+## W12 reconciliation-safety repair
+
+The recovery path now enforces one rule: **a reservation that may already have
+committed is never concluded rejected without authoritative identity-aware
+evidence.**
+
+1. **Reconcile before replay.** An `UNKNOWN` attempt, or an `IN_FLIGHT` attempt
+   whose durable `max_dispatched_version` fence is set (the fence commits before
+   the remote call), is transitioned to `UNKNOWN` and reconciled by querying the
+   SAME `reservationId` before any Reserve replay. `OWNED_BY_THIS_RESERVATION`
+   converges the attempt/round; a fenced negative (`AVAILABLE` with Vx > max,
+   or an incompatible state with Vx >= max) is conclusive; transport/exhaustion
+   leaves the attempt unresolved and blocks the next candidate.
+2. **STALE_RESERVATION is not a rejection.** Driver's lifecycle history guard
+   proves the identity already produced a STARTED/COMPLETED effect. The
+   orchestrator persists `RESERVE_STALE_IDENTITY` ambiguity and reconciles the
+   exact identity next pass instead of advancing to D2.
+3. **404 provenance.** A bare 404 at the version read, Reserve, or reservation
+   query is transport uncertainty. Only the structured Driver-domain
+   `DRIVER_NOT_FOUND` body (or the query's 200 `NOT_FOUND` outcome) is
+   authoritative absence.
+4. **Demo→production origin gate.** `EnsureProductionRoundAsync` only upgrades a
+   round already created by production intake (`auto_execute = TRUE`). A
+   demo/test-created row is rejected with `MATCHING_ROUND_ORIGIN_CONFLICT`
+   without mutating pickup, identity, attempts or `auto_execute`, and the
+   worker never selects it.
+5. **Attempt metric.** `matching.attempt.created_total` counts committed NEW
+   attempt identities from the initial stage snapshot only; frozen-stage
+   replay/heal rows are not counted.
+6. **Migration 007** drops only the legacy auto-named
+   `matching_attempts_state_check` constraint; unrelated state-related sentinel
+   constraints survive repeated application.
+7. **Operational visibility.** A persisted stage missing from the running
+   configuration yields durable `work_error_code = STAGE_CONFIGURATION_MISMATCH`
+   without a terminal or attempt mutation. Reconciliation exhaustion keeps the
+   attempt `UNKNOWN` with `RECONCILE_EXHAUSTED` (and the round PROCESSING with
+   `RECONCILE_PENDING`); no new terminal business state is invented.
+
+Safety proofs: `ReservationReconciliationSafetyTests` (the mandatory matrix
+plus same-R idempotency over real PostgreSQL + controlled HTTP faults),
+`ProductionOriginIsolationTests`,
+`ProductionMatchingLifecycleRecoveryTests` (real process kill/restart across
+STARTED/COMPLETED), and the L4/L5/L7 proofs in `MatchingMetricsTests`,
+`MatchingMigrationRepairTests` and `ProductionMatchingStageTests`. See the
+[W12 reconciliation-safety evidence](../../../../evidence/member-b/w12-reconciliation-safety/README.md).
 
 ## NOT implemented (later weeks)
 
