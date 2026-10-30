@@ -196,11 +196,8 @@ public sealed class ReservationReconciliationSafetyTests
         var client = new RepositoryAuthorityClient(_drivers.CreateRepository());
         var orchestrator = Orchestrator(client);
 
-        var reconciled = await orchestrator.ReconcileAsync(s.Trip, s.Round, s.Ordinal);
-        Assert.Equal(AttemptOutcome.Reserved, reconciled.Outcome);
-        Assert.Equal(s.ReservationId, reconciled.ReservationId);
-
-        // A resume of the round must replay the durable winner, never D2.
+        // Resume directly through the round executor: recovery must query
+        // ownership before replaying the reserve or considering D2.
         var resumed = await orchestrator.ExecuteRoundAsync(
             s.Trip, s.Round, [s.D1, s.D2], Guid.NewGuid().ToString("D"));
         Assert.Equal(RoundOutcome.Reserved, resumed.Outcome);
@@ -370,6 +367,7 @@ public sealed class ReservationReconciliationSafetyTests
         private readonly List<string> _requests = [];
 
         public Func<HttpRequestMessage, HttpResponseMessage?>? Inject { get; set; }
+        public bool ReplaceReserveResponse { get; set; }
 
         public IReadOnlyList<string> Requests
         {
@@ -390,7 +388,7 @@ public sealed class ReservationReconciliationSafetyTests
             }
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(
+        protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             lock (_gate)
@@ -399,9 +397,18 @@ public sealed class ReservationReconciliationSafetyTests
             }
 
             var injected = Inject?.Invoke(request);
-            return injected is not null
-                ? Task.FromResult(injected)
-                : base.SendAsync(request, cancellationToken);
+            if (injected is not null) return injected;
+
+            var response = await base.SendAsync(request, cancellationToken);
+            if (ReplaceReserveResponse && request.Method == HttpMethod.Post
+                && request.RequestUri!.AbsolutePath.EndsWith("/reserve", StringComparison.Ordinal))
+            {
+                Assert.True(response.IsSuccessStatusCode);
+                response.Dispose();
+                return Bare(HttpStatusCode.NotFound);
+            }
+
+            return response;
         }
     }
 
@@ -540,6 +547,46 @@ public sealed class ReservationReconciliationSafetyTests
         Assert.Equal(0L, await MatchingFailedAsync(trip));
         Assert.Equal(DriverStatus.Available, (await _drivers.CreateRepository().LoadAsync(d1))!.Status);
         Assert.Equal(DriverStatus.Available, (await _drivers.CreateRepository().LoadAsync(d2))!.Status);
+        await app.StopAsync();
+    }
+
+    [Fact]
+    public async Task CommittedReserve_ResponseReplacedWithBare404_BlocksD2AndRecoversSameIdentity()
+    {
+        var (d1, _) = await SeedAvailableAsync();
+        var (d2, _) = await SeedAvailableAsync();
+        await using var app = BuildDriverHost(_drivers, DriverFaultPoint.Disabled());
+        await app.StartAsync();
+        var (http, handler) = CreateClient(AddressOf(app));
+        using var clientLifetime = http;
+        handler.ReplaceReserveResponse = true;
+        var trip = Guid.NewGuid();
+        var orchestrator = Orchestrator(new HttpDriverClient(http));
+
+        var first = await orchestrator.ExecuteRoundAsync(trip, 1, [d1, d2], trip.ToString("D"));
+        Assert.Equal(RoundOutcome.BlockedOnUnknown, first.Outcome);
+        var unresolved = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
+        Assert.Equal(MatchingAttemptStates.Unknown, unresolved.State);
+        Assert.Equal(unresolved.ReservationId,
+            (await _drivers.CreateRepository().LoadAsync(d1))!.ReservationId);
+        Assert.Equal(MatchingRoundStatuses.Processing,
+            (await Attempts().LoadRoundAsync(trip, 1))!.Status);
+        Assert.Equal(DriverStatus.Available,
+            (await _drivers.CreateRepository().LoadAsync(d2))!.Status);
+
+        var recovered = await orchestrator.ExecuteRoundAsync(trip, 1, [d1, d2], trip.ToString("D"));
+        Assert.Equal(RoundOutcome.Reserved, recovered.Outcome);
+        Assert.Equal(d1, recovered.DriverId);
+        Assert.Equal(unresolved.ReservationId, recovered.ReservationId);
+        Assert.Equal(1, handler.Count(r => r.StartsWith("POST ", StringComparison.Ordinal)));
+        Assert.Equal(MatchingAttemptStates.Reserved,
+            Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1)).State);
+        Assert.Equal(MatchingRoundStatuses.Reserved,
+            (await Attempts().LoadRoundAsync(trip, 1))!.Status);
+        Assert.Null((await _drivers.CreateRepository().LoadAsync(d2))!.ReservationId);
+        Assert.Equal(1L, await DriverReservedOutboxAsync(d1));
+        Assert.Equal(0L, await DriverReservedOutboxAsync(d2));
+        Assert.Equal(0L, await MatchingFailedAsync(trip));
         await app.StopAsync();
     }
 
