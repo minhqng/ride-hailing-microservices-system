@@ -9,8 +9,11 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
+using RideHailing.TripService.Integration.Messaging;
+using RideHailing.TripService.Integration.Observability;
 
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
@@ -52,19 +55,57 @@ public sealed class CancelRideHandler
         if (trip.State == TripState.Cancelled)
             return TripLifecycleResult.Success(trip, isReplay: true, TripCompensation.None);
 
-        var outcome = trip.Cancel(_time.GetUtcNow());
+        var saga = await _db.RideSagas
+            .SingleOrDefaultAsync(s => s.TripId == tripId, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Snapshot before Cancel so only the obligations added by this
+        // transition are staged; an upgrade/backfill is never silently
+        // republished as a new logical message.
+        var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
+        var now = _time.GetUtcNow();
+        var outcome = trip.Cancel(now);
         if (!outcome.IsSuccess)
         {
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
+        // A-W10: cancelling at DRIVER_ACCEPTED with an in-flight
+        // authorization flips the saga to COMPENSATING immediately (release
+        // and matching cleanup exist now), while the void decision waits for
+        // the authority-confirmed outcome — never assume the effect absent.
+        var sagaStatusBefore = saga?.Status;
+        if (saga is not null)
+        {
+            var sagaOutcome = saga.RecordCancellationDuringAuthorize(now);
+            if (!sagaOutcome.IsSuccess)
+            {
+                throw new InvalidOperationException(
+                    $"Saga rejected cancellation compensation for trip {tripId:D}: {sagaOutcome.ErrorCode} {sagaOutcome.Message}");
+            }
+        }
+
+        // A-W09-02: CANCELLED + CancelMatchingRound/ReleaseDriverReservation
+        // intents commit atomically. The ReconcilePayment intent resolves via
+        // the W10 payment outcome/void lineage, not a published command here.
+        TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        // A-W12-02: post-commit observation only — the committed saga status
+        // transition into COMPENSATING is counted once, here, where the unit
+        // of work is known durable. A failed save never reaches this line.
+        if (saga is not null && sagaStatusBefore != RideSagaStatus.Compensating &&
+            saga.Status == RideSagaStatus.Compensating)
+        {
+            TripDiagnostics.RecordSagaCompensation();
+        }
+
         _log.LogInformation(
-            "CancelRide {TripId} state {State} compensation {Compensation}.",
+            "CancelRide {TripId} state {State} compensation {Compensation} saga {SagaStatus}.",
             trip.TripId,
             trip.State.ToCanonicalName(),
-            outcome.Compensation);
+            outcome.Compensation,
+            saga?.Status.ToCanonicalName() ?? "NONE");
 
         return TripLifecycleResult.Success(trip, outcome.IsReplay, outcome.Compensation);
     }

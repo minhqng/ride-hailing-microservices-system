@@ -23,6 +23,95 @@ namespace RideHailing.TripService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("RideHailing.TripService.Domain.Sagas.RideSaga", b =>
+                {
+                    b.Property<Guid>("SagaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("saga_id");
+
+                    b.Property<string>("AuthorizeOperationKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("authorize_operation_key");
+
+                    b.Property<string>("CaptureOperationKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("capture_operation_key");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CurrentStep")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("current_step");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("last_error_code");
+
+                    b.Property<string>("RequiresReviewReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("requires_review_reason");
+
+                    b.Property<Guid?>("ReservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reservation_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StepVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("step_version");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("VoidOperationKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("void_operation_key");
+
+                    b.HasKey("SagaId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_ride_sagas_status");
+
+                    b.HasIndex("TripId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ride_sagas_one_per_trip");
+
+                    b.ToTable("ride_sagas", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ride_sagas_operation_lineage", "(authorize_operation_key IS NULL OR authorize_operation_key = trip_id::text || ':authorize:v1') AND (capture_operation_key IS NULL OR capture_operation_key = trip_id::text || ':capture:v1') AND (void_operation_key IS NULL OR void_operation_key = trip_id::text || ':void:v1')");
+
+                            t.HasCheckConstraint("CK_ride_sagas_reservation_present", "reservation_id IS NOT NULL AND reservation_id <> '00000000-0000-0000-0000-000000000000'::uuid");
+
+                            t.HasCheckConstraint("CK_ride_sagas_status_domain", "status IN ('ACTIVE', 'COMPENSATING', 'COMPLETED', 'COMPENSATED', 'REQUIRES_REVIEW')");
+
+                            t.HasCheckConstraint("CK_ride_sagas_step_domain", "current_step IN ('AUTHORIZE_PENDING', 'AUTHORIZED', 'CAPTURE_PENDING', 'CAPTURED', 'RELEASE_PENDING', 'VOID_PENDING')");
+
+                            t.HasCheckConstraint("CK_ride_sagas_step_key_agreement", "((current_step NOT IN ('CAPTURE_PENDING', 'CAPTURED')) OR capture_operation_key IS NOT NULL) AND (current_step <> 'VOID_PENDING' OR void_operation_key IS NOT NULL) AND (status <> 'COMPLETED' OR current_step = 'CAPTURED')");
+
+                            t.HasCheckConstraint("CK_ride_sagas_step_version_positive", "step_version >= 1");
+                        });
+                });
+
             modelBuilder.Entity("RideHailing.TripService.Domain.Trips.Trip", b =>
                 {
                     b.Property<Guid>("TripId")
@@ -245,6 +334,136 @@ namespace RideHailing.TripService.Migrations
                     b.HasIndex("Disposition", "RecordedAt");
 
                     b.ToTable("trip_message_receipts", (string)null);
+                });
+
+            modelBuilder.Entity("RideHailing.TripService.Integration.Messaging.TripOutboxMessage", b =>
+                {
+                    b.Property<string>("MessageId")
+                        .HasColumnType("text")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("AggregateId")
+                        .HasColumnType("text")
+                        .HasColumnName("aggregate_id");
+
+                    b.Property<string>("AggregateType")
+                        .HasColumnType("text")
+                        .HasColumnName("aggregate_type");
+
+                    b.Property<long?>("AggregateVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("aggregate_version");
+
+                    b.Property<int>("AttemptCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("attempt_count");
+
+                    b.Property<string>("CausationId")
+                        .HasColumnType("text")
+                        .HasColumnName("causation_id");
+
+                    b.Property<DateTimeOffset?>("ClaimedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("claimed_at");
+
+                    b.Property<string>("ClaimedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("claimed_by");
+
+                    b.Property<string>("CorrelationId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("Exchange")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("exchange");
+
+                    b.Property<string>("HeadersJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("headers_json")
+                        .HasDefaultValueSql("'{}'::jsonb");
+
+                    b.Property<DateTimeOffset?>("LastErrorAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_error_at");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error_code");
+
+                    b.Property<string>("MessageType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("message_type");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("OperationKey")
+                        .HasColumnType("text")
+                        .HasColumnName("operation_key");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload_json");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("RoutingKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("routing_key");
+
+                    b.Property<string>("SagaId")
+                        .HasColumnType("text")
+                        .HasColumnName("saga_id");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("schema_version");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("PENDING")
+                        .HasColumnName("status");
+
+                    b.HasKey("MessageId")
+                        .HasName("outbox_messages_pk");
+
+                    b.HasIndex("OccurredAt", "MessageId")
+                        .HasDatabaseName("ix_outbox_messages_failed_visible")
+                        .HasFilter("status = 'FAILED_VISIBLE'");
+
+                    b.HasIndex("NextAttemptAt", "OccurredAt", "MessageId")
+                        .HasDatabaseName("ix_outbox_messages_claim")
+                        .HasFilter("status = 'PENDING'");
+
+                    b.ToTable("outbox_messages", null, t =>
+                        {
+                            t.HasCheckConstraint("outbox_messages_attempt_count_check", "attempt_count >= 0");
+
+                            t.HasCheckConstraint("outbox_messages_identity_nonempty", "btrim(message_id) <> '' AND btrim(message_type) <> '' AND btrim(correlation_id) <> '' AND btrim(exchange) <> '' AND btrim(routing_key) <> ''");
+
+                            t.HasCheckConstraint("outbox_messages_schema_version_check", "schema_version >= 1");
+
+                            t.HasCheckConstraint("outbox_messages_status_check", "status IN ('PENDING', 'PUBLISHED', 'FAILED_VISIBLE')");
+                        });
                 });
 
             modelBuilder.Entity("RideHailing.TripService.Domain.Trips.Trip", b =>

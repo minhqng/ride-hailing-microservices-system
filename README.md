@@ -29,7 +29,7 @@ API Gateway (YARP, no DB)
 | Gateway | C | none | 8080 | routing, auth forwarding, edge diagnostics |
 | Identity | Shared/A | `identity_db` | 8101 | users, roles, auth baseline |
 | Driver/Vehicle/Location | B | `driver_db` | 8102 | **exclusive reservation authority (PostgreSQL OCC, never Redis lock)** |
-| Trip/Booking | A | `trip_db` | 8103 | Trip FSM, cancellation cleanup, W8 messaging; persisted Saga planned |
+| Trip/Booking | A | `trip_db` | 8103 | Trip FSM, transactional Outbox, persisted Saga, exact compensation and forward recovery |
 | Matching | B | `matching_db` + Redis | 8104 | MatchingRound, deterministic ranking, Redis is derived only |
 | Payment Simulator | C | `payment_db` | 8105 | durable `operationKey` idempotency, UNKNOWN reconcile, finite retry |
 | Notification Worker | C | `notification_db` | — | async side-effect only, never business truth |
@@ -52,15 +52,15 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 
 **Safety (never):** 1 driver → 2 trips, 1 trip → 2 drivers, stale release frees newer reservation, duplicate payment effect, terminal trip reactivation.
 
-**Liveness targets:** pending Outbox publishes, UNKNOWN reconciles, Saga progresses/compensates/`REQUIRES_REVIEW`. Payment supports explicit reconciliation now; autonomous Outbox/Saga recovery remains planned.
+**Liveness targets:** pending Outbox publishes, UNKNOWN reconciles, Saga progresses/compensates/`REQUIRES_REVIEW`. Payment and Trip both host confirmed Outbox relays; Trip resumes workflow from persisted Saga state after restart.
 
 **Messaging:** at-least-once + `MessageEnvelope<T>` + publisher confirms + manual ACK after commit + bounded retry (3) + `<queue>.dead` + `ride.quarantine.q` + consumer dedup. Timeout = `UNKNOWN`, reconcile with same key, no blind retry, no hedging on side-effects. See `docs/messaging-runtime.md`, `docs/02-distributed-workflow-engineering.md`.
 
 **Workflows:** Trip→Matching `RideRequested` (async), Matching→Driver `ReserveDriver` (sync + UNKNOWN handling), Trip→Payment (async Saga), events→Notification (async). Outbox for dual-write gap, persisted Saga/MatchingRound for crash-resume.
 
-Implemented on main through W08: PG-guarded Driver reservation foundation, Trip lifecycle and single-assignment fencing, durable cancellation cleanup, opt-in Trip publication/consumption with atomic receipt dedup, Payment durable simulator, and the RabbitMQ runtime (publisher confirms, manual ACK, dedup). Planned: Trip persisted Saga, Outbox relay and automatic cleanup dispatch.
+This combined completion branch includes Member C's shared transactional Outbox/dedup runtime, Payment command consumer and result Outbox, fault platform, Notification projection and HA tooling together with Member A's Trip Outbox, persisted Saga, compensation/forward-recovery workflow, deterministic crash proofs, auditor and Trip/Saga dashboard.
 
-Closed on this branch (W08 round-lineage hardening): `DriverReservedV1` now carries `matchingRound` from durable Driver-side provenance — a `reserved_round` column recorded on the reserve win, preserved across restart/replay, and cleared with the reservation refs on release/trip start. The round rides the Matching→Driver reserve request and the Driver→Trip event, so Trip no longer parks verified deliveries solely for a missing round; the `NeedsReview:RESERVATION_ROUND_REQUIRED` path remains only for legacy/deploy-skew payloads that omit the field. Payment outcomes remain a durable simulator skeleton awaiting Saga operation lineage.
+Closed on this branch: `DriverReservedV1` carries durable `matchingRound` provenance; Trip atomically commits lifecycle/Saga changes with stable Outbox intents; Payment outcomes are fenced by matching `sagaId` and `operationKey`; pre-pivot failure performs exact compensation while capture uncertainty after completion recovers forward without regressing the terminal Trip.
 
 ## 4. Prerequisites
 
@@ -97,9 +97,9 @@ curl -X POST http://localhost:8105/simulator/operations/{id}/reconcile
 
 Details: `src/Services/Payment/RideHailing.PaymentService/README.md`.
 
-### Enable Trip W8 messaging
+### Enable Trip Outbox/Saga messaging
 
-Apply Trip EF migrations through `W08_TripMessageReceipts` against the Trip-owned
+Apply Trip EF migrations through `W10_RideSaga` against the Trip-owned
 database first; startup does not auto-migrate. With the .NET SDK and the owned
 connection string supplied as `ConnectionStrings__Postgres`:
 
@@ -112,11 +112,14 @@ curl http://localhost:8103/health/ready
 ```
 
 Messaging is disabled by default. When enabled, readiness includes migrations and
-broker consumers. Authenticated POST /trips publishes RideRequested; a 503
-MATCHING_PUBLICATION_PENDING means the ride was saved and the caller should retry
-the same Idempotency-Key/body. W8 still has a DB/publish gap until the Trip
-producer adopts the shared transactional Outbox.
+broker consumers. Authenticated POST /trips atomically stages `RideRequestedV1`
+in the Trip Outbox; a 503 `MATCHING_INTENT_PENDING` means the ride was saved but
+the durable matching intent has not committed, so retry the same key/body.
 The production authenticated client flow depends on shared Identity/Gateway integration.
+
+For a local visual walkthrough, run `scripts/demo/member-a-mock-workflow.ps1`
+and open the provisioned Grafana dashboard at
+`http://localhost:3000/d/ride-trip-saga/trip-saga-and-outbox`.
 
 ## 6. Common commands
 
@@ -152,13 +155,10 @@ Branches: `main`, `feature/<issue>-<name>`, `fix/<issue>-<name>`, `experiment/<i
 
 ## 10. Status & roadmap
 
-Implemented on main through W08: compose core/obs profiles, per-service DB roles, bounded readiness, OTel traces/metrics, CI smoke definitions, Payment durable simulator, RabbitMQ confirms/manual ACK, Driver reservation foundation, Trip lifecycle/assignment fencing, durable cancellation cleanup and Trip atomic consumer receipts.
+Implemented through Member A W12 and Member C W16: compose core/obs profiles, per-service DB roles, OTel, confirmed/manual-ACK messaging, Driver reservation foundation, Trip lifecycle/assignment fencing, transactional Trip Outbox, persisted Ride Saga, exact compensation, post-pivot forward recovery, deterministic crash/restart proofs and invariant auditing.
 
-This W9 branch adds shared transactional Outbox and durable processed-message dedup primitives, low-cardinality metrics, and PostgreSQL/RabbitMQ integration harnesses. The Trip and Payment business producers/consumers still need to adopt these primitives in their scheduled work.
+Member C W07–W16 implementation is present on this branch: bounded retry/DLQ, shared Outbox/dedup, Payment messaging, deterministic faultpoints, Notification projection, observability dashboards, endpoint-list reconnect, HA/release harnesses and final report. See `evidence/member-c/w12-w16-completion.md` for the strict split between implemented code and live proofs still requiring Docker.
 
-Verified on main (CI run 38912031301, reproduced locally on identical tree): **851 tests passed, 0 failed, 1 env-gated skip**, using real PostgreSQL 18.6 and RabbitMQ 4.3.6 for messaging proofs. The Matching-style integration sink is a test fixture; this is not a complete production dispatch demo.
+Member A completion verification on this working tree: Trip unit **299/299**, W9/W10 real-infrastructure **31/31**, W11 faultpoint **11/11**, W11 real process crash/restart **5/5**, and W12 telemetry/authz/auditor **19/19**; Release solution build is clean with 0 warnings/errors.
 
-Next: human peer review, Trip Saga persistence,
-production Outbox adoption and relay hosting, automatic cleanup/reconciliation dispatch, faultpoint orchestration,
-and the end-to-end authenticated Trip/Saga flow. (`DriverReservedV1` matchingRound
-alignment has landed on this branch; see §3.)
+Remaining system boundary: Identity is still a skeleton, so the production authenticated client walkthrough and independent peer reruns are not claimed. No full-system HA claim is made; the tested claim is Trip Outbox/Saga recovery under the recorded broker/process scenarios.

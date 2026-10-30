@@ -3,6 +3,7 @@ using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RideHailing.Messaging.Contracts;
+using RideHailing.Messaging.Observability;
 
 namespace RideHailing.Messaging.Reliability;
 
@@ -74,6 +75,9 @@ public sealed class ManualAckConsumer : IAsyncDisposable
         Func<MessageEnvelope<JsonElement>, CancellationToken, Task> handler, BasicDeliverEventArgs delivery)
     {
         if (stopping.IsCancellationRequested) return;
+        var started = Stopwatch.GetTimestamp();
+        var metricOutcome = "failed";
+        MessagingMetrics.RecordDelivery(delivery.Redelivered);
         // RabbitMQ owns delivery memory. Copy before any asynchronous work.
         var oversized = delivery.Body.Length > 1024 * 1024;
         var body = oversized ? [] : delivery.Body.ToArray();
@@ -118,6 +122,8 @@ public sealed class ManualAckConsumer : IAsyncDisposable
                     properties.Headers ??= new Dictionary<string, object?>();
                     properties.Headers["x-ride-attempt"] = attempt + 1;
                     await publisher.PublishRawAsync("", queue, properties, body, stopping.Token);
+                    MessagingMetrics.RecordRetry(failure.Kind.ToString());
+                    metricOutcome = "retry";
                 }
                 else
                 {
@@ -129,19 +135,34 @@ public sealed class ManualAckConsumer : IAsyncDisposable
                     var errorEnvelope = MessageEnvelope<DeliveryError>.Create("DeliveryErrorV1", error.CorrelationId, error,
                         causationId: string.IsNullOrWhiteSpace(properties.MessageId) ? null : properties.MessageId);
                     await publisher.PublishAsync("ride.deadletter", queue, errorEnvelope, stopping.Token);
+                    MessagingMetrics.RecordDeadLetter(failure.Kind.ToString());
+                    metricOutcome = "deadletter";
                 }
+            }
+            else
+            {
+                metricOutcome = "success";
             }
             // Success: handler committed. Failure: retry/error transfer was confirmed. Only now ACK.
             await faultPoint.HitAsync(RideHailing.Messaging.FaultPointNames.ConsumerAfterBusinessCommitBeforeAck, stopping.Token);
             await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, stopping.Token);
             Interlocked.Increment(ref acknowledged);
+            MessagingMetrics.RecordAcknowledged();
         }
-        catch (OperationCanceledException) when (stopping.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+        {
+            metricOutcome = "cancelled";
+        }
         catch (Exception error)
         {
             // No ACK after failed/uncertain handoff. Supervisor disposes this connection, allowing redelivery.
             completion.TrySetException(error);
             stopping.Cancel();
+        }
+        finally
+        {
+            MessagingMetrics.RecordProcessingDuration(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds, metricOutcome);
         }
     }
 

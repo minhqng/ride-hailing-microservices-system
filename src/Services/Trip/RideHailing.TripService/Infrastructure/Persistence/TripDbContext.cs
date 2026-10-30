@@ -1,16 +1,24 @@
 // Trip-owned EF Core persistence (A-W02-02 foundation, A-W03-07 aggregate,
-// A-W04-02 request idempotency, A-W04-04 active-Rider defense).
+// A-W04-02 request idempotency, A-W04-04 active-Rider defense, A-W09-01
+// Trip-owned Outbox intent, A-W10-01 Trip-owned RideSaga).
 //
-// SCOPE (W4): Trip aggregate plus Trip-local request-idempotency
-// bookkeeping. Transport DTOs in Api/ are NOT entities and MUST NOT be
-// mapped here. Driver/Matching/Payment/Saga/Outbox/Inbox tables belong to
-// later work. Version is the application-managed optimistic-concurrency
-// token: the domain advances it, persistence only compares the original
-// value. Concurrency failures are translated to
+// SCOPE: Trip aggregate, the Trip-owned ride saga, Trip-local
+// request-idempotency bookkeeping, durable message receipts and pending
+// outgoing Outbox intents. Transport DTOs in Api/ are NOT entities and MUST
+// NOT be mapped here. Driver/Matching/Payment/Inbox tables belong to their
+// owning services. Version/StepVersion are the application-managed
+// optimistic-concurrency tokens: the domain advances them, persistence only
+// compares the original value. A deterministic Outbox messageId is the second
+// fence for the same logical transition, and an identity clash is only
+// treated as a lost race after the committed winner is read back and proven
+// to carry the same message contract. Concurrency failures are translated to
 // TripConcurrencyConflictException at this Trip-specific boundary; no generic
 // repository, no blind retry.
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Npgsql;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Integration.Messaging;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence.Configurations;
@@ -30,7 +38,20 @@ public sealed class TripDbContext : DbContext
 
     /// <summary>Authoritative W3 Trip aggregate set.</summary>
     public DbSet<Trip> Trips => Set<Trip>();
+
+    /// <summary>
+    /// W10 Trip-owned persisted ride workflow: exactly one authoritative
+    /// current saga per Trip (Doc 05A §18, Doc 02 §14).
+    /// </summary>
+    public DbSet<RideSaga> RideSagas => Set<RideSaga>();
+
     public DbSet<TripMessageReceipt> MessageReceipts => Set<TripMessageReceipt>();
+
+    /// <summary>
+    /// W9 Trip-owned pending outgoing intents. Rows are appended atomically
+    /// with the business transition; the shared C-owned relay owns delivery.
+    /// </summary>
+    public DbSet<TripOutboxMessage> OutboxMessages => Set<TripOutboxMessage>();
 
     /// <summary>W4 request-idempotency bookkeeping set (not a domain aggregate).</summary>
     public DbSet<RequestIdempotencyRecord> RequestIdempotency => Set<RequestIdempotencyRecord>();
@@ -38,7 +59,9 @@ public sealed class TripDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new TripConfiguration());
+        modelBuilder.ApplyConfiguration(new RideSagaConfiguration());
         modelBuilder.ApplyConfiguration(new TripMessageReceiptConfiguration());
+        modelBuilder.ApplyConfiguration(new TripOutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new RequestIdempotencyConfiguration());
     }
 
@@ -58,6 +81,27 @@ public sealed class TripDbContext : DbContext
 
             throw;
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "outbox_messages_pk",
+        } conflict)
+        {
+            if (SameLogicalIntentRace(ex.Entries))
+            {
+                throw TranslateOutboxIdentityConflict(ex, conflict);
+            }
+
+            throw;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "UX_ride_sagas_one_per_trip",
+        })
+        {
+            throw TranslateSagaIdentityConflict(ex.Entries);
+        }
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -76,7 +120,124 @@ public sealed class TripDbContext : DbContext
 
             throw;
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "outbox_messages_pk",
+        } conflict)
+        {
+            if (await SameLogicalIntentRaceAsync(ex.Entries, cancellationToken).ConfigureAwait(false))
+            {
+                throw TranslateOutboxIdentityConflict(ex, conflict);
+            }
+
+            throw;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "UX_ride_sagas_one_per_trip",
+        })
+        {
+            throw TranslateSagaIdentityConflict(ex.Entries);
+        }
     }
+
+    /// <summary>
+    /// The UNIQUE(trip_id) fence means another writer committed this Trip's
+    /// saga first — the same logical workflow, never a foreign one (two
+    /// different trips cannot collide on this index). Report it like a
+    /// Version conflict so a racing first acceptance reconciles by replay
+    /// instead of surfacing as a server fault.
+    /// </summary>
+    private static TripConcurrencyConflictException TranslateSagaIdentityConflict(
+        IEnumerable<EntityEntry> entries)
+    {
+        var tripId = Guid.Empty;
+        foreach (var entry in entries)
+        {
+            if (entry.Entity is RideSaga saga)
+            {
+                tripId = saga.TripId;
+                break;
+            }
+        }
+
+        return new TripConcurrencyConflictException(tripId, expectedVersion: null,
+            new InvalidOperationException("RideSaga identity already committed by another writer."));
+    }
+
+    /// <summary>
+    /// A deterministic Outbox identity is the second concurrency fence for the
+    /// same logical transition: if the row already exists, another writer has
+    /// committed that transition. Report it like a Version conflict so callers
+    /// reread the winner instead of treating a lost race as a server fault.
+    /// Only callers of this translation have already proven the persisted
+    /// winner carries the staged message contract.
+    /// </summary>
+    private static TripConcurrencyConflictException TranslateOutboxIdentityConflict(
+        DbUpdateException ex, PostgresException uniqueViolation)
+    {
+        var tripId = Guid.Empty;
+        foreach (var entry in ex.Entries)
+        {
+            if (entry.Entity is TripOutboxMessage message &&
+                Guid.TryParse(message.AggregateId, out var aggregateId))
+            {
+                tripId = aggregateId;
+                break;
+            }
+        }
+
+        return new TripConcurrencyConflictException(tripId, expectedVersion: null,
+            new InvalidOperationException("Outbox identity already committed by another writer.", uniqueViolation));
+    }
+
+    /// <summary>
+    /// A duplicate outbox_messages key is a legitimate lost race only when the
+    /// committed winner carries the same message contract (type, exchange,
+    /// routing key) as the staged intent. The winner is read back outside the
+    /// rolled-back save: a foreign or corrupt row occupying a Trip intent
+    /// identity must surface as a database fault, never replay as concurrency,
+    /// and an unverifiable winner is treated as a fault rather than a race.
+    /// </summary>
+    private bool SameLogicalIntentRace(IReadOnlyList<EntityEntry> entries)
+    {
+        var staged = entries.Select(e => e.Entity).OfType<TripOutboxMessage>().ToList();
+        if (staged.Count == 0) return false;
+
+        foreach (var message in staged)
+        {
+            var winner = OutboxMessages.AsNoTracking()
+                .SingleOrDefault(m => m.MessageId == message.MessageId);
+            if (!WinnerMatchesContract(winner, message)) return false;
+        }
+
+        return true;
+    }
+
+    private async Task<bool> SameLogicalIntentRaceAsync(
+        IReadOnlyList<EntityEntry> entries, CancellationToken cancellationToken)
+    {
+        var staged = entries.Select(e => e.Entity).OfType<TripOutboxMessage>().ToList();
+        if (staged.Count == 0) return false;
+
+        foreach (var message in staged)
+        {
+            var winner = await OutboxMessages.AsNoTracking()
+                .SingleOrDefaultAsync(m => m.MessageId == message.MessageId, cancellationToken)
+                .ConfigureAwait(false);
+            if (!WinnerMatchesContract(winner, message)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool WinnerMatchesContract(TripOutboxMessage? winner, TripOutboxMessage staged) =>
+        winner is not null &&
+        winner.MessageType == staged.MessageType &&
+        winner.Exchange == staged.Exchange &&
+        winner.RoutingKey == staged.RoutingKey;
 
     private static TripConcurrencyConflictException? TryTranslateConcurrencyConflict(DbUpdateConcurrencyException ex)
     {
@@ -96,6 +257,25 @@ public sealed class TripDbContext : DbContext
                 }
 
                 return new TripConcurrencyConflictException(trip.TripId, expected, ex);
+            }
+
+            // W10: the saga row shares the same transaction and the same OCC
+            // discipline; a losing saga writer must surface as the same
+            // transient conflict so redelivery reconciles it.
+            if (entry.Entity is RideSaga saga)
+            {
+                int? expected = null;
+                try
+                {
+                    expected = entry.Property("StepVersion").OriginalValue as int?
+                        ?? (entry.Property("StepVersion").OriginalValue is int v ? v : null);
+                }
+                catch
+                {
+                    expected = null;
+                }
+
+                return new TripConcurrencyConflictException(saga.TripId, expected, ex);
             }
         }
 

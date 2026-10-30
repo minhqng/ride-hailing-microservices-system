@@ -138,15 +138,12 @@ public sealed class DriverEventPublisher : IAsyncDisposable
                 await _connection.DisposeAsync();
             }
 
-            var factory = new ConnectionFactory
-            {
-                HostName = _options.Host,
-                Port = _options.Port,
-                UserName = _options.Username,
-                Password = _options.Password,
-                ClientProvidedName = "driver-service/event-publisher",
-                AutomaticRecoveryEnabled = false,
-            };
+            var factory = RabbitConnectionFactory.Create(
+                _options.Hosts ?? _options.Host,
+                _options.Port,
+                _options.Username,
+                _options.Password,
+                "driver-service/event-publisher");
             _connection = await factory.CreateConnectionAsync(ct);
             await RideTopology.DeclareAsync(_connection, ct);
         }

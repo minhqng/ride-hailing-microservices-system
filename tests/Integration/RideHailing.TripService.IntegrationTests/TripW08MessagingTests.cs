@@ -157,12 +157,10 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
     {
         var trip = await Seed(cancel: true);
         await using var db = Db();
-        await using var services = new ServiceCollection()
-            .AddSingleton(new TripMessagingReadiness()).BuildServiceProvider();
-        var publisher = new TripRideRequestedPublisher(db, new TripMessagingSettings(true), services,
-            TimeProvider.System, NullLogger<TripRideRequestedPublisher>.Instance);
-        Assert.True(await publisher.PublishForOwnedRideAsync(trip.TripId, trip.RiderId, default));
-        Assert.False(await publisher.PublishForOwnedRideAsync(trip.TripId, Guid.NewGuid(), default));
+        var intake = new TripRideRequestedIntake(db, new TripMessagingSettings(true),
+            TimeProvider.System, NullLogger<TripRideRequestedIntake>.Instance);
+        Assert.True(await intake.EnsureRideRequestedAsync(trip.TripId, trip.RiderId, default));
+        Assert.False(await intake.EnsureRideRequestedAsync(trip.TripId, Guid.NewGuid(), default));
         var current = await db.Trips.SingleAsync(t => t.TripId == trip.TripId);
         Assert.Equal(trip.Version, current.Version);
         Assert.Equal(TripState.Cancelled, current.State);
@@ -238,7 +236,7 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
     }
 
     [Fact]
-    public async Task HttpCreate_PublishesStableRideRequested_AndMatchingStyleCommitPrecedesAck()
+    public async Task HttpCreate_CommitsStableRideRequestedToOutbox_AndRelayPublishesOnce()
     {
         await using (var db = Db())
         {
@@ -254,7 +252,7 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded
         };
         ActivitySource.AddActivityListener(listener);
-        using var root = new Activity("trip-http-w8").SetIdFormat(ActivityIdFormat.W3C).Start();
+        using var root = new Activity("trip-http-w9").SetIdFormat(ActivityIdFormat.W3C).Start();
         using var app = new TripApplicationFactory(postgres.ConnectionString).WithWebHostBuilder(builder =>
         {
             builder.UseSetting("TripMessaging:Enabled", "true");
@@ -305,20 +303,32 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
         using var first = await client.SendAsync(firstRequest);
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         var tripId = (await first.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("tripId").GetGuid();
+        // HTTP replay must not create a second logical message.
         using var secondRequest = Request();
         using var second = await client.SendAsync(secondRequest);
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
-        await Eventually(() => Task.FromResult(matching.AcknowledgedCount == 2));
+        await Eventually(async () =>
+        {
+            await using var probe = Db();
+            return await probe.OutboxMessages.AnyAsync(m =>
+                m.AggregateId == tripId.ToString("D") && m.Status == "PUBLISHED");
+        });
+        await Eventually(() => Task.FromResult(matching.AcknowledgedCount == 1));
+        (string Id, string Json, string Correlation, ActivityTraceId Trace) delivered;
         lock (observed)
         {
-            Assert.Equal(2, observed.Count);
-            Assert.Equal(observed[0].Id, observed[1].Id);
-            Assert.Equal(observed[0].Json, observed[1].Json);
-            Assert.Equal(tripId.ToString("D"), observed[0].Correlation);
-            Assert.Equal(root.TraceId, observed[0].Trace);
+            delivered = Assert.Single(observed);
         }
+        Assert.Equal(tripId.ToString("D"), delivered.Correlation);
+        Assert.Equal(root.TraceId, delivered.Trace);
         await using var verify = Db();
-        Assert.Equal(TripState.Matching, (await verify.Trips.SingleAsync(t => t.TripId == tripId)).State);
+        var saved = await verify.Trips.SingleAsync(t => t.TripId == tripId);
+        Assert.Equal(TripState.Matching, saved.State);
+        var intent = await verify.OutboxMessages.SingleAsync(m => m.AggregateId == tripId.ToString("D"));
+        Assert.Equal("RideRequestedV1", intent.MessageType);
+        Assert.Equal("PUBLISHED", intent.Status);
+        Assert.Equal(TripOutboxIntents.RideRequestedMessageId(saved), intent.MessageId);
+        Assert.Equal(intent.MessageId, delivered.Id);
         await using var countConnection = new NpgsqlConnection(postgres.ConnectionString);
         await countConnection.OpenAsync();
         await using var count = new NpgsqlCommand("SELECT count(*) FROM w8_matching_style_receipts WHERE trip_id=@trip", countConnection);
@@ -327,9 +337,20 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
     }
 
     [Fact]
-    public async Task BrokerReconnect_ReadinessGatesPublication_AndSameHttpKeyRecoversSavedRide()
+    public async Task BrokerOutage_CommitsMatchingWithDurableIntent_ThenRelayPublishesSameIdAfterRecovery()
     {
         await using (var db = Db()) await db.Database.MigrateAsync();
+        // The relay drains the SHARED collection database: pending outbox rows
+        // staged by other suites (W09 writer proofs) may publish into this
+        // class's broker during the test. The queue starts empty and the
+        // oracle below stays trip-scoped, so cross-suite residue cannot
+        // masquerade as (or mask) this ride's publication.
+        await using (var clean = await rabbit.Factory.CreateConnectionAsync())
+        await using (var cleanChannel = await clean.CreateChannelAsync())
+        {
+            await cleanChannel.QueuePurgeAsync("matching.ride-requested.q");
+        }
+
         using var app = new TripApplicationFactory(postgres.ConnectionString).WithWebHostBuilder(builder =>
         {
             builder.UseSetting("TripMessaging:Enabled", "true");
@@ -355,38 +376,84 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             request.Headers.Add("Idempotency-Key", key);
             return request;
         }
+
         Guid tripId;
+        string expectedMessageId;
         try
         {
             Assert.Equal(0, (await rabbit.Broker.ExecAsync(["rabbitmqctl", "stop_app"])).ExitCode);
-            await Eventually(async () => (await client.GetAsync("/health/ready")).StatusCode == HttpStatusCode.ServiceUnavailable);
+            await Eventually(async () =>
+                (await client.GetAsync("/health/ready")).StatusCode == HttpStatusCode.ServiceUnavailable);
+
+            // W9: the broker is not on the create path. The request commits
+            // MATCHING plus its durable intent and succeeds even though the
+            // relay cannot publish yet.
             using var request = Request();
             using var saved = await client.SendAsync(request);
-            Assert.Equal(HttpStatusCode.ServiceUnavailable, saved.StatusCode);
-            var problem = await saved.Content.ReadFromJsonAsync<JsonElement>();
-            Assert.Equal("MATCHING_PUBLICATION_PENDING", problem.GetProperty("code").GetString());
-            tripId = problem.GetProperty("tripId").GetGuid();
+            Assert.Equal(HttpStatusCode.Created, saved.StatusCode);
+            tripId = (await saved.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("tripId").GetGuid();
+
             await using var verify = Db();
-            Assert.Equal(TripState.Created, (await verify.Trips.SingleAsync(t => t.TripId == tripId)).State);
+            var committed = await verify.Trips.SingleAsync(t => t.TripId == tripId);
+            Assert.Equal(TripState.Matching, committed.State);
+            expectedMessageId = TripOutboxIntents.RideRequestedMessageId(committed);
+            var pending = await verify.OutboxMessages.SingleAsync(m => m.AggregateId == tripId.ToString("D"));
+            Assert.Equal(expectedMessageId, pending.MessageId);
+            Assert.Equal("RideRequestedV1", pending.MessageType);
+            Assert.Equal(RideTopology.EventsExchange, pending.Exchange);
+            Assert.Equal("trip.ride-requested.v1", pending.RoutingKey);
+            Assert.Equal("PENDING", pending.Status);
+            // The relay must not have burned a publication attempt while the
+            // broker was down: a durable backlog, not a failed message.
+            Assert.Equal(0, pending.AttemptCount);
+            Assert.Null(pending.PublishedAt);
+            Assert.Null(pending.LastErrorCode);
         }
         finally { Assert.Equal(0, (await rabbit.Broker.ExecAsync(["rabbitmqctl", "start_app"])).ExitCode); }
+
         await Eventually(async () => (await client.GetAsync("/health/ready")).IsSuccessStatusCode);
+        await Eventually(async () =>
+        {
+            await using var probe = Db();
+            return await probe.OutboxMessages.AnyAsync(m =>
+                m.MessageId == expectedMessageId && m.Status == "PUBLISHED");
+        });
+        await using (var verify = Db())
+        {
+            var published = await verify.OutboxMessages.SingleAsync(m => m.MessageId == expectedMessageId);
+            Assert.Equal("PUBLISHED", published.Status);
+            Assert.Equal(0, published.AttemptCount);
+            Assert.NotNull(published.PublishedAt);
+            Assert.Null(published.ClaimedBy);
+        }
+
+        // HTTP replay of the saved ride is idempotent and must not enqueue a
+        // second logical message.
         using var retryRequest = Request();
         using var retry = await client.SendAsync(retryRequest);
         Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
         Assert.Equal(tripId, (await retry.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("tripId").GetGuid());
-        await using var final = Db();
-        Assert.Equal(1, await final.Trips.CountAsync(t => t.RiderId == rider));
-        Assert.Equal(TripState.Matching, (await final.Trips.SingleAsync(t => t.TripId == tripId)).State);
-        // Consume this test's publication so the shared broker has no leftover
-        // RideRequested delivery for the independent HTTP trace test.
+        await using (var final = Db())
+        {
+            Assert.Equal(1, await final.Trips.CountAsync(t => t.RiderId == rider));
+            Assert.Equal(TripState.Matching, (await final.Trips.SingleAsync(t => t.TripId == tripId)).State);
+            Assert.Equal(1, await final.OutboxMessages.CountAsync(m => m.AggregateId == tripId.ToString("D")));
+        }
+
+        // Exactly one publication of THIS ride's stable identity reached the
+        // queue — the id committed while the broker was down, republished
+        // unchanged after recovery. Other pending rows from unrelated suites
+        // share the broker drain but never this trip's identity.
         await using var connection = await rabbit.Factory.CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
-        var delivery = await channel.BasicGetAsync("matching.ride-requested.q", autoAck: false);
-        Assert.NotNull(delivery);
-        Assert.Equal(TripRideRequestedPublisher.CreateEnvelope(await final.Trips.SingleAsync(t => t.TripId == tripId)).MessageId,
-            delivery.BasicProperties.MessageId);
-        await channel.BasicAckAsync(delivery.DeliveryTag, false);
+        var deliveredIds = new List<string>();
+        while (await channel.BasicGetAsync("matching.ride-requested.q", autoAck: false) is { } delivery)
+        {
+            deliveredIds.Add(delivery.BasicProperties.MessageId ?? "");
+            await channel.BasicAckAsync(delivery.DeliveryTag, false);
+        }
+        Assert.Single(deliveredIds, id => id == expectedMessageId);
+        Assert.DoesNotContain(deliveredIds, id => id.StartsWith($"trip:{tripId:N}:") && id != expectedMessageId);
     }
 
     [Fact]

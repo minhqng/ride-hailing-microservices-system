@@ -14,3 +14,7 @@ TestResults/
 secrets/
 logs/
 evidence/**/raw/
+ride-hailing-dispatch-platform/
+ride-hailing-dispatch-platform-A-B-proof/
+ride-hailing-dispatch-platform-A-W06/
+ride-hailing-dispatch-platform-w10-ci/

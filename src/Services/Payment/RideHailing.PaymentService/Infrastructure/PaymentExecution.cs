@@ -1,11 +1,12 @@
 using System.Globalization;
 using Npgsql;
 using RideHailing.PaymentService.Domain;
+using RideHailing.PaymentService.Observability;
 
 namespace RideHailing.PaymentService.Infrastructure;
 
 public sealed class PaymentConflictException : Exception;
-public sealed record PaymentExecutionResult(PaymentOperation Operation, bool Applied);
+public sealed record PaymentExecutionResult(PaymentOperation Operation, bool MessageApplied, bool IdempotencyHit);
 
 /// <summary>One canonical operation per exact key. PostgreSQL arbitrates across service instances.</summary>
 public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator simulator)
@@ -62,10 +63,11 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         var stored = await LoadAsync(request.OperationKey, connection, transaction, cancellationToken);
         if (Fingerprint(stored) != Fingerprint(request)) throw new PaymentConflictException();
+        var idempotencyHit = stored.AttemptCount > 0;
         if (tryBegin is not null && !await tryBegin(connection, transaction, cancellationToken))
         {
             await transaction.CommitAsync(cancellationToken);
-            return new PaymentExecutionResult(stored, Applied: false);
+            return new PaymentExecutionResult(stored, MessageApplied: false, IdempotencyHit: idempotencyHit);
         }
         PaymentOperation result;
         if (stored.AttemptCount > 0 && (!retry || stored.State != PaymentOperationState.Pending))
@@ -97,7 +99,7 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         if (persistResult is not null)
             await persistResult(connection, transaction, result, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return new PaymentExecutionResult(result, Applied: true);
+        return new PaymentExecutionResult(result, MessageApplied: true, IdempotencyHit: idempotencyHit);
     }
 
     public async Task<PaymentOperation> ReconcileAsync(string key, ProviderLedger provider, CancellationToken token)
@@ -114,6 +116,7 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         }
         stored = await LoadAsync(key, connection, transaction, token);
         await transaction.CommitAsync(token);
+        PaymentMetrics.RecordReconciliation(stored.State);
         return stored;
     }
 

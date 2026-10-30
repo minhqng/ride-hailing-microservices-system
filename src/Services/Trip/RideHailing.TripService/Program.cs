@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using RideHailing.Observability;
 using RideHailing.TripService.Api;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
+using RideHailing.TripService.Integration.Observability;
 
 // Bootstrap skeleton for RideHailing.TripService (Trip service).
 // Owns: see src/Services/Trip/RideHailing.TripService/README.md.
@@ -16,6 +18,13 @@ using RideHailing.TripService.Integration.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddRideTelemetry("trip-service");
+// A-W12-01/02: Trip domain spans and metrics ride the SAME OpenTelemetry
+// pipeline as the shared messaging instruments — one registry, no second
+// exporter. The meter is observed regardless of messaging enablement so
+// saga.active reflects durable workflow state even without a broker.
+builder.Services.AddOpenTelemetry()
+    .WithTracing(t => t.AddSource(TripDiagnostics.ActivitySourceName))
+    .WithMetrics(m => m.AddMeter(TripDiagnostics.MeterName));
 builder.Services.AddHealthChecks();
 
 // (A-W02-02) Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
@@ -28,7 +37,19 @@ var postgresConnection = builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException(
         "Missing Trip PostgreSQL connection string 'ConnectionStrings:Postgres'. " +
         "Provide ConnectionStrings__Postgres (see compose.yaml / deploy/postgres/init).");
-builder.Services.AddDbContext<TripDbContext>(options => options.UseNpgsql(postgresConnection));
+
+// One pooled data source serves both EF and the C-owned Outbox store. The
+// relay must read the SAME Trip database that owns the transaction; sharing
+// the data source avoids a second credential/pool and guarantees identical
+// connection settings. EF does not dispose an externally supplied source.
+//
+// Creation is deferred to first use: readiness must be able to report
+// NotReady (503) for an unparsable owned-database configuration instead of
+// crashing the host during startup. Nothing resolves the context or the relay
+// before the readiness gates pass.
+builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(postgresConnection));
+builder.Services.AddDbContext<TripDbContext>((sp, options) =>
+    options.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>()));
 
 // W4-local application dependencies: scoped handler/DbContext per request,
 // single system clock, stateless deterministic fare policy needs no service.
@@ -50,7 +71,10 @@ builder.Services.AddScoped<MarkMatchingFailedHandler>();
 builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-builder.Services.AddTripMessaging(builder.Configuration);
+builder.Services.AddTripMessaging(builder.Configuration, builder.Environment);
+// A-W12-02: durable saga-backlog observation (saga.active{step}) runs in every
+// host: it only reads the Trip-owned database and never touches the broker.
+builder.Services.AddHostedService<TripMetricsObserver>();
 
 var app = builder.Build();
 

@@ -30,7 +30,13 @@ public static class PlatformBootstrap
             })
             .WithMetrics(m =>
             {
-                m.AddMeter("Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Server.Kestrel", "RideHailing.Messaging");
+                m.AddMeter(
+                    "Microsoft.AspNetCore.Hosting",
+                    "Microsoft.AspNetCore.Server.Kestrel",
+                    "RideHailing.Messaging",
+                    "RideHailing.Payment",
+                    "RideHailing.Notification",
+                    "RideHailing.Trip");
                 if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
                     m.AddOtlpExporter();
             });

@@ -1,0 +1,17 @@
+{
+  "preparedAt": "2026-10-28T00:00:00+07:00",
+  "branch": "feature/C-W10-W11-payment-fault-platform",
+  "implementation": {
+    "w12ObservabilitySecurity": "implemented; live dashboard and auth fixture rerun pending",
+    "w13PerformanceSupport": "implemented; measured runs pending",
+    "w14ReconnectQuorum": "harness implemented; live Docker evidence pending",
+    "w15ReportEvidence": "implemented",
+    "w16ReleaseRehearsal": "deterministic gate implemented; live rehearsal pending"
+  },
+  "environment": {
+    "dockerCli": "unavailable",
+    "liveClaims": false
+  },
+  "report": "docs/member-c-reliability-report.md",
+  "releaseGate": "scripts/evidence/release-check.ps1"
+}

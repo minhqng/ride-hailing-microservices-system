@@ -63,4 +63,13 @@ public enum TripErrorCode
     /// current round/reservation instead of overwriting it.
     /// </summary>
     StaleIdentity = 7,
+
+    /// <summary>
+    /// The W10 payment leg cannot quote a positive amount from the frozen
+    /// fare (DSI-014), so the ride cannot start its Payment orchestration
+    /// (A-W10-02). The aggregate is unchanged; the caller must reject the
+    /// intake instead of mutating a Trip whose acceptance could never
+    /// dispatch AuthorizePayment.
+    /// </summary>
+    PaymentQuoteRequired = 8,
 }
