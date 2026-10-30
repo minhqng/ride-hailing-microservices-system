@@ -85,13 +85,19 @@ def _load(experiment: str, runs_root: Path) -> tuple[list[dict[str, Any]], list[
 
 def _base_result(experiment: str, manifests: list[dict[str, Any]], errors: list[str]) -> dict[str, Any]:
     report_grades = {bool(manifest.get("reportGrade")) for manifest in manifests}
+    live_g4 = lib.g4_readiness()
     return {
         "experiment": experiment,
         "runCount": len(manifests),
         "reportGrade": (report_grades.pop() if len(report_grades) == 1 else None),
         "mixedReportGrade": len(report_grades) > 1,
         "manifestErrors": errors,
-        "g4Green": all(bool((manifest.get("g4") or {}).get("green")) for manifest in manifests) if manifests else False,
+        "g4Green": bool(live_g4.get("green")) if manifests else False,
+        "liveG4": live_g4,
+        "manifestG4Mismatch": any(
+            bool((manifest.get("g4") or {}).get("green")) != bool(live_g4.get("green"))
+            for manifest in manifests
+        ),
         "sourceCommits": sorted({(manifest.get("source") or {}).get("commit") for manifest in manifests}),
         "environmentFingerprints": sorted({
             lib.environment_fingerprint(manifest.get("environment") or {}) for manifest in manifests
@@ -114,7 +120,9 @@ def _acceptance_gate(result: dict[str, Any], manifests: list[dict[str, Any]], mi
         reasons.append("campaign mixes report-grade and smoke runs")
     if result["reportGrade"]:
         if not result["g4Green"]:
-            reasons.append("G4 is not green for every report-grade run")
+            reasons.append("the live G4 gate is not green for report-grade analysis")
+        if result.get("manifestG4Mismatch"):
+            reasons.append("a manifest's recorded G4 verdict disagrees with the live G4 gate")
         if len(result["sourceCommits"]) != 1:
             reasons.append("report-grade runs were not all measured from the same source commit")
         dirty = [
@@ -129,12 +137,10 @@ def _acceptance_gate(result: dict[str, Any], manifests: list[dict[str, Any]], mi
             reasons.append("the authoritative B-owned invariant auditor did not PASS for every run")
     if extra_reasons:
         reasons.extend(extra_reasons)
-    blocked = [
-        manifest for manifest in manifests
-        if (manifest.get("result") or {}).get("status") == "BLOCKED"
-    ]
-    if blocked:
-        reasons.append(f"{len(blocked)} run(s) are BLOCKED; blocked runs never provide performance evidence")
+    statuses = [(manifest.get("result") or {}).get("status") for manifest in manifests]
+    non_pass = [status for status in statuses if status != "PASS"]
+    if non_pass:
+        reasons.append(f"{len(non_pass)} run(s) did not complete with PASS: {sorted(set(non_pass))}")
     if result.get("synthetic"):
         reasons.append("synthetic fixtures cannot establish acceptance; they only exercise parser/analyzer logic")
     result["reasons"] = reasons
@@ -222,10 +228,16 @@ def analyze_e02(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
             continue
         configured = ((manifest.get("workload") or {}).get("configured") or {})
         rate = configured.get("configuredRatePerSecond")
-        if isinstance(rate, (int, float)):
+        if isinstance(rate, (int, float)) and rate > 0:
             grouped[float(rate)].append(manifest)
     groups = []
     reasons = []
+    no_data = [
+        manifest for manifest in manifests
+        if not ((manifest.get("workload") or {}).get("achieved") or {})
+    ]
+    if no_data:
+        reasons.append(f"{len(no_data)} run(s) have no achieved workload data")
     for rate in sorted(grouped):
         runs = grouped[rate]
         achieved = [((manifest.get("workload") or {}).get("achieved") or {}) for manifest in runs]
@@ -252,13 +264,26 @@ def analyze_e02(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
             "finalState": [payload.get("finalState") for manifest in runs for payload in _final_state_payloads(manifest)],
         }
         finals = group["finalState"]
+        success_counts = [int(item.get("successCount") or 0) for item in achieved]
+        group["successCounts"] = success_counts
+        group["latencyMethod"] = "k6 summary trend percentiles per run; not pooled"
         if result["reportGrade"] and not finals:
             reasons.append(f"rate {rate:g}/s: authoritative Trip final state is missing")
         if finals:
-            if any(str(item.get("activeTripsPerRiderViolations")) not in ("0", "None") for item in finals if item):
+            if any(not item or item.get("error") for item in finals):
+                reasons.append(f"rate {rate:g}/s: authoritative Trip final state is unreadable or errored")
+            if any(str(item.get("activeTripsPerRiderViolations")) != "0" for item in finals if item):
                 reasons.append(f"rate {rate:g}/s: active-Trip-per-Rider violations were observed")
-            if any(str(item.get("duplicateIdempotencyResources")) not in ("0", "None") for item in finals if item):
+            if any(str(item.get("duplicateIdempotencyResources")) != "0" for item in finals if item):
                 reasons.append(f"rate {rate:g}/s: duplicate idempotency resources were observed")
+            if len(finals) == len(success_counts):
+                for final, successes in zip(finals, success_counts):
+                    if str(final.get("tripCount")) != str(successes):
+                        reasons.append(f"rate {rate:g}/s: Trip count does not match successful requests")
+                    if str(final.get("e02IdempotencyKeys")) != str(successes):
+                        reasons.append(f"rate {rate:g}/s: idempotency count does not match successful requests")
+        if any(count == 0 for count in success_counts):
+            reasons.append(f"rate {rate:g}/s: a run produced zero successful requests")
         if result["reportGrade"] and len(runs) < min_repeats:
             reasons.append(f"rate {rate:g}/s: only {len(runs)} run(s); report-grade requires {min_repeats}")
         if p50["count"] == 0 or p95["count"] == 0:
@@ -283,10 +308,12 @@ def analyze_e02(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
         verdict = "INVALID"
     elif not manifests:
         verdict = "NOT_RUN"
-    elif any(status == "FAIL" for status in statuses):
+    elif any(status in ("FAIL", "INVALID", "INCOMPLETE") for status in statuses):
         verdict = "FAIL"
     elif statuses and all(status == "BLOCKED" for status in statuses):
         verdict = "BLOCKED"
+    elif statuses and any(status != "PASS" for status in statuses):
+        verdict = "FAIL"
     elif result["reportGrade"] and (reasons or not result["g4Green"]):
         verdict = "INCOMPLETE"
     elif result["reportGrade"]:
@@ -306,6 +333,10 @@ def analyze_e02(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
 def analyze_e03(manifests: list[dict[str, Any]], errors: list[str], min_repeats: int) -> dict[str, Any]:
     result = _base_result("E03", manifests, errors)
     grouped: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    no_data = [
+        manifest for manifest in manifests
+        if not ((manifest.get("workload") or {}).get("achieved") or {})
+    ]
     for manifest in manifests:
         if not ((manifest.get("workload") or {}).get("achieved") or {}):
             continue
@@ -315,6 +346,8 @@ def analyze_e03(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
             grouped[replicas].append(manifest)
     groups = []
     reasons = []
+    if no_data:
+        reasons.append(f"{len(no_data)} run(s) have no achieved workload data")
     for replicas in sorted(grouped):
         runs = grouped[replicas]
         achieved = [((manifest.get("workload") or {}).get("achieved") or {}) for manifest in runs]
@@ -330,7 +363,8 @@ def analyze_e03(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
             "queuePeakMessages": _numeric([item.get("queuePeakMessages") for item in achieved]),
             "redeliveryDelta": _numeric([item.get("redeliveryDelta") for item in achieved]),
             "perReplicaNonzero": all(
-                all(int(item.get("consumedLines") or 0) > 0 for item in (entry.get("perReplicaConsumed") or []))
+                all(int(item.get("measuredConsumedLines") or item.get("consumedLines") or 0) > 0
+                    for item in (entry.get("perReplicaConsumed") or []))
                 for entry in achieved
             ) if replicas > 1 else True,
             "workerMode": sorted({str(((manifest.get("workload") or {}).get("configured") or {}).get("workerMode"))
@@ -348,6 +382,21 @@ def analyze_e03(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
             reasons.append(f"replicas={replicas}: intake latency percentiles are missing")
         if any((item.get("redeliveryDelta") or 0) > 0 for item in achieved):
             reasons.append(f"replicas={replicas}: redelivery was observed and requires review")
+        if result["reportGrade"]:
+            for item in achieved:
+                if int(item.get("deliveries") or 0) < 100:
+                    reasons.append(f"replicas={replicas}: fewer than 100 measured messages")
+                configured_rate = float(item.get("configuredRatePerSecond") or 0)
+                achieved_rate = float(item.get("achievedSendRatePerSecond") or 0)
+                if configured_rate <= 0 or achieved_rate / configured_rate < 0.9:
+                    reasons.append(f"replicas={replicas}: achieved send rate is below 90% of configured")
+                if (item.get("missingLatencySamples") or 0) != 0:
+                    reasons.append(f"replicas={replicas}: measured latency samples are missing")
+                measured = item.get("perReplicaMeasuredConsumed") or []
+                if sum(int(value or 0) for value in measured) != int(item.get("uniqueMessages") or 0):
+                    reasons.append(f"replicas={replicas}: per-replica measured work does not sum to unique messages")
+            if any(str(mode) != "disabled" for mode in group["workerMode"]):
+                reasons.append(f"replicas={replicas}: worker-enabled mode is not an isolated consumer-scaling configuration")
         groups.append(group)
     missing_replicas = [value for value in CANONICAL_REPLICAS if value not in grouped]
     result["missingCanonicalReplicas"] = missing_replicas
@@ -358,10 +407,12 @@ def analyze_e03(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
         verdict = "INVALID"
     elif not manifests:
         verdict = "NOT_RUN"
-    elif any(status == "FAIL" for status in statuses):
+    elif any(status in ("FAIL", "INVALID", "INCOMPLETE") for status in statuses):
         verdict = "FAIL"
     elif statuses and all(status == "BLOCKED" for status in statuses):
         verdict = "BLOCKED"
+    elif statuses and any(status != "PASS" for status in statuses):
+        verdict = "FAIL"
     elif result["reportGrade"] and (reasons or not result["g4Green"]):
         verdict = "INCOMPLETE"
     elif result["reportGrade"]:
@@ -415,6 +466,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-rates", type=lambda value: tuple(int(part) for part in value.split(",")),
                         default=CANONICAL_RATES)
     args = parser.parse_args(argv)
+    min_repeats = max(args.min_repeats, 3)
+    expected_rates = tuple(sorted(set(args.expected_rates) | set(CANONICAL_RATES)))
 
     experiments = list(lib.EXPERIMENTS) if args.experiment == "ALL" else [args.experiment]
     all_results = []
@@ -422,11 +475,11 @@ def main(argv: list[str] | None = None) -> int:
     for experiment in experiments:
         manifests, errors = _load(experiment, args.runs_root)
         if experiment == "E01":
-            result = analyze_e01(manifests, errors, args.min_repeats)
+            result = analyze_e01(manifests, errors, min_repeats)
         elif experiment == "E02":
-            result = analyze_e02(manifests, errors, args.min_repeats, args.expected_rates)
+            result = analyze_e02(manifests, errors, min_repeats, expected_rates)
         else:
-            result = analyze_e03(manifests, errors, args.min_repeats)
+            result = analyze_e03(manifests, errors, min_repeats)
         result["generatedAtUtc"] = lib.iso()
         all_results.append(result)
         args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -434,11 +487,18 @@ def main(argv: list[str] | None = None) -> int:
         lib.write_text(args.out_dir / f"{experiment.lower()}-analysis.md", markdown(result))
         if result["verdict"] not in ("ACCEPTED", "SMOKE_PASS", "NOT_RUN"):
             exit_code = 3 if result["verdict"] == "BLOCKED" else 2
+    campaign_accepted = bool(all_results) and all(result.get("acceptance") for result in all_results)
     lib.write_json(args.out_dir / "campaign-analysis.json", {
         "schemaVersion": 1,
         "generatedAtUtc": lib.iso(),
         "experiments": all_results,
-        "verdict": "ACCEPTED" if all(result.get("acceptance") for result in all_results) and all_results else "NOT_ACCEPTED",
+        "verdict": "ACCEPTED" if campaign_accepted else "NOT_ACCEPTED",
+        "acceptance": campaign_accepted,
+        "latencyMethod": {
+            "E01": "nearest-rank over per-request latencies",
+            "E02": "k6 summary trend percentiles per run; group values are medians of per-run percentiles",
+            "E03": "nearest-rank over per-message intake latencies",
+        },
     })
     lib.print_json({"verdicts": {result["experiment"]: result["verdict"] for result in all_results},
                     "outDir": str(args.out_dir)})

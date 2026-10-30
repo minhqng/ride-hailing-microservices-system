@@ -138,7 +138,7 @@ def _publish_series(
     started = time.perf_counter()
     sequence = start_sequence
     for index in range(count):
-        target = started + index * interval
+        target = started + (index + 1) * interval
         now = time.perf_counter()
         if target > now:
             time.sleep(target - now)
@@ -157,6 +157,7 @@ def _publish_series(
             "error": error,
             "duplicate": False,
             "outcome": "success" if routed else "systemError",
+            "scheduleLatenessMs": max(0.0, (sent_mono - target) * 1000.0),
         }
         unique.append(record)
         deliveries.append(record)
@@ -169,6 +170,9 @@ def _publish_series(
             duplicate_record["routed"] = routed
             duplicate_record["error"] = error
             duplicate_record["outcome"] = "success" if routed else "systemError"
+            duplicate_record["scheduleLatenessMs"] = max(
+                0.0, (duplicate_record["sentMono"] - target) * 1000.0
+            )
             deliveries.append(duplicate_record)
         sequence += 1
     duration = time.perf_counter() - started
@@ -242,18 +246,32 @@ def _matching_state() -> dict[str, Any]:
     }
 
 
-def _consumer_log_counts(containers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _consumer_log_counts(
+    containers: list[dict[str, Any]], measured_trip_ids: list[str]
+) -> list[dict[str, Any]]:
     counts = []
+    measured = set(measured_trip_ids)
     for container in containers:
         container_id = container.get("id")
         result = lib.docker("logs", container_id, timeout=60) if container_id else None
         text = (result.stdout or "") if result is not None else ""
         text += (result.stderr or "") if result is not None else ""
+        measured_lines = 0
+        warmup_lines = 0
+        for line in text.splitlines():
+            if LOG_MARKER not in line:
+                continue
+            if any(trip_id in line for trip_id in measured):
+                measured_lines += 1
+            else:
+                warmup_lines += 1
         counts.append(
             {
                 "containerId": container_id,
                 "name": container.get("name"),
-                "consumedLines": text.count(LOG_MARKER),
+                "consumedLines": measured_lines + warmup_lines,
+                "measuredConsumedLines": measured_lines,
+                "warmupConsumedLines": warmup_lines,
             }
         )
     return counts
@@ -371,7 +389,7 @@ def _run_configuration_inner(
     poll_thread.join(timeout=5)
     rows = _round_rows(measurement_started_iso)
     state = _matching_state()
-    consumer_counts = _consumer_log_counts(containers)
+    consumer_counts = _consumer_log_counts(containers, [record["tripId"] for record in unique])
     queue_after = _queue_snapshot()
     environment_after = lib.capture_environment(include_observed=True)
 
@@ -393,7 +411,10 @@ def _run_configuration_inner(
         if sample.get("redeliver") is not None
     ]
     redelivery = (max(redeliver_values) - min(redeliver_values)) if redeliver_values else 0
-    per_replica_nonzero = all(item["consumedLines"] > 0 for item in consumer_counts) if replicas > 1 else True
+    per_replica_measured = [int(item["measuredConsumedLines"]) for item in consumer_counts]
+    per_replica_nonzero = all(value > 0 for value in per_replica_measured) if replicas > 1 else True
+    distribution_total_matches = sum(per_replica_measured) == unique_count
+    schedule_lateness = [float(record.get("scheduleLatenessMs") or 0.0) for record in deliveries]
     assertions = {
         "replicaContainerCount": len(containers) == replicas,
         "brokerConsumerCount": int(queue.get("consumers") or 0) == replicas,
@@ -405,6 +426,8 @@ def _run_configuration_inner(
         "noDuplicateInputIds": int(state.get("duplicateInputIds") or 0) == 0,
         "queueDrained": drain_ok,
         "allReplicasConsumedWork": per_replica_nonzero,
+        "measuredDistributionTotalMatches": distribution_total_matches,
+        "zeroMissingLatencySamples": missing_latency == 0,
         "duplicateIntakeSuppressed": duplicate_deliveries == 0 or rounds_created == unique_count,
     }
     if args.worker_mode == "disabled":
@@ -437,6 +460,8 @@ def _run_configuration_inner(
         "missingLatencySamples": missing_latency,
         "queuePeakMessages": max(queue_peaks) if queue_peaks else None,
         "queueSamples": len(poll_samples),
+        "maxScheduleLatenessMs": max(schedule_lateness) if schedule_lateness else None,
+        "perReplicaMeasuredConsumed": per_replica_measured,
         "redeliveryDelta": redelivery,
         "brokerConsumers": queue_after.get("consumers"),
         "perReplicaConsumed": consumer_counts,
@@ -523,8 +548,17 @@ def run_configuration(
     try:
         return _run_configuration_inner(args, replicas, repeat, g4)
     except Exception as exc:  # noqa: BLE001 - a crashed harness run is BLOCKED, not a result
-        run_id = lib.new_run_id("E03", args.seed + repeat + replicas)
-        run_dir = lib.RUNS_ROOT / "E03" / run_id
+        base = lib.RUNS_ROOT / "E03"
+        orphans = [
+            path for path in base.glob("W13-E03-*")
+            if path.is_dir() and not (path / "manifest.json").exists()
+        ] if base.exists() else []
+        if orphans:
+            run_dir = max(orphans, key=lambda path: path.stat().st_mtime)
+            run_id = run_dir.name
+        else:
+            run_id = lib.new_run_id("E03", args.seed + repeat + replicas)
+            run_dir = base / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         commands = [
             f"python scripts/perf/w13.py e03 --replicas {replicas} --rate {args.rate} "
@@ -573,7 +607,7 @@ def run(args: argparse.Namespace) -> int:
     g4 = lib.g4_readiness()
     if args.report_grade:
         try:
-            lib.ensure_report_grade(g4)
+            lib.ensure_report_grade(g4, lib.source_binding())
         except lib.GateError as exc:
             lib.print_json({"status": "BLOCKED", "reason": str(exc), "g4": g4})
             return 3
@@ -617,6 +651,10 @@ def main(argv: list[str] | None = None) -> int:
         args.duration_seconds = int(args.duration.rstrip("s"))
     except ValueError:
         parser.error("--duration must be an integer number of seconds (e.g. 20s)")
+    if args.rate <= 0:
+        parser.error("--rate must be greater than zero")
+    if args.duration_seconds <= 0:
+        parser.error("--duration must be greater than zero")
     return run(args)
 
 

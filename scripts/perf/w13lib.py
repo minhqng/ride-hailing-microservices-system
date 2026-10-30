@@ -150,7 +150,8 @@ def compose_args(*args: str) -> list[str]:
 
 
 def compose(*args: str, timeout: float | None = 600, check: bool = False) -> subprocess.CompletedProcess[str]:
-    return run(compose_args(*args), timeout=timeout, check=check)
+    return run(compose_args(*args), timeout=timeout, check=check,
+               env={"COMPOSE_PROJECT_NAME": PROJECT})
 
 
 def compose_up(services: Iterable[str], *, build: bool = True, scale: int | None = None,
@@ -400,17 +401,28 @@ def find_k6() -> str | None:
     return shutil.which("k6")
 
 
-def _redact(value: Any) -> Any:
+_SECRET_KEY_PARTS = ("password", "secret", "token", "credential", "passwd", "pwd")
+_CONNECTION_SECRET_RE = re.compile(r"(?i)(password|pwd)=([^;\s]+)")
+
+
+def _redact_string(value: str) -> str:
+    return _CONNECTION_SECRET_RE.sub(lambda match: f"{match.group(1)}=<redacted>", value)
+
+
+def _redact(value: Any, key_hint: str = "") -> Any:
     if isinstance(value, dict):
         redacted = {}
         for key, item in value.items():
-            if any(secret in key.lower() for secret in ("password", "secret", "token", "credential")):
+            lowered = str(key).lower()
+            if any(part in lowered for part in _SECRET_KEY_PARTS) or lowered.endswith("pass"):
                 redacted[key] = "<redacted>"
             else:
-                redacted[key] = _redact(item)
+                redacted[key] = _redact(item, str(key))
         return redacted
     if isinstance(value, list):
-        return [_redact(item) for item in value]
+        return [_redact(item, key_hint) for item in value]
+    if isinstance(value, str):
+        return _redact_string(value)
     return value
 
 
@@ -596,7 +608,6 @@ def capture_environment(*, include_observed: bool = True) -> dict[str, Any]:
         },
         "tooling": {
             "dotnet": run([dotnet, "--version"], timeout=30).stdout.strip() if dotnet else None,
-            "dotnetPath": dotnet,
             "python": platform.python_version(),
             "k6Installed": find_k6(),
             "k6Image": _image_info(K6_IMAGE),
@@ -637,6 +648,7 @@ def source_binding() -> dict[str, Any]:
 def g4_readiness(path: Path | None = None) -> dict[str, Any]:
     """Read the curated G4 evidence and independently re-check live B-owned facts."""
     evidence_path = path or Path(os.environ.get("W13_G4_EVIDENCE", G4_EVIDENCE))
+    evidence_path = evidence_path.resolve()
     result: dict[str, Any] = {
         "green": False,
         "verdict": "RED",
@@ -645,6 +657,13 @@ def g4_readiness(path: Path | None = None) -> dict[str, Any]:
         "checks": {},
         "checkedAtUtc": iso(),
     }
+    try:
+        evidence_path.relative_to(EVIDENCE_ROOT.resolve())
+    except ValueError:
+        result["blockers"].append(
+            f"G4 evidence must live under {EVIDENCE_ROOT}: {evidence_path}"
+        )
+        return result
     if not evidence_path.exists():
         result["blockers"].append(f"G4 evidence is missing: {evidence_path}")
         return result
@@ -697,11 +716,17 @@ def g4_readiness(path: Path | None = None) -> dict[str, Any]:
     return result
 
 
-def ensure_report_grade(g4: dict[str, Any]) -> None:
+def ensure_report_grade(g4: dict[str, Any], source: dict[str, Any] | None = None) -> None:
     if not g4.get("green"):
         raise GateError(
             "report-grade execution refused: G4 is not green. Blockers: "
             + "; ".join(g4.get("blockers") or ["G4 evidence missing or invalid"])
+        )
+    source = source or source_binding()
+    if source.get("dirty"):
+        raise GateError(
+            "report-grade execution refused: the source tree outside evidence/ is dirty "
+            f"(digest {source.get('statusDigest')})"
         )
 
 
@@ -821,6 +846,8 @@ def validate_manifest(manifest: dict[str, Any], run_dir: Path | None = None) -> 
     require(isinstance(g4.get("blockers"), list), "g4.blockers must be a list")
     if manifest.get("reportGrade") and not g4.get("green"):
         errors.append("reportGrade=true requires a green G4 gate")
+    if manifest.get("reportGrade") and source.get("dirty") is True:
+        errors.append("reportGrade=true requires a clean source tree")
 
     environment = manifest.get("environment") or {}
     require(bool(environment.get("capturedAtUtc")), "environment.capturedAtUtc is missing")
@@ -840,6 +867,9 @@ def validate_manifest(manifest: dict[str, Any], run_dir: Path | None = None) -> 
     require(status in ("PASS", "FAIL", "BLOCKED", "INVALID", "INCOMPLETE"), "result.status is invalid")
     require(isinstance(result.get("sampleCount"), int) and result.get("sampleCount", -1) >= 0,
             "result.sampleCount must be a non-negative integer")
+    if status == "PASS":
+        require(int(result.get("sampleCount") or 0) > 0,
+                "result.status=PASS requires at least one sample")
     outcomes = result.get("outcomes") or {}
     if isinstance(result.get("sampleCount"), int) and result["sampleCount"] > 0:
         require(isinstance(outcomes, dict), "result.outcomes is missing")
@@ -884,6 +914,15 @@ def campaign_runs(experiment: str, runs_root: Path | None = None) -> list[Path]:
     if not root.exists():
         return []
     return sorted(path for path in root.iterdir() if path.is_dir() and path.name.startswith(f"W13-{experiment}-"))
+
+
+def container_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError as exc:
+        raise HarnessError(
+            f"path {path} is outside the repository and cannot be mounted into the k6 container"
+        ) from exc
 
 
 def run_directory_reference(run_dir: Path) -> str:
