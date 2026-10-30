@@ -61,7 +61,7 @@ Before physical start, failures can compensate: cancellation/authorization failu
 
 | Lane | Result |
 | --- | ---: |
-| Release solution build | 0 warnings, 0 errors |
+| Release solution build (integrated A-W16 + C-W16 head) | 0 warnings, 0 errors |
 | Trip unit | 299/299 passed |
 | W9/W10 Outbox + Saga with real PostgreSQL/RabbitMQ | 31/31 passed |
 | W11 deterministic faultpoint | 11/11 passed |

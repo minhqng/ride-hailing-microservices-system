@@ -1,19 +1,63 @@
-# Release-safe overrides. Combine with compose.yaml; never rely on the local
-# Development default when producing a release/demo claim.
+# Release-safe overrides. Combine with compose.yaml:
+#
+#   POSTGRES_PASSWORD=... IDENTITY_DB_PASSWORD=... DRIVER_DB_PASSWORD=... \
+#   TRIP_DB_PASSWORD=... MATCHING_DB_PASSWORD=... PAYMENT_DB_PASSWORD=... \
+#   NOTIFICATION_DB_PASSWORD=... RABBITMQ_PASSWORD=... \
+#   docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config
+#
+# Every secret below is mandatory. Compose interpolation fails closed when a
+# variable is absent, so the development fallbacks in compose.yaml can never be
+# rendered into a release/demo claim.
 services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set for the release overlay}"
+      IDENTITY_DB_PASSWORD: "${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set for the release overlay}"
+      DRIVER_DB_PASSWORD: "${DRIVER_DB_PASSWORD:?DRIVER_DB_PASSWORD must be set for the release overlay}"
+      TRIP_DB_PASSWORD: "${TRIP_DB_PASSWORD:?TRIP_DB_PASSWORD must be set for the release overlay}"
+      MATCHING_DB_PASSWORD: "${MATCHING_DB_PASSWORD:?MATCHING_DB_PASSWORD must be set for the release overlay}"
+      PAYMENT_DB_PASSWORD: "${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD must be set for the release overlay}"
+      NOTIFICATION_DB_PASSWORD: "${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD must be set for the release overlay}"
+
+  rabbitmq:
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
+
   gateway:
     environment: { ASPNETCORE_ENVIRONMENT: Production }
   identity:
-    environment: { ASPNETCORE_ENVIRONMENT: Production }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set for the release overlay}"
   driver:
-    environment: { ASPNETCORE_ENVIRONMENT: Production }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:?DRIVER_DB_PASSWORD must be set for the release overlay}"
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
   trip:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       TripDatabase__AutoMigrate: "false"
+      ConnectionStrings__Postgres: "Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:?TRIP_DB_PASSWORD must be set for the release overlay}"
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
   matching:
-    environment: { ASPNETCORE_ENVIRONMENT: Production }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:?MATCHING_DB_PASSWORD must be set for the release overlay}"
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
   payment:
-    environment: { ASPNETCORE_ENVIRONMENT: Production }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD must be set for the release overlay}"
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
   notification:
-    environment: { DOTNET_ENVIRONMENT: Production }
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Database=notification_db;Username=notification_app;Password=${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD must be set for the release overlay}"
+      RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
+      RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"

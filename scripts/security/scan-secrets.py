@@ -55,6 +55,33 @@ release_override = (ROOT / "deploy/compose/compose.release.yaml").read_text("utf
 if "ASPNETCORE_ENVIRONMENT: Production" not in release_override:
     findings.append("compose.release.yaml: Payment is not forced to Production")
 
+# The release overlay must fail closed. A count greater than one also proves
+# the service connection strings were overridden, not just the broker/server
+# container environment.
+required_release_secrets = {
+    "POSTGRES_PASSWORD": 1,
+    "IDENTITY_DB_PASSWORD": 2,
+    "DRIVER_DB_PASSWORD": 2,
+    "TRIP_DB_PASSWORD": 2,
+    "MATCHING_DB_PASSWORD": 2,
+    "PAYMENT_DB_PASSWORD": 2,
+    "NOTIFICATION_DB_PASSWORD": 2,
+    "RABBITMQ_PASSWORD": 6,
+}
+for name, minimum in required_release_secrets.items():
+    required = f"${{{name}:?"
+    fallback = f"${{{name}:-"
+    if fallback in release_override:
+        findings.append(f"compose.release.yaml: {name} still has a development fallback")
+    occurrences = release_override.count(required)
+    if occurrences < minimum:
+        findings.append(
+            f"compose.release.yaml: {name} is required {minimum} time(s), found {occurrences}"
+        )
+
+if "_dev_pw" in release_override:
+    findings.append("compose.release.yaml: contains a development password literal")
+
 if findings:
     print("SECRET/RELEASE SCAN FAILED")
     print("\n".join(findings))

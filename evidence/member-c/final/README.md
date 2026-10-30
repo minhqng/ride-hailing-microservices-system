@@ -19,8 +19,9 @@ Prepared: 2026-10-28
 - W12 dashboards populated with real traffic and trace propagation screenshot
   or exported query JSON.
 - W13 3–5 raw metric snapshots per compared consumer replica condition.
-- REL-15 endpoint-list reconnect and Outbox backlog/drain.
-- REL-16 one-node-loss plus restore/rejoin/quorum status.
+- REL-15 endpoint-list reconnect, fresh Payment connections and payment queue
+  drain.
+- REL-16 one-node-loss (2/3 online) plus restore/rejoin (3/3) and quorum status.
 - Clean-clone release Compose smoke.
 
 No live PASS is claimed on this machine: Docker CLI/engine was unavailable on

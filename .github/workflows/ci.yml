@@ -2,12 +2,11 @@ name: ci
 on:
   push:
     branches: [main, 'MemC-*-Distributed']
+  # Run for every pull request, not only a hard-coded list of stacked bases.
+  # A new stacked branch must never silently skip CI just because its base was
+  # not added to a YAML allow-list.
   pull_request:
-    # The A-W10 branch stacks on the unmerged A-W09 head (PR #36), A-W11
-    # stacks on the unmerged A-W10 head (PR #40), and A-W12 stacks on the
-    # unmerged A-W11 head (PR #42), so each stacked base must be listed here
-    # or CI never runs on the stacked PR.
-    branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox', 'feature/A-W10-trip-saga', 'feature/A-W11-trip-fault-proofs']
+  workflow_dispatch:
 jobs:
   hygiene:
     name: hygiene
@@ -40,10 +39,34 @@ jobs:
   compose-config:
     name: compose-config
     runs-on: ubuntu-latest
+    env:
+      # Deliberately non-development values: the release overlay must render
+      # with operator-supplied secrets and must never inherit *_dev_pw.
+      POSTGRES_PASSWORD: ci-release-postgres-pw
+      IDENTITY_DB_PASSWORD: ci-release-identity-pw
+      DRIVER_DB_PASSWORD: ci-release-driver-pw
+      TRIP_DB_PASSWORD: ci-release-trip-pw
+      MATCHING_DB_PASSWORD: ci-release-matching-pw
+      PAYMENT_DB_PASSWORD: ci-release-payment-pw
+      NOTIFICATION_DB_PASSWORD: ci-release-notification-pw
+      RABBITMQ_PASSWORD: ci-release-rabbitmq-pw
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config
       - run: docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config
+      - name: release overlay fails closed without secrets
+        run: |
+          unset POSTGRES_PASSWORD IDENTITY_DB_PASSWORD DRIVER_DB_PASSWORD \
+            TRIP_DB_PASSWORD MATCHING_DB_PASSWORD PAYMENT_DB_PASSWORD \
+            NOTIFICATION_DB_PASSWORD RABBITMQ_PASSWORD
+          if docker compose --env-file /dev/null \
+              -f compose.yaml -f deploy/compose/compose.release.yaml config \
+              --quiet > /dev/null 2> release-missing-secrets.log; then
+            echo 'release overlay accepted a render without required secrets'
+            cat release-missing-secrets.log
+            exit 1
+          fi
+          grep -q 'POSTGRES_PASSWORD' release-missing-secrets.log
       - run: docker compose -f compose.yaml -f deploy/compose/compose.ha.yaml --profile ha config
       - run: python3 scripts/security/scan-secrets.py
   platform-smoke:
