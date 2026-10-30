@@ -18,7 +18,14 @@ public static class DriverReserveResults
             code = result.ConflictCode,
             message = result.ConflictMessage,
         }),
-        ReserveOutcome.DriverNotFound => Results.NotFound(),
+        // L2: absence carries domain provenance. A bare 404 could be a
+        // proxy/route failure and must never prove that no remote effect
+        // exists; the stable code distinguishes the authoritative branch.
+        ReserveOutcome.DriverNotFound => Results.NotFound(new
+        {
+            code = DriverErrors.DriverNotFound,
+            message = "Driver not found.",
+        }),
         _ => throw new ArgumentOutOfRangeException(nameof(result)),
     };
 

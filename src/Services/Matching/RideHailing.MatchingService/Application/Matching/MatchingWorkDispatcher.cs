@@ -224,7 +224,18 @@ public sealed class MatchingWorkDispatcher : BackgroundService
                 continue;
             }
 
-            var stage = _policy.Stage(row.CurrentStage);
+            // L7: a configuration shrink can leave a persisted current_stage
+            // that the running policy no longer defines. Preserve the durable
+            // round and its ambiguity (no terminal, no attempt mutation, no
+            // invented stage) and surface the mismatch through the worker's
+            // durable error code; the pass retries only if configuration is
+            // restored.
+            var stage = stages.FirstOrDefault(s =>
+                string.Equals(s.Name, row.CurrentStage, StringComparison.Ordinal));
+            if (stage is null)
+            {
+                return "STAGE_CONFIGURATION_MISMATCH";
+            }
             var ready = attempts
                 .Where(a => string.Equals(a.Stage, stage.Name, StringComparison.Ordinal)
                     && string.Equals(a.State, MatchingAttemptStates.Ready, StringComparison.Ordinal))
