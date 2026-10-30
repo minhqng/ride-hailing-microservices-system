@@ -72,12 +72,13 @@ def sample(started: float, phase: str) -> dict:
     # Both broker ownership and durable application ownership are observed.
     work = lib.psql_json("matching_db", "SELECT json_build_object('intake', count(*), "
         "'terminal', count(*) FILTER (WHERE status IN ('RESERVED','NO_DRIVER','CANCELLED')), "
-        "'pending', count(*) FILTER (WHERE status NOT IN ('RESERVED','NO_DRIVER','CANCELLED'))) "
+        "'pending', count(*) FILTER (WHERE status NOT IN ('RESERVED','NO_DRIVER','CANCELLED')), "
+        "'outbox', (SELECT json_build_object('committed', count(*), "
+        "'published', count(*) FILTER (WHERE status='PUBLISHED')) FROM outbox_messages)) "
         "FROM matching_rounds")
-    outbox = lib.psql_json("matching_db", "SELECT json_build_object('committed', count(*), "
-        "'published', count(*) FILTER (WHERE status='PUBLISHED')) FROM outbox_messages")
+    broker = queue()
     return {"atUtc": lib.iso(), "elapsed": time.monotonic() - started,
-            "phase": phase, **queue(), **work, "outbox": outbox}
+            "phase": phase, **broker, **work}
 
 
 def wait_for(predicate, label: str, timeout: float = 120):
@@ -126,7 +127,7 @@ class Publisher:
                 self.process.stdout.close()
 
 
-def finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts):
+def finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts, resource_thread=None):
     stop.set()
     try:
         if producer:
@@ -138,6 +139,8 @@ def finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts):
         manifest["cleanupError"] = type(exc).__name__
     finally:
         try:
+            if resource_thread:
+                resource_thread.join(timeout=65)
             for name, data in (("samples", samples), ("receipts", receipts)):
                 path = run_dir / f"{name}.json"
                 lib.write_json(path, data)
@@ -181,6 +184,7 @@ def run_one(args, repeat: int, group: str) -> Path:
     lib.write_json(run_dir / "manifest.json", manifest)
     publisher = None
     producer = None
+    resource_thread = None
     stop = threading.Event()
     samples, receipts, errors = [], [], []
     phase = {"value": "baseline"}
@@ -197,8 +201,12 @@ def run_one(args, repeat: int, group: str) -> Path:
         if status != 201:
             raise lib.HarnessError(f"OFFLINE Driver seed failed: HTTP {status}")
         manifest["environment"] = lib.capture_environment()
+        from w14_ha import snapshot
+        manifest["topology"] = snapshot()
         manifest["fingerprint"] = lib.environment_fingerprint(manifest["environment"])
         manifest["driverBefore"] = state()["drivers"]
+        manifest["resourcesBefore"] = [r for r in lib.container_stats()
+            if str(r.get("Name", "")).startswith(lib.PROJECT)]
         publisher = Publisher()
         started = time.monotonic()
 
@@ -242,16 +250,21 @@ def run_one(args, repeat: int, group: str) -> Path:
         wait_for(lambda: samples[-1]["terminal"] > 0 or sample(started, "baseline")["terminal"] > 0,
                  "baseline authoritative completion")
         manifest["beforeInterruption"] = sample(started, "baseline")
-        manifest["resourcesBefore"] = [r for r in lib.container_stats()
-            if str(r.get("Name", "")).startswith(lib.PROJECT)]
+        samples.append(manifest["beforeInterruption"])
         manifest["stopRequestedAtUtc"] = lib.iso()
         lib.compose("stop", "-t", "10", "matching", check=True)
         wait_for(lambda: queue()["consumers"] == 0, "consumer removal")
         phase["value"] = "outage"
         manifest["interruption"] = {"startUtc": lib.iso(), "start": time.monotonic() - started}
+        def capture_outage_resources():
+            try:
+                manifest["resourcesDuring"] = [r for r in lib.container_stats()
+                    if str(r.get("Name", "")).startswith(lib.PROJECT)]
+            except Exception as error:
+                manifest["resourceCaptureError"] = type(error).__name__
+        resource_thread = threading.Thread(target=capture_outage_resources, name="outage-resources")
+        resource_thread.start()
         observe_until(args.outage)
-        manifest["resourcesDuring"] = [r for r in lib.container_stats()
-            if str(r.get("Name", "")).startswith(lib.PROJECT)]
         manifest["interruption"].update(endUtc=lib.iso(), end=time.monotonic() - started)
         phase["value"] = "recovery"
         manifest["restoreRequestedAtUtc"] = lib.iso()
@@ -304,7 +317,7 @@ def run_one(args, repeat: int, group: str) -> Path:
         manifest["status"] = "FAIL"
         manifest["error"] = type(exc).__name__ + ": " + lib._redact_string(str(exc))[:1000]
     finally:
-        finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts)
+        finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts, resource_thread)
     return run_dir
 
 
@@ -351,6 +364,8 @@ def main(argv=None) -> int:
     from w14_analyze import analyze_group
     result = analyze_group(runs)
     lib.print_json({"runs": [str(path) for path in runs], "analysis": result})
+    if result["status"] == "GATED":
+        return 3
     return 0 if result["status"] in ("ACCEPTED", "SMOKE_ONLY") else 2
 
 

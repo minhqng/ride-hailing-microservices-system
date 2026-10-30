@@ -109,7 +109,14 @@ application `ConfirmedPublisher`; routed HTTP responses are never used.
 
 Each sample records ready, unacked, consumer count, broker redelivery and
 ACK counters, persisted intake, terminal work, pending work, and committed/
-published Matching Outbox counts. Outstanding logical work is confirmed
+published Matching Outbox counts. Durable counts use one PostgreSQL statement
+snapshot. Outage resource collection runs concurrently so Docker statistics
+latency cannot prolong the controlled interruption. Actual T runs from
+observed consumer removal to restoration request; restoration/startup delay
+is reported separately through recovery observations. Analysis rejects
+an actual T differing from configured T by more than 1 second or 10%, whichever
+is greater, and requires the configured minimum healthy baseline interval.
+Outstanding logical work is confirmed
 identities minus terminal identities; it does not add unacked work to DB
 obligations, which could double-count the same message.
 
@@ -163,7 +170,10 @@ E04 artifacts are refused even if presented with a three-member snapshot.
 
 The adapter checks three actual quorum members, all online at baseline, known leader, surviving
 majority, restored membership/consumers, source equality and overlap with
-the B observation window. B proof must use the same observed cluster.
+the B observation window. B proof must use the same observed cluster, queue
+member and broker node identities; mutable cluster name alone is insufficient.
+Source must match all three snapshots, and both confirmed publications and
+consumer ACKs must progress inside the node-loss window.
 The single-node E04 runner cannot supply HA evidence for it. C must supply
 the HA environment and orchestrated B application run; B can then execute
 the adapter and existing provider tests against the agreed isolated service
