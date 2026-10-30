@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-10-30T02:45:00Z",
+  "verdict": "RED",
+  "sourceCommit": "61d7328838befa0adbbc9974a7b5c1635cdecf2d",
+  "sourceTree": "ec97b590595d974b45cad1cfcefe2f3d1257a29c",
+  "topology": {
+    "main": "86062af028d01b86f07b1c902f040a41c41fe57f",
+    "w11": "3ba3724e7e7df378e8c234af685c027ad9d26863",
+    "w11Pr": 44,
+    "w12Head": "61d7328838befa0adbbc9974a7b5c1635cdecf2d",
+    "w12Pr": 45,
+    "a12": "132ecfd4ebc7f452af5e28f030bf66754e9b0df7",
+    "c10w11": "d3008492fa1d4769bda02603fb7a24a59de5083c"
+  },
+  "checks": {
+    "bOwnedCorrectness": "PASS",
+    "securityBaseline": "FAIL",
+    "aCorrectnessAcceptance": "FAIL",
+    "cCorrectnessAcceptance": "FAIL",
+    "authoritativeAuditor": "NOT_RUN",
+    "productionApiSurface": "FAIL",
+    "brokerSurface": "PASS",
+    "stableEnvironment": "PASS"
+  },
+  "checkNotes": {
+    "bOwnedCorrectness": "B-REC-01 and DSI-021 are repaired forward on the W12 head; W11 five-pass campaign and B12 auditor 18/18 PASS on the repair source. No known B-owned S0/S1 defect.",
+    "securityBaseline": "SEC-AUTH-01 (Critical), SEC-AUTH-02 (High), SEC-AUTH-03 (High), SEC-AUTH-04 (Medium) remain OPEN. Driver public/internal mutations are unauthenticated; Identity and Gateway are skeletons.",
+    "aCorrectnessAcceptance": "A-W12 G4 matrix says G4 NOT YET GREEN; A PR #43 is unmerged and requires B/C peer reruns.",
+    "cCorrectnessAcceptance": "C-W10/W11 platform is on unmerged PR #41; shared REL-11 DLQ lane and C-side acceptance remain pending.",
+    "authoritativeAuditor": "B-owned B12 auditor is available and green for B scope. A-owned AUD-03 and C-owned AUD-05 are NOT RUN by B; a team-level auditor PASS is not established.",
+    "productionApiSurface": "Trip CreateRide requires an authenticated Rider principal, but no Identity token issuance, Gateway routing or shared auth middleware exists. E02's canonical authenticated API is blocked. Testing-only Matching seams are not substitutes.",
+    "brokerSurface": "RabbitMQ 4.3.6 management, frozen exchanges/queues and quorum topology are present. C-owned replica management and shared broker metrics remain external dependencies.",
+    "stableEnvironment": "Docker engine, Compose, PostgreSQL/Redis/RabbitMQ images and the fixed W13 compose limits are available; the harness freezes configured and observed values per run. Smoke validation is still required."
+  },
+  "blockers": [
+    "SEC-AUTH-01 CRITICAL OPEN: unauthenticated Driver mutations and Outbox creation are reproducible over real HTTP.",
+    "SEC-AUTH-02 HIGH OPEN: actor-ID spoofing is unchecked; route {id} is the only actor.",
+    "SEC-AUTH-03 HIGH OPEN: internal reserve/reconcile routes are reachable without service identity.",
+    "SEC-AUTH-04 MEDIUM OPEN: no object-level authorization binds a principal to a Driver/reservation.",
+    "SYSTEM_AUTH_PENDING: Identity service and Gateway are skeletons; no token issuance, validation, routing or authenticated integration fixture exists.",
+    "A-owned correctness acceptance is not green: A-W12 G4 matrix says G4 NOT YET GREEN; PR #43 is unmerged.",
+    "C-owned correctness acceptance is not green: C-W10/W11 PR #41 is open/unmerged; shared REL-11 DLQ lane remains pending.",
+    "Team invariant auditor is not green: B-owned AUD-01/02/04/06/07/08 PASS, but AUD-03 (A) and AUD-05 (C) are NOT RUN and no team-level PASS exists.",
+    "A/C peer reruns and human sign-off are absent.",
+    "PR #45 has zero CI check runs on its stacked base; zero checks is not green."
+  ],
+  "evidenceSources": [
+    {
+      "claim": "W12 head and PR #45 tip",
+      "source": "git:refs/pull/45/head and origin/feature/B-W12-observability-g4",
+      "revision": "61d7328838befa0adbbc9974a7b5c1635cdecf2d"
+    },
+    {
+      "claim": "Security exposures and ownership",
+      "source": "evidence/member-b/w12-observability-g4/security/inventory.md",
+      "revision": "61d7328838befa0adbbc9974a7b5c1635cdecf2d"
+    },
+    {
+      "claim": "Historical G4 verdict and blockers",
+      "source": "evidence/member-b/w12-observability-g4/g4/g4-verdict.md",
+      "revision": "61d7328838befa0adbbc9974a7b5c1635cdecf2d"
+    },
+    {
+      "claim": "B-REC-01 / DSI-021 repair and final auditor",
+      "source": "evidence/member-b/b-rec01-dsi021/README.md and auditor-final.md",
+      "revision": "61d7328838befa0adbbc9974a7b5c1635cdecf2d"
+    },
+    {
+      "claim": "A-W12 G4 is not green",
+      "source": "origin/feature/A-W12-trip-observability-g4:evidence/member-a/w12-core-gate/final-state/g4-matrix.md",
+      "revision": "132ecfd4ebc7f452af5e28f030bf66754e9b0df7"
+    },
+    {
+      "claim": "C-W10/W11 platform remains unmerged and the shared DLQ lane is pending",
+      "source": "origin/feature/C-W10-W11-payment-fault-platform:evidence/member-c/w11-fault-platform/README.md",
+      "revision": "d3008492fa1d4769bda02603fb7a24a59de5083c"
+    },
+    {
+      "claim": "Identity and Gateway have no business endpoints",
+      "source": "src/Services/Identity/RideHailing.IdentityService/Program.cs and src/Gateway/RideHailing.Gateway/Program.cs",
+      "revision": "61d7328838befa0adbbc9974a7b5c1635cdecf2d"
+    }
+  ],
+  "limitations": [
+    "This is an independent readiness assessment, not a claim that G4 is green.",
+    "No report-grade W13 measurement is permitted while this file is RED.",
+    "The sourceTree recorded here is informational; the harness re-checks source ancestry and code/test drift at execution time."
+  ]
+}
