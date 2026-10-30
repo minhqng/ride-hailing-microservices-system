@@ -12,6 +12,7 @@ public sealed class RabbitMqOptions
     public const string SectionName = "RabbitMq";
 
     public string Host { get; set; } = "localhost";
+    public string? Hosts { get; set; }
     public string Username { get; set; } = "ride_app";
     public string Password { get; set; } = "ride_dev_pw";
     public int Port { get; set; } = 5672;
@@ -28,6 +29,11 @@ public sealed class RabbitMqOptions
         if (string.IsNullOrWhiteSpace(Host))
         {
             return "RabbitMq:Host must not be empty.";
+        }
+
+        if (Hosts is not null && Hosts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length == 0)
+        {
+            return "RabbitMq:Hosts must contain at least one host when supplied.";
         }
 
         if (string.IsNullOrWhiteSpace(RideRequestedQueue)
