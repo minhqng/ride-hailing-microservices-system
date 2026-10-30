@@ -13,7 +13,7 @@ import uuid
 from pathlib import Path
 
 import w13lib as lib
-from w13_e03 import QUEUE, _envelope, _queue_snapshot
+from w13_e03 import _envelope, _queue_snapshot
 
 PROBE = lib.PERF_DIR / "recovery-probe" / "recovery-probe.csproj"
 PROBE_DLL = PROBE.parent / "bin" / "Release" / "net10.0" / "recovery-probe.dll"
@@ -74,7 +74,11 @@ def sample(started: float, phase: str) -> dict:
 def wait_for(predicate, label: str, timeout: float = 120):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        value = predicate()
+        try:
+            value = predicate()
+        except (lib.HarnessError, KeyError):
+            # Queue creation and its first management statistics lag process startup.
+            value = None
         if value:
             return value
         time.sleep(0.2)
@@ -261,6 +265,10 @@ def run_one(args, repeat: int, group: str) -> Path:
             producer.join(timeout=20)
         if publisher:
             publisher.close()
+        for name, data in (("samples", samples), ("receipts", receipts)):
+            path = run_dir / f"{name}.json"
+            lib.write_json(path, data)
+            manifest["artifacts"][name] = {"path": path.name, "sha256": lib.sha256_file(path)}
         manifest["finishedAtUtc"] = lib.iso()
         manifest["sourceAfter"] = lib.source_binding()
         lib.write_json(run_dir / "manifest.json", manifest)
