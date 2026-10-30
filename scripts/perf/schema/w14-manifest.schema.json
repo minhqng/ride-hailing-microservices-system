@@ -31,5 +31,6 @@
   "$defs": {
     "source": {"type": "object", "required": ["commit", "tree", "dirty", "statusDigest"], "properties": {"commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "tree": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "dirty": {"type": "boolean"}, "statusDigest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}},
     "artifact": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}
-  }
+  },
+  "allOf": [{"if": {"properties": {"experiment": {"const": "E04"}}}, "then": {"required": ["killCommandCompletedAtUtc", "consumerRemovedAtUtc"]}}]
 }
