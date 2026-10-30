@@ -16,6 +16,9 @@ QUERIES = {
     "consumer_redelivery_rate": "sum(rate({__name__=~'consumer_redelivery(_messages)?_total'}[1m]))",
     "dedup_rate": "sum by (outcome) (rate({__name__=~'dedup_processed(_messages)?_total'}[1m]))",
     "outbox_pending": "sum({__name__=~'outbox_pending(_messages)?'})",
+    "outbox_oldest_pending_age": "max({__name__=~'outbox_oldest_pending_age(_seconds)?'})",
+    "saga_active": "sum by (step) ({__name__=~'saga_active(_sagas)?'})",
+    "trip_transition_rejected_rate": "sum by (reason) (rate({__name__=~'trip_transition_rejected(_transitions)?_total'}[1m]))",
     "payment_rate": "sum by (type,outcome) (rate({__name__=~'payment_operation(_operations)?_total'}[1m]))",
 }
 

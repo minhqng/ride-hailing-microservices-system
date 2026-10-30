@@ -14,7 +14,7 @@ Date: 2026-10-30
 
 | Check | Result |
 | --- | --- |
-| `dotnet build RideHailing.Distributed.slnx -c Release` | PASS, 0 warnings/errors |
+| `dotnet build RideHailing.Distributed.slnx -c Release` | PASS, 0 errors; the stacked A branch reports one pre-existing B-owned xUnit analyzer warning |
 | Trip unit suite | PASS 299/299 |
 | `TripW09|TripW10` real infrastructure | PASS 31/31 |
 | `TripW11FaultPointTests` | PASS 11/11 |
