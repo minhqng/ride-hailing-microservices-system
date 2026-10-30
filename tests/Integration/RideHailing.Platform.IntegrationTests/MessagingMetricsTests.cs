@@ -37,6 +37,12 @@ public class MessagingMetricsTests
         MessagingMetrics.RecordConfirmLatency(12.5);
         MessagingMetrics.RecordDedup(duplicate: false);
         MessagingMetrics.RecordDedup(duplicate: true);
+        MessagingMetrics.RecordDelivery(redelivered: false);
+        MessagingMetrics.RecordDelivery(redelivered: true);
+        MessagingMetrics.RecordAcknowledged();
+        MessagingMetrics.RecordRetry("Transient");
+        MessagingMetrics.RecordDeadLetter("Poison");
+        MessagingMetrics.RecordProcessingDuration(7.5, "success");
         MessagingMetrics.RecordOutboxBacklog(pending: 4, failedVisible: 2, oldestAgeSeconds: 9.5);
         listener.RecordObservableInstruments();
 
@@ -49,6 +55,12 @@ public class MessagingMetricsTests
         Assert.Contains(captures, c => c.Instrument == "outbox.confirm.duration" && c.Value == 12.5d);
         Assert.Contains(captures, c => c.Instrument == "dedup.processed" && HasTag(c, "outcome", "applied"));
         Assert.Contains(captures, c => c.Instrument == "dedup.processed" && HasTag(c, "outcome", "duplicate"));
+        Assert.Contains(captures, c => c.Instrument == "consumer.delivery" && c.Value == 1d);
+        Assert.Contains(captures, c => c.Instrument == "consumer.redelivery" && c.Value == 1d);
+        Assert.Contains(captures, c => c.Instrument == "consumer.ack" && c.Value == 1d);
+        Assert.Contains(captures, c => c.Instrument == "consumer.retry" && HasTag(c, "reason", "Transient"));
+        Assert.Contains(captures, c => c.Instrument == "consumer.deadletter" && HasTag(c, "kind", "Poison"));
+        Assert.Contains(captures, c => c.Instrument == "consumer.processing.duration" && HasTag(c, "outcome", "success"));
         Assert.Contains(captures, c => c.Instrument == "outbox.pending" && c.Value == 4d);
         Assert.Contains(captures, c => c.Instrument == "outbox.failed_visible" && c.Value == 2d);
         Assert.Contains(captures, c => c.Instrument == "outbox.oldest_pending.age" && c.Value == 9.5d);
@@ -56,8 +68,9 @@ public class MessagingMetricsTests
         var forbidden = new[] { "message_id", "messageId", "correlationId", "operationKey", "aggregateId", "tripId" };
         Assert.DoesNotContain(captures.SelectMany(capture => capture.Tags),
             tag => forbidden.Contains(tag.Key, StringComparer.Ordinal));
+        var allowedKeys = new[] { "outcome", "reason", "kind" };
         Assert.All(captures, capture => Assert.All(capture.Tags,
-            tag => Assert.Equal("outcome", tag.Key)));
+            tag => Assert.Contains(tag.Key, allowedKeys)));
     }
 
     private static bool HasTag(Capture capture, string key, string value) =>
