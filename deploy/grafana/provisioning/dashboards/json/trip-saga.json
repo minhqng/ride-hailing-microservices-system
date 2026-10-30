@@ -1,0 +1,19 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {"type":"timeseries","title":"Active Saga by step","id":1,"gridPos":{"h":8,"w":12,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (step) ({__name__=~\"saga_active(_sagas)?\"})","legendFormat":"{{step}}","refId":"A"}]},
+    {"type":"timeseries","title":"Compensation / requires review","id":2,"gridPos":{"h":8,"w":12,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate({__name__=~\"saga_compensation(_sagas)?_total\"}[5m]))","legendFormat":"compensation","refId":"A"},{"expr":"sum(rate({__name__=~\"saga_requires_review(_sagas)?_total\"}[5m]))","legendFormat":"requires review","refId":"B"}]},
+    {"type":"timeseries","title":"Trip lifecycle decisions","id":3,"gridPos":{"h":8,"w":8,"x":0,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate({__name__=~\"trip_created(_trips)?_total\"}[5m]))","legendFormat":"created","refId":"A"},{"expr":"sum(rate({__name__=~\"trip_cancelled(_trips)?_total\"}[5m]))","legendFormat":"cancelled","refId":"B"}]},
+    {"type":"timeseries","title":"Rejected transitions","id":4,"gridPos":{"h":8,"w":8,"x":8,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (reason) (rate({__name__=~\"trip_transition_rejected(_transitions)?_total\"}[5m]))","legendFormat":"{{reason}}","refId":"A"}]},
+    {"type":"timeseries","title":"Trip Outbox backlog / age","id":5,"gridPos":{"h":8,"w":8,"x":16,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum({__name__=~\"outbox_pending(_messages)?\"})","legendFormat":"pending","refId":"A"},{"expr":"max({__name__=~\"outbox_oldest_pending_age(_seconds)?\"})","legendFormat":"oldest seconds","refId":"B"}]}
+  ],
+  "schemaVersion": 41,
+  "tags": ["member-a","trip","saga","outbox"],
+  "templating": {"list": []},
+  "time": {"from":"now-1h","to":"now"},
+  "title": "Trip, Saga and Outbox",
+  "uid": "ride-trip-saga",
+  "version": 1
+}
