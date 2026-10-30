@@ -1,0 +1,2623 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+  "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+  "sourceStatus": "",
+  "generatedAt": "2026-10-30T03:19:18.9768229+00:00",
+  "environment": {
+    "runtime": "10.0.14",
+    "os": "Microsoft Windows NT 10.0.26200.0",
+    "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY / MID_FLIGHT_OBSERVATION / NEGATIVE_CONTROL_SEEDED",
+    "driverAuthority": "real PostgreSQL 18.6 (Testcontainers, disposable)",
+    "matchingAuthority": "real PostgreSQL 18.6 (Testcontainers, disposable)",
+    "tripAuthority": "real PostgreSQL 18.6 (Testcontainers, disposable)",
+    "access": "read-only verification sessions"
+  },
+  "runs": [
+    {
+      "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+      "scenarioId": "cancel-release-quiesced",
+      "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:05.5844813+00:00",
+      "elapsedTimeMs": 38.1792,
+      "checks": [
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 6.2949
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.221,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0017,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.1644,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0015,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 12,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 9.3093
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.1462,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-cancel-release-quiesced-20261030T031905Z-b019da",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "cancel-release-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 4,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 6.9956,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+      "scenarioId": "control-empty-dataset",
+      "observationMode": "EMPTY_DATASET_CONTROL",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:03.738463+00:00",
+      "elapsedTimeMs": 35.1319,
+      "checks": [
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 6.5942,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 6,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.4821,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0009,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 5.252,
+          "limitation": "Empty Trip or Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0013,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 9.5088,
+          "limitation": "Empty Matching terminal dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.1369,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-empty-dataset-20261030T031903Z-955691",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-empty-dataset",
+          "observationMode": "EMPTY_DATASET_CONTROL",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 5.1075,
+          "limitation": "No Outbox/attempt/round rows inspected; PASS would be vacuous."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+      "scenarioId": "control-unreachable-trip",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:09.070276+00:00",
+      "elapsedTimeMs": 8045.7564,
+      "checks": [
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 6.4041,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 6,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.7686,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.001,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "BLOCKED",
+          "findings": [
+            {
+              "code": "AUTHORITY_UNREACHABLE",
+              "message": "AUD-04 could not inspect its authority: NpgsqlException: Failed to connect to 127.0.0.1:1"
+            }
+          ],
+          "elapsedTimeMs": 2005.9802,
+          "limitation": "Unreachable/invalid authority dataset; not a business verdict."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0025,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "BLOCKED",
+          "findings": [
+            {
+              "code": "AUTHORITY_UNREACHABLE",
+              "message": "AUD-06 could not inspect its authority: NpgsqlException: Failed to connect to 127.0.0.1:1"
+            }
+          ],
+          "elapsedTimeMs": 2011.464,
+          "limitation": "Unreachable/invalid authority dataset; not a business verdict."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "BLOCKED",
+          "findings": [
+            {
+              "code": "AUTHORITY_UNREACHABLE",
+              "message": "AUD-07 could not inspect its authority: NpgsqlException: Failed to connect to 127.0.0.1:1"
+            }
+          ],
+          "elapsedTimeMs": 2006.9012,
+          "limitation": "Unreachable/invalid authority dataset; not a business verdict."
+        },
+        {
+          "runId": "B12-AUD-control-unreachable-trip-20261030T031909Z-acb7fc",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "control-unreachable-trip",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "BLOCKED",
+          "findings": [
+            {
+              "code": "AUTHORITY_UNREACHABLE",
+              "message": "AUD-08 could not inspect its authority: NpgsqlException: Failed to connect to 127.0.0.1:1"
+            }
+          ],
+          "elapsedTimeMs": 2010.1604,
+          "limitation": "Unreachable/invalid authority dataset; not a business verdict."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+      "scenarioId": "driver-lifecycle",
+      "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:18.5342398+00:00",
+      "elapsedTimeMs": 9.873,
+      "checks": [
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 10,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.5423
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.2851,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0023,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0115,
+          "limitation": "Trip database not supplied to this scenario; cross-service agreement cannot be evaluated."
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0008,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0025,
+          "limitation": "Matching database not supplied; terminal uniqueness cannot be evaluated."
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0018,
+          "limitation": "Trip database not supplied; terminal-trip leak detection cannot be evaluated."
+        },
+        {
+          "runId": "B12-AUD-driver-lifecycle-20261030T031918Z-a21fb8",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "driver-lifecycle",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0017,
+          "limitation": "Matching database not supplied; Outbox/attempt resolution cannot be evaluated."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+      "scenarioId": "late-release-fenced",
+      "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:02.1235748+00:00",
+      "elapsedTimeMs": 122.6076,
+      "checks": [
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 32.9505
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 17.6753,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0957,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 6,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 18.0255,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0999,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 15,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 27.2306
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 9.8211,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-late-release-fenced-20261030T031902Z-86a295",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "late-release-fenced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 13.8822,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+      "scenarioId": "negative-contradictory-terminal",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:18.2529203+00:00",
+      "elapsedTimeMs": 35.7909,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 6.2129
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.6467,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0026,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 2,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.0412,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0022,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 12,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "MULTIPLE_RESERVED_ATTEMPTS",
+              "message": "RESERVED round has 2 RESERVED attempt rows; exactly one is required.",
+              "record": "34938570-ed43-45aa-b451-8814d3e0d417/1"
+            }
+          ],
+          "elapsedTimeMs": 10.0955
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 1,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.1105,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-contradictory-terminal-20261030T031918Z-f070f9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-contradictory-terminal",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 4,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 5.6301,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+      "scenarioId": "negative-disagreement",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:07.879347+00:00",
+      "elapsedTimeMs": 38.7695,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 7.2088
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.5017,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0012,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 2,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "DRIVER_TRIP_DISAGREEMENT",
+              "message": "Trip expects driver=7f18598e-d5f4-4bad-a8b8-340252d9bda4 trip=3361ae6a-c2f4-4640-bfdf-cd53692a6e6e reservation=62ea0813-f96f-41c9-a4f5-dc67ec22831f round=1; Driver row is status=RESERVED, reservedTrip=3361ae6a-c2f4-4640-bfdf-cd53692a6e6e, reservation=5d0b080e-f7b1-4f7e-92cc-adc13a532d7c, round=1.",
+              "record": "3361ae6a-c2f4-4640-bfdf-cd53692a6e6e"
+            },
+            {
+              "code": "DRIVER_TRIP_DISAGREEMENT",
+              "message": "Driver current reservation identity does not match the Trip assignment.",
+              "record": "7f18598e-d5f4-4bad-a8b8-340252d9bda4/3361ae6a-c2f4-4640-bfdf-cd53692a6e6e"
+            }
+          ],
+          "elapsedTimeMs": 5.6729,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0016,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 9.2471
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 1,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.5717,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-disagreement-20261030T031907Z-ea5ae5",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-disagreement",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 6.5132,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+      "scenarioId": "negative-false-cleanup",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:04.9442203+00:00",
+      "elapsedTimeMs": 36.6279,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.6214
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.7405,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0012,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "TERMINAL_TRIP_WITH_ACTIVE_RESERVATION",
+              "message": "Terminal Trip still holds a live Driver reservation without a durable cleanup obligation.",
+              "record": "e1a04c16-84af-4481-9efc-199d9b44ca8f"
+            },
+            {
+              "code": "DRIVER_POINTS_AT_TERMINAL_TRIP",
+              "message": "Driver current reservation/trip points at a terminal Trip without a fresh recognized cleanup.",
+              "record": "801ad46f-e4ae-4a64-993e-5e80943b392e/e1a04c16-84af-4481-9efc-199d9b44ca8f"
+            }
+          ],
+          "elapsedTimeMs": 5.1475,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0009,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 8.4741
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "LEAKED_RESERVATION",
+              "message": "Terminal Trip still holds an active Driver reservation with no open cleanup obligation.",
+              "record": "e1a04c16-84af-4481-9efc-199d9b44ca8f/801ad46f-e4ae-4a64-993e-5e80943b392e"
+            }
+          ],
+          "elapsedTimeMs": 5.135,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-negative-false-cleanup-20261030T031904Z-a4de7a",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-false-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 6.4643,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+      "scenarioId": "negative-fresh-cleanup-quiesced",
+      "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:04.3120282+00:00",
+      "elapsedTimeMs": 42.4032,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 6.694
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.6226,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0008,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+              "message": "Business-quiesced observation still holds a Driver reservation with an open release obligation.",
+              "record": "124c3466-58e6-43e7-a2bd-2984f15a8b91"
+            },
+            {
+              "code": "UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+              "message": "Business-quiesced observation still points a Driver reservation at a terminal Trip with an open release obligation.",
+              "record": "8b7a4f75-c2a7-483d-8967-bedec3269477/124c3466-58e6-43e7-a2bd-2984f15a8b91"
+            }
+          ],
+          "elapsedTimeMs": 10.9055,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0017,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 8.3062
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+              "message": "Business-quiesced observation still holds a Driver reservation with an open release obligation.",
+              "record": "124c3466-58e6-43e7-a2bd-2984f15a8b91/8b7a4f75-c2a7-483d-8967-bedec3269477"
+            }
+          ],
+          "elapsedTimeMs": 4.7469,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-cleanup-quiesced-20261030T031904Z-00ae42",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-cleanup-quiesced",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 6.0725,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+      "scenarioId": "negative-fresh-pending-relay-quiesced",
+      "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:18.9391625+00:00",
+      "elapsedTimeMs": 33.9213,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 5.4154,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 6,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.5199,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0017,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 5.451,
+          "limitation": "Empty Trip or Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0058,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 9.7479,
+          "limitation": "Empty Matching terminal dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.3941,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-fresh-pending-relay-quiesced-20261030T031918Z-94d8c1",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-fresh-pending-relay-quiesced",
+          "observationMode": "POST_SCENARIO_RELAY_QUIESCED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 1,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "PENDING_OUTBOX_AT_QUIESCENCE",
+              "message": "driver Outbox row is PENDING in a relay-quiesced observation (pending must be 0).",
+              "record": "fresh-relay-pending/DriverReservedV1"
+            },
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 4.3339,
+          "limitation": "Relay-quiesced policy: any PENDING Outbox row is a violation; unresolved attempts/rounds \u003C= 15 min; FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+      "scenarioId": "negative-missing-intent",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:17.6689283+00:00",
+      "elapsedTimeMs": 31.9458,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 10,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.6127
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.3457,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0028,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.5945,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0016,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "MISSING_OR_MISMATCHED_FAILURE_INTENT",
+              "message": "NO_DRIVER result identity has no matching MatchingFailedV1 Outbox intent.",
+              "record": "1f50e101-446e-49ef-b53c-3a4aab48733d/1"
+            }
+          ],
+          "elapsedTimeMs": 7.9976
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 2,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 3.7606,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-missing-intent-20261030T031917Z-977964",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-missing-intent",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 4.5928,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+      "scenarioId": "negative-stuck-cleanup",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:08.8933836+00:00",
+      "elapsedTimeMs": 34.0259,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.9444
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.1649,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.002,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "STUCK_CLEANUP_OBLIGATION",
+              "message": "Recognized cleanup obligation exceeded the accepted age while the Driver stayed reserved.",
+              "record": "d7fce5e4-94d4-4406-8890-b20d143b1244"
+            },
+            {
+              "code": "DRIVER_POINTS_AT_TERMINAL_TRIP",
+              "message": "Driver current reservation/trip points at a terminal Trip without a fresh recognized cleanup.",
+              "record": "a956036b-807c-4f9b-9d83-4aa9b2b9e86b/d7fce5e4-94d4-4406-8890-b20d143b1244"
+            }
+          ],
+          "elapsedTimeMs": 5.4063,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0015,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 8.1871
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "STUCK_CLEANUP_OBLIGATION",
+              "message": "Cleanup remains open beyond the accepted age while the Driver is still reserved.",
+              "record": "d7fce5e4-94d4-4406-8890-b20d143b1244/a956036b-807c-4f9b-9d83-4aa9b2b9e86b"
+            }
+          ],
+          "elapsedTimeMs": 4.0733,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-cleanup-20261030T031908Z-63b0c9",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-cleanup",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 6.2026,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+      "scenarioId": "negative-stuck-unresolved",
+      "observationMode": "NEGATIVE_CONTROL_SEEDED",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:03.340386+00:00",
+      "elapsedTimeMs": 33.225,
+      "checks": [
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 5.888,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 6,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.1782,
+          "limitation": "Empty Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.001,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 5.2277,
+          "limitation": "Empty Trip or Driver dataset; PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0014,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 7.8498
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.4191,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-negative-stuck-unresolved-20261030T031903Z-3bc4c6",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "negative-stuck-unresolved",
+          "observationMode": "NEGATIVE_CONTROL_SEEDED",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "FAIL",
+          "findings": [
+            {
+              "code": "STUCK_PENDING_OUTBOX",
+              "message": "driver Outbox row stayed PENDING for 120.0 min (policy 15 min).",
+              "record": "stuck-driver-intent/DriverReservedV1"
+            },
+            {
+              "code": "STUCK_UNRESOLVED_ATTEMPT",
+              "message": "Matching attempt stayed UNKNOWN for 120.0 min (policy 15 min).",
+              "record": "35d36538-5f72-40bd-a2a7-13e755466e18/1/0"
+            },
+            {
+              "code": "STUCK_PROCESSING_ROUND",
+              "message": "Matching round stayed PROCESSING for 120.0 min (policy 15 min).",
+              "record": "35d36538-5f72-40bd-a2a7-13e755466e18/1"
+            },
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 5.6168,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+      "scenarioId": "no-driver-terminal",
+      "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:07.26298+00:00",
+      "elapsedTimeMs": 35.3187,
+      "checks": [
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 10,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.7528
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 8,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.6696,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.001,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.4757,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0033,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 12,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 10.747
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.0956,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-no-driver-terminal-20261030T031907Z-61af97",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "no-driver-terminal",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 4,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 5.5417,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+      "scenarioId": "recognized-pending-cleanup",
+      "observationMode": "MID_FLIGHT_OBSERVATION",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:06.1436696+00:00",
+      "elapsedTimeMs": 52.9389,
+      "checks": [
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 6.8728
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 6.3023,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0022,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "RECOGNIZED_PENDING_CLEANUP",
+              "message": "Cleanup is durably recognized and still within policy; not counted as a leak in mid-flight observation.",
+              "record": "043e1b43-fd3d-43d0-bee3-55d3ca989e98"
+            }
+          ],
+          "elapsedTimeMs": 8.8269,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0021,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 13.1365
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 5,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "RECOGNIZED_PENDING_CLEANUP",
+              "message": "Cleanup is durably recognized and still within policy; not counted as a leak in mid-flight observation.",
+              "record": "043e1b43-fd3d-43d0-bee3-55d3ca989e98/8fe25f3f-a767-4cdc-be26-c393eede5a1a"
+            }
+          ],
+          "elapsedTimeMs": 7.2075,
+          "limitation": "Only the current drivers row is reservation authority; historical lifecycle effects are not leaks. Fresh recognized cleanup is accepted only in mid-flight observation; post-scenario modes require completed release obligations."
+        },
+        {
+          "runId": "B12-AUD-recognized-pending-cleanup-20261030T031906Z-ec4fef",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "recognized-pending-cleanup",
+          "observationMode": "MID_FLIGHT_OBSERVATION",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 10.5506,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    },
+    {
+      "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+      "scenarioId": "reserved-agreement",
+      "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+      "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+      "sourceTree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+      "startedAt": "2026-10-30T03:19:02.9057868+00:00",
+      "elapsedTimeMs": 35.5414,
+      "checks": [
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-01",
+          "requirement": "Exclusive Driver reservation: at most one current active reservation/trip per Driver",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 9,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 6.0122
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-02",
+          "requirement": "Driver state coherence and lifecycle provenance",
+          "authoritySources": [
+            "driver_db"
+          ],
+          "inspectedRecordCount": 7,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 5.4381,
+          "limitation": "Historical lifecycle_effects rows are never treated as current reservations; only the drivers row is active authority."
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-03",
+          "requirement": "One current Trip assignment",
+          "authoritySources": [
+            "trip_db (A-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.001,
+          "limitation": "Trip assignment authority is A-owned (TripInvariantAuditor, PR #43). B executes AUD-04 against real Trip rows but does not duplicate the Trip-only audit; A\u0027s evidence is bound to a different source SHA/scenario set, so it is not reused as B\u0027s PASS."
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-04",
+          "requirement": "Driver\u2013Trip exact reservation identity agreement",
+          "authoritySources": [
+            "driver_db",
+            "trip_db"
+          ],
+          "inspectedRecordCount": 2,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 4.9612,
+          "limitation": "Driver is authoritative for reservation identity; Trip is authoritative for assignment; agreement is evaluated from both final states."
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-05",
+          "requirement": "Payment logical effect uniqueness",
+          "authoritySources": [
+            "payment_db (C-owned)"
+          ],
+          "inspectedRecordCount": 0,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 0.0011,
+          "limitation": "Payment authority is C-owned; no Payment database is supplied to the B audit. Explicit C dependency: payment effect ledger inspection."
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-06",
+          "requirement": "Matching terminal uniqueness and durable result intent",
+          "authoritySources": [
+            "matching_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 11,
+          "status": "PASS",
+          "findings": [],
+          "elapsedTimeMs": 8.1417
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-07",
+          "requirement": "No leaked pre-start Driver reservation after quiescence",
+          "authoritySources": [
+            "trip_db",
+            "driver_db"
+          ],
+          "inspectedRecordCount": 1,
+          "status": "NOT_RUN",
+          "findings": [],
+          "elapsedTimeMs": 4.802,
+          "limitation": "No terminal Trip in this scenario; leak PASS would be vacuous."
+        },
+        {
+          "runId": "B12-AUD-reserved-agreement-20261030T031902Z-1f3bac",
+          "sourceCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "scenarioId": "reserved-agreement",
+          "observationMode": "POST_SCENARIO_B_QUIESCED_NO_RELAY",
+          "checkId": "AUD-08",
+          "requirement": "Outbox/attempt unresolved state and age",
+          "authoritySources": [
+            "driver_db",
+            "matching_db"
+          ],
+          "inspectedRecordCount": 3,
+          "status": "PASS",
+          "findings": [
+            {
+              "code": "TRIP_SAGA_SCOPE",
+              "message": "Trip Saga/Outbox unresolved age is A-owned and intentionally not inspected here; A\u0027s AUD-08 PASS covers the Trip authority."
+            }
+          ],
+          "elapsedTimeMs": 6.1372,
+          "limitation": "Relay not executed for this observation; fresh PENDING \u003C= 15 min accepted by the age policy, unresolved attempts/rounds \u003C= 15 min, FAILED_VISIBLE is visible-by-design and reported for review."
+        }
+      ]
+    }
+  ],
+  "negativeControls": [
+    {
+      "controlId": "CTRL-01A",
+      "targetCheck": "AUD-01",
+      "seededCondition": "Direct SQL: the same reservationId current on two Drivers.",
+      "expected": "PostgreSQL rejects the duplicate reservation identity.",
+      "observed": "ENFORCED_BY_CONSTRAINT (23505 ux_drivers_reservation_id)",
+      "isolation": "isolated Driver database (control_constraints)",
+      "notes": "Cross-driver reservation uniqueness is storage-enforced."
+    },
+    {
+      "controlId": "CTRL-02A",
+      "targetCheck": "AUD-02",
+      "seededCondition": "Direct SQL: AVAILABLE with reservation references.",
+      "expected": "PostgreSQL rejects the incoherent row.",
+      "observed": "ENFORCED_BY_CONSTRAINT (23514 chk_drivers_coherence)",
+      "isolation": "isolated Driver database (control_constraints)",
+      "notes": "Constraint enforcement demonstrated instead of bypassing the guard to fabricate a detection."
+    },
+    {
+      "controlId": "CTRL-06A",
+      "targetCheck": "AUD-06",
+      "seededCondition": "Direct SQL: one result identity attached to two NO_DRIVER rounds.",
+      "expected": "PostgreSQL rejects the duplicate terminal identity.",
+      "observed": "ENFORCED_BY_CONSTRAINT (23505 ux_matching_rounds_result_message_id)",
+      "isolation": "isolated Matching database (control_matching_constraints)",
+      "notes": "One logical result identity is storage-enforced."
+    },
+    {
+      "controlId": "CTRL-06B",
+      "targetCheck": "AUD-06",
+      "seededCondition": "Direct SQL: NO_DRIVER without a persisted result identity.",
+      "expected": "PostgreSQL rejects the identity-less terminal.",
+      "observed": "ENFORCED_BY_CONSTRAINT (23514 chk_matching_rounds_no_driver_result)",
+      "isolation": "isolated Matching database (control_matching_constraints)",
+      "notes": "New NO_DRIVER terminals cannot omit their durable result identity."
+    },
+    {
+      "controlId": "CTRL-EMPTY",
+      "targetCheck": "AUD-01..08",
+      "seededCondition": "Fresh schemas with zero rows in every authority table.",
+      "expected": "No PASS from an empty dataset.",
+      "observed": "AUD-01=NOT_RUN, AUD-02=NOT_RUN, AUD-03=NOT_RUN, AUD-04=NOT_RUN, AUD-05=NOT_RUN, AUD-06=NOT_RUN, AUD-07=NOT_RUN, AUD-08=NOT_RUN",
+      "isolation": "isolated empty databases (control_empty)",
+      "notes": "Demonstrates non-vacuity: an empty dataset yields NOT RUN, never a green result."
+    },
+    {
+      "controlId": "CTRL-UNREACHABLE",
+      "targetCheck": "AUD-04/AUD-07",
+      "seededCondition": "Trip/Matching connection strings point to an unreachable server.",
+      "expected": "BLOCKED, never PASS.",
+      "observed": "AUD-04=BLOCKED, AUD-07=BLOCKED",
+      "isolation": "driver-only database \u002B unreachable authorities",
+      "notes": "An unreachable authority cannot produce a business verdict."
+    },
+    {
+      "controlId": "NEG-04A",
+      "targetCheck": "AUD-04",
+      "seededCondition": "Trip assignment reservationId changed while the Driver kept the original reservation.",
+      "expected": "AUD-04 FAIL for exact identity disagreement.",
+      "observed": "FAIL / DRIVER_TRIP_DISAGREEMENT",
+      "isolation": "isolated Trip \u002B Driver databases (neg_disagreement)",
+      "notes": "Trip row remains internally coherent; only the cross-service comparison can catch it."
+    },
+    {
+      "controlId": "NEG-06A",
+      "targetCheck": "AUD-06",
+      "seededCondition": "Second RESERVED attempt added to an already RESERVED round.",
+      "expected": "AUD-06 FAIL with multiple RESERVED attempts.",
+      "observed": "FAIL / MULTIPLE_RESERVED_ATTEMPTS",
+      "isolation": "isolated matching database (neg_contradictory)",
+      "notes": "No production code path creates two RESERVED attempts in one round; the auditor detects ledger corruption."
+    },
+    {
+      "controlId": "NEG-06B",
+      "targetCheck": "AUD-06",
+      "seededCondition": "NO_DRIVER terminal result identity with its MatchingFailedV1 Outbox intent deleted.",
+      "expected": "AUD-06 FAIL for missing durable terminal intent.",
+      "observed": "FAIL / MISSING_OR_MISMATCHED_FAILURE_INTENT",
+      "isolation": "isolated matching database (neg_missing_intent)",
+      "notes": "The real terminalizer commits state and intent atomically; deletion simulates storage corruption outside the code path."
+    },
+    {
+      "controlId": "NEG-07A",
+      "targetCheck": "AUD-07",
+      "seededCondition": "Cancelled Trip, cleanup intents marked complete, Driver row still RESERVED.",
+      "expected": "AUD-07 FAIL: a sent/confirmed cleanup is not proof the reservation was released.",
+      "observed": "FAIL / LEAKED_RESERVATION",
+      "isolation": "isolated Trip \u002B Driver databases (neg_leak)",
+      "notes": "Directly exercises the mission rule that release completion must be read from the Driver authority."
+    },
+    {
+      "controlId": "NEG-07B",
+      "targetCheck": "AUD-07",
+      "seededCondition": "Recognized release obligation aged 2 h while the Driver stayed RESERVED.",
+      "expected": "AUD-07 FAIL beyond the accepted cleanup policy.",
+      "observed": "FAIL / STUCK_CLEANUP_OBLIGATION",
+      "isolation": "isolated Trip \u002B Driver databases (neg_stuck_cleanup)",
+      "notes": "Distinguishes recognized-pending cleanup from an unbounded leak."
+    },
+    {
+      "controlId": "NEG-07C",
+      "targetCheck": "AUD-04/AUD-07",
+      "seededCondition": "Fresh open release obligation and a still-RESERVED Driver at business quiescence.",
+      "expected": "AUD-04 and AUD-07 FAIL; recognized pending is only acceptable in mid-flight observation.",
+      "observed": "AUD-04=FAIL, AUD-07=FAIL / UNRESOLVED_CLEANUP_AT_QUIESCENCE",
+      "isolation": "isolated Trip \u002B Driver databases (neg_fresh_cleanup)",
+      "notes": "Proves the observation mode is enforced, not merely recorded."
+    },
+    {
+      "controlId": "NEG-08A",
+      "targetCheck": "AUD-08",
+      "seededCondition": "2 h-old PENDING Outbox row, UNKNOWN attempt and PROCESSING round.",
+      "expected": "AUD-08 FAIL for every stale unresolved category.",
+      "observed": "FAIL / STUCK_PENDING_OUTBOX,STUCK_UNRESOLVED_ATTEMPT,STUCK_PROCESSING_ROUND,TRIP_SAGA_SCOPE",
+      "isolation": "isolated Driver \u002B Matching databases (neg_stuck)",
+      "notes": "Age policy: 15 min for pending outbox, unresolved attempts and PROCESSING rounds."
+    },
+    {
+      "controlId": "NEG-08B",
+      "targetCheck": "AUD-08",
+      "seededCondition": "Fresh PENDING Outbox row in a relay-quiesced observation.",
+      "expected": "AUD-08 FAIL: quiesced relay state requires pending = 0.",
+      "observed": "FAIL / PENDING_OUTBOX_AT_QUIESCENCE",
+      "isolation": "isolated Driver database (neg_relay_pending)",
+      "notes": "Complements the age-policy control: no-relay modes accept fresh pending within policy, relay-quiesced modes do not."
+    }
+  ],
+  "summary": {
+    "PASS": 56,
+    "LOCAL_PROXY_PASS": 0,
+    "FAIL": 11,
+    "NOT_RUN": 57,
+    "BLOCKED": 4,
+    "positive:PASS": 31,
+    "positive:LOCAL_PROXY_PASS": 0,
+    "positive:FAIL": 0,
+    "positive:NOT_RUN": 17,
+    "positive:BLOCKED": 0,
+    "control:PASS": 25,
+    "control:LOCAL_PROXY_PASS": 0,
+    "control:FAIL": 11,
+    "control:NOT_RUN": 40,
+    "control:BLOCKED": 4
+  }
+}
