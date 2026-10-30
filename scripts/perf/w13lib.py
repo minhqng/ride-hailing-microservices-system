@@ -614,7 +614,10 @@ def capture_environment(*, include_observed: bool = True) -> dict[str, Any]:
 
 
 def source_binding() -> dict[str, Any]:
-    status = run(["git", "status", "--porcelain"], timeout=30).stdout
+    status = run(
+        ["git", "status", "--porcelain", "--", ".", ":(exclude)evidence"], timeout=30
+    ).stdout
+    all_status = run(["git", "status", "--porcelain"], timeout=30).stdout
     commit = run(["git", "rev-parse", "HEAD"], timeout=30, check=True).stdout.strip()
     tree = run(["git", "rev-parse", "HEAD^{tree}"], timeout=30, check=True).stdout.strip()
     branch = run(["git", "branch", "--show-current"], timeout=30).stdout.strip()
@@ -627,6 +630,7 @@ def source_binding() -> dict[str, Any]:
         "dirty": bool(status.strip()),
         "statusDigest": sha256_text(status),
         "statusPreview": status.strip().splitlines()[:40],
+        "evidenceChanges": all_status != status,
     }
 
 
