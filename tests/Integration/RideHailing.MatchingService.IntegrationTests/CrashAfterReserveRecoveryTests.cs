@@ -19,6 +19,7 @@ public sealed class CrashAfterReserveRecoveryTests(MatchingPostgresDatabase matc
     {
         public readonly List<DriverReserveRequest> Reservations = [];
         public readonly List<Guid> Reads = [];
+        public int Queries;
         public async Task<DriverVersionRead?> TryGetDriverVersionAsync(Guid id, CancellationToken ct = default)
         {
             Reads.Add(id);
@@ -36,6 +37,7 @@ public sealed class CrashAfterReserveRecoveryTests(MatchingPostgresDatabase matc
         }
         public async Task<ReservationReconcileResult> GetReservationAsync(Guid driverId, Guid reservationId, CancellationToken ct = default)
         {
+            Queries++;
             var truth = await repository.QueryReservationAsync(driverId, reservationId, ct);
             return new(Enum.Parse<ReservationReconcileOutcome>(truth.Outcome.ToString()), truth.Version);
         }
@@ -76,8 +78,9 @@ public sealed class CrashAfterReserveRecoveryTests(MatchingPostgresDatabase matc
         Assert.Null(await matching.OutboxStore.LoadAsync(MatchingResultMessageIds.ForNoDriver(trip, 1), ct));
 
         // Recreate repositories, pools and orchestrator, then recover ONLY by
-        // persisted identity. IN_FLIGHT recovery uses idempotent same-R Reserve
-        // (the existing production reconciliation contract), not a new attempt.
+        // persisted identity. A possibly-dispatched IN_FLIGHT attempt is
+        // reconciled with the authoritative same-R query BEFORE any replay;
+        // only a proven non-commit would then advance (never a new attempt).
         await using var restartedPool = NpgsqlDataSource.Create(drivers.ConnectionString);
         var restartedDriver = new DriverRepository(restartedPool,
             new RideHailing.Messaging.Outbox.NpgsqlOutboxStore(restartedPool));
@@ -88,7 +91,8 @@ public sealed class CrashAfterReserveRecoveryTests(MatchingPostgresDatabase matc
         var result = await restarted.ReconcileAsync(trip, 1, persisted.Ordinal, ct);
         Assert.Equal(AttemptOutcome.Reserved, result.Outcome);
         Assert.Equal(persisted.ReservationId, result.ReservationId);
-        Assert.Equal(persisted.ReservationId, Assert.Single(recoveredClient.Reservations).ReservationId);
+        Assert.Empty(recoveredClient.Reservations);
+        Assert.True(recoveredClient.Queries > 0, "recovery must query the committed identity");
         var finalAttempt = Assert.Single(await restartedAttempts.LoadAttemptsAsync(trip, 1, ct));
         Assert.Equal(persisted.Ordinal, finalAttempt.Ordinal);
         Assert.Equal(MatchingAttemptStates.Reserved, finalAttempt.State);
@@ -114,7 +118,7 @@ public sealed class CrashAfterReserveRecoveryTests(MatchingPostgresDatabase matc
             (await terminalizer.TryTerminalizeNoDriverAsync(trip, 1, ct)).Outcome);
         var replay = await restarted.ExecuteRoundAsync(trip, 1, [driver.DriverId, nextDriver], "rel02:" + trip, ct);
         Assert.Equal(RoundOutcome.Reserved, replay.Outcome);
-        Assert.Single(recoveredClient.Reservations);
+        Assert.Empty(recoveredClient.Reservations);
         Assert.Null(await matching.OutboxStore.LoadAsync(MatchingResultMessageIds.ForNoDriver(trip, 1), ct));
     }
 }

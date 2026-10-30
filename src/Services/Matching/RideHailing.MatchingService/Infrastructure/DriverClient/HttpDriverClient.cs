@@ -55,8 +55,17 @@ public sealed class HttpDriverClient : IDriverClient
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return new DriverReserveResult(
-                DriverReserveOutcomeKind.Rejected, "DRIVER_NOT_FOUND", null);
+            // L2: only the Driver domain's structured body is an authoritative
+            // "no such driver". A bare 404 may be routing/proxy/transport and
+            // carries no proof that the original reservation had no effect.
+            if (await HasAuthoritativeDriverNotFoundAsync(response, cancellationToken))
+            {
+                return new DriverReserveResult(
+                    DriverReserveOutcomeKind.Rejected, "DRIVER_NOT_FOUND", null);
+            }
+
+            throw new HttpRequestException(
+                "Driver reserve 404 without authoritative DRIVER_NOT_FOUND provenance.");
         }
 
         // 5xx and anything unexpected: transport-level failure for the caller
@@ -80,7 +89,16 @@ public sealed class HttpDriverClient : IDriverClient
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return null;
+            // L2: absence precedes dispatch, so this answer can be conclusive
+            // only when it is the authoritative Driver-domain 404. Any other
+            // 404 is transport uncertainty and must keep the attempt UNKNOWN.
+            if (await HasAuthoritativeDriverNotFoundAsync(response, cancellationToken))
+            {
+                return null;
+            }
+
+            throw new HttpRequestException(
+                "Driver version read returned a 404 without authoritative DRIVER_NOT_FOUND provenance.");
         }
 
         response.EnsureSuccessStatusCode();
@@ -125,6 +143,44 @@ public sealed class HttpDriverClient : IDriverClient
                 $"Unknown reconcile outcome '{body?.Outcome}': Driver contract drift."),
         };
         return new ReservationReconcileResult(outcome, body?.Version);
+    }
+
+    /// <summary>
+    /// L2 provenance gate: a 404 is authoritative absence only when the
+    /// Driver service itself emitted the stable DRIVER_NOT_FOUND domain body.
+    /// Empty/HTML/other-code bodies stay indistinguishable from a proxy or
+    /// routing 404 and are classified as transport uncertainty by callers.
+    /// </summary>
+    private static async Task<bool> HasAuthoritativeDriverNotFoundAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        string text;
+        try
+        {
+            text = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is IOException or HttpRequestException)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(text);
+            return document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                && document.RootElement.TryGetProperty("code", out var code)
+                && code.ValueKind == System.Text.Json.JsonValueKind.String
+                && string.Equals(code.GetString(), "DRIVER_NOT_FOUND", StringComparison.Ordinal);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
     }
 
     private sealed record ReserveSuccessBody(int? Version);

@@ -62,22 +62,13 @@ CREATE INDEX IF NOT EXISTS ix_matching_rounds_work
 -- Doc 01 §8.3: CANCELLED/SKIPPED is a possible extended terminal. A
 -- cancellation closes READY attempts (no effect was sent) without pretending
 -- they were Driver rejections.
-DO $$
-DECLARE c RECORD;
-BEGIN
-    FOR c IN
-        SELECT con.conname
-        FROM pg_constraint con
-        JOIN pg_class rel ON rel.oid = con.conrelid
-        JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY (con.conkey)
-        WHERE rel.relname = 'matching_attempts'
-          AND att.attname = 'state'
-          AND con.contype = 'c'
-          AND con.conname <> 'chk_matching_attempts_state'
-    LOOP
-        EXECUTE format('ALTER TABLE matching_attempts DROP CONSTRAINT %I', c.conname);
-    END LOOP;
-END $$;
+--
+-- Drop ONLY the legacy auto-named inline CHECK created by 001 (PostgreSQL
+-- names an unnamed column check "<table>_<column>_check"). A name-based scan
+-- over every constraint that happens to mention `state` would silently drop
+-- unrelated sentinel constraints; forward migrations must never do that.
+ALTER TABLE matching_attempts
+    DROP CONSTRAINT IF EXISTS matching_attempts_state_check;
 
 DO $$
 BEGIN

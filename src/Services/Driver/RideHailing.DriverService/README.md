@@ -143,3 +143,27 @@ RabbitMQ, exact Trip intake and actual broker/database restarts. Full REL-09 sti
 requires C's Payment command/outcome path and combined A persisted-Saga validation;
 human A/C agreement review remains external. See
 [W10 evidence](../../../../evidence/member-b/w10-lifecycle/README.md).
+
+## W12 reconciliation-safety repair
+
+Two authority answers were hardened for Matching's recovery path:
+
+1. `GET /internal/drivers/{id}/reservations/{rid}` is identity-aware. A durable
+   `driver_lifecycle_effects` row for the exact `(driver_id, reservation_id)`
+   with phase `STARTED` or `COMPLETED` returns
+   `OWNED_BY_THIS_RESERVATION`, regardless of the Driver's current ON_TRIP or
+   AVAILABLE status. The live row clears `reservation_id` when the ride starts,
+   so status alone cannot prove that the reservation never committed. A
+   different reservation/trip is never inferred from status alone; the current
+   status branch still answers `ON_TRIP`/`OFFLINE`/`RESERVED_BY_OTHER`.
+2. `GET /drivers/{id}` and `POST /drivers/{id}/reserve` return a structured
+   `404 {"code":"DRIVER_NOT_FOUND"}` for authoritative absence. A bare 404
+   (routing/proxy/transport, empty or foreign body) carries no domain
+   provenance; Matching must keep the attempt ambiguous instead of concluding
+   that no remote effect exists.
+
+Both additions preserve status codes, OCC/version behaviour, same-reservation
+idempotency, exact lifecycle identity and release fencing. Proofs:
+`DriverRaceFencingTests` (historical ownership) and
+`DriverNotFoundProvenanceTests` (real Kestrel bodies). See the
+[W12 reconciliation-safety evidence](../../../../evidence/member-b/w12-reconciliation-safety/README.md).
