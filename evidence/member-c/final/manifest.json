@@ -6,12 +6,14 @@
     "w13PerformanceSupport": "implemented; measured runs pending",
     "w14ReconnectQuorum": "implemented and compose-validated; live failover evidence pending",
     "w15ReportEvidence": "implemented and deterministic checks validated",
-    "w16ReleaseRehearsal": "pending next stacked branch"
+    "w16ReleaseRehearsal": "deterministic gate and mock traffic generator implemented"
   },
   "environment": {
     "composeConfigValidatedViaWsl": true,
     "liveHaClaims": false
   },
   "report": "docs/member-c-reliability-report.md",
-  "secretGate": "scripts/security/scan-secrets.py"
+  "secretGate": "scripts/security/scan-secrets.py",
+  "releaseGate": "scripts/evidence/release-check.ps1",
+  "mockTraffic": "scripts/demo/member-c-mock-traffic.ps1"
 }
