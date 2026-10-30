@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "synthetic": false,
+  "reportGrade": false,
+  "acceptance": false,
+  "note": "Functional harness smoke only. This is not a report-grade benchmark and must never be used as performance acceptance.",
+  "source": {
+    "commit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+    "tree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+    "dirty": false
+  },
+  "g4": {
+    "green": false,
+    "verdict": "RED",
+    "blockers": 15
+  },
+  "E01": {
+    "runId": "W13-E01-20261030T031444Z-051520e9",
+    "status": "PASS",
+    "points": [
+      {
+        "n": 1,
+        "winnerCount": 1,
+        "conflictCount": 0,
+        "systemErrorCount": 0,
+        "unexpectedCount": 0,
+        "sampleCount": 1,
+        "p50Ms": 7.696899934671819,
+        "p95Ms": 7.696899934671819,
+        "wallMs": 19.89210001192987,
+        "barrierSpreadMs": 0.0,
+        "aud01": "PASS"
+      },
+      {
+        "n": 2,
+        "winnerCount": 1,
+        "conflictCount": 1,
+        "systemErrorCount": 0,
+        "unexpectedCount": 0,
+        "sampleCount": 2,
+        "p50Ms": 8.390899980440736,
+        "p95Ms": 16.390700009651482,
+        "wallMs": 17.459499998949468,
+        "barrierSpreadMs": 0.0906,
+        "aud01": "PASS"
+      },
+      {
+        "n": 10,
+        "winnerCount": 1,
+        "conflictCount": 9,
+        "systemErrorCount": 0,
+        "unexpectedCount": 0,
+        "sampleCount": 10,
+        "p50Ms": 16.961000044830143,
+        "p95Ms": 23.60970003064722,
+        "wallMs": 43.80039998795837,
+        "barrierSpreadMs": 0.8877,
+        "aud01": "PASS"
+      }
+    ],
+    "totalSamples": 13
+  },
+  "E02": {
+    "runId": "W13-E02-20261030T031621Z-05167996",
+    "status": "BLOCKED",
+    "reason": "AUTH_TOKEN_UNAVAILABLE",
+    "configured": {
+      "configuredRatePerSecond": 10,
+      "duration": "30s",
+      "executor": "constant-arrival-rate",
+      "endpoint": "/trips",
+      "preflightBaseUrl": "http://127.0.0.1:18080",
+      "k6BaseUrl": "http://gateway:8080",
+      "preAllocatedVUs": 30,
+      "maxVUs": 80,
+      "tokenCount": 0,
+      "warmupSeconds": 0,
+      "cooldownSeconds": 0
+    },
+    "probe": {
+      "message": "No W13_E02_TOKEN_FILE / --token-file with a bearer token is configured.",
+      "gatewayProbe": {
+        "reachable": true,
+        "status": 404,
+        "elapsedMs": 90.95019998494536,
+        "bodySnippet": "",
+        "unauthenticatedMutationRejected": false,
+        "unauthenticatedMutationAccepted": false
+      },
+      "tripDirectProbe": {
+        "reachable": true,
+        "status": 401,
+        "elapsedMs": 28.002799954265356,
+        "bodySnippet": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.2\",\"title\":\"Authentication required.\",\"status\":401,\"code\":\"UNAUTHORIZED\"}",
+        "unauthenticatedMutationRejected": true,
+        "unauthenticatedMutationAccepted": false
+      }
+    }
+  },
+  "E03": {
+    "runIds": [
+      "W13-E03-20261030T031627Z-0518a3ac",
+      "W13-E03-20261030T031738Z-0519bb47"
+    ],
+    "statuses": [
+      "PASS",
+      "PASS"
+    ],
+    "groups": [
+      {
+        "replicas": 1,
+        "workerMode": "disabled",
+        "configuredRatePerSecond": 5.0,
+        "roundsCreated": 25,
+        "uniqueMessages": 25,
+        "achievedSendRatePerSecond": 5.186937862960608,
+        "p50IntakeLatencyMs": 20.355,
+        "p95IntakeLatencyMs": 46.828,
+        "queuePeakMessages": 0,
+        "redeliveryDelta": 0,
+        "perReplicaConsumedLines": [
+          40
+        ],
+        "attemptCount": "0",
+        "assertions": {
+          "replicaContainerCount": true,
+          "brokerConsumerCount": true,
+          "brokerConsumersRemainAtMeasurementEnd": true,
+          "warmupDrained": true,
+          "publishFailuresZero": true,
+          "roundsCreatedEqualsUnique": true,
+          "noDuplicateRounds": true,
+          "noDuplicateInputIds": true,
+          "queueDrained": true,
+          "allReplicasConsumedWork": true,
+          "duplicateIntakeSuppressed": true,
+          "workerIsolation": true
+        }
+      },
+      {
+        "replicas": 2,
+        "workerMode": "disabled",
+        "configuredRatePerSecond": 5.0,
+        "roundsCreated": 25,
+        "uniqueMessages": 25,
+        "achievedSendRatePerSecond": 5.181646987696378,
+        "p50IntakeLatencyMs": 22.273,
+        "p95IntakeLatencyMs": 26.549,
+        "queuePeakMessages": 0,
+        "redeliveryDelta": 0,
+        "perReplicaConsumedLines": [
+          20,
+          20
+        ],
+        "attemptCount": "0",
+        "assertions": {
+          "replicaContainerCount": true,
+          "brokerConsumerCount": true,
+          "brokerConsumersRemainAtMeasurementEnd": true,
+          "warmupDrained": true,
+          "publishFailuresZero": true,
+          "roundsCreatedEqualsUnique": true,
+          "noDuplicateRounds": true,
+          "noDuplicateInputIds": true,
+          "queueDrained": true,
+          "allReplicasConsumedWork": true,
+          "duplicateIntakeSuppressed": true,
+          "workerIsolation": true
+        }
+      }
+    ]
+  },
+  "analysis": {
+    "E01": "SMOKE_PASS",
+    "E02": "BLOCKED",
+    "E03": "SMOKE_PASS",
+    "campaign": "NOT_ACCEPTED"
+  },
+  "auditor": {
+    "run": "18/18 PASS on the same clean source",
+    "positiveScenarios": {
+      "PASS": 31,
+      "FAIL": 0,
+      "NOT_RUN": 17,
+      "BLOCKED": 0
+    },
+    "controls": {
+      "FAIL": 11,
+      "BLOCKED": 4,
+      "PASS": 25,
+      "NOT_RUN": 40
+    }
+  }
+}
