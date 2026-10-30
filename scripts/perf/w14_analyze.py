@@ -108,6 +108,11 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
     wall_duration = (timestamp(outage["endUtc"]) - timestamp(outage["startUtc"])).total_seconds()
     if duration <= 0 or abs(duration - wall_duration) > 0.5:
         raise ValueError("invalid interruption timestamps")
+    if experiment == "E04":
+        killed = timestamp(manifest["killCommandCompletedAtUtc"])
+        removed = timestamp(manifest["consumerRemovedAtUtc"])
+        if not timestamp(outage["startUtc"]) <= killed <= removed <= timestamp(outage["endUtc"]):
+            raise ValueError("process kill/removal timestamps do not fit inside the interruption")
     steady = number(manifest["steadyElapsed"], "steadyElapsed")
     if steady <= end:
         raise ValueError("steady state precedes recovery")
@@ -123,6 +128,10 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
                 for p in ("baseline", "outage", "recovery", "quiescence")}
     if any(not rows for rows in by_phase.values()):
         raise ValueError("missing baseline/outage/recovery/quiescence observations")
+    if (any(not start <= row["elapsed"] <= end for row in by_phase["outage"])
+            or any(row["elapsed"] >= start for row in by_phase["baseline"])
+            or any(row["elapsed"] <= end for row in by_phase["recovery"])):
+        raise ValueError("measurement phase labels contradict the observed interruption window")
     previous = None
     for row in samples:
         for key in ("elapsed", "ready", "unacked", "consumers", "redeliver", "ack",
