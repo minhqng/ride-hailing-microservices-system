@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Source-bound E04 recovery run",
   "type": "object",
-  "required": ["schemaVersion", "experiment", "runId", "group", "repeat", "plannedRepeats", "mode", "synthetic", "source", "sourceAfter", "g4", "status", "configuration", "environment", "fingerprint", "interruption", "steadyElapsed", "artifacts", "auditor", "duplicateReceipt", "driverBefore"],
+  "required": ["schemaVersion", "experiment", "runId", "group", "repeat", "plannedRepeats", "mode", "synthetic", "source", "sourceAfter", "g4", "status", "configuration", "environment", "fingerprint", "interruption", "steadyElapsed", "steadyPolicy", "beforeInterruption", "artifacts", "auditor", "duplicateReceipt", "driverBefore"],
   "properties": {
     "schemaVersion": {"const": 1},
-    "experiment": {"const": "E04"},
-    "runId": {"type": "string", "pattern": "^W14-E04-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$"},
+    "experiment": {"enum": ["E04", "REL16"]},
+    "runId": {"type": "string", "pattern": "^W14-(E04|REL16)-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$"},
     "group": {"type": "string", "minLength": 1},
     "repeat": {"type": "integer", "minimum": 1},
     "plannedRepeats": {"type": "integer", "minimum": 1},
@@ -22,6 +22,8 @@
     "artifacts": {"type": "object", "required": ["samples", "receipts", "final-state"], "additionalProperties": {"$ref": "#/$defs/artifact"}},
     "interruption": {"type": "object", "required": ["start", "end", "startUtc", "endUtc"]},
     "steadyElapsed": {"type": "number", "exclusiveMinimum": 0},
+    "steadyPolicy": {"type": "object", "required": ["consecutiveSamples", "ready", "unacked", "maxPending"]},
+    "beforeInterruption": {"type": "object", "required": ["pending"]},
     "auditor": {"type": "object", "required": ["sourceCommit", "sourceTree", "checks"]},
     "duplicateReceipt": {"type": "object", "required": ["messageId", "confirmed"]},
     "driverBefore": {"type": "array"}

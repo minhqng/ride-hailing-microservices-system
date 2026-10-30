@@ -4,6 +4,7 @@ import copy
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch, Mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -11,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import w13lib as lib
 import w14_analyze as analyze
 import w14_ha as ha
+import w14
 
 
 def fixture(root: Path) -> dict:
@@ -35,23 +37,31 @@ def fixture(root: Path) -> dict:
     samples = []
     for elapsed, phase, ready, terminal in ((1, "baseline", 0, 1), (2.5, "outage", 1, 1),
             (3.5, "outage", 2, 1), (4.5, "recovery", 1, 2),
-            (5.5, "recovery", 0, 3), (6.5, "recovery", 0, 4), (7.5, "quiescence", 0, 4)):
+            (5.5, "recovery", 0, 3), (6, "recovery", 0, 4),
+            (6.5, "recovery", 0, 4), (7.5, "quiescence", 0, 4)):
         samples.append({"elapsed": elapsed, "atUtc": stamp(elapsed), "phase": phase,
             "ready": ready, "unacked": 0, "consumers": 0 if phase == "outage" else 1,
             "redeliver": 0, "ack": terminal, "intake": terminal, "terminal": terminal,
             "pending": 0, "type": "quorum"})
+    samples[-1]["ack"] = 5
+    offline = {"driver_id": lib.seeded_uuid(14, "offline"), "status": "OFFLINE",
+               "version": 1, "reservation_id": None, "reserved_trip_id": None}
     manifest = {"schemaVersion": 1, "experiment": "E04", "runId": "W14-E04-20261030T000000Z-aabbccdd",
         "group": "explicitly-synthetic", "repeat": 1, "plannedRepeats": 1, "mode": "smoke",
         "synthetic": True, "source": source, "sourceAfter": source, "status": "PASS",
-        "configuration": {"rate": 1, "outageSeconds": 2, "baselineSeconds": 1, "recoveryTimeout": 10},
-        "environment": {"configured": {}}, "g4": {"green": False},
+        "configuration": {"rate": 1, "outageSeconds": 2, "baselineSeconds": 1, "recoveryTimeout": 10,
+            "seed": 14, "consumerCount": 1, "prefetch": 16, "dataset": "synthetic OFFLINE",
+            "outage": "synthetic consumer stop", "reset": "synthetic fresh volumes"},
+        "environment": {"configured": {}}, "g4": {"green": False, "verdict": "RED", "blockers": []},
         "fingerprint": lib.environment_fingerprint({"configured": {}}),
         "interruption": {"start": 2, "end": 4, "startUtc": stamp(2), "endUtc": stamp(4)},
-        "steadyElapsed": 6.5, "driverBefore": [], "duplicateReceipt": receipts[0],
+        "steadyElapsed": 6.5, "driverBefore": [offline], "duplicateReceipt": receipts[0],
+        "beforeInterruption": {"pending": 0},
+        "steadyPolicy": {"consecutiveSamples": 3, "ready": 0, "unacked": 0, "maxPending": 0},
         "auditor": {"sourceCommit": source["commit"], "sourceTree": source["tree"],
             "checks": [{"checkId": key, "status": "PASS"} for key in
                        ("AUD-01", "AUD-02", "AUD-06", "AUD-08")]}, "artifacts": {}}
-    final = {"rounds": rounds, "attempts": [], "matchingOutbox": events, "drivers": [], "driverOutbox": []}
+    final = {"rounds": rounds, "attempts": [], "matchingOutbox": events, "drivers": [offline], "driverOutbox": []}
     for name, data in (("samples", samples), ("receipts", receipts), ("final-state", final)):
         artifact_path = root / f"{name}.json"
         lib.write_json(artifact_path, data)
@@ -109,6 +119,8 @@ class RecoveryAnalysisTests(unittest.TestCase):
         controls = (("receipts", lambda data: data[0].update(confirmed=False)),
             ("samples", lambda data: data[2].update(elapsed=-1)),
             ("samples", lambda data: data.clear()),
+            ("samples", lambda data: [row.update(ack=0) for row in data]),
+            ("samples", lambda data: data[-3].update(ready=1)),
             ("final-state", lambda data: data["rounds"].pop()),
             ("final-state", lambda data: data["rounds"][0].update(status="PROCESSING")),
             ("final-state", lambda data: data["matchingOutbox"][0].update(status="PENDING")),
@@ -132,10 +144,44 @@ class RecoveryAnalysisTests(unittest.TestCase):
 
     def test_report_gate_and_repetitions_cannot_be_lowered(self):
         self.manifest["mode"] = "report"
+        self.manifest["g4"].update(certificate={"checks": {}}, checks={})
         result = self.result()
         self.assertEqual("INVALID", result["status"])
         self.assertTrue(any("three" in error for error in result["errors"]))
         self.assertTrue(any("G4" in error for error in result["errors"]))
+
+    def test_contradictory_stored_gate_rejected_even_with_future_green_live_gate(self):
+        paths = []
+        for repeat in range(1, 4):
+            path = self.root / str(repeat)
+            path.mkdir()
+            manifest = fixture(path)
+            manifest.update(repeat=repeat, plannedRepeats=3, mode="report")
+            manifest["runId"] = f"W14-E04-20261030T000000Z-{repeat:08x}"
+            manifest["g4"] = {"green": True, "verdict": "RED", "blockers": ["not certified"],
+                "checks": {}, "certificate": {"checks": {}}}
+            lib.write_json(path / "manifest.json", manifest)
+            paths.append(path)
+        with patch.object(lib, "g4_readiness", return_value={"green": True}), \
+                patch.object(lib, "source_binding", return_value={"dirty": False}):
+            result = analyze.analyze_group(paths)
+        self.assertEqual("INVALID", result["status"])
+        self.assertTrue(any("contradictory" in e for e in result["errors"]))
+
+    def test_teardown_failure_still_retains_manifest_and_removes_isolated_stack(self):
+        import threading
+        publisher = Mock()
+        publisher.close.side_effect = BrokenPipeError()
+        manifest = {"status": "PASS", "artifacts": {}}
+        with patch.object(lib, "compose_down") as down:
+            w14.finish_run(manifest, self.root, publisher, None, threading.Event(), [], [])
+        down.assert_called_once_with(volumes=True)
+        self.assertEqual("FAIL", lib.read_json(self.root / "manifest.json")["status"])
+        with patch.object(lib, "compose_down") as down, \
+                patch.object(lib, "write_json", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                w14.finish_run(manifest, self.root, None, None, threading.Event(), [], [])
+        down.assert_called_once_with(volumes=True)
 
     def test_non_drainable_workload_has_no_finite_prediction(self):
         samples_path = self.root / "samples.json"
@@ -156,13 +202,22 @@ class RecoveryAnalysisTests(unittest.TestCase):
     def test_ha_rejects_single_node_even_if_queue_type_is_quorum(self):
         point = {"capturedAtUtc": "2026-10-30T00:00:00Z", "source": self.manifest["source"],
             "cluster": "test", "queue": {"type": "quorum", "members": ["rabbit@one"],
-            "online": ["rabbit@one"], "leader": "rabbit@one", "consumers": 1}}
+            "online": ["rabbit@one"], "leader": "rabbit@one", "consumers": 1},
+            "nodes": [{"name": "rabbit@one", "running": True}]}
         during, after = copy.deepcopy(point), copy.deepcopy(point)
         during["capturedAtUtc"] = "2026-10-30T00:00:03Z"
         after["capturedAtUtc"] = "2026-10-30T00:00:08Z"
         result = ha.verify(point, during, after, "rabbit@one", [])
         self.assertEqual("FAIL", result["status"])
         self.assertTrue(any("three" in error for error in result["errors"]))
+
+    def test_ha_application_contract_rejects_an_e04_consumer_stop(self):
+        self.manifest["experiment"] = "REL16"
+        self.manifest["runId"] = "W14-REL16-20261030T000000Z-aabbccdd"
+        lib.write_json(self.root / "manifest.json", self.manifest)
+        result = analyze.analyze_group([self.root], experiment="REL16")
+        self.assertEqual("INVALID", result["status"])
+        self.assertTrue(any("continued consumer acknowledgements" in e for e in result["errors"]))
 
 
 if __name__ == "__main__":
