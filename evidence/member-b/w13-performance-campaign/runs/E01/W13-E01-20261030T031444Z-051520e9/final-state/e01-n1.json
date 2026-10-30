@@ -1,0 +1,78 @@
+{
+  "synthetic": false,
+  "reportGrade": false,
+  "driverId": "9a80e63f-9930-5a78-8a86-59a7cef4dc69",
+  "expectedVersion": 2,
+  "winner": {
+    "status": 200,
+    "code": null,
+    "responseOutcome": "won",
+    "latencyMs": 7.696899934671819,
+    "outcome": "success",
+    "index": 0,
+    "tripId": "fb0078a0-7b9a-5cce-813a-1e0886dd6eae",
+    "reservationId": "3bf72efc-a666-5a48-91d0-f0f1c5c3a6d0",
+    "barrierSpreadMs": 0.0,
+    "wallMs": 19.89210001192987
+  },
+  "final": {
+    "driver": {
+      "driver_id": "9a80e63f-9930-5a78-8a86-59a7cef4dc69",
+      "user_id": "c70babbb-fea1-5761-bea2-5efa5049792e",
+      "status": "RESERVED",
+      "version": 3,
+      "reserved_trip_id": "fb0078a0-7b9a-5cce-813a-1e0886dd6eae",
+      "reservation_id": "3bf72efc-a666-5a48-91d0-f0f1c5c3a6d0",
+      "active_trip_id": null,
+      "reserved_round": 1
+    },
+    "activeReservationRows": [
+      {
+        "driver_id": "9a80e63f-9930-5a78-8a86-59a7cef4dc69",
+        "reservation_id": "3bf72efc-a666-5a48-91d0-f0f1c5c3a6d0",
+        "reserved_trip_id": "fb0078a0-7b9a-5cce-813a-1e0886dd6eae"
+      }
+    ],
+    "reserveOutbox": [
+      {
+        "message_id": "7b4a6e3d8bd6b7629ec9c7cb8417ba92",
+        "message_type": "DriverReservedV1",
+        "status": "PUBLISHED",
+        "aggregate_id": "9a80e63f99305a788a8659a7cef4dc69",
+        "reservation_id": "3bf72efc-a666-5a48-91d0-f0f1c5c3a6d0",
+        "trip_id": "fb0078a0-7b9a-5cce-813a-1e0886dd6eae"
+      }
+    ],
+    "lifecycleEffects": [],
+    "reservationHolders": [
+      {
+        "driver_id": "9a80e63f-9930-5a78-8a86-59a7cef4dc69",
+        "status": "RESERVED"
+      }
+    ]
+  },
+  "aud01": {
+    "status": "PASS",
+    "checks": {
+      "driverExists": true,
+      "reservedState": true,
+      "singleActiveRow": true,
+      "oneReservationHolder": true,
+      "winnerReservationMatches": true,
+      "winnerTripMatches": true,
+      "oneReserveOutboxIntent": true,
+      "noLifecycleEffect": true
+    }
+  },
+  "assertions": {
+    "sampleCountEqualsContenders": true,
+    "exactlyOneWinner": true,
+    "expectedConflicts": true,
+    "zeroSystemErrors": true,
+    "zeroUnexpected": true,
+    "driversReserved": true,
+    "singleActiveReservation": true,
+    "singleReserveOutbox": true,
+    "aud01Pass": true
+  }
+}
