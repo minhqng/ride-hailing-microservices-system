@@ -90,9 +90,9 @@ copy these files into an evidence bundle without discarding the raw inputs.
 Schema: [w14-manifest.schema.json](schema/w14-manifest.schema.json).
 Failed runs retain their incomplete manifest and cannot be analyzed as PASS.
 
-The dataset deliberately has no available Driver: real Matching intake and
+The dataset has one real OFFLINE Driver and no available Driver: real Matching intake and
 autonomous S0/S1/S2 exhaustion commit real `NO_DRIVER` and one
-`MatchingFailedV1` Outbox event per identity. Driver authority must stay empty.
+`MatchingFailedV1` Outbox event per identity. Driver authority must stay unchanged.
 This is a bounded B application experiment, not a full Trip/Saga workload.
 Separate real-provider tests exercise successful Driver reservation,
 commit-before-ACK redelivery, process restart, broker stop/return, and stale
@@ -155,7 +155,13 @@ python scripts/perf/w14_ha.py snapshot --management-port 35672 --out after.json
 python scripts/perf/w14_ha.py verify --before before.json --during during.json --after after.json --lost-node rabbit@node1 --runs /path/to/source-bound-B-run
 ```
 
-The adapter checks three actual quorum members, known leader, surviving
+Keep snapshots in the ignored outputs directory (or outside the repository)
+so capture itself does not dirty source provenance. C's application artifact
+uses `experiment: REL16` and `runId: W14-REL16-...` in the shared schema,
+with consumers left running and observed ACK progress during the loss window.
+E04 artifacts are refused even if presented with a three-member snapshot.
+
+The adapter checks three actual quorum members, all online at baseline, known leader, surviving
 majority, restored membership/consumers, source equality and overlap with
 the B observation window. B proof must use the same observed cluster.
 The single-node E04 runner cannot supply HA evidence for it. C must supply
