@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "experiment": "E01",
+  "runId": "W13-E01-20260101T000000Z-e01x",
+  "reportGrade": false,
+  "smoke": true,
+  "source": {
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "synthetic-fixture",
+    "remote": "synthetic",
+    "dirty": false,
+    "statusDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "statusPreview": []
+  },
+  "g4": {
+    "green": false,
+    "verdict": "RED",
+    "evidencePath": "synthetic",
+    "blockers": [
+      "synthetic G4 blocker"
+    ]
+  },
+  "dataset": {
+    "seed": 7,
+    "resetPolicy": "synthetic, no execution"
+  },
+  "environment": {
+    "capturedAtUtc": "2026-01-01T00:00:00Z",
+    "host": {
+      "platform": "synthetic"
+    },
+    "docker": {
+      "server": "synthetic"
+    },
+    "tooling": {},
+    "images": {},
+    "configured": {
+      "composeServices": {}
+    },
+    "observed": {}
+  },
+  "workload": {},
+  "result": {
+    "status": "PASS",
+    "reason": "synthetic fixture",
+    "sampleCount": 1,
+    "outcomes": {
+      "success": 1,
+      "domainConflict": 1,
+      "systemError": 0,
+      "timeout": 0,
+      "unexpected": 0
+    },
+    "latencyMs": {
+      "p50": 1.0,
+      "p95": 2.0,
+      "count": 1
+    },
+    "assertions": {}
+  },
+  "artifacts": {
+    "runDirectory": "synthetic",
+    "commands": [
+      "synthetic"
+    ],
+    "rawSamples": [],
+    "finalState": [],
+    "rawRetainedLocally": true
+  },
+  "limitations": [
+    "Synthetic fixture only. Never a measurement or acceptance result."
+  ]
+}
