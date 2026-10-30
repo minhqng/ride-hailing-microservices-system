@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "experiment": "E01",
-  "runId": "W13-E01-20261030T031444Z-051520e9",
+  "runId": "W13-E01-20261030T034725Z-05155ab6",
   "reportGrade": false,
   "smoke": true,
   "source": {
-    "commit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
-    "tree": "4a0dd7b805b5ed15c7f3e067a0b127135e614e89",
+    "commit": "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a",
+    "tree": "4033938a500e6373e59f3d346a0bc0481a5e2744",
     "branch": "feature/B-W13-performance-campaign",
     "remote": "https://github.com/minhqng/ride-hailing-microservices-system.git",
     "dirty": false,
@@ -41,7 +41,7 @@
     "resetPolicy": "fresh compose project volumes per measured run"
   },
   "environment": {
-    "capturedAtUtc": "2026-10-30T03:15:24.258289Z",
+    "capturedAtUtc": "2026-10-30T03:48:08.274366Z",
     "host": {
       "platform": "Windows-11-10.0.26200-SP0",
       "machine": "AMD64",
@@ -122,7 +122,6 @@
     },
     "tooling": {
       "dotnet": "10.0.403",
-      "dotnetPath": "C:\\Users\\admin\\.dotnet\\dotnet.exe",
       "python": "3.15.2",
       "k6Installed": null,
       "k6Image": {
@@ -172,7 +171,7 @@
           ],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=driver_dev_pw;Maximum Pool Size=20",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=<redacted>;Maximum Pool Size=20",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -207,7 +206,7 @@
           ],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=identity_dev_pw",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=<redacted>",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "ServiceInstanceId": "identity-local"
           }
@@ -219,7 +218,7 @@
           "publishedPorts": [],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=matching_dev_pw;Maximum Pool Size=20",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=<redacted>;Maximum Pool Size=20",
             "Matching__Worker__BatchSize": "16",
             "Matching__Worker__Enabled": "true",
             "Matching__Worker__MaxConcurrentRounds": "4",
@@ -239,7 +238,7 @@
           "memLimitBytes": "536870912",
           "publishedPorts": [],
           "environment": {
-            "ConnectionStrings__Postgres": "Host=postgres;Database=notification_db;Username=notification_app;Password=notification_dev_pw",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=notification_db;Username=notification_app;Password=<redacted>",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -257,7 +256,7 @@
           "environment": {
             "ASPNETCORE_ENVIRONMENT": "Development",
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=payment_dev_pw",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=<redacted>",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -293,7 +292,7 @@
             "25672"
           ],
           "environment": {
-            "RABBITMQ_DEFAULT_PASS": "ride_dev_pw",
+            "RABBITMQ_DEFAULT_PASS": "<redacted>",
             "RABBITMQ_DEFAULT_USER": "ride_app"
           }
         },
@@ -315,7 +314,7 @@
           ],
           "environment": {
             "ASPNETCORE_URLS": "http://+:8080",
-            "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=trip_dev_pw;Maximum Pool Size=20",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=<redacted>;Maximum Pool Size=20",
             "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
             "RabbitMq__Host": "rabbitmq",
             "RabbitMq__Password": "<redacted>",
@@ -336,10 +335,10 @@
           "state": "running",
           "health": null,
           "inspect": {
-            "id": "d05c297b2a36aeb33cfc64ba0d2121d3fc8656fddf00fa8248151a0d726d722a",
+            "id": "864b0432077822e43ce5ba2dbe9300cbc275c4da3bce26f93ee9d736f0f2efb4",
             "name": "ride-hailing-w13-driver-1",
-            "image": "sha256:8d287e6823fa2d58ad3d359df780486dcbe1848df4f372c8abe393385aff718f",
-            "startedAt": "2026-10-30T03:15:21.337633175Z",
+            "image": "sha256:ba2f027ab7d9a5ab60a7148cd39b2edd493873b527ec29f8dbcc9e969145a877",
+            "startedAt": "2026-10-30T03:48:05.462460116Z",
             "status": "running",
             "nanoCpus": 2000000000,
             "memoryBytes": 1073741824,
@@ -349,7 +348,7 @@
               "RabbitMq__Username": "ride_app",
               "ServiceInstanceId": "driver-local",
               "ASPNETCORE_URLS": "http://+:8080",
-              "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=driver_dev_pw;Maximum Pool Size=20",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=<redacted>;Maximum Pool Size=20",
               "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
               "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
               "APP_UID": "1654",
@@ -366,23 +365,23 @@
           "state": "running",
           "health": "healthy",
           "inspect": {
-            "id": "c0382cee603e1dbb7936114060a41fe480382f012bb09002f2db500230443f15",
+            "id": "35cb79b5bab8a6390d032bee409f6415f1b51182f47f19bee257a63c1d1ef4c7",
             "name": "ride-hailing-w13-postgres-1",
             "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
-            "startedAt": "2026-10-30T03:15:09.602708812Z",
+            "startedAt": "2026-10-30T03:47:52.898910075Z",
             "status": "running",
             "nanoCpus": 2000000000,
             "memoryBytes": 2147483648,
             "env": {
-              "POSTGRES_USER": "postgres",
+              "DRIVER_DB_PASSWORD": "<redacted>",
               "POSTGRES_PASSWORD": "<redacted>",
               "PAYMENT_DB_PASSWORD": "<redacted>",
-              "POSTGRES_DB": "postgres",
-              "TRIP_DB_PASSWORD": "<redacted>",
-              "NOTIFICATION_DB_PASSWORD": "<redacted>",
-              "DRIVER_DB_PASSWORD": "<redacted>",
-              "MATCHING_DB_PASSWORD": "<redacted>",
               "IDENTITY_DB_PASSWORD": "<redacted>",
+              "MATCHING_DB_PASSWORD": "<redacted>",
+              "POSTGRES_DB": "postgres",
+              "POSTGRES_USER": "postgres",
+              "NOTIFICATION_DB_PASSWORD": "<redacted>",
+              "TRIP_DB_PASSWORD": "<redacted>",
               "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin",
               "GOSU_VERSION": "1.19",
               "LANG": "en_US.utf8",
@@ -398,15 +397,15 @@
           "state": "running",
           "health": "healthy",
           "inspect": {
-            "id": "89965110c77226ceb3ea23eb32faca5ba8177feb0ffca505e37ee89863358b26",
+            "id": "473f0e6619790afecc3b59da61446204319a0a2a36e3a40e2cdeedcf81c4fec9",
             "name": "ride-hailing-w13-rabbitmq-1",
             "image": "sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
-            "startedAt": "2026-10-30T03:15:09.299319989Z",
+            "startedAt": "2026-10-30T03:47:53.184345587Z",
             "status": "running",
             "nanoCpus": 2000000000,
             "memoryBytes": 1073741824,
             "env": {
-              "RABBITMQ_DEFAULT_PASS": "ride_dev_pw",
+              "RABBITMQ_DEFAULT_PASS": "<redacted>",
               "RABBITMQ_DEFAULT_USER": "ride_app",
               "PATH": "/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
               "ERLANG_INSTALL_PATH_PREFIX": "/opt/erlang",
@@ -433,7 +432,7 @@
       },
       "broker": {
         "version": "4.3.6",
-        "cluster": "rabbit@89965110c772",
+        "cluster": "rabbit@473f0e661979",
         "queueTotals": {},
         "objectTotals": {
           "channels": 0,
@@ -475,9 +474,9 @@
           "systemErrorCount": 0,
           "unexpectedCount": 0,
           "sampleCount": 1,
-          "p50Ms": 7.696899934671819,
-          "p95Ms": 7.696899934671819,
-          "wallMs": 19.89210001192987,
+          "p50Ms": 6.2689000042155385,
+          "p95Ms": 6.2689000042155385,
+          "wallMs": 7.430900004692376,
           "barrierSpreadMs": 0.0,
           "assertions": {
             "sampleCountEqualsContenders": true,
@@ -485,10 +484,14 @@
             "expectedConflicts": true,
             "zeroSystemErrors": true,
             "zeroUnexpected": true,
+            "knownConflictCodes": true,
             "driversReserved": true,
             "singleActiveReservation": true,
             "singleReserveOutbox": true,
-            "aud01Pass": true
+            "aud01Pass": true,
+            "driverVersionIncrementedOnce": true,
+            "reservedRoundRecorded": true,
+            "outboxPayloadMatchesWinner": true
           },
           "aud01": "PASS"
         },
@@ -501,20 +504,24 @@
           "systemErrorCount": 0,
           "unexpectedCount": 0,
           "sampleCount": 2,
-          "p50Ms": 8.390899980440736,
-          "p95Ms": 16.390700009651482,
-          "wallMs": 17.459499998949468,
-          "barrierSpreadMs": 0.0906,
+          "p50Ms": 8.631000062450767,
+          "p95Ms": 15.529499971307814,
+          "wallMs": 16.836500028148293,
+          "barrierSpreadMs": 0.0851,
           "assertions": {
             "sampleCountEqualsContenders": true,
             "exactlyOneWinner": true,
             "expectedConflicts": true,
             "zeroSystemErrors": true,
             "zeroUnexpected": true,
+            "knownConflictCodes": true,
             "driversReserved": true,
             "singleActiveReservation": true,
             "singleReserveOutbox": true,
-            "aud01Pass": true
+            "aud01Pass": true,
+            "driverVersionIncrementedOnce": true,
+            "reservedRoundRecorded": true,
+            "outboxPayloadMatchesWinner": true
           },
           "aud01": "PASS"
         },
@@ -527,20 +534,24 @@
           "systemErrorCount": 0,
           "unexpectedCount": 0,
           "sampleCount": 10,
-          "p50Ms": 16.961000044830143,
-          "p95Ms": 23.60970003064722,
-          "wallMs": 43.80039998795837,
-          "barrierSpreadMs": 0.8877,
+          "p50Ms": 13.514899997971952,
+          "p95Ms": 19.23410000745207,
+          "wallMs": 22.59159996174276,
+          "barrierSpreadMs": 0.7346,
           "assertions": {
             "sampleCountEqualsContenders": true,
             "exactlyOneWinner": true,
             "expectedConflicts": true,
             "zeroSystemErrors": true,
             "zeroUnexpected": true,
+            "knownConflictCodes": true,
             "driversReserved": true,
             "singleActiveReservation": true,
             "singleReserveOutbox": true,
-            "aud01Pass": true
+            "aud01Pass": true,
+            "driverVersionIncrementedOnce": true,
+            "reservedRoundRecorded": true,
+            "outboxPayloadMatchesWinner": true
           },
           "aud01": "PASS"
         }
@@ -566,10 +577,10 @@
         ],
         "finalVersion": 8
       },
-      "measurementSeconds": 4.978856800007634
+      "measurementSeconds": 3.811883000074886
     },
-    "warmupSeconds": 0.1733363000676036,
-    "measurementSeconds": 4.978856800007634,
+    "warmupSeconds": 0.1550899000139907,
+    "measurementSeconds": 3.811883000074886,
     "cooldownSeconds": 0,
     "datasetSeed": 1301
   },
@@ -585,8 +596,8 @@
       "unexpected": 0
     },
     "latencyMs": {
-      "p50": 16.390700009651482,
-      "p95": 23.60970003064722,
+      "p50": 13.514899997971952,
+      "p95": 19.23410000745207,
       "count": 13
     },
     "assertions": {
@@ -596,10 +607,14 @@
         "expectedConflicts": true,
         "zeroSystemErrors": true,
         "zeroUnexpected": true,
+        "knownConflictCodes": true,
         "driversReserved": true,
         "singleActiveReservation": true,
         "singleReserveOutbox": true,
-        "aud01Pass": true
+        "aud01Pass": true,
+        "driverVersionIncrementedOnce": true,
+        "reservedRoundRecorded": true,
+        "outboxPayloadMatchesWinner": true
       },
       "n2": {
         "sampleCountEqualsContenders": true,
@@ -607,10 +622,14 @@
         "expectedConflicts": true,
         "zeroSystemErrors": true,
         "zeroUnexpected": true,
+        "knownConflictCodes": true,
         "driversReserved": true,
         "singleActiveReservation": true,
         "singleReserveOutbox": true,
-        "aud01Pass": true
+        "aud01Pass": true,
+        "driverVersionIncrementedOnce": true,
+        "reservedRoundRecorded": true,
+        "outboxPayloadMatchesWinner": true
       },
       "n10": {
         "sampleCountEqualsContenders": true,
@@ -618,15 +637,19 @@
         "expectedConflicts": true,
         "zeroSystemErrors": true,
         "zeroUnexpected": true,
+        "knownConflictCodes": true,
         "driversReserved": true,
         "singleActiveReservation": true,
         "singleReserveOutbox": true,
-        "aud01Pass": true
+        "aud01Pass": true,
+        "driverVersionIncrementedOnce": true,
+        "reservedRoundRecorded": true,
+        "outboxPayloadMatchesWinner": true
       }
     }
   },
   "artifacts": {
-    "runDirectory": "evidence/member-b/w13-performance-campaign/runs/E01/W13-E01-20261030T031444Z-051520e9",
+    "runDirectory": "evidence/member-b/w13-performance-campaign/runs/E01/W13-E01-20261030T034725Z-05155ab6",
     "commands": [
       "python scripts/perf/w13.py e01 --base-url http://127.0.0.1:18102 --seed 1301 --repeats 1 --n 1,2,10 --mode smoke"
     ],
