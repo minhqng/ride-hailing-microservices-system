@@ -9,9 +9,9 @@ TestResults/
 .idea/
 *.DotSettings.user
 
-# Python
+# Python tooling
 __pycache__/
-*.pyc
+*.py[cod]
 
 # Env / secrets
 .env
@@ -43,4 +43,3 @@ evidence/**/outputs/
 
 # CI/local smoke log written at repo root by platform-smoke
 platform-smoke.log
-__pycache__/
