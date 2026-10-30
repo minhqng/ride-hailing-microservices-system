@@ -406,6 +406,7 @@ _CONNECTION_SECRET_RE = re.compile(r"(?i)(password|pwd)=([^;\s]+)")
 
 
 def _redact_string(value: str) -> str:
+    value = re.sub(r"([a-zA-Z][a-zA-Z0-9+.-]*://)[^/\s]*@", r"\1<redacted>@", value)
     return _CONNECTION_SECRET_RE.sub(lambda match: f"{match.group(1)}=<redacted>", value)
 
 
@@ -637,7 +638,7 @@ def source_binding() -> dict[str, Any]:
         "commit": commit,
         "tree": tree,
         "branch": branch,
-        "remote": remote,
+        "remote": _redact_string(remote),
         "dirty": bool(status.strip()),
         "statusDigest": sha256_text(status),
         "statusPreview": status.strip().splitlines()[:40],

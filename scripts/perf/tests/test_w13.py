@@ -31,6 +31,12 @@ def materialize(name: str, target: Path, **manifest_overrides) -> tuple[dict, Pa
 
 
 class PercentileTests(unittest.TestCase):
+    def test_uri_userinfo_is_redacted_before_source_evidence(self) -> None:
+        self.assertEqual("https://<redacted>@github.com/team/repo.git",
+            lib._redact_string("https://account:private-token@github.com/team/repo.git"))
+        self.assertEqual("amqp://<redacted>@localhost/vhost",
+            lib._redact_string("amqp://username:password@localhost/vhost"))
+
     def test_g4_green_requires_every_check_and_verified_source(self) -> None:
         # A valid certificate must be able to turn green; any failed check still blocks.
         with tempfile.TemporaryDirectory() as directory:
