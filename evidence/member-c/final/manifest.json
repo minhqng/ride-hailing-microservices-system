@@ -1,6 +1,6 @@
 {
   "preparedAt": "2026-10-30T00:00:00+07:00",
-  "branch": "feature/C-W15-freeze-report",
+  "branch": "feature/C-W16-release-demo",
   "implementation": {
     "w12ObservabilitySecurity": "implemented; live dashboard export pending",
     "w13PerformanceSupport": "implemented; measured runs pending",
