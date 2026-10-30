@@ -208,6 +208,16 @@ STARTED/COMPLETED), and the L4/L5/L7 proofs in `MatchingMetricsTests`,
 `MatchingMigrationRepairTests` and `ProductionMatchingStageTests`. See the
 [W12 reconciliation-safety evidence](../../../../evidence/member-b/w12-reconciliation-safety/README.md).
 
+For `STAGE_CONFIGURATION_MISMATCH`, restore a configuration containing the
+persisted stage and its original policy before resuming the worker. Do not
+rewind `current_stage` or discard its snapshot. For `RECONCILE_EXHAUSTED`,
+restore access to Driver's reservation-query endpoint, inspect the exact
+`driver_id`/`reservation_id` and durable dispatch fence, and allow the next
+worker pass to reconcile. Keep the round PROCESSING and the attempt UNKNOWN
+until authoritative evidence resolves it; do not clear the row or manually
+mark it REJECTED to unblock another Driver. Polls remain bounded per pass and
+the configured worker backoff controls repeated checks across restarts.
+
 ## NOT implemented (later weeks)
 
 - W13 performance experiments (E01/E02/E03) and W14 HA validation are not started.
