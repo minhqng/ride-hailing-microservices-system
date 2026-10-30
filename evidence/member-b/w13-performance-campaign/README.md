@@ -12,8 +12,8 @@ No report-grade benchmark was executed because G4 is red.
 |---|---|
 | Branch | `feature/B-W13-performance-campaign` |
 | Base | validated W12 head `61d7328838befa0adbbc9974a7b5c1635cdecf2d` (PR #45) |
-| Code commit tested by the smoke runs | `1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58` |
-| Code tree | `4a0dd7b805b5ed15c7f3e067a0b127135e614e89` |
+| Code commit tested by the smoke runs | `b1beb8451f50673bc98445beea7f3c6b6d8f7c4a` |
+| Code tree | `4033938a500e6373e59f3d346a0bc0481a5e2744` |
 | Report-grade | **NO** |
 | Acceptance | **NO** |
 
@@ -30,7 +30,7 @@ untouched; no A/C-owned source changed. The W13 code commits change only
 | W12 / PR #45 | `61d7328` | latest validated B head, recovery repair included |
 | A-W12 | `132ecfd` | unmerged; G4 matrix says team G4 not green |
 | C-W10/W11 | `d300849` | unmerged; shared platform/REL-11 pending |
-| B-W13 | `98eb274` + `e8feb2f` + `1dcc7ee` | W13 harness on top of `61d7328` |
+| B-W13 | `98eb274` + `e8feb2f` + `1dcc7ee` + `f513a69` + `b1beb84` | W13 harness on top of `61d7328` |
 
 ## G4 readiness — RED
 
@@ -79,17 +79,17 @@ Raw per-request files remain local under gitignored `runs/**/raw/`.
 
 | N | winners | expected conflicts | system errors | samples | P50 ms | P95 ms | AUD-01 |
 |---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | 1 | 0 | 0 | 1 | 7.70 | 7.70 | PASS |
-| 2 | 1 | 1 | 0 | 2 | 8.39 | 16.39 | PASS |
-| 10 | 1 | 9 | 0 | 10 | 16.96 | 23.61 | PASS |
+| 1 | 1 | 0 | 0 | 1 | 6.27 | 6.27 | PASS |
+| 2 | 1 | 1 | 0 | 2 | 8.63 | 15.53 | PASS |
+| 10 | 1 | 9 | 0 | 10 | 13.51 | 19.23 | PASS |
 
 Every measured Driver ended `RESERVED` with exactly one active reservation,
-one matching `DriverReservedV1` Outbox intent, and no lifecycle effect. Barrier release spread was 0.09–0.89 ms at N=2/10; connections were established before
+one matching `DriverReservedV1` Outbox intent, and no lifecycle effect. Barrier release spread was 0.09–0.73 ms at N=2/10; connections were established before
 the barrier. `N=25/50/100` and repeat runs were **NOT RUN** because G4 is red.
 
 ### E02 — controlled API load (BLOCKED)
 
-- Run: `W13-E02-20261030T031621Z-05167996`, status `BLOCKED`.
+- Run: `W13-E02-20261030T034905Z-0516017e`, status `BLOCKED`.
 - Reason: `AUTH_TOKEN_UNAVAILABLE`; no shared token issuer exists.
 - Gateway `POST /trips` (host `:18080`) returned **404** — the Gateway is a
   skeleton with no routing.
@@ -98,8 +98,13 @@ the barrier. `N=25/50/100` and repeat runs were **NOT RUN** because G4 is red.
   obtained.
 - k6 was **NOT RUN**. The `10/25/50/100 req/s` open-model rates, dropped
   iterations, VUs and achieved rates are therefore **NOT RUN**, not zero.
-- The harness refuses to substitute `/internal/test/...` or another
-  unauthenticated/Testing-only route.
+- The harness restricts the target to `/trips`; report-grade mode additionally
+  requires the Gateway target and an observed rejected no-token mutation. It
+  refuses to substitute `/internal/test/...` or another unauthenticated or
+  Testing-only route.
+- Report-grade E02 also requires at least two rider tokens; the preflight token
+  is excluded from the load pool so the active-Trip guard does not turn the
+  measured workload into all-conflict. No such tokens exist in the repository.
 
 ### E03 — consumer scaling harness (SMOKE_PASS)
 
@@ -107,12 +112,14 @@ The Matching autonomous worker was disabled by default to isolate the intake
 consumer path (recorded in each manifest). A fixed-rate publisher fed
 `matching.ride-requested.q`; each configuration resets the disposable volumes.
 
-| Replicas | measured messages | rounds created | achieved send rate | P50 intake ms | P95 intake ms | per-replica consumed log lines | broker consumers | attempts |
+| Replicas | measured messages | rounds created | achieved send rate | P50 intake ms | P95 intake ms | measured work per replica | broker consumers | attempts |
 |---:|---:|---:|---:|---:|---:|---|---:|---:|
-| 1 | 25 | 25 | 5.19/s | 20.36 | 46.83 | 40 | 1 | 0 |
-| 2 | 25 | 25 | 5.18/s | 22.27 | 26.55 | 20 + 20 | 2 | 0 |
+| 1 | 25 | 25 | 4.98/s | 19.46 | 39.54 | 25 | 1 | 0 |
+| 2 | 25 | 25 | 4.98/s | 22.78 | 40.88 | 12 + 13 | 2 | 0 |
 
-The extra log lines are the 15 warm-up messages. No duplicate rounds, duplicate
+The 1-replica run put all 25 measured messages on the single consumer; the
+2-replica run split them 12/13. Work distribution is counted over the measured
+trip identities; warm-up messages are excluded. No duplicate rounds, duplicate
 input identities, queue backlog, redelivery, or worker attempts were observed;
 the queue drained in every configuration. `replicas=4` and repeat runs were
 **NOT RUN** because G4 is red.
@@ -123,7 +130,7 @@ the queue drained in every configuration. `replicas=4` and repeat runs were
 
 - E01 `SMOKE_PASS`, E02 `BLOCKED`, E03 `SMOKE_PASS`;
 - campaign verdict `NOT_ACCEPTED`, acceptance `NO`;
-- P50/P95 are nearest-rank with sample counts; ranges are emitted per group;
+- E01/E03 P50/P95 use nearest-rank over per-request/per-message samples; E02 uses k6 per-outcome summary trends (group values are medians of per-run percentiles); ranges are emitted per group;
 - domain conflicts are never merged with system errors;
 - a missing/invalid manifest makes the campaign `INVALID`;
 - report-grade acceptance additionally requires >=3 repeats, a green G4 gate,
@@ -132,7 +139,7 @@ the queue drained in every configuration. `replicas=4` and repeat runs were
 ## Authoritative auditor
 
 `auditor/` contains a clean-source regression of the B-owned auditor
-(`18/18` tests PASS; source commit/tree above). Positive scenarios:
+(`18/18` tests PASS; exact command/result in `auditor/regression.txt`; source commit/tree above). Positive scenarios:
 31 PASS, 0 FAIL, 17 NOT RUN (A/C-owned), 0 BLOCKED. Negative controls:
 11 expected FAIL detections, 4 expected BLOCKED honesty controls. AUD-03 (A)
 and AUD-05 (C) are not run by B and are never reported as PASS.

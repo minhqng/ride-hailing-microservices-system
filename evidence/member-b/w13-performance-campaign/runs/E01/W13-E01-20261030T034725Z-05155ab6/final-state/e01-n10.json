@@ -7,13 +7,13 @@
     "status": 200,
     "code": null,
     "responseOutcome": "won",
-    "latencyMs": 8.775800000876188,
+    "latencyMs": 7.715400075539947,
     "outcome": "success",
-    "index": 1,
-    "tripId": "09127fb2-5ac9-58a4-9e84-062bf40b12f8",
-    "reservationId": "4785ba1d-bbe2-5c90-9a98-208006da8121",
-    "barrierSpreadMs": 0.8877,
-    "wallMs": 43.80039998795837
+    "index": 8,
+    "tripId": "9e8ea0be-9258-5588-bd8c-a7120f8e8813",
+    "reservationId": "e67ea748-2f2d-5dc3-a265-8eeb223d969b",
+    "barrierSpreadMs": 0.7346,
+    "wallMs": 22.59159996174276
   },
   "final": {
     "driver": {
@@ -21,26 +21,26 @@
       "user_id": "e484eb0a-6d2a-5588-ae09-b3ec6bae8c70",
       "status": "RESERVED",
       "version": 3,
-      "reserved_trip_id": "09127fb2-5ac9-58a4-9e84-062bf40b12f8",
-      "reservation_id": "4785ba1d-bbe2-5c90-9a98-208006da8121",
+      "reserved_trip_id": "9e8ea0be-9258-5588-bd8c-a7120f8e8813",
+      "reservation_id": "e67ea748-2f2d-5dc3-a265-8eeb223d969b",
       "active_trip_id": null,
       "reserved_round": 1
     },
     "activeReservationRows": [
       {
         "driver_id": "7dca15e6-a9e5-5782-97bc-b5bfa82a7ba4",
-        "reservation_id": "4785ba1d-bbe2-5c90-9a98-208006da8121",
-        "reserved_trip_id": "09127fb2-5ac9-58a4-9e84-062bf40b12f8"
+        "reservation_id": "e67ea748-2f2d-5dc3-a265-8eeb223d969b",
+        "reserved_trip_id": "9e8ea0be-9258-5588-bd8c-a7120f8e8813"
       }
     ],
     "reserveOutbox": [
       {
-        "message_id": "7ecf24410577f8ef60023918910b0c00",
+        "message_id": "605feab7e30798c89fe135ca0b920d36",
         "message_type": "DriverReservedV1",
         "status": "PUBLISHED",
         "aggregate_id": "7dca15e6a9e5578297bcb5bfa82a7ba4",
-        "reservation_id": "4785ba1d-bbe2-5c90-9a98-208006da8121",
-        "trip_id": "09127fb2-5ac9-58a4-9e84-062bf40b12f8"
+        "reservation_id": "e67ea748-2f2d-5dc3-a265-8eeb223d969b",
+        "trip_id": "9e8ea0be-9258-5588-bd8c-a7120f8e8813"
       }
     ],
     "lifecycleEffects": [],
@@ -61,6 +61,9 @@
       "winnerReservationMatches": true,
       "winnerTripMatches": true,
       "oneReserveOutboxIntent": true,
+      "outboxPayloadMatchesWinner": true,
+      "driverVersionIncrementedOnce": true,
+      "reservedRoundRecorded": true,
       "noLifecycleEffect": true
     }
   },
@@ -70,9 +73,13 @@
     "expectedConflicts": true,
     "zeroSystemErrors": true,
     "zeroUnexpected": true,
+    "knownConflictCodes": true,
     "driversReserved": true,
     "singleActiveReservation": true,
     "singleReserveOutbox": true,
-    "aud01Pass": true
+    "aud01Pass": true,
+    "driverVersionIncrementedOnce": true,
+    "reservedRoundRecorded": true,
+    "outboxPayloadMatchesWinner": true
   }
 }

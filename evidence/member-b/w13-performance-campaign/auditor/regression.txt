@@ -1,0 +1,9 @@
+Command:
+dotnet test tests/Audit/RideHailing.B12Audit.Tests -c Release --no-build --filter "FullyQualifiedName~AuditScenarioTests"
+
+Source commit: b1beb8451f50673bc98445beea7f3c6b6d8f7c4a
+Source tree: 4033938a500e6373e59f3d346a0bc0481a5e2744
+Source status: clean
+
+Test run for D:\rh-w13b\tests\Audit\RideHailing.B12Audit.Tests\bin\Release\net10.0\RideHailing.B12Audit.Tests.dll (.NETCoreApp,Version=v10.0)
+Passed!  - Failed:     0, Passed:    18, Skipped:     0, Total:    18, Duration: 22 s - RideHailing.B12Audit.Tests.dll (net10.0)

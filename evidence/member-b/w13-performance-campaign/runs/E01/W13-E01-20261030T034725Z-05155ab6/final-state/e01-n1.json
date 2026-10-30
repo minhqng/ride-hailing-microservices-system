@@ -7,13 +7,13 @@
     "status": 200,
     "code": null,
     "responseOutcome": "won",
-    "latencyMs": 7.696899934671819,
+    "latencyMs": 6.2689000042155385,
     "outcome": "success",
     "index": 0,
     "tripId": "fb0078a0-7b9a-5cce-813a-1e0886dd6eae",
     "reservationId": "3bf72efc-a666-5a48-91d0-f0f1c5c3a6d0",
     "barrierSpreadMs": 0.0,
-    "wallMs": 19.89210001192987
+    "wallMs": 7.430900004692376
   },
   "final": {
     "driver": {
@@ -37,7 +37,7 @@
       {
         "message_id": "7b4a6e3d8bd6b7629ec9c7cb8417ba92",
         "message_type": "DriverReservedV1",
-        "status": "PUBLISHED",
+        "status": "PENDING",
         "aggregate_id": "9a80e63f99305a788a8659a7cef4dc69",
         "reservation_id": "3bf72efc-a666-5a48-91d0-f0f1c5c3a6d0",
         "trip_id": "fb0078a0-7b9a-5cce-813a-1e0886dd6eae"
@@ -61,6 +61,9 @@
       "winnerReservationMatches": true,
       "winnerTripMatches": true,
       "oneReserveOutboxIntent": true,
+      "outboxPayloadMatchesWinner": true,
+      "driverVersionIncrementedOnce": true,
+      "reservedRoundRecorded": true,
       "noLifecycleEffect": true
     }
   },
@@ -70,9 +73,13 @@
     "expectedConflicts": true,
     "zeroSystemErrors": true,
     "zeroUnexpected": true,
+    "knownConflictCodes": true,
     "driversReserved": true,
     "singleActiveReservation": true,
     "singleReserveOutbox": true,
-    "aud01Pass": true
+    "aud01Pass": true,
+    "driverVersionIncrementedOnce": true,
+    "reservedRoundRecorded": true,
+    "outboxPayloadMatchesWinner": true
   }
 }
