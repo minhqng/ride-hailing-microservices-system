@@ -46,6 +46,7 @@
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/RideHailing.DriverService.UnitTests/RideHailing.DriverService.UnitTests.csproj" />
     <Project Path="tests/Unit/RideHailing.MatchingService.UnitTests/RideHailing.MatchingService.UnitTests.csproj" />
+    <Project Path="tests/Unit/RideHailing.NotificationWorker.UnitTests/RideHailing.NotificationWorker.UnitTests.csproj" />
     <Project Path="tests/Unit/RideHailing.PaymentService.UnitTests/RideHailing.PaymentService.UnitTests.csproj" />
     <Project Path="tests/Unit/RideHailing.TripService.UnitTests/RideHailing.TripService.UnitTests.csproj" />
   </Folder>

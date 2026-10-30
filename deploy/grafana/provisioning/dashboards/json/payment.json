@@ -1,0 +1,19 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {"type":"timeseries","title":"Payment operations by type/outcome","id":1,"gridPos":{"h":8,"w":12,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (type,outcome) (rate({__name__=~\"payment_operation(_operations)?_total\"}[1m]))","legendFormat":"{{type}} {{outcome}}","refId":"A"}]},
+    {"type":"timeseries","title":"Payment idempotency hits","id":2,"gridPos":{"h":8,"w":12,"x":12,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (type) (rate({__name__=~\"payment_idempotency_hit(_operations)?_total\"}[1m]))","legendFormat":"{{type}}","refId":"A"}]},
+    {"type":"timeseries","title":"UNKNOWN / requires review","id":3,"gridPos":{"h":8,"w":8,"x":0,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate({__name__=~\"payment_unknown(_operations)?_total\"}[1m]))","legendFormat":"unknown","refId":"A"},{"expr":"sum(rate({__name__=~\"payment_requires_review(_operations)?_total\"}[1m]))","legendFormat":"requires review","refId":"B"}]},
+    {"type":"timeseries","title":"Payment P95 duration","id":4,"gridPos":{"h":8,"w":8,"x":8,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"histogram_quantile(0.95, sum by (le,type) (rate({__name__=~\"payment_operation_duration(_milliseconds|_ms)?_bucket\"}[5m])))","legendFormat":"{{type}}","refId":"A"}]},
+    {"type":"timeseries","title":"Notification delivery projection","id":5,"gridPos":{"h":8,"w":8,"x":16,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (outcome) (rate({__name__=~\"notification_delivery(_events)?_total\"}[1m]))","legendFormat":"{{outcome}}","refId":"A"}]}
+  ],
+  "schemaVersion": 41,
+  "tags": ["member-c","payment","notification"],
+  "templating": {"list": []},
+  "time": {"from":"now-1h","to":"now"},
+  "title": "Payment and Notification",
+  "uid": "ride-payment",
+  "version": 1
+}
