@@ -181,8 +181,9 @@ issuance latency is excluded from API measurements.
 - Human reviews/reruns are waived by the project lead for this campaign. This
   waiver does not represent a performed review or change technical gates.
 
-W14 (`E04` backlog recovery, `REL-16` quorum node loss) is explicitly out of
-scope here.
+W14 (`E04` backlog recovery, `REL-16` quorum node loss) is documented separately
+in [the recovery runbook](README-w14.md), reusing these helpers without changing
+E01–E03 measurement semantics.
 
 ## Synthetic fixtures
 

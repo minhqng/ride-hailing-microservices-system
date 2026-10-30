@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import math
+import json
+import re
 import statistics
 import uuid
 from datetime import datetime
@@ -38,9 +40,31 @@ def artifact(run_dir: Path, item: dict):
     return lib.read_json(path)
 
 
-def validate_run(run_dir: Path) -> tuple[dict, dict]:
+def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
     manifest = lib.read_json(run_dir / "manifest.json")
-    if (manifest["schemaVersion"] != 1 or manifest["experiment"] != "E04"
+    schema = lib.read_json(lib.PERF_DIR / "schema/w14-manifest.schema.json")
+    if any(key not in manifest for key in schema["required"]):
+        raise ValueError("missing required manifest fields")
+    for key in ("source", "sourceAfter", "configuration", "environment", "g4", "artifacts",
+                "auditor", "interruption", "duplicateReceipt", "steadyPolicy", "beforeInterruption"):
+        if not isinstance(manifest[key], dict):
+            raise ValueError(f"{key} must be an object")
+    gate = manifest["g4"]
+    if (type(gate.get("green")) is not bool or not isinstance(gate.get("verdict"), str)
+            or not isinstance(gate.get("blockers"), list)):
+        raise ValueError("malformed G4 snapshot")
+    if manifest["mode"] == "report":
+        certificate = gate.get("certificate")
+        if (not isinstance(certificate, dict) or not isinstance(gate.get("checks"), dict)
+                or not isinstance(certificate.get("checks"), dict)):
+            raise ValueError("missing report-grade G4 certification")
+    for key in ("repeat", "plannedRepeats"):
+        if type(manifest[key]) is not int or manifest[key] < 1:
+            raise ValueError("repetition identities must be positive integers")
+    if not re.fullmatch(rf"W14-{experiment}-\d{{8}}T\d{{6}}Z-[a-f0-9]{{8}}", manifest["runId"]):
+        raise ValueError("invalid experiment run identity")
+    if (type(manifest["schemaVersion"]) is not int or manifest["schemaVersion"] != 1
+            or manifest["experiment"] != experiment
             or manifest["status"] != "PASS" or type(manifest["synthetic"]) is not bool
             or manifest["mode"] not in ("smoke", "report")):
         raise ValueError("invalid, incomplete or failed E04 manifest")
@@ -86,6 +110,8 @@ def validate_run(run_dir: Path) -> tuple[dict, dict]:
     if steady <= end:
         raise ValueError("steady state precedes recovery")
     configured = manifest["configuration"]
+    if any(key not in configured for key in schema["properties"]["configuration"]["required"]):
+        raise ValueError("missing frozen configuration")
     for key in ("rate", "outageSeconds", "baselineSeconds", "recoveryTimeout"):
         number(configured[key], key, positive=True)
     by_phase = {p: [s for s in samples if s["phase"] == p]
@@ -105,13 +131,25 @@ def validate_run(run_dir: Path) -> tuple[dict, dict]:
         if previous and (row["elapsed"] <= previous["elapsed"]
                          or timestamp(row["atUtc"]) <= timestamp(previous["atUtc"])
                          or row["terminal"] < previous["terminal"]
-                         or row["intake"] < previous["intake"]):
+                         or row["intake"] < previous["intake"]
+                         or row["ack"] < previous["ack"]):
             raise ValueError("nonmonotonic timestamps or durable counters")
         previous = row
     if by_phase["baseline"][-1]["terminal"] < 1:
         raise ValueError("no healthy baseline processing")
-    if any(s["consumers"] != 0 for s in by_phase["outage"]):
+    if experiment == "E04" and any(s["consumers"] != 0 for s in by_phase["outage"]):
         raise ValueError("consumer was not isolated during outage")
+    if experiment == "REL16" and not any(s["consumers"] > 0 and
+            s["ack"] > by_phase["baseline"][-1]["ack"] for s in by_phase["outage"]):
+        raise ValueError("REL-16 requires continued consumer acknowledgements during node loss")
+    steady_rows = [s for s in samples if s["phase"] == "recovery" and s["elapsed"] <= steady]
+    policy = manifest["steadyPolicy"]
+    baseline_pending = manifest["beforeInterruption"]["pending"]
+    if (policy != {"consecutiveSamples": 3, "ready": 0, "unacked": 0, "maxPending": baseline_pending}
+            or len(steady_rows) < 3 or steady_rows[-1]["elapsed"] != steady
+            or any(s["ready"] or s["unacked"] or s["pending"] > baseline_pending
+                   or s["consumers"] < 1 for s in steady_rows[-3:])):
+        raise ValueError("steady state lacks three consecutive observed baseline-work/queue-zero samples")
     ids = set()
     for receipt in receipts:
         if receipt["confirmed"] is not True or receipt.get("error"):
@@ -128,6 +166,8 @@ def validate_run(run_dir: Path) -> tuple[dict, dict]:
         raise ValueError("duplicate replay was not confirmed")
     if manifest["duplicateReceipt"]["messageId"] not in ids:
         raise ValueError("duplicate replay changed message identity")
+    if samples[-1]["ack"] < len(receipts) + 1:
+        raise ValueError("broker ACK observations do not cover all publications and duplicate replay")
     rounds = final["rounds"]
     if (len(rounds) != len(receipts) or {r["input_message_id"] for r in rounds} != ids
             or len({(r["trip_id"], r["matching_round"]) for r in rounds}) != len(receipts)):
@@ -146,8 +186,11 @@ def validate_run(run_dir: Path) -> tuple[dict, dict]:
                 or event["message_type"] != "MatchingFailedV1"
                 or event["payload_json"]["tripId"] != row["trip_id"]):
             raise ValueError("terminal result lacks confirmed matching Outbox publication")
-    if final["attempts"] or final["drivers"] != manifest["driverBefore"] or final["driverOutbox"]:
-        raise ValueError("empty-dataset experiment fabricated Driver work or changed authority")
+    if (not manifest["driverBefore"] or final["attempts"]
+            or final["drivers"] != manifest["driverBefore"] or final["driverOutbox"]
+            or any(d["status"] != "OFFLINE" or d["reservation_id"] or d["reserved_trip_id"]
+                   for d in final["drivers"])):
+        raise ValueError("NO_DRIVER dataset lacks nonvacuous unchanged OFFLINE Driver authority")
     audit = manifest["auditor"]
     if audit["sourceCommit"] != source["commit"] or audit["sourceTree"] != source["tree"]:
         raise ValueError("auditor source is not the experiment source")
@@ -159,7 +202,7 @@ def validate_run(run_dir: Path) -> tuple[dict, dict]:
     if samples[-1]["ready"] or samples[-1]["unacked"] or samples[-1]["pending"]:
         raise ValueError("broker/application work has not quiesced")
     outage_arrivals = [r for r in receipts if start <= r["sentElapsed"] < end]
-    if not outage_arrivals or max(r["ready"] for r in by_phase["outage"]) == 0:
+    if not outage_arrivals or (experiment == "E04" and max(r["ready"] for r in by_phase["outage"]) == 0):
         raise ValueError("no observed durable accumulation")
     incoming = len(outage_arrivals) / duration
     recovery = [s for s in samples if s["phase"] == "recovery" and s["elapsed"] <= steady]
@@ -203,14 +246,14 @@ def validate_run(run_dir: Path) -> tuple[dict, dict]:
             "Manual duplicate replay is distinct from broker redelivery; REL-15 tests prove the latter."]}
 
 
-def analyze_group(run_dirs: list[Path]) -> dict:
+def analyze_group(run_dirs: list[Path], experiment="E04") -> dict:
     errors, runs, metrics = [], [], []
     for path in run_dirs:
         try:
-            manifest, measured = validate_run(path)
+            manifest, measured = validate_run(path, experiment)
             runs.append(manifest)
             metrics.append(measured)
-        except (KeyError, ValueError, TypeError, OSError, StopIteration, lib.HarnessError) as exc:
+        except (KeyError, ValueError, TypeError, OSError, StopIteration, OverflowError, lib.HarnessError) as exc:
             errors.append(f"{path.name}: {type(exc).__name__}: {exc}")
     if not run_dirs:
         errors.append("missing run group")
@@ -223,16 +266,40 @@ def analyze_group(run_dirs: list[Path]) -> dict:
                 errors.append(f"inconsistent run group {key}")
     if sorted(r["repeat"] for r in runs) != list(range(1, first["plannedRepeats"] + 1)):
         errors.append("incomplete or duplicated run repetitions")
+    if len({r["runId"] for r in runs}) != len(runs):
+        errors.append("duplicate run identity")
+    gate_errors = []
     if first["mode"] == "report":
         if len(runs) < 3:
             errors.append("report-grade E04 requires at least three measured repetitions")
-        if any(not r["g4"].get("green") for r in runs) or not lib.g4_readiness()["green"]:
-            errors.append("live G4/experiment gate is not GREEN")
+        current_gate = lib.g4_readiness()
+        required_checks = ("bOwnedCorrectness", "securityBaseline", "aCorrectnessAcceptance",
+            "cCorrectnessAcceptance", "authoritativeAuditor", "productionApiSurface",
+            "brokerSurface", "stableEnvironment")
+        for run in runs:
+            gate = run["g4"]
+            certificate = gate.get("certificate") or {}
+            if (gate.get("green") is not True or gate.get("verdict") != "GREEN"
+                    or gate.get("blockers") != []
+                    or any(gate.get("checks", {}).get(key) != "PASS" for key in required_checks)
+                    or certificate.get("verdict") != "GREEN" or certificate.get("blockers") != []
+                    or any(certificate.get("checks", {}).get(key) != "PASS" for key in required_checks)
+                    or gate.get("certificateSha256") != lib.sha256_text(json.dumps(certificate, sort_keys=True))):
+                errors.append("recorded G4 certificate is contradictory, missing or uncertified")
+            else:
+                certified = certificate.get("sourceCommit", "")
+                ancestry = lib.run(["git", "merge-base", "--is-ancestor", certified, run["source"]["commit"]])
+                code_diff = lib.run(["git", "diff", "--quiet", certified,
+                    run["source"]["commit"], "--", "src", "tests"])
+                if ancestry.returncode or code_diff.returncode:
+                    errors.append("recorded G4 certification does not cover measured application/test source")
+        if not current_gate["green"]:
+            gate_errors.append("live G4/experiment gate is not GREEN")
         drift = lib.run(["git", "diff", "--quiet", first["source"]["commit"], "HEAD", "--", ".",
                          ":(exclude)evidence"])
         if drift.returncode or lib.source_binding()["dirty"]:
             errors.append("source is dirty or differs from measured source")
-    status = "INVALID" if errors else ("SYNTHETIC_ONLY" if first["synthetic"] else
+    status = "INVALID" if errors else "GATED" if gate_errors else ("SYNTHETIC_ONLY" if first["synthetic"] else
              "ACCEPTED" if first["mode"] == "report" else "SMOKE_ONLY")
     stats = {}
     for key in ("lambdaOutage", "lambdaRecovery", "T", "peakReady", "mu", "observedSteadySeconds"):
@@ -240,4 +307,4 @@ def analyze_group(run_dirs: list[Path]) -> dict:
         stats[key] = {"runs": len(values), "median": statistics.median(values),
                       "min": min(values), "max": max(values),
                       "sampleVariance": statistics.variance(values) if len(values) > 1 else None}
-    return {"status": status, "errors": errors, "runs": metrics, "statistics": stats}
+    return {"status": status, "errors": errors + gate_errors, "runs": metrics, "statistics": stats}

@@ -15,7 +15,7 @@ def snapshot() -> dict:
     return {"capturedAtUtc": lib.iso(), "source": lib.source_binding(),
             "cluster": lib.rabbit_api("/api/overview")["cluster_name"],
             "queue": {k: q.get(k) for k in ("name", "type", "leader", "members",
-                       "online", "messages_ready", "messages_unacknowledged", "consumers")},
+                       "online", "messages_ready", "messages_unacknowledged", "consumers", "message_stats")},
             "nodes": [{"name": n["name"], "running": n["running"]} for n in nodes]}
 
 
@@ -27,16 +27,25 @@ def verify(before: dict, during: dict, after: dict, lost: str, runs: list[Path])
     members = set(before["queue"]["members"] or [])
     if len(members) != 3 or before["queue"]["leader"] not in members or lost not in members:
         errors.append("baseline does not prove a known leader and three queue members")
+    if set(before["queue"]["online"] or []) != members or len(members) != 3:
+        errors.append("all three quorum members must be online at baseline")
+    if {node["name"] for node in before["nodes"]} != members:
+        errors.append("baseline must observe the actual three-node broker profile")
     for point in (before, during, after):
         if (point["cluster"] != before["cluster"] or point["queue"]["type"] != "quorum"
                 or set(point["queue"]["members"] or []) != members):
             errors.append("cluster or quorum membership changed unexpectedly")
+        running = {node["name"] for node in point["nodes"] if node["running"]}
+        if set(point["queue"]["online"] or []) - running:
+            errors.append("queue-online members do not match observed running RabbitMQ nodes")
     online = set(during["queue"]["online"] or [])
     if lost in online or len(online & members) < 2 or during["queue"]["leader"] not in online:
         errors.append("node-loss sample does not prove surviving majority and live leader")
     if set(after["queue"]["online"] or []) != members or not after["queue"]["consumers"]:
         errors.append("node return and consumer restoration not observed")
-    analysis = analyze_group(runs)
+    # REL-16 leaves application consumers running. E04's consumer-stop proof
+    # cannot establish application behaviour through quorum leader/member loss.
+    analysis = analyze_group(runs, experiment="REL16")
     if analysis["status"] not in ("ACCEPTED", "SMOKE_ONLY"):
         errors.append("B application proof is invalid or unavailable")
     for run in runs:
