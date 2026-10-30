@@ -83,6 +83,8 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
     if manifest["fingerprint"] != lib.environment_fingerprint(environment):
         raise ValueError("environment fingerprint mismatch")
     if not manifest["synthetic"]:
+        if not isinstance(manifest.get("topology"), dict):
+            raise ValueError("missing observed queue/node topology")
         for key in ("host", "docker", "tooling", "configured", "observed"):
             if not environment.get(key):
                 raise ValueError(f"missing observed environment {key}")
@@ -114,6 +116,9 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
         raise ValueError("missing frozen configuration")
     for key in ("rate", "outageSeconds", "baselineSeconds", "recoveryTimeout"):
         number(configured[key], key, positive=True)
+    tolerance = max(1.0, 0.1 * configured["outageSeconds"])
+    if abs(duration - configured["outageSeconds"]) > tolerance:
+        raise ValueError("observed interruption exceeds configured duration tolerance (1s or 10%)")
     by_phase = {p: [s for s in samples if s["phase"] == p]
                 for p in ("baseline", "outage", "recovery", "quiescence")}
     if any(not rows for rows in by_phase.values()):
@@ -126,6 +131,9 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
         timestamp(row["atUtc"])
         if row["terminal"] + row["pending"] != row["intake"]:
             raise ValueError("durable work counts disagree")
+        if (row["outbox"]["committed"] != row["terminal"]
+                or not 0 <= row["outbox"]["published"] <= row["outbox"]["committed"]):
+            raise ValueError("terminal and transactional Outbox counts disagree")
         if row["type"] != "quorum":
             raise ValueError("expected actual quorum queue topology")
         if previous and (row["elapsed"] <= previous["elapsed"]
@@ -137,6 +145,9 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
         previous = row
     if by_phase["baseline"][-1]["terminal"] < 1:
         raise ValueError("no healthy baseline processing")
+    if (manifest["beforeInterruption"] != by_phase["baseline"][-1]
+            or manifest["beforeInterruption"]["elapsed"] < configured["baselineSeconds"]):
+        raise ValueError("baseline declaration is not the observed pre-interruption sample")
     if experiment == "E04" and any(s["consumers"] != 0 for s in by_phase["outage"]):
         raise ValueError("consumer was not isolated during outage")
     if experiment == "REL16" and not any(s["consumers"] > 0 and
@@ -194,16 +205,29 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
     audit = manifest["auditor"]
     if audit["sourceCommit"] != source["commit"] or audit["sourceTree"] != source["tree"]:
         raise ValueError("auditor source is not the experiment source")
-    checks = {c["checkId"]: c["status"] for c in audit["checks"]}
+    check_rows = audit["checks"]
+    check_ids = [c["checkId"] for c in check_rows]
+    if (len(check_ids) != len(set(check_ids)) or set(check_ids) != {f"AUD-{i:02}" for i in range(1, 9)}
+            or any(c["status"] not in ("PASS", "FAIL", "NOT_RUN", "LOCAL_PROXY_PASS", "BLOCKED")
+                   for c in check_rows)):
+        raise ValueError("auditor check identities are duplicated, missing or malformed")
+    checks = {c["checkId"]: c["status"] for c in check_rows}
     if any(checks.get(key) != "PASS" for key in ("AUD-01", "AUD-02", "AUD-06", "AUD-08")):
         raise ValueError("B-owned run-dataset auditor did not pass")
     if any(value in ("FAIL", "BLOCKED") for value in checks.values()):
         raise ValueError("auditor failure or unavailable authority")
     if samples[-1]["ready"] or samples[-1]["unacked"] or samples[-1]["pending"]:
         raise ValueError("broker/application work has not quiesced")
+    if (samples[-1]["intake"] != len(rounds) or samples[-1]["terminal"] != len(receipts)
+            or samples[-1]["outbox"] != {"committed": len(final["matchingOutbox"]),
+                                        "published": len(final["matchingOutbox"])}):
+        raise ValueError("final durable counters contradict authoritative artifacts")
     outage_arrivals = [r for r in receipts if start <= r["sentElapsed"] < end]
     if not outage_arrivals or (experiment == "E04" and max(r["ready"] for r in by_phase["outage"]) == 0):
         raise ValueError("no observed durable accumulation")
+    if experiment == "REL16" and not any(timestamp(outage["startUtc"]) <= timestamp(r["confirmedAtUtc"])
+            <= timestamp(outage["endUtc"]) for r in outage_arrivals):
+        raise ValueError("REL-16 lacks a publisher confirmation inside the actual loss window")
     incoming = len(outage_arrivals) / duration
     recovery = [s for s in samples if s["phase"] == "recovery" and s["elapsed"] <= steady]
     if len(recovery) < 2:

@@ -42,7 +42,7 @@ def fixture(root: Path) -> dict:
         samples.append({"elapsed": elapsed, "atUtc": stamp(elapsed), "phase": phase,
             "ready": ready, "unacked": 0, "consumers": 0 if phase == "outage" else 1,
             "redeliver": 0, "ack": terminal, "intake": terminal, "terminal": terminal,
-            "pending": 0, "type": "quorum"})
+            "pending": 0, "type": "quorum", "outbox": {"committed": terminal, "published": terminal}})
     samples[-1]["ack"] = 5
     offline = {"driver_id": lib.seeded_uuid(14, "offline"), "status": "OFFLINE",
                "version": 1, "reservation_id": None, "reserved_trip_id": None}
@@ -56,11 +56,11 @@ def fixture(root: Path) -> dict:
         "fingerprint": lib.environment_fingerprint({"configured": {}}),
         "interruption": {"start": 2, "end": 4, "startUtc": stamp(2), "endUtc": stamp(4)},
         "steadyElapsed": 6.5, "driverBefore": [offline], "duplicateReceipt": receipts[0],
-        "beforeInterruption": {"pending": 0},
+        "beforeInterruption": samples[0],
         "steadyPolicy": {"consecutiveSamples": 3, "ready": 0, "unacked": 0, "maxPending": 0},
         "auditor": {"sourceCommit": source["commit"], "sourceTree": source["tree"],
-            "checks": [{"checkId": key, "status": "PASS"} for key in
-                       ("AUD-01", "AUD-02", "AUD-06", "AUD-08")]}, "artifacts": {}}
+            "checks": [{"checkId": f"AUD-{i:02}",
+                "status": "PASS" if i in (1, 2, 6, 8) else "NOT_RUN"} for i in range(1, 9)]}, "artifacts": {}}
     final = {"rounds": rounds, "attempts": [], "matchingOutbox": events, "drivers": [offline], "driverOutbox": []}
     for name, data in (("samples", samples), ("receipts", receipts), ("final-state", final)):
         artifact_path = root / f"{name}.json"
@@ -138,6 +138,29 @@ class RecoveryAnalysisTests(unittest.TestCase):
     def test_tampering_and_real_label_without_provider_proof_rejected(self):
         (self.root / "samples.json").write_text("[]")
         self.assertEqual("INVALID", self.result()["status"])
+
+    def test_duplicate_auditor_ids_cannot_hide_failure(self):
+        checks = self.manifest["auditor"]["checks"]
+        checks[0]["status"] = "FAIL"
+        checks.append({"checkId": "AUD-01", "status": "PASS"})
+        self.assertEqual("INVALID", self.result()["status"])
+
+    def test_outage_and_baseline_are_bound_to_configuration_and_raw_samples(self):
+        self.manifest["configuration"].update(outageSeconds=1000, baselineSeconds=1000)
+        self.assertEqual("INVALID", self.result()["status"])
+        self.manifest = fixture(self.root)
+        self.manifest["beforeInterruption"]["pending"] = 100
+        self.manifest["steadyPolicy"]["maxPending"] = 100
+        self.assertEqual("INVALID", self.result()["status"])
+
+    def test_final_sample_cannot_invent_additional_business_work(self):
+        path = self.root / "samples.json"
+        rows = lib.read_json(path)
+        rows[-1].update(intake=104, terminal=104)
+        rows[-1]["outbox"] = {"committed": 104, "published": 104}
+        lib.write_json(path, rows)
+        self.manifest["artifacts"]["samples"]["sha256"] = lib.sha256_file(path)
+        self.assertEqual("INVALID", self.result()["status"])
         self.manifest = fixture(self.root)
         self.manifest["synthetic"] = False
         self.assertEqual("INVALID", self.result()["status"])
@@ -192,6 +215,7 @@ class RecoveryAnalysisTests(unittest.TestCase):
             if row["phase"] == "recovery":
                 row["terminal"] = 4
                 row["intake"] = 4
+                row["outbox"] = {"committed": 4, "published": 4}
         lib.write_json(samples_path, samples)
         self.manifest["artifacts"]["samples"]["sha256"] = lib.sha256_file(samples_path)
         result = self.result()

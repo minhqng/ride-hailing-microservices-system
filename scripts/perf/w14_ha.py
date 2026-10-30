@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import w13lib as lib
 from w14_analyze import analyze_group, timestamp
@@ -17,6 +18,13 @@ def snapshot() -> dict:
             "queue": {k: q.get(k) for k in ("name", "type", "leader", "members",
                        "online", "messages_ready", "messages_unacknowledged", "consumers", "message_stats")},
             "nodes": [{"name": n["name"], "running": n["running"]} for n in nodes]}
+
+
+def topology_identity(point: dict) -> str:
+    return lib.sha256_text(json.dumps({"cluster": point["cluster"],
+        "queue": point["queue"]["name"], "type": point["queue"]["type"],
+        "members": sorted(point["queue"]["members"] or []),
+        "nodes": sorted(n["name"] for n in point["nodes"])}, sort_keys=True))
 
 
 def verify(before: dict, during: dict, after: dict, lost: str, runs: list[Path]) -> dict:
@@ -53,11 +61,14 @@ def verify(before: dict, during: dict, after: dict, lost: str, runs: list[Path])
         broker = manifest.get("environment", {}).get("observed", {}).get("broker", {})
         if broker.get("cluster") != before["cluster"]:
             errors.append("application run was not executed against C's observed HA cluster")
+        if topology_identity(manifest["topology"]) != topology_identity(before):
+            errors.append("application run queue members and node identities differ from C topology")
         window = manifest.get("interruption", {})
         if not (timestamp(window["startUtc"]) <= timestamp(during["capturedAtUtc"])
                 <= timestamp(window["endUtc"])):
             errors.append("node loss did not overlap the application observation window")
-        if manifest["source"] != before["source"] or before["source"] != after["source"]:
+        if (manifest["source"] != before["source"] or before["source"] != after["source"]
+                or before["source"] != during["source"]):
             errors.append("HA and application source provenance differ")
     return {"status": "FAIL" if errors else "B_SUPPORT_PASS", "errors": errors,
             "teamAcceptance": "GATED", "application": analysis,
