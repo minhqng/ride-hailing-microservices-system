@@ -28,7 +28,7 @@ from typing import Any, Iterable
 ROOT = Path(__file__).resolve().parents[2]
 PERF_DIR = ROOT / "scripts" / "perf"
 EVIDENCE_ROOT = ROOT / "evidence" / "member-b" / "w13-performance-campaign"
-RUNS_ROOT = EVIDENCE_ROOT / "runs"
+RUNS_ROOT = Path(os.environ.get("W13_RUNS_ROOT", str(EVIDENCE_ROOT / "runs")))
 G4_EVIDENCE = EVIDENCE_ROOT / "g4" / "g4-readiness.json"
 SCHEMA_PATH = PERF_DIR / "schema" / "w13-manifest.schema.json"
 COMPOSE_FILES = ["compose.yaml", "scripts/perf/compose.w13.yaml"]
