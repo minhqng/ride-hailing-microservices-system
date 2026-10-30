@@ -15,11 +15,14 @@ measurement that was not executed.
 
 ## G4 gate
 
-Report-grade execution is refused unless `evidence/member-b/w13-performance-campaign/g4/g4-readiness.json`
-declares `verdict: GREEN`, every required check is `PASS`, the certified source
-is an ancestor of the current W13 source, and `src/`/`tests/` have not changed
-since certification. A smoke run may execute the harness, but its analysis
-verdict is never `ACCEPTED`.
+Report-grade execution is refused unless the curated G4 evidence under
+`evidence/member-b/w13-performance-campaign/g4/` declares `verdict: GREEN`,
+every required check is `PASS`, the certified production/test source is an
+ancestor of the current W13 source, `src/`/`tests/` have not changed since
+certification, and the working tree outside `evidence/` is clean. The analyzer
+re-evaluates the live gate instead of trusting manifest booleans, and ignores
+attempts to lower the canonical repeat/rate floors. A smoke run may execute the
+harness, but its analysis verdict is never `ACCEPTED`.
 
 Current state (2026-10-30): **G4 RED** — `SEC-AUTH-01..04` are open, the
 shared Identity/Gateway authentication is a skeleton, A/C acceptance is
@@ -97,23 +100,29 @@ Every run manifest records, separately:
 - G4 gate outcome and blockers;
 - workload, warm-up, measurement, cooldown, dataset seed.
 
-Secrets are never recorded: password/token/secret environment keys are
-redacted, and E02 token files are mounted into the k6 container from a
-gitignored run path.
+Secrets are never recorded: password/token/secret/PASS environment keys and
+connection-string password values are redacted, and E02 token files are
+written into a gitignored run path before being mounted into k6.
 
 ## Outcome and latency discipline
 
 - Outcome classes are always separate: `success`, `domainConflict`,
   `systemError`, `timeout`, `unexpected`. A `409` is never counted as a system
   error.
-- Percentiles are nearest-rank P50/P95 with the sample count. The analyzer
-  does not report a percentile without `n`.
+- E01/E03 percentiles are nearest-rank P50/P95 over request/message samples.
+  E02 reports k6 summary trend percentiles per outcome with the trend count;
+  group values are medians of per-run percentiles, not pooled samples. The
+  analyzer does not report a percentile without `n`.
 - E02 uses k6's open model and reports configured rate, achieved rate,
-  `dropped_iterations`, allocated/active VUs, and domain conflicts separately
-  from transport/system failures.
+  `dropped_iterations`, allocated/active VUs, per-outcome latency trends, and
+  domain conflicts separately from transport/system failures. The target is
+  restricted to the canonical `/trips`; report-grade mode requires the Gateway
+  target, an observed rejected no-token mutation, and at least two rider
+  tokens (the preflight token is excluded from the load pool).
 - E03 proves replica registration from the broker consumer count and actual
-  work distribution from each replica's consumption log. Starting containers
-  is not proof.
+  work distribution by matching measured trip identities in each replica's
+  consumption log. Starting containers is not proof, and warm-up messages are
+  excluded from the distribution count.
 - The autonomous Matching worker is disabled in E03 by default (recorded in
   the manifest) so consumer count is the only scaled capacity variable.
   `--worker-mode enabled` is a separate, documented confounded variant.
