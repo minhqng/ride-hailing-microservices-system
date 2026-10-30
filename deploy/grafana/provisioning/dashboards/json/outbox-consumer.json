@@ -1,0 +1,19 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {"type":"timeseries","title":"Outbox pending / failed visible","id":1,"gridPos":{"h":8,"w":8,"x":0,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum({__name__=~\"outbox_pending(_messages)?\"})","legendFormat":"pending","refId":"A"},{"expr":"sum({__name__=~\"outbox_failed_visible(_messages)?\"})","legendFormat":"failed visible","refId":"B"}]},
+    {"type":"timeseries","title":"Oldest pending age","id":2,"gridPos":{"h":8,"w":8,"x":8,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"max({__name__=~\"outbox_oldest_pending_age(_seconds|_s)?\"})","legendFormat":"seconds","refId":"A"}]},
+    {"type":"timeseries","title":"Publish attempts / outcomes","id":3,"gridPos":{"h":8,"w":8,"x":16,"y":0},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate({__name__=~\"outbox_publish_attempts(_messages)?_total\"}[1m]))","legendFormat":"attempt","refId":"A"},{"expr":"sum by (outcome) (rate({__name__=~\"outbox_publish(_messages)?_total\"}[1m]))","legendFormat":"{{outcome}}","refId":"B"}]},
+    {"type":"timeseries","title":"Consumer delivery / ACK / redelivery","id":4,"gridPos":{"h":8,"w":12,"x":0,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum(rate({__name__=~\"consumer_delivery(_messages)?_total\"}[1m]))","legendFormat":"delivery","refId":"A"},{"expr":"sum(rate({__name__=~\"consumer_ack(_messages)?_total\"}[1m]))","legendFormat":"ack","refId":"B"},{"expr":"sum(rate({__name__=~\"consumer_redelivery(_messages)?_total\"}[1m]))","legendFormat":"redelivery","refId":"C"}]},
+    {"type":"timeseries","title":"Dedup outcomes","id":5,"gridPos":{"h":8,"w":12,"x":12,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (outcome) (rate({__name__=~\"dedup_processed(_messages)?_total\"}[1m]))","legendFormat":"{{outcome}}","refId":"A"}]}
+  ],
+  "schemaVersion": 41,
+  "tags": ["member-c","outbox","consumer"],
+  "templating": {"list": []},
+  "time": {"from":"now-1h","to":"now"},
+  "title": "Outbox and Consumer Reliability",
+  "uid": "ride-outbox-consumer",
+  "version": 1
+}

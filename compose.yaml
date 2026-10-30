@@ -48,7 +48,9 @@ services:
       - rabbitdata:/var/lib/rabbitmq
       - ./deploy/rabbitmq/reliability.json:/etc/rabbitmq/ride-reliability.json:ro
       - ./deploy/rabbitmq/health-ready.sh:/etc/rabbitmq/ride-health-ready.sh:ro
-    ports: ["5672:5672", "15672:15672"]
+      - ./deploy/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./deploy/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    ports: ["5672:5672", "15672:15672", "127.0.0.1:15692:15692"]
     healthcheck:
       test: ["CMD", "sh", "/etc/rabbitmq/ride-health-ready.sh"]
       interval: 10s
