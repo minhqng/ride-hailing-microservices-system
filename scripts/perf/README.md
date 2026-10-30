@@ -138,8 +138,9 @@ written into a gitignored run path before being mounted into k6.
   management and shared broker metrics, Payment/platform acceptance.
 - Lead: G4 approval, peer reruns, CI triggering for the stacked base.
 
-W14 (`E04` backlog recovery, `REL-16` quorum node loss) is explicitly out of
-scope here.
+W14 (`E04` backlog recovery, `REL-16` quorum node loss) is documented separately
+in [the recovery runbook](README-w14.md), reusing these helpers without changing
+E01–E03 measurement semantics.
 
 ## Synthetic fixtures
 

@@ -20,6 +20,15 @@ PROBE_DLL = PROBE.parent / "bin" / "Release" / "net10.0" / "recovery-probe.dll"
 RUNS = lib.ROOT / "evidence/member-b/w14-recovery/outputs"
 
 
+def release_gate() -> dict:
+    gate = lib.g4_readiness()
+    path = Path(gate["evidencePath"])
+    certificate = lib.read_json(path) if path.is_file() else None
+    gate["certificate"] = certificate
+    gate["certificateSha256"] = lib.sha256_text(json.dumps(certificate, sort_keys=True))
+    return gate
+
+
 def isolate() -> None:
     # Only this process changes helper context; W13 files and CLI stay untouched.
     lib.PROJECT = "ride-hailing-w14"
@@ -102,13 +111,42 @@ class Publisher:
         return json.loads(line)
 
     def close(self):
-        self.process.stdin.close()
         try:
-            self.process.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            self.process.kill()
-            self.process.wait()
-        self.process.stdout.close()
+            try:
+                self.process.stdin.close()
+            except BrokenPipeError:
+                pass
+        finally:
+            try:
+                self.process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+            finally:
+                self.process.stdout.close()
+
+
+def finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts):
+    stop.set()
+    try:
+        if producer:
+            producer.join(timeout=20)
+        if publisher:
+            publisher.close()
+    except Exception as exc:
+        manifest["status"] = "FAIL"
+        manifest["cleanupError"] = type(exc).__name__
+    finally:
+        try:
+            for name, data in (("samples", samples), ("receipts", receipts)):
+                path = run_dir / f"{name}.json"
+                lib.write_json(path, data)
+                manifest["artifacts"][name] = {"path": path.name, "sha256": lib.sha256_file(path)}
+            manifest["finishedAtUtc"] = lib.iso()
+            manifest["sourceAfter"] = lib.source_binding()
+            lib.write_json(run_dir / "manifest.json", manifest)
+        finally:
+            lib.compose_down(volumes=True)
 
 
 def audit(source: dict) -> dict:
@@ -124,7 +162,7 @@ def audit(source: dict) -> dict:
 
 def run_one(args, repeat: int, group: str) -> Path:
     source = lib.source_binding()
-    g4 = lib.g4_readiness()
+    g4 = release_gate()
     if args.mode == "report":
         lib.ensure_report_grade(g4, source)
     run_id = f"W14-E04-{lib.utc_stamp()}-{uuid.uuid4().hex[:8]}"
@@ -137,7 +175,7 @@ def run_one(args, repeat: int, group: str) -> Path:
         "configuration": {"rate": args.rate, "outageSeconds": args.outage,
             "baselineSeconds": args.baseline, "recoveryTimeout": args.timeout,
             "seed": args.seed, "consumerCount": 1, "prefetch": 16,
-            "dataset": "empty Driver authority and healthy empty Redis; real NO_DRIVER outcomes",
+            "dataset": "one OFFLINE Driver and healthy empty Redis; real NO_DRIVER outcomes",
             "outage": "compose stop matching; producer and broker remain running",
             "reset": "fresh W14 project volumes per repeat"}}
     lib.write_json(run_dir / "manifest.json", manifest)
@@ -152,6 +190,12 @@ def run_one(args, repeat: int, group: str) -> Path:
         lib.compose_down(volumes=True)
         lib.compose_up(["postgres", "redis", "rabbitmq", "driver", "matching"], scale=1)
         wait_for(lambda: queue()["consumers"] == 1, "healthy intake consumer")
+        driver_id = lib.seeded_uuid(args.seed + repeat, "e04-offline-driver")
+        status, _, _, _ = lib.http_request("POST",
+            f"http://127.0.0.1:{os.environ['W13_DRIVER_PORT']}/drivers",
+            body={"driverId": driver_id, "userId": lib.seeded_uuid(args.seed + repeat, "e04-owner")})
+        if status != 201:
+            raise lib.HarnessError(f"OFFLINE Driver seed failed: HTTP {status}")
         manifest["environment"] = lib.capture_environment()
         manifest["fingerprint"] = lib.environment_fingerprint(manifest["environment"])
         manifest["driverBefore"] = state()["drivers"]
@@ -260,19 +304,7 @@ def run_one(args, repeat: int, group: str) -> Path:
         manifest["status"] = "FAIL"
         manifest["error"] = type(exc).__name__ + ": " + lib._redact_string(str(exc))[:1000]
     finally:
-        stop.set()
-        if producer:
-            producer.join(timeout=20)
-        if publisher:
-            publisher.close()
-        for name, data in (("samples", samples), ("receipts", receipts)):
-            path = run_dir / f"{name}.json"
-            lib.write_json(path, data)
-            manifest["artifacts"][name] = {"path": path.name, "sha256": lib.sha256_file(path)}
-        manifest["finishedAtUtc"] = lib.iso()
-        manifest["sourceAfter"] = lib.source_binding()
-        lib.write_json(run_dir / "manifest.json", manifest)
-        lib.compose_down(volumes=True)
+        finish_run(manifest, run_dir, publisher, producer, stop, samples, receipts)
     return run_dir
 
 
@@ -295,6 +327,8 @@ def main(argv=None) -> int:
         from w14_analyze import analyze_group
         result = analyze_group(args.runs)
         lib.print_json(result)
+        if result["status"] == "GATED":
+            return 3
         return 0 if result["status"] in ("ACCEPTED", "SMOKE_ONLY", "SYNTHETIC_ONLY") else 2
     if args.command == "g4":
         lib.print_json(lib.g4_readiness())
