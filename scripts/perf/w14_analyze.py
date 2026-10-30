@@ -1,7 +1,6 @@
 """Fail-closed E04 artifact validation and observed-rate analysis."""
 from __future__ import annotations
 
-import json
 import math
 import statistics
 import uuid

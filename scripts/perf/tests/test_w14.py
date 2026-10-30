@@ -6,7 +6,6 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import w13lib as lib
@@ -54,8 +53,9 @@ def fixture(root: Path) -> dict:
                        ("AUD-01", "AUD-02", "AUD-06", "AUD-08")]}, "artifacts": {}}
     final = {"rounds": rounds, "attempts": [], "matchingOutbox": events, "drivers": [], "driverOutbox": []}
     for name, data in (("samples", samples), ("receipts", receipts), ("final-state", final)):
-        lib.write_json(root / f"{name}.json", data)
-        manifest["artifacts"][name] = {"path": f"{name}.json", "sha256": lib.sha256_file(root / f"{name}.json")}
+        artifact_path = root / f"{name}.json"
+        lib.write_json(artifact_path, data)
+        manifest["artifacts"][name] = {"path": artifact_path.name, "sha256": lib.sha256_file(artifact_path)}
     lib.write_json(root / "manifest.json", manifest)
     return manifest
 
