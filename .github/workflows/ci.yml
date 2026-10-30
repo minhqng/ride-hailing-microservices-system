@@ -3,7 +3,6 @@ on:
   push:
     branches: [main, 'MemC-*-Distributed']
   pull_request:
-    branches: [main, 'MemC-*-Distributed']
 jobs:
   build-test:
     name: build-test
