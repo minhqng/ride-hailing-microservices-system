@@ -96,6 +96,7 @@ public sealed class TripSagaIntentTests
 
         var payload = JsonDocument.Parse(first.PayloadJson).RootElement;
         Assert.Equal(trip.TripId, payload.GetProperty("tripId").GetGuid());
+        Assert.Equal(first.OperationKey, payload.GetProperty("operationKey").GetString());
         // VND has no minor unit: the frozen 50000 VND fare quotes 50000 minor.
         Assert.Equal(50000L, payload.GetProperty("amountMinor").GetInt64());
         Assert.Equal("VND", payload.GetProperty("currency").GetString());
@@ -130,6 +131,8 @@ public sealed class TripSagaIntentTests
         Assert.Equal(saga.SagaId.ToString("D"), intent.SagaId);
         Assert.Equal(RideTopology.CommandsExchange, intent.Exchange);
         Assert.Equal("payment.capture.v1", intent.RoutingKey);
+        Assert.Equal(intent.OperationKey,
+            JsonDocument.Parse(intent.PayloadJson).RootElement.GetProperty("operationKey").GetString());
 
         // DSI-027: capture is constructible only after the completion pivot.
         var notCompleted = InProgressRide();
@@ -155,6 +158,8 @@ public sealed class TripSagaIntentTests
         Assert.Equal($"{trip.TripId:D}:void:v1", intent.OperationKey);
         Assert.Equal(saga.SagaId.ToString("D"), intent.SagaId);
         Assert.Equal("payment.void-authorization.v1", intent.RoutingKey);
+        Assert.Equal(intent.OperationKey,
+            JsonDocument.Parse(intent.PayloadJson).RootElement.GetProperty("operationKey").GetString());
 
         // The three logical payment operations of one ride never collide.
         Assert.NotEqual(TripSagaIntents.AuthorizePaymentMessageId(trip.TripId), intent.MessageId);
