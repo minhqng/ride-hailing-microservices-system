@@ -55,7 +55,6 @@ def finite_series(result: list[dict]) -> bool:
             return False
     return True
 
-
 snapshot = {
     "run": args.run,
     "capturedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
