@@ -12,12 +12,14 @@ Delivered:
 Validation:
 
 ```powershell
-./scripts/fault/ha-up.ps1
-./scripts/fault/rel16-one-node-loss.ps1
-./scripts/fault/rel15-broker-interruption.ps1
+./scripts/fault/ha-up.ps1 -Applications
+./scripts/fault/rel15-broker-interruption.ps1 -Execute
+./scripts/fault/rel16-one-node-loss.ps1 -Node rabbitmq-3 -Execute
 ```
 
 The scripts preserve volumes and restore the stopped node/service. A successful
-run supports the bounded statement that confirmed publishing, manual ACK and
-application backlog recovery survived the recorded scenario. It does not prove
-arbitrary partitions or whole-system availability.
+run requires a real duplicate workload, visible backlog for REL-15, continued
+processing at 2/3 quorum for REL-16, exact Payment/provider/dedup counts, every
+result Outbox row marked `PUBLISHED`, and a drained queue. It supports only the
+recorded broker/application-boundary scenario; it does not prove arbitrary
+partitions or whole-system availability.
