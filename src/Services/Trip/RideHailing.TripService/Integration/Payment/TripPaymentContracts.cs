@@ -2,11 +2,11 @@
 //
 // SHAPE ONLY for the W10 producer leg: Payment (C) owns consuming
 // payment.commands.q and deciding provider effects; Trip owns the exact
-// logical identities. Every command carries its stable operationKey and
-// sagaId on the ENVELOPE (not the payload): one saga step = one operationKey
-// = at most one logical Payment effect (DSI-034). The payload carries only
-// what Payment authority needs to execute the operation: the ride identity
-// and the frozen fare.
+// logical identities. Every command carries its stable operationKey on both
+// the envelope and payload; Payment rejects any mismatch. sagaId remains
+// envelope lineage. One saga step = one operationKey = at most one logical
+// Payment effect (DSI-034). The payload also carries the ride identity and
+// frozen fare required by Payment authority.
 
 using System.Text.Json.Serialization;
 using RideHailing.TripService.Domain.Trips;
@@ -18,6 +18,9 @@ public sealed record AuthorizePaymentV1
 {
     [JsonPropertyName("tripId")]
     public required Guid TripId { get; init; }
+
+    [JsonPropertyName("operationKey")]
+    public required string OperationKey { get; init; }
 
     [JsonPropertyName("amountMinor")]
     public required long AmountMinor { get; init; }
@@ -32,6 +35,9 @@ public sealed record CapturePaymentV1
     [JsonPropertyName("tripId")]
     public required Guid TripId { get; init; }
 
+    [JsonPropertyName("operationKey")]
+    public required string OperationKey { get; init; }
+
     [JsonPropertyName("amountMinor")]
     public required long AmountMinor { get; init; }
 
@@ -44,6 +50,9 @@ public sealed record VoidPaymentAuthorizationV1
 {
     [JsonPropertyName("tripId")]
     public required Guid TripId { get; init; }
+
+    [JsonPropertyName("operationKey")]
+    public required string OperationKey { get; init; }
 
     [JsonPropertyName("amountMinor")]
     public required long AmountMinor { get; init; }
