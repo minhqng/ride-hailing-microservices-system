@@ -6,9 +6,11 @@ Run the deterministic gate from the repository root:
 ./scripts/evidence/release-check.ps1
 ```
 
-If Docker is available in the same shell, include `-WithDocker`. Otherwise,
-render both release and HA Compose configurations explicitly through the host
-that owns the Docker engine. Generate dashboard traffic with:
+If Docker is available in the same shell, export all eight passwords required
+by `deploy/compose/compose.release.yaml` and include `-WithDocker`. That mode
+validates both a positive release render and a negative secretless render.
+Otherwise, render both release and HA Compose configurations explicitly through
+the host that owns the Docker engine. Generate dashboard traffic with:
 
 ```powershell
 ./scripts/demo/member-c-mock-traffic.ps1 -Count 24
