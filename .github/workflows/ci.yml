@@ -62,11 +62,35 @@ jobs:
   compose-config:
     name: compose-config
     runs-on: ubuntu-latest
+    env:
+      # Deliberately non-development values: the release overlay must render
+      # with operator-supplied secrets and must never inherit *_dev_pw.
+      POSTGRES_PASSWORD: ci-release-postgres-pw
+      IDENTITY_DB_PASSWORD: ci-release-identity-pw
+      DRIVER_DB_PASSWORD: ci-release-driver-pw
+      TRIP_DB_PASSWORD: ci-release-trip-pw
+      MATCHING_DB_PASSWORD: ci-release-matching-pw
+      PAYMENT_DB_PASSWORD: ci-release-payment-pw
+      NOTIFICATION_DB_PASSWORD: ci-release-notification-pw
+      RABBITMQ_PASSWORD: ci-release-rabbitmq-pw
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
       - run: python3 scripts/security/init-local-auth.py
       - run: docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
+      - name: release overlay fails closed without secrets
+        run: |
+          unset POSTGRES_PASSWORD IDENTITY_DB_PASSWORD DRIVER_DB_PASSWORD \
+            TRIP_DB_PASSWORD MATCHING_DB_PASSWORD PAYMENT_DB_PASSWORD \
+            NOTIFICATION_DB_PASSWORD RABBITMQ_PASSWORD
+          if docker compose --env-file /dev/null \
+              -f compose.yaml -f deploy/compose/compose.release.yaml config \
+              --quiet > /dev/null 2> release-missing-secrets.log; then
+            echo 'release overlay accepted a render without required secrets'
+            cat release-missing-secrets.log
+            exit 1
+          fi
+          grep -q 'POSTGRES_PASSWORD' release-missing-secrets.log
       - run: docker compose -f compose.yaml -f deploy/compose/compose.ha.yaml --profile ha config --quiet
       - run: python3 scripts/security/scan-secrets.py
   platform-smoke:
