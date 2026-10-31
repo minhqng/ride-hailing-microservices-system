@@ -71,7 +71,13 @@ public static class TripSagaIntents
         var envelope = MessageEnvelope<AuthorizePaymentV1>.Create(
             AuthorizePaymentType,
             trip.TripId.ToString("D"),
-            new AuthorizePaymentV1 { TripId = trip.TripId, AmountMinor = amountMinor, Currency = trip.Fare.Currency },
+            new AuthorizePaymentV1
+            {
+                TripId = trip.TripId,
+                OperationKey = saga.AuthorizeOperationKey,
+                AmountMinor = amountMinor,
+                Currency = trip.Fare.Currency,
+            },
             messageId: AuthorizePaymentMessageId(trip.TripId),
             occurredAt: occurredAt,
             aggregateType: TripOutboxIntents.TripAggregateType,
@@ -105,7 +111,13 @@ public static class TripSagaIntents
         var envelope = MessageEnvelope<CapturePaymentV1>.Create(
             CapturePaymentType,
             trip.TripId.ToString("D"),
-            new CapturePaymentV1 { TripId = trip.TripId, AmountMinor = amountMinor, Currency = trip.Fare.Currency },
+            new CapturePaymentV1
+            {
+                TripId = trip.TripId,
+                OperationKey = saga.CaptureOperationKey,
+                AmountMinor = amountMinor,
+                Currency = trip.Fare.Currency,
+            },
             messageId: CapturePaymentMessageId(trip.TripId),
             occurredAt: occurredAt,
             aggregateType: TripOutboxIntents.TripAggregateType,
@@ -139,7 +151,13 @@ public static class TripSagaIntents
         var envelope = MessageEnvelope<VoidPaymentAuthorizationV1>.Create(
             VoidPaymentAuthorizationType,
             trip.TripId.ToString("D"),
-            new VoidPaymentAuthorizationV1 { TripId = trip.TripId, AmountMinor = amountMinor, Currency = trip.Fare.Currency },
+            new VoidPaymentAuthorizationV1
+            {
+                TripId = trip.TripId,
+                OperationKey = saga.VoidOperationKey,
+                AmountMinor = amountMinor,
+                Currency = trip.Fare.Currency,
+            },
             messageId: VoidPaymentAuthorizationMessageId(trip.TripId),
             occurredAt: occurredAt,
             aggregateType: TripOutboxIntents.TripAggregateType,
