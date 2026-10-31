@@ -1,17 +1,32 @@
 {
   "preparedAt": "2026-10-30T00:00:00+07:00",
+  "updatedAt": "2026-10-31T18:02:09Z",
   "branch": "feature/C-W16-release-demo",
+  "codeCommit": {
+    "sha": "8085913965004e1ab0429e682a9702305288a6fb",
+    "message": "fix(release): keep the C gate fail-fast"
+  },
   "implementation": {
     "w12ObservabilitySecurity": "implemented; live dashboard export pending",
-    "w13PerformanceSupport": "implemented; measured runs pending",
-    "w14ReconnectQuorum": "implemented and compose-validated; live failover evidence pending",
-    "w15ReportEvidence": "implemented and deterministic checks validated",
-    "w16ReleaseRehearsal": "deterministic gate and mock traffic generator implemented"
+    "w13PerformanceSupport": "fail-closed required-series snapshot implemented; measured runs pending",
+    "w14ReconnectQuorum": "duplicate-workload backlog, exact-effect, dedup, confirmed-Outbox and 2-of-3/3-of-3 harness implemented; live failover evidence pending",
+    "w15ReportEvidence": "fail-closed production overlay, secret scan and CI positive/negative render checks implemented",
+    "w16ReleaseRehearsal": "fail-fast deterministic gate and mock traffic generator implemented"
+  },
+  "validation": {
+    "releaseBuild": "PASS, 0 warnings, 0 errors",
+    "paymentUnit": "PASS 31/31",
+    "notificationUnit": "PASS 2/2",
+    "deterministicPlatform": "PASS 35/35",
+    "releaseGate": "PASS (without -WithDocker)",
+    "liveHaEvidence": "pending; no live REL-15/REL-16 PASS claimed"
   },
   "environment": {
-    "composeConfigValidatedViaWsl": true,
+    "dockerAvailableToValidationShell": false,
+    "composeConfigValidatedOnCodeCommit": false,
     "liveHaClaims": false
   },
+  "anchorNote": "codeCommit is the exact product revision verified by the deterministic gate; this later commit changes only evidence metadata.",
   "report": "docs/member-c-reliability-report.md",
   "secretGate": "scripts/security/scan-secrets.py",
   "releaseGate": "scripts/evidence/release-check.ps1",
