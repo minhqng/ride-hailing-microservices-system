@@ -1,10 +1,10 @@
 {
   "preparedAt": "2026-10-30T00:00:00+07:00",
-  "updatedAt": "2026-10-31T18:02:09Z",
+  "updatedAt": "2026-11-01T07:11:29Z",
   "branch": "feature/C-W16-release-demo",
   "codeCommit": {
-    "sha": "8085913965004e1ab0429e682a9702305288a6fb",
-    "message": "fix(release): keep the C gate fail-fast"
+    "sha": "9a24c4e08cb1bdef646fcced102a4d5938a8a83d",
+    "message": "fix(release): accept any missing secret diagnostic"
   },
   "implementation": {
     "w12ObservabilitySecurity": "implemented; live dashboard export pending",
