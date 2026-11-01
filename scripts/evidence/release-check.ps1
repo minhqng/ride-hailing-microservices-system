@@ -65,7 +65,7 @@ try {
             }
         }
         if ($negativeExit -eq 0) { throw 'Release Compose rendered without required secrets.' }
-        if ($negativeOutput -notmatch 'POSTGRES_PASSWORD') {
+        if ($negativeOutput -notmatch 'must be set for the release overlay') {
             throw "Release Compose failed without secrets for an unexpected reason:`n$negativeOutput"
         }
 
