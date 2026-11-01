@@ -12,8 +12,8 @@
   `-WithDocker` to validate release and HA Compose manifests when Docker is
   available; release secrets must be supplied in the process environment and
   the gate also proves the release overlay fails closed without them.
+- `../demo/member-c-mock-traffic.ps1` publishes unique Payment commands plus
+  exact transport replays so dashboards expose throughput and dedup behavior.
 
 Live REL-05/06/08/11/15/16 outputs belong under `evidence/member-c/`; never
 replace missing live output with a hand-written PASS file.
-
-Core must be healthy first. No fake config committed. Owner: C (OTel/platform), B (perf methodology). See Docs 02-03.
