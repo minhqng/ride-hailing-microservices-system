@@ -86,7 +86,7 @@ expect drift "top-level rename"
 
 # 7. File-mode change on a top-level file.
 new_fixture
-chmod +x TOPLEVEL.md && git add TOPLEVEL.md && git commit -qm mode
+git update-index --chmod=+x TOPLEVEL.md && git commit -qm mode
 expect drift "file-mode change"
 
 # 8. Source file renamed into evidence/ (committed): the source side is drift.
