@@ -2,11 +2,11 @@ name: ci
 on:
   push:
     branches: [main, 'MemC-*-Distributed']
+  # Run for every pull request, not only a hard-coded list of stacked bases.
+  # A new stacked branch must never silently skip CI just because its base was
+  # not added to a YAML allow-list.
   pull_request:
-    # Week 9/10 work landed as stacked PRs against intermediate member
-    # branches; keep those bases listed until the stack is integrated into
-    # main, otherwise CI never runs on the stacked PRs.
-    branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox', 'feature/B-W09-driver-outbox']
+  workflow_dispatch:
 jobs:
   fault-campaign:
     if: github.event_name == 'pull_request' && github.head_ref == 'integration/team-w11-final'
