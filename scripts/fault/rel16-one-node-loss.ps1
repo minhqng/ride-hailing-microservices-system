@@ -1,64 +1,93 @@
 param(
     [Parameter(Mandatory=$true)][ValidateSet('rabbitmq-2','rabbitmq-3')][string]$Node,
     [ValidatePattern('^[a-z0-9][a-z0-9_-]+$')][string]$ProjectName = 'ride-memc-ha',
+    [string]$ManagementUrl = 'http://localhost:15672',
+    [string]$RabbitUser = $env:RABBITMQ_USER,
+    [string]$RabbitPassword = $env:RABBITMQ_PASSWORD,
+    [ValidateRange(2, 200)][int]$ProbeCount = 12,
+    [int]$WorkloadTimeoutSeconds = 240,
     [int]$RejoinTimeoutSeconds = 180,
     [switch]$Execute
 )
 $ErrorActionPreference = 'Stop'
-if (-not $Execute) { throw 'This stops a broker container. Re-run with -Execute after confirming the disposable HA project.' }
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+if (-not $Execute) { throw 'This stops a broker container. Re-run with -Execute against the disposable HA project.' }
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is required.' }
+
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $PSScriptRoot 'quorum-common.ps1')
 $compose = @('compose','--project-name',$ProjectName,'-f','compose.yaml','-f','deploy/compose/compose.ha.yaml','--profile','ha')
+if ([string]::IsNullOrWhiteSpace($RabbitUser)) { $RabbitUser = 'ride_app' }
+if ([string]::IsNullOrWhiteSpace($RabbitPassword)) { $RabbitPassword = 'ride_dev_pw' }
+$headers = New-RabbitManagementHeaders -Username $RabbitUser -Password $RabbitPassword
+$runId = "rel16-$([DateTimeOffset]::UtcNow.ToString('yyyyMMddHHmmss'))-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
 $queue = 'payment.commands.q'
+$nodeStopped = $false
+$failure = $null
 
 Push-Location $root
-$failure = $null
 try {
     try {
-        & docker @compose exec -T $Node rabbitmq-queues check_if_node_is_quorum_critical
-        if ($LASTEXITCODE -ne 0) { throw "$Node is quorum-critical; refusing one-node-loss test." }
+        Wait-RabbitManagementApi -ManagementUrl $ManagementUrl -Headers $headers
+        Invoke-ComposeCommand -Compose $compose -Arguments @(
+            'exec', '-T', $Node, 'rabbitmq-queues', 'check_if_node_is_quorum_critical') | Out-Null
 
         $before = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 -TimeoutSeconds 60
-        Write-Output "BEFORE: $queue online=$($before.Online)/$($before.Total)"
+        $baseline = Get-PaymentQueueState -ManagementUrl $ManagementUrl -Headers $headers
+        if ($baseline.Consumers -lt 1) { throw 'Payment has no consumer before REL-16.' }
+        if ($baseline.Ready -ne 0 -or $baseline.Unacked -ne 0) {
+            throw "REL-16 requires an idle baseline; observed ready=$($baseline.Ready) unacked=$($baseline.Unacked)."
+        }
+        Write-Output "BEFORE: $queue online=$($before.Online)/$($before.Total) consumers=$($baseline.Consumers) ready=0 unacked=0"
 
-        & docker @compose stop $Node
-        if ($LASTEXITCODE -ne 0) { throw "Failed to stop $Node." }
+        Invoke-ComposeCommand -Compose $compose -Arguments @('stop', $Node) | Out-Null
+        $nodeStopped = $true
 
         $deadline = (Get-Date).AddSeconds(90)
-        $after = $null
+        $degraded = $null
         do {
-            try { $after = Get-OnlineQuorumMembers -Compose $compose -Queue $queue }
-            catch { $after = $null }
-            if ($null -ne $after -and $after.Total -eq 3 -and $after.Online -eq 2) { break }
-            if ((Get-Date) -le $deadline) { Start-Sleep -Seconds 2 }
+            try { $degraded = Get-OnlineQuorumMembers -Compose $compose -Queue $queue }
+            catch { $degraded = $null }
+            if ($null -ne $degraded -and $degraded.Total -eq 3 -and $degraded.Online -eq 2) { break }
+            Start-Sleep -Seconds 2
         } until ((Get-Date) -gt $deadline)
-
-        if ($null -eq $after -or $after.Total -ne 3 -or $after.Online -ne 2) {
-            $observed = if ($null -eq $after) { 'no readable quorum status' } else { "$($after.Online)/$($after.Total) online" }
-            throw "Expected 2/3 online members of $queue with $Node stopped; observed $observed."
+        if ($null -eq $degraded -or $degraded.Total -ne 3 -or $degraded.Online -ne 2) {
+            $observed = if ($null -eq $degraded) { '<unreadable>' } else { "$($degraded.Online)/$($degraded.Total)" }
+            throw "Expected 2/3 online quorum members with $Node stopped; observed $observed."
         }
-        if ($after.Online -lt 2) { throw "No online quorum majority for $queue with $Node stopped." }
 
-        & docker @compose exec -T rabbitmq rabbitmqctl cluster_status
-        if ($LASTEXITCODE -ne 0) { throw 'cluster_status failed during the outage.' }
-        Write-Output "DURING OUTAGE: $queue online=$($after.Online)/$($after.Total); majority held with $Node stopped."
+        $published = Publish-PaymentProbeBatch -ManagementUrl $ManagementUrl -Headers $headers `
+            -RunId $runId -Count $ProbeCount -Copies 2
+        $final = Wait-PaymentProbeConvergence -Compose $compose -RunId $runId `
+            -Expected $ProbeCount -TimeoutSeconds $WorkloadTimeoutSeconds
+        $during = Get-OnlineQuorumMembers -Compose $compose -Queue $queue
+        $queueState = Get-PaymentQueueState -ManagementUrl $ManagementUrl -Headers $headers
+        if ($during.Total -ne 3 -or $during.Online -ne 2) {
+            throw "Quorum did not remain 2/3 through the workload; observed $($during.Online)/$($during.Total)."
+        }
+        if ($queueState.Consumers -lt 1 -or $queueState.Ready -ne 0 -or $queueState.Unacked -ne 0) {
+            throw "Consumer did not continue and drain under one-node loss: consumers=$($queueState.Consumers) ready=$($queueState.Ready) unacked=$($queueState.Unacked)."
+        }
+        Write-Output ("DURING OUTAGE: quorum={0}/{1}; routed={2}; operations={3}; providerEffects={4}; dedupMarkers={5}; outboxPublished={6}; consumers={7}" -f `
+            $during.Online, $during.Total, $published.RoutedDeliveries, $final.operations,
+            $final.providerEffects, $final.processedMessages, $final.outboxPublished,
+            $queueState.Consumers)
     }
-    catch {
-        $failure = $_
-    }
+    catch { $failure = $_ }
 
-    & docker @compose start $Node
-    if ($LASTEXITCODE -ne 0) { throw "Failed to start $Node for rejoin." }
-    $rejoined = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 -TimeoutSeconds $RejoinTimeoutSeconds
+    if ($nodeStopped) {
+        Invoke-ComposeCommand -Compose $compose -Arguments @('start', $Node) | Out-Null
+        $nodeStopped = $false
+    }
+    $rejoined = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 `
+        -TimeoutSeconds $RejoinTimeoutSeconds
     Write-Output "AFTER REJOIN: $queue online=$($rejoined.Online)/$($rejoined.Total)"
-
-    & docker @compose exec -T rabbitmq rabbitmqctl cluster_status
-    if ($LASTEXITCODE -ne 0) { throw 'cluster_status failed after rejoin.' }
 }
 finally {
+    if ($nodeStopped) {
+        Invoke-ComposeCommand -Compose $compose -Arguments @('start', $Node) -AllowFailure | Out-Null
+    }
     Pop-Location
 }
 
 if ($null -ne $failure) { throw $failure }
-Write-Output "PASS: $queue kept a 2/3 online quorum with $Node stopped and returned to 3/3 after rejoin."
+Write-Output "PASS: REL-16 kept a 2/3 quorum while $Node was stopped, processed exactly $ProbeCount unique commands plus exact duplicates, confirmed all result Outbox publications, kept the consumer draining and returned to 3/3 after rejoin."

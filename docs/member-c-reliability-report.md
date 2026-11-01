@@ -1,8 +1,8 @@
 # Member C reliability and release report
 
-Date: 2026-10-28  
+Date: 2026-10-30
 Scope: Payment authority, messaging reliability, Notification projection,
-observability, broker HA harness, security/release infrastructure.
+observability, broker HA harness, and release infrastructure.
 
 ## Claim boundary
 
@@ -80,24 +80,25 @@ flowchart TB
 ## Metrics and safe telemetry
 
 - RabbitMQ selective detailed scrape: ready, unacked, redelivery, consumers,
-  confirms/unroutable outcomes.
+  confirms, and unroutable outcomes.
 - Messaging: delivery, ACK, redelivery, retry, dead-letter, dedup, processing
-  duration, Outbox pending/age/publish/confirm.
+  duration, and Outbox pending/age/publish/confirm.
 - Payment: operation type/outcome, idempotency hit, UNKNOWN,
-  `REQUIRES_REVIEW`, reconciliation, duration.
+  `REQUIRES_REVIEW`, reconciliation, and duration.
 - Notification: delivered versus duplicate projection.
-- Passwords, tokens, private keys, raw credentials and unnecessary PII are
+- Passwords, tokens, private keys, raw credentials, and unnecessary PII are
   forbidden. Business identifiers never become metric dimensions.
 
-## Reproducible gates
+## Reproducible W15 gates
 
 ```powershell
-./scripts/evidence/release-check.ps1
-./scripts/evidence/release-check.ps1 -WithDocker
+python scripts/security/scan-secrets.py
+docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
 ./scripts/fault/ha-up.ps1 -Applications
 ./scripts/fault/rel15-broker-interruption.ps1 -Execute
 ./scripts/fault/rel16-one-node-loss.ps1 -Node rabbitmq-3 -Execute
 ```
 
-Live Docker outputs must be saved as evidence. An unavailable Docker engine is
-a blocked run, not a PASS.
+Live fault outputs must be saved as evidence. Compose configuration validation
+is not proof of runtime failover; an unavailable or unexercised environment is
+reported as pending, never converted into a PASS.

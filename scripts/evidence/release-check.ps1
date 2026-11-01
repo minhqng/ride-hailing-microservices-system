@@ -1,18 +1,34 @@
 param([switch]$WithDocker)
+
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+
+function Assert-LastExitCode([string]$Message) {
+    if ($LASTEXITCODE -ne 0) { throw $Message }
+}
+
 Push-Location $root
 try {
     python scripts/security/scan-secrets.py
-    if ($LASTEXITCODE -ne 0) { throw 'Secret/release scan failed.' }
+    Assert-LastExitCode 'Secret/release scan failed.'
+
     dotnet build RideHailing.Distributed.slnx -c Release --nologo
-    if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
+    Assert-LastExitCode 'Release build failed.'
+
     dotnet test tests/Unit/RideHailing.PaymentService.UnitTests -c Release --no-build --nologo
+    Assert-LastExitCode 'Payment unit regression failed.'
+
     dotnet test tests/Unit/RideHailing.NotificationWorker.UnitTests -c Release --no-build --nologo
-    dotnet test tests/Integration/RideHailing.Platform.IntegrationTests -c Release --no-build --nologo --filter 'FullyQualifiedName~FailurePolicyTests|FullyQualifiedName~OutboxRelayUnitTests|FullyQualifiedName~MessagingMetricsTests|FullyQualifiedName~OutboxMessageTests|FullyQualifiedName~RabbitConnectionFactoryTests'
-    if ($LASTEXITCODE -ne 0) { throw 'Deterministic Member C regression failed.' }
+    Assert-LastExitCode 'Notification unit regression failed.'
+
+    $filter = 'FullyQualifiedName~FailurePolicyTests|FullyQualifiedName~OutboxRelayUnitTests|FullyQualifiedName~MessagingMetricsTests|FullyQualifiedName~OutboxMessageTests|FullyQualifiedName~RabbitConnectionFactoryTests'
+    dotnet test tests/Integration/RideHailing.Platform.IntegrationTests -c Release --no-build --nologo --filter $filter
+    Assert-LastExitCode 'Deterministic Member C integration regression failed.'
+
     if ($WithDocker) {
-        if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is required for -WithDocker.' }
+        if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+            throw 'Docker CLI is required for -WithDocker.'
+        }
         $releaseSecrets = @(
             'POSTGRES_PASSWORD', 'IDENTITY_DB_PASSWORD', 'DRIVER_DB_PASSWORD',
             'TRIP_DB_PASSWORD', 'MATCHING_DB_PASSWORD', 'PAYMENT_DB_PASSWORD',
@@ -25,10 +41,11 @@ try {
         }
 
         docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
-        if ($LASTEXITCODE -ne 0) { throw 'Release Compose validation failed with supplied secrets.' }
+        Assert-LastExitCode 'Release Compose validation failed with supplied secrets.'
 
-        # Prove the release overlay is fail-closed: with every required secret
-        # removed, rendering must fail and name the first missing variable.
+        # Prove the release overlay is fail-closed. Compose gives process
+        # variables precedence over --env-file, so temporarily remove and then
+        # restore the required variables around the negative render.
         $saved = @{}
         foreach ($name in $releaseSecrets) {
             $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
@@ -36,7 +53,8 @@ try {
         }
         $emptyEnvFile = New-TemporaryFile
         try {
-            $negativeOutput = docker compose --env-file $emptyEnvFile.FullName -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet 2>&1 | Out-String
+            $negativeOutput = docker compose --env-file $emptyEnvFile.FullName `
+                -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet 2>&1 | Out-String
             $negativeExit = $LASTEXITCODE
         }
         finally {
@@ -52,8 +70,11 @@ try {
         }
 
         docker compose -f compose.yaml -f deploy/compose/compose.ha.yaml --profile ha config --quiet
-        if ($LASTEXITCODE -ne 0) { throw 'HA Compose validation failed.' }
+        Assert-LastExitCode 'HA Compose validation failed.'
     }
+
     Write-Output 'PASS: Member C deterministic release gate.'
 }
-finally { Pop-Location }
+finally {
+    Pop-Location
+}

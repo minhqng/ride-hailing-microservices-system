@@ -110,8 +110,7 @@ for ($index = 0; $index -lt $Count; $index++) {
         OperationKey = $operationKey
     })
 
-    # Exact transport replay: exercises processed-message dedup without
-    # creating a second Payment effect or a second result Outbox message.
+    # Exact transport replay exercises durable dedup without a second effect.
     if ($index % 6 -eq 0) {
         Publish-Envelope -RoutingKey $routingKey -Envelope $envelope
         $routed++

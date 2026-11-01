@@ -8,6 +8,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
+
 def git_paths(*args: str) -> list[str]:
     return subprocess.check_output(
         ["git", "ls-files", "-z", *args], cwd=ROOT

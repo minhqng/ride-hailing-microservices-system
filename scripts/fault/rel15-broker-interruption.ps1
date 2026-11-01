@@ -1,117 +1,122 @@
 param(
     [ValidatePattern('^[a-z0-9][a-z0-9_-]+$')][string]$ProjectName = 'ride-memc-ha',
-    [string]$ManagementUrl = 'http://localhost:15672',
+    [string]$PrimaryManagementUrl = 'http://localhost:15672',
+    [string]$SurvivorManagementUrl = 'http://localhost:25672',
     [string]$RabbitUser = $env:RABBITMQ_USER,
     [string]$RabbitPassword = $env:RABBITMQ_PASSWORD,
-    [int]$DrainTimeoutSeconds = 180,
+    [ValidateRange(2, 200)][int]$ProbeCount = 12,
+    [int]$BacklogTimeoutSeconds = 90,
+    [int]$DrainTimeoutSeconds = 240,
     [switch]$Execute
 )
 $ErrorActionPreference = 'Stop'
-if (-not $Execute) { throw 'This restarts the primary broker. Re-run with -Execute against the disposable HA project.' }
+if (-not $Execute) {
+    throw 'This stops Payment and the primary broker in a disposable HA project. Re-run with -Execute.'
+}
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI is required.' }
+
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+. (Join-Path $PSScriptRoot 'quorum-common.ps1')
 $compose = @('compose','--project-name',$ProjectName,'-f','compose.yaml','-f','deploy/compose/compose.ha.yaml','--profile','ha')
 if ([string]::IsNullOrWhiteSpace($RabbitUser)) { $RabbitUser = 'ride_app' }
 if ([string]::IsNullOrWhiteSpace($RabbitPassword)) { $RabbitPassword = 'ride_dev_pw' }
-$authHeaders = @{
-    Authorization = 'Basic ' + [Convert]::ToBase64String(
-        [Text.Encoding]::UTF8.GetBytes("${RabbitUser}:${RabbitPassword}"))
-}
-
-function Invoke-ManagementApi {
-    param([string]$Path)
-    try {
-        return Invoke-RestMethod -Uri "$($ManagementUrl.TrimEnd('/'))$Path" -Headers $authHeaders -TimeoutSec 5
-    }
-    catch {
-        throw "RabbitMQ management API request failed: $Path`n$($_.Exception.Message)"
-    }
-}
-
-function Get-PaymentConnections {
-    return @(Invoke-ManagementApi '/api/connections' | Where-Object {
-        $_.client_properties.connection_name -eq 'payment-service'
-    })
-}
-
-function Get-PaymentQueueState {
-    $queue = Invoke-ManagementApi '/api/queues/%2F/payment.commands.q'
-    return [pscustomobject]@{
-        Consumers = [int]$queue.consumers
-        Ready = [int]$queue.messages_ready
-        Unacked = [int]$queue.messages_unacknowledged
-    }
-}
-
-function Wait-ManagementApi {
-    param([int]$TimeoutSeconds = 60)
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    do {
-        try { Invoke-ManagementApi '/api/overview' | Out-Null; return }
-        catch { if ((Get-Date) -le $deadline) { Start-Sleep -Seconds 2 } }
-    } until ((Get-Date) -gt $deadline)
-    throw "RabbitMQ management API did not become ready at $ManagementUrl."
-}
+$headers = New-RabbitManagementHeaders -Username $RabbitUser -Password $RabbitPassword
+$runId = "rel15-$([DateTimeOffset]::UtcNow.ToString('yyyyMMddHHmmss'))-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+$queue = 'payment.commands.q'
+$paymentStopped = $false
+$primaryStopped = $false
 
 Push-Location $root
 try {
-    Wait-ManagementApi
-    $connectionDeadline = (Get-Date).AddSeconds(60)
-    do {
-        try { $connections = @(Get-PaymentConnections) } catch { $connections = @() }
-        try { $baseline = Get-PaymentQueueState } catch { $baseline = $null }
-        if ($connections.Count -gt 0 -and $null -ne $baseline -and $baseline.Consumers -ge 1) { break }
-        if ((Get-Date) -le $connectionDeadline) { Start-Sleep -Seconds 2 }
-    } until ((Get-Date) -gt $connectionDeadline)
-    if ($connections.Count -eq 0 -or $null -eq $baseline -or $baseline.Consumers -lt 1) {
-        throw 'Payment is not connected to payment.commands.q before the fault; refusing a false recovery claim.'
-    }
-    Write-Output ("BASELINE: payment-service connections={0}; payment.commands.q consumers={1} ready={2} unacked={3}" -f `
-        $connections.Count, $baseline.Consumers, $baseline.Ready, $baseline.Unacked)
-
-    # Only a connection created after this instant proves that Payment actually
-    # re-established its session instead of having stayed on another node.
-    $interventionStart = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    & docker @compose restart rabbitmq
-    if ($LASTEXITCODE -ne 0) { throw 'Primary broker restart failed.' }
-
-    Wait-ManagementApi
-    $recoveryDeadline = (Get-Date).AddSeconds($DrainTimeoutSeconds)
-    do {
-        try { $connections = @(Get-PaymentConnections) } catch { $connections = @() }
-        $state = $null
-        try { $state = Get-PaymentQueueState } catch { }
-        $newConnections = @($connections | Where-Object {
-            [long]$_.connected_at -ge $interventionStart
-        })
-        $staleConnections = @($connections | Where-Object {
-            [long]$_.connected_at -lt $interventionStart
-        })
-        # Every payment-service connection must be new: if any consumer or
-        # publisher session survived on another node, the primary restart did
-        # not exercise Payment's reconnect path and must not be reported PASS.
-        $recovered = $connections.Count -gt 0 -and $staleConnections.Count -eq 0 -and
-            $null -ne $state -and
-            $state.Consumers -ge $baseline.Consumers -and
-            $state.Ready -le $baseline.Ready -and
-            $state.Unacked -le $baseline.Unacked
-        if (-not $recovered -and (Get-Date) -le $recoveryDeadline) { Start-Sleep -Seconds 2 }
-    } until ($recovered -or (Get-Date) -gt $recoveryDeadline)
-
-    if (-not $recovered) {
-        $stateText = if ($null -eq $state) { '<unreadable>' } else {
-            "consumers=$($state.Consumers) ready=$($state.Ready) unacked=$($state.Unacked)"
+    try {
+        Wait-RabbitManagementApi -ManagementUrl $PrimaryManagementUrl -Headers $headers
+        Wait-RabbitManagementApi -ManagementUrl $SurvivorManagementUrl -Headers $headers
+        $beforeQuorum = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 -TimeoutSeconds 60
+        $baseline = Get-PaymentQueueState -ManagementUrl $PrimaryManagementUrl -Headers $headers
+        if ($baseline.Consumers -lt 1) {
+            throw 'Payment has no payment.commands.q consumer before the fault.'
         }
-        throw (("Payment did not establish a new connection for every session and drain to baseline within {0}s " +
-            "(connections={1}; new={2}; stale={3}; state={4}). If a session stayed on another node, " +
-            "the primary restart did not exercise Payment's reconnect path.") -f `
-            $DrainTimeoutSeconds, $connections.Count, $newConnections.Count, $staleConnections.Count, $stateText)
-    }
+        if ($baseline.Ready -ne 0 -or $baseline.Unacked -ne 0) {
+            throw "REL-15 requires an idle baseline; observed ready=$($baseline.Ready) unacked=$($baseline.Unacked)."
+        }
+        Write-Output "BASELINE: $queue quorum=$($beforeQuorum.Online)/$($beforeQuorum.Total) consumers=$($baseline.Consumers) ready=0 unacked=0"
 
-    & docker @compose exec -T rabbitmq rabbitmqctl cluster_status
-    if ($LASTEXITCODE -ne 0) { throw 'cluster_status failed after recovery.' }
-    Write-Output (("PASS: payment-service established fresh connections for every session and " +
-        "payment.commands.q drained to baseline (consumers={0} ready={1} unacked={2} newConnections={3}).") -f `
-        $state.Consumers, $state.Ready, $state.Unacked, $newConnections.Count)
+        # Isolate the application/broker boundary before publishing. This makes
+        # every routed delivery durable backlog rather than racing a live consumer.
+        Invoke-ComposeCommand -Compose $compose -Arguments @('stop', 'payment') | Out-Null
+        $paymentStopped = $true
+        $consumerDeadline = (Get-Date).AddSeconds(60)
+        do {
+            $isolated = Get-PaymentQueueState -ManagementUrl $PrimaryManagementUrl -Headers $headers
+            if ($isolated.Consumers -eq 0) { break }
+            Start-Sleep -Seconds 2
+        } until ((Get-Date) -gt $consumerDeadline)
+        if ($isolated.Consumers -ne 0) { throw 'Payment consumer did not disconnect before probe publication.' }
+
+        Invoke-ComposeCommand -Compose $compose -Arguments @('stop', 'rabbitmq') | Out-Null
+        $primaryStopped = $true
+        Wait-RabbitManagementApi -ManagementUrl $SurvivorManagementUrl -Headers $headers
+        $degraded = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 2 `
+            -ControlService 'rabbitmq-2' -TimeoutSeconds 90
+        if ($degraded.Total -ne 3 -or $degraded.Online -ne 2) {
+            throw "Expected exactly 2/3 online quorum members with the primary stopped; observed $($degraded.Online)/$($degraded.Total)."
+        }
+
+        $published = Publish-PaymentProbeBatch -ManagementUrl $SurvivorManagementUrl -Headers $headers `
+            -RunId $runId -Count $ProbeCount -Copies 2
+        $expectedBacklog = $published.RoutedDeliveries
+        $backlogDeadline = (Get-Date).AddSeconds($BacklogTimeoutSeconds)
+        do {
+            $backlog = Get-PaymentQueueState -ManagementUrl $SurvivorManagementUrl -Headers $headers
+            if ($backlog.Ready -ge $expectedBacklog -and $backlog.Unacked -eq 0) { break }
+            Start-Sleep -Seconds 2
+        } until ((Get-Date) -gt $backlogDeadline)
+        if ($backlog.Ready -lt $expectedBacklog -or $backlog.Unacked -ne 0) {
+            throw "Backlog did not accumulate while the boundary was isolated: expected >=$expectedBacklog ready, observed ready=$($backlog.Ready) unacked=$($backlog.Unacked)."
+        }
+        Write-Output "OUTAGE: primary stopped; quorum=2/3; consumers=0; ready=$($backlog.Ready); unique=$ProbeCount; duplicate deliveries=$($published.RoutedDeliveries - $ProbeCount)"
+
+        Invoke-ComposeCommand -Compose $compose -Arguments @('start', 'rabbitmq') | Out-Null
+        $primaryStopped = $false
+        Wait-RabbitManagementApi -ManagementUrl $PrimaryManagementUrl -Headers $headers
+        $restoredQuorum = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 -TimeoutSeconds 180
+
+        $recoveryStart = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+        Invoke-ComposeCommand -Compose $compose -Arguments @('start', 'payment') | Out-Null
+        $paymentStopped = $false
+
+        $final = Wait-PaymentProbeConvergence -Compose $compose -RunId $runId `
+            -Expected $ProbeCount -TimeoutSeconds $DrainTimeoutSeconds
+        $drainDeadline = (Get-Date).AddSeconds($DrainTimeoutSeconds)
+        do {
+            $drained = Get-PaymentQueueState -ManagementUrl $PrimaryManagementUrl -Headers $headers
+            $connections = @(Invoke-RabbitManagementApi -ManagementUrl $PrimaryManagementUrl -Headers $headers `
+                -Path '/api/connections' | Where-Object {
+                    $_.client_properties.connection_name -eq 'payment-service' -and
+                    [long]$_.connected_at -ge $recoveryStart
+                })
+            if ($drained.Consumers -ge 1 -and $drained.Ready -eq 0 -and
+                $drained.Unacked -eq 0 -and $connections.Count -gt 0) { break }
+            Start-Sleep -Seconds 2
+        } until ((Get-Date) -gt $drainDeadline)
+        if ($drained.Consumers -lt 1 -or $drained.Ready -ne 0 -or
+            $drained.Unacked -ne 0 -or $connections.Count -eq 0) {
+            throw "Payment did not reconnect and drain the probe backlog: consumers=$($drained.Consumers) ready=$($drained.Ready) unacked=$($drained.Unacked) freshConnections=$($connections.Count)."
+        }
+
+        Write-Output ("FINAL: quorum={0}/{1}; operations={2}; providerEffects={3}; dedupMarkers={4}; outboxPublished={5}; queue ready={6} unacked={7}" -f `
+            $restoredQuorum.Online, $restoredQuorum.Total, $final.operations,
+            $final.providerEffects, $final.processedMessages, $final.outboxPublished,
+            $drained.Ready, $drained.Unacked)
+        Write-Output "PASS: REL-15 accumulated $expectedBacklog durable deliveries during the isolated boundary, recovered exactly $ProbeCount logical Payment effects, deduplicated exact replays, confirmed every result Outbox publication and drained the queue."
+    }
+    finally {
+        if ($primaryStopped) {
+            Invoke-ComposeCommand -Compose $compose -Arguments @('start', 'rabbitmq') -AllowFailure | Out-Null
+        }
+        if ($paymentStopped) {
+            Invoke-ComposeCommand -Compose $compose -Arguments @('start', 'payment') -AllowFailure | Out-Null
+        }
+    }
 }
 finally { Pop-Location }
