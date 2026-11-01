@@ -2,12 +2,11 @@ name: ci
 on:
   push:
     branches: [main, 'MemC-*-Distributed']
+  # Run for every pull request, not only a hard-coded list of stacked bases.
+  # A new stacked branch must never silently skip CI just because its base was
+  # not added to a YAML allow-list.
   pull_request:
-    # The A-W10 branch stacks on the unmerged A-W09 head (PR #36), A-W11
-    # stacks on the unmerged A-W10 head (PR #40), and A-W12 stacks on the
-    # unmerged A-W11 head (PR #42), so each stacked base must be listed here
-    # or CI never runs on the stacked PR.
-    branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox', 'feature/A-W10-trip-saga', 'feature/A-W11-trip-fault-proofs']
+  workflow_dispatch:
 jobs:
   hygiene:
     name: hygiene
