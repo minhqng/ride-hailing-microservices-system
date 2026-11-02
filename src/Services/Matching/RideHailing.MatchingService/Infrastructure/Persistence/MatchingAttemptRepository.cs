@@ -54,7 +54,8 @@ public sealed record MatchingRoundRow(
     string? SnapshotJson = null,
     string? WorkErrorCode = null,
     DateTimeOffset? WorkCheckedAt = null,
-    string? StageEvaluated = null);
+    string? StageEvaluated = null,
+    string? IntakeTraceParent = null);
 
 public sealed class MatchingAttemptRepository
 {
@@ -100,7 +101,7 @@ public sealed class MatchingAttemptRepository
     /// </summary>
     public async Task<MatchingRoundRow> EnsureProductionRoundAsync(
         Guid tripId, int round, string inputMessageId,
-        double pickupLongitude, double pickupLatitude, CancellationToken ct = default)
+        double pickupLongitude, double pickupLatitude, CancellationToken ct = default, string? traceParent = null)
     {
         if (string.IsNullOrWhiteSpace(inputMessageId))
         {
@@ -135,8 +136,8 @@ public sealed class MatchingAttemptRepository
         const string Insert = """
             INSERT INTO matching_rounds
                 (trip_id, matching_round, input_message_id, status,
-                 pickup_longitude, pickup_latitude, auto_execute, cancel_requested)
-            VALUES (@trip, @round, @msg, 'PROCESSING', @lon, @lat, TRUE, @cancel)
+                 pickup_longitude, pickup_latitude, auto_execute, cancel_requested, intake_traceparent)
+            VALUES (@trip, @round, @msg, 'PROCESSING', @lon, @lat, TRUE, @cancel, @traceparent)
             ON CONFLICT (trip_id, matching_round) DO NOTHING;
             """;
         int inserted;
@@ -149,6 +150,8 @@ public sealed class MatchingAttemptRepository
             cmd.Parameters.AddWithValue("lon", pickupLongitude);
             cmd.Parameters.AddWithValue("lat", pickupLatitude);
             cmd.Parameters.AddWithValue("cancel", pendingCancel);
+            cmd.Parameters.AddWithValue("traceparent", NpgsqlTypes.NpgsqlDbType.Text,
+                System.Diagnostics.ActivityContext.TryParse(traceParent, null, out _) ? traceParent! : DBNull.Value);
             inserted = await cmd.ExecuteNonQueryAsync(ct);
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation
@@ -280,7 +283,7 @@ public sealed class MatchingAttemptRepository
                    result_message_id, input_message_id, current_stage, cancel_requested,
                    auto_execute, pickup_longitude, pickup_latitude,
                    candidate_snapshot_json::text, work_error_code, work_checked_at,
-                   stage_evaluated
+                   stage_evaluated, intake_traceparent
             FROM matching_rounds WHERE trip_id = @trip AND matching_round = @round;
             """;
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -306,7 +309,8 @@ public sealed class MatchingAttemptRepository
             reader.IsDBNull(12) ? null : reader.GetString(12),
             reader.IsDBNull(13) ? null : reader.GetString(13),
             reader.IsDBNull(14) ? null : ReadTimestamp(reader, 14),
-            reader.IsDBNull(15) ? null : reader.GetString(15));
+            reader.IsDBNull(15) ? null : reader.GetString(15),
+            reader.IsDBNull(16) ? null : reader.GetString(16));
     }
 
     private static DateTimeOffset ReadTimestamp(NpgsqlDataReader reader, int ordinal)

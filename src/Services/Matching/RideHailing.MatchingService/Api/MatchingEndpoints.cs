@@ -14,6 +14,16 @@ public static class MatchingEndpoints
 {
     public static void Map(WebApplication app)
     {
+        app.MapGet("/internal/matching/rounds/{tripId:guid}/{round:int}/cancellation", async (
+            Guid tripId, int round,
+            RideHailing.MatchingService.Infrastructure.Persistence.MatchingWorkRepository work,
+            CancellationToken token) =>
+        {
+            if (tripId == Guid.Empty || round < 1) return Results.BadRequest();
+            var stopped = await work.IsCancellationStoppedAsync(tripId, round, token);
+            return Results.Ok(new { tripId, matchingRound = round, state = stopped ? "STOPPED" : "PENDING" });
+        });
+
         app.MapPost("/internal/matching/rounds", async (
             StartRoundRequest req,
             MatchingRoundService rounds,

@@ -399,6 +399,22 @@ public sealed class MatchingWorkRepository
         await tx.CommitAsync(ct);
     }
 
+    public async Task<bool> IsCancellationStoppedAsync(Guid tripId, int round, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(_connectionString);
+        await connection.OpenAsync(ct);
+        await using var command = new NpgsqlCommand("""
+            SELECT EXISTS (SELECT 1 FROM matching_cancel_intents WHERE trip_id=@trip AND matching_round=@round)
+              AND NOT EXISTS (SELECT 1 FROM matching_attempts WHERE trip_id=@trip AND matching_round=@round
+                              AND state IN ('READY','IN_FLIGHT','UNKNOWN'))
+              AND NOT EXISTS (SELECT 1 FROM matching_rounds WHERE trip_id=@trip AND matching_round=@round
+                              AND status NOT IN ('RESERVED','NO_DRIVER','CANCELLED') AND cancel_requested=FALSE);
+            """, connection);
+        command.Parameters.AddWithValue("trip", tripId);
+        command.Parameters.AddWithValue("round", round);
+        return (bool)(await command.ExecuteScalarAsync(ct))!;
+    }
+
     /// <summary>
     /// Applies a cancel intent that arrived before its round. Must run after
     /// the round row exists; the tombstone is consumed exactly once.

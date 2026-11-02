@@ -23,6 +23,11 @@ using RideHailing.MatchingService.Infrastructure.DriverClient;
 using RideHailing.MatchingService.Infrastructure.Persistence;
 using RideHailing.Messaging.Outbox;
 
+var traceParent = Environment.GetEnvironmentVariable("TRACEPARENT");
+using var operatorActivity = System.Diagnostics.ActivityContext.TryParse(traceParent, null, out _)
+    ? new System.Diagnostics.Activity("controlled-lifecycle").SetParentId(traceParent!).Start()
+    : null;
+
 var connectionString = Environment.GetEnvironmentVariable("TRIP_DB")
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
     ?? "Host=127.0.0.1;Port=5432;Database=trip_db;Username=trip_app;Password=trip_dev_pw";

@@ -128,6 +128,12 @@ public sealed class MatchingWorkDispatcher : BackgroundService
             return false;
         }
 
+        var intake = await _attempts.LoadRoundAsync(tripId, round, ct);
+        var hasParent = System.Diagnostics.ActivityContext.TryParse(intake?.IntakeTraceParent, null, out var parent);
+        using var activity = hasParent
+            ? MatchingTelemetry.Activities.StartActivity("matching.work.resume", System.Diagnostics.ActivityKind.Internal, parent)
+            : MatchingTelemetry.Activities.StartActivity("matching.work.resume", System.Diagnostics.ActivityKind.Internal);
+
         string? error = null;
         try
         {
