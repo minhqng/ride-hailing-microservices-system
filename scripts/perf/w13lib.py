@@ -406,7 +406,7 @@ def find_k6() -> str | None:
     return shutil.which("k6")
 
 
-_SECRET_KEY_PARTS = ("password", "secret", "token", "credential", "passwd", "pwd", "privatekey", "private_key")
+_SECRET_KEY_PARTS = ("password", "secret", "token", "credential", "passwd", "pwd", "privatekey", "private_key", "cookie")
 _CONNECTION_SECRET_RE = re.compile(r"(?i)(password|pwd)=([^;\s]+)")
 
 

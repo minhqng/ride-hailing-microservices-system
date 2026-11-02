@@ -51,6 +51,8 @@
   is probed; production sets it false and migrates via an external job.
   Supply `RabbitMq__Host`, `RabbitMq__Username`,
   `RabbitMq__Password`; optional `RabbitMq__Port` and `RabbitMq__VirtualHost`.
+  `RabbitMq__Hosts` accepts a comma-separated broker endpoint list for supervised
+  reconnection across the HA cluster; the durable Outbox remains the retry authority.
   Readiness checks migrations and, when enabled, consumer connectivity. The
   relay gates on database readiness plus its own publish-path probe (broker
   reachable and topology declared, verified independently while consumers are

@@ -68,17 +68,11 @@ public static class TripMessagingRegistration
 
         string Required(string key) => !string.IsNullOrWhiteSpace(config[key]) ? config[key]! :
             throw new InvalidOperationException($"Missing messaging configuration '{key}'.");
-        services.AddSingleton(new ConnectionFactory
-        {
-            HostName = Required("RabbitMq:Host"),
-            UserName = Required("RabbitMq:Username"),
-            Password = Required("RabbitMq:Password"),
-            Port = config.GetValue<int?>("RabbitMq:Port") ?? 5672,
-            VirtualHost = config["RabbitMq:VirtualHost"] ?? "/",
-            // The worker supervises connection/channel replacement explicitly.
-            AutomaticRecoveryEnabled = false,
-            RequestedConnectionTimeout = TimeSpan.FromSeconds(10)
-        });
+        services.AddSingleton(RideHailing.Messaging.Topology.RabbitConnectionFactory.Create(
+            config["RabbitMq:Hosts"] ?? Required("RabbitMq:Host"),
+            config.GetValue<int?>("RabbitMq:Port") ?? 5672,
+            Required("RabbitMq:Username"), Required("RabbitMq:Password"), "trip-service",
+            config["RabbitMq:VirtualHost"] ?? "/"));
         services.AddSingleton<ConfirmedPublisher>();
         services.AddSingleton<TripMessagingReadiness>();
         services.AddHealthChecks().AddCheck<TripMessagingReadiness>("trip-messaging", tags: ["ready"]);
