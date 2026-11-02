@@ -61,17 +61,9 @@ var outboxOptions = new OutboxRelayOptions();
 builder.Configuration.GetSection("Outbox").Bind(outboxOptions);
 outboxOptions.Validate();
 
-var connectionFactory = new ConnectionFactory
-{
-    HostName = brokerOptions.Host,
-    Port = brokerOptions.Port,
-    UserName = brokerOptions.Username,
-    Password = brokerOptions.Password,
-    // The host owns restart: a lost connection is observed and retried with
-    // bounded backoff instead of relying on silent client auto-recovery.
-    ClientProvidedName = "driver-service/outbox-relay",
-    AutomaticRecoveryEnabled = false,
-};
+var connectionFactory = RideHailing.Messaging.Topology.RabbitConnectionFactory.Create(
+    brokerOptions.Hosts ?? brokerOptions.Host, brokerOptions.Port,
+    brokerOptions.Username, brokerOptions.Password, "driver-service/outbox-relay");
 builder.Services.AddSingleton(connectionFactory);
 builder.Services.AddSingleton<ConfirmedPublisher>();
 builder.Services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
