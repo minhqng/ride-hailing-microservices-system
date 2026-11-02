@@ -146,7 +146,8 @@ def main():
             assert all("rabbit@" + lost not in q["online"] for q in report["duringBeforeWork"]["queues"])
         else:
             port = 15672
-        core_environment = dict(ENV, W14_BROKER_RECOVERY="1" if args.scenario == "broker" else "0")
+        core_environment = dict(ENV, W14_BROKER_RECOVERY="1" if args.scenario == "broker" else "0",
+                                W14_RABBIT_CONTROL_SERVICE="rabbitmq-2" if lost == "rabbitmq" else "rabbitmq")
         report["workStartedAtUtc"] = stamp()
         with output.with_suffix(".log").open("w", encoding="utf-8") as log:
             result = subprocess.run([sys.executable, "scripts/test/core-runtime-gate.py"],
