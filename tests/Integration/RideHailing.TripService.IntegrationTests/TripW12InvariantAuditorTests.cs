@@ -381,7 +381,7 @@ public sealed class TripW12InvariantAuditorTests(TripPostgresFixture fixture)
             var saga = await db.RideSagas.AsNoTracking().SingleAsync(s => s.TripId == tripId);
             var declined = MessageEnvelope<JsonElement>.Create("PaymentAuthorizationFailedV1",
                 Guid.NewGuid().ToString("N"),
-                JsonSerializer.SerializeToElement(new { tripId, resultCode = "DECLINED" }),
+                JsonSerializer.SerializeToElement(new { tripId, reasonCode = "DECLINED" }),
                 sagaId: saga.SagaId.ToString("D"), operationKey: saga.AuthorizeOperationKey);
             await new TripMessageHandler(db, clock, NullLogger<TripMessageHandler>.Instance)
                 .HandleAsync("trip.payment-outcome.q", declined, CancellationToken.None);

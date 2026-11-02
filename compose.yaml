@@ -2,6 +2,11 @@
 # Service DNS names are used; no static IPs.
 name: ride-hailing
 
+x-auth: &auth
+  Auth__PublicKeyBase64: ${AUTH_PUBLIC_KEY_BASE64:-}
+  Auth__Issuer: ride-hailing-identity
+  Auth__Audience: ride-hailing-api
+
 services:
   postgres:
     image: postgres:18.6
@@ -19,7 +24,7 @@ services:
       - pgdata:/var/lib/postgresql
       - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
       interval: 5s
@@ -31,7 +36,7 @@ services:
     image: redis:8.10.2
     command: ["redis-server", "--appendonly", "yes"]
     volumes: [redisdata:/data]
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -50,7 +55,7 @@ services:
       - ./deploy/rabbitmq/health-ready.sh:/etc/rabbitmq/ride-health-ready.sh:ro
       - ./deploy/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
       - ./deploy/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-    ports: ["5672:5672", "15672:15672", "127.0.0.1:15692:15692"]
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672", "127.0.0.1:15692:15692"]
     healthcheck:
       test: ["CMD", "sh", "/etc/rabbitmq/ride-health-ready.sh"]
       interval: 10s
@@ -98,6 +103,7 @@ services:
       context: .
       dockerfile: src/Gateway/RideHailing.Gateway/Dockerfile
     environment:
+      <<: *auth
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ServiceInstanceId: ${GATEWAY_INSTANCE_ID:-gateway-local}
       ASPNETCORE_URLS: http://+:8080
@@ -115,11 +121,15 @@ services:
       context: .
       dockerfile: src/Services/Identity/RideHailing.IdentityService/Dockerfile
     environment:
+      <<: *auth
+      Auth__PrivateKeyBase64: ${AUTH_PRIVATE_KEY_BASE64:-}
+      Auth__ServiceClients__matching__Secret: ${AUTH_MATCHING_SECRET:-}
+      Auth__ServiceClients__trip__Secret: ${AUTH_TRIP_SECRET:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ServiceInstanceId: ${IDENTITY_INSTANCE_ID:-identity-local}
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:-identity_dev_pw}
-    ports: ["8101:8080"]
+    ports: ["127.0.0.1:8101:8080"]
     depends_on:
       postgres: { condition: service_healthy }
     networks: [ride-net]
@@ -129,6 +139,7 @@ services:
       context: .
       dockerfile: src/Services/Driver/RideHailing.DriverService/Dockerfile
     environment:
+      <<: *auth
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ServiceInstanceId: ${DRIVER_INSTANCE_ID:-driver-local}
       ASPNETCORE_URLS: http://+:8080
@@ -136,7 +147,7 @@ services:
       RabbitMq__Host: rabbitmq
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
-    ports: ["8102:8080"]
+    ports: ["127.0.0.1:8102:8080"]
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
@@ -147,6 +158,11 @@ services:
       context: .
       dockerfile: src/Services/Trip/RideHailing.TripService/Dockerfile
     environment:
+      <<: *auth
+      Services__MatchingBaseUrl: http://matching:8080/
+      Auth__TokenEndpoint: http://identity:8080/connect/token
+      Auth__ClientId: trip
+      Auth__ClientSecret: ${AUTH_TRIP_SECRET:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ServiceInstanceId: ${TRIP_INSTANCE_ID:-trip-local}
       TripMessaging__Enabled: ${TRIP_MESSAGING_ENABLED:-false}
@@ -156,7 +172,7 @@ services:
       RabbitMq__Host: rabbitmq
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
-    ports: ["8103:8080"]
+    ports: ["127.0.0.1:8103:8080"]
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
@@ -167,6 +183,10 @@ services:
       context: .
       dockerfile: src/Services/Matching/RideHailing.MatchingService/Dockerfile
     environment:
+      <<: *auth
+      Auth__TokenEndpoint: http://identity:8080/connect/token
+      Auth__ClientId: matching
+      Auth__ClientSecret: ${AUTH_MATCHING_SECRET:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       ServiceInstanceId: ${MATCHING_INSTANCE_ID:-matching-local}
       ASPNETCORE_URLS: http://+:8080
@@ -176,7 +196,7 @@ services:
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
       Services__DriverBaseUrl: http://driver:8080
-    ports: ["8104:8080"]
+    ports: ["127.0.0.1:8104:8080"]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -196,7 +216,7 @@ services:
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-ride_dev_pw}
       ServiceInstanceId: ${PAYMENT_INSTANCE_ID:-payment-local}
-    ports: ["8105:8080"]
+    ports: ["127.0.0.1:8105:8080"]
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }

@@ -33,5 +33,7 @@ public sealed class TripApplicationFactory : WebApplicationFactory<Program>
         // NOT reach minimal-host CreateBuilder config at Program startup;
         // UseSetting does.
         builder.UseSetting("ConnectionStrings:Postgres", _postgresConnectionString);
+        using var key = System.Security.Cryptography.RSA.Create(2048);
+        builder.UseSetting("Auth:PublicKeyBase64", Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(key.ExportSubjectPublicKeyInfoPem())));
     }
 }

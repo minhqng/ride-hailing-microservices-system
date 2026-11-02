@@ -58,6 +58,8 @@ public sealed class MatchingServiceProcess : IAsyncDisposable
             CreateNoWindow = true,
         };
         psi.ArgumentList.Add(serviceDll);
+        using var signingKey = System.Security.Cryptography.RSA.Create(2048);
+        psi.Environment["Auth__PublicKeyBase64"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(signingKey.ExportSubjectPublicKeyInfoPem()));
         psi.Environment["ASPNETCORE_URLS"] = baseUrl;
         psi.Environment["ASPNETCORE_ENVIRONMENT"] = "Testing";
         psi.Environment["DOTNET_ENVIRONMENT"] = "Testing";

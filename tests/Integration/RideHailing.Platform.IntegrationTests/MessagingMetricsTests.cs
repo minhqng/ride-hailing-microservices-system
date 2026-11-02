@@ -46,30 +46,33 @@ public class MessagingMetricsTests
         MessagingMetrics.RecordOutboxBacklog(pending: 4, failedVisible: 2, oldestAgeSeconds: 9.5);
         listener.RecordObservableInstruments();
 
-        Assert.Contains(captures, c => c.Instrument == "outbox.claim" && c.Value == 3d);
-        Assert.Contains(captures, c => c.Instrument == "outbox.publish.attempts" && c.Value == 1d);
-        Assert.Contains(captures, c => c.Instrument == "outbox.publish" && HasTag(c, "outcome", "accepted"));
-        Assert.Contains(captures, c => c.Instrument == "outbox.publish" && HasTag(c, "outcome", "failed"));
-        Assert.Contains(captures, c => c.Instrument == "outbox.mark" && HasTag(c, "outcome", "published"));
-        Assert.Contains(captures, c => c.Instrument == "outbox.mark" && HasTag(c, "outcome", "already_published"));
-        Assert.Contains(captures, c => c.Instrument == "outbox.confirm.duration" && c.Value == 12.5d);
-        Assert.Contains(captures, c => c.Instrument == "dedup.processed" && HasTag(c, "outcome", "applied"));
-        Assert.Contains(captures, c => c.Instrument == "dedup.processed" && HasTag(c, "outcome", "duplicate"));
-        Assert.Contains(captures, c => c.Instrument == "consumer.delivery" && c.Value == 1d);
-        Assert.Contains(captures, c => c.Instrument == "consumer.redelivery" && c.Value == 1d);
-        Assert.Contains(captures, c => c.Instrument == "consumer.ack" && c.Value == 1d);
-        Assert.Contains(captures, c => c.Instrument == "consumer.retry" && HasTag(c, "reason", "Transient"));
-        Assert.Contains(captures, c => c.Instrument == "consumer.deadletter" && HasTag(c, "kind", "Poison"));
-        Assert.Contains(captures, c => c.Instrument == "consumer.processing.duration" && HasTag(c, "outcome", "success"));
-        Assert.Contains(captures, c => c.Instrument == "outbox.pending" && c.Value == 4d);
-        Assert.Contains(captures, c => c.Instrument == "outbox.failed_visible" && c.Value == 2d);
-        Assert.Contains(captures, c => c.Instrument == "outbox.oldest_pending.age" && c.Value == 9.5d);
+        Capture[] snapshot;
+        lock (gate) snapshot = captures.ToArray();
+
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.claim" && c.Value == 3d);
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.publish.attempts" && c.Value == 1d);
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.publish" && HasTag(c, "outcome", "accepted"));
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.publish" && HasTag(c, "outcome", "failed"));
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.mark" && HasTag(c, "outcome", "published"));
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.mark" && HasTag(c, "outcome", "already_published"));
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.confirm.duration" && c.Value == 12.5d);
+        Assert.Contains(snapshot, c => c.Instrument == "dedup.processed" && HasTag(c, "outcome", "applied"));
+        Assert.Contains(snapshot, c => c.Instrument == "dedup.processed" && HasTag(c, "outcome", "duplicate"));
+        Assert.Contains(snapshot, c => c.Instrument == "consumer.delivery" && c.Value == 1d);
+        Assert.Contains(snapshot, c => c.Instrument == "consumer.redelivery" && c.Value == 1d);
+        Assert.Contains(snapshot, c => c.Instrument == "consumer.ack" && c.Value == 1d);
+        Assert.Contains(snapshot, c => c.Instrument == "consumer.retry" && HasTag(c, "reason", "Transient"));
+        Assert.Contains(snapshot, c => c.Instrument == "consumer.deadletter" && HasTag(c, "kind", "Poison"));
+        Assert.Contains(snapshot, c => c.Instrument == "consumer.processing.duration" && HasTag(c, "outcome", "success"));
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.pending" && c.Value == 4d);
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.failed_visible" && c.Value == 2d);
+        Assert.Contains(snapshot, c => c.Instrument == "outbox.oldest_pending.age" && c.Value == 9.5d);
 
         var forbidden = new[] { "message_id", "messageId", "correlationId", "operationKey", "aggregateId", "tripId" };
-        Assert.DoesNotContain(captures.SelectMany(capture => capture.Tags),
+        Assert.DoesNotContain(snapshot.SelectMany(capture => capture.Tags),
             tag => forbidden.Contains(tag.Key, StringComparer.Ordinal));
         var allowedKeys = new[] { "outcome", "reason", "kind" };
-        Assert.All(captures, capture => Assert.All(capture.Tags,
+        Assert.All(snapshot, capture => Assert.All(capture.Tags,
             tag => Assert.Contains(tag.Key, allowedKeys)));
     }
 

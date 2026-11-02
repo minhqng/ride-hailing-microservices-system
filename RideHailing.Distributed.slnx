@@ -4,6 +4,7 @@
     <Project Path="src/BuildingBlocks/RideHailing.Contracts/RideHailing.Contracts.csproj" />
     <Project Path="src/BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
     <Project Path="src/BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
+    <Project Path="src/BuildingBlocks/RideHailing.Security/RideHailing.Security.csproj" />
   </Folder>
   <Folder Name="/src/Gateway/">
     <Project Path="src/Gateway/RideHailing.Gateway/RideHailing.Gateway.csproj" />
