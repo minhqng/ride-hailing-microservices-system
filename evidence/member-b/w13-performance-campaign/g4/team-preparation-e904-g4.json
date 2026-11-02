@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "verdict": "GREEN",
+  "sourceCommit": "e90416ec8d3e15620f92857ad40ba18420cef0d6",
+  "sourceTree": "7c0ae0b3e772433c69121cc429fdf4a7a432ab66",
+  "ciCheckoutSha": "bea89ab2edae9b78986ca0781e5d4f59c4df82be",
+  "ciCheckoutTree": "7c0ae0b3e772433c69121cc429fdf4a7a432ab66",
+  "ciRunUrl": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41448881051",
+  "checks": {
+    "bOwnedCorrectness": "PASS",
+    "securityBaseline": "PASS",
+    "aCorrectnessAcceptance": "PASS",
+    "cCorrectnessAcceptance": "PASS",
+    "authoritativeAuditor": "PASS",
+    "productionApiSurface": "PASS",
+    "brokerSurface": "PASS",
+    "stableEnvironment": "PASS"
+  },
+  "blockers": [],
+  "evidence": {
+    "jobs": [
+      "hygiene",
+      "build-test",
+      "compose-config",
+      "platform-smoke"
+    ],
+    "regression": {
+      "passed": 1207,
+      "failed": 0,
+      "skipped": 1,
+      "skipBoundary": "ordinary opt-in Identity theory; actual runtime fixture separately executed below"
+    },
+    "realIdentity": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    "httpSecurityCases": 55,
+    "authoritativeAuditor": [
+      "AUD-01",
+      "AUD-02",
+      "AUD-03",
+      "AUD-04",
+      "AUD-05",
+      "AUD-06",
+      "AUD-07",
+      "AUD-08"
+    ],
+    "runtimeScenarios": [
+      "completed/CAPTURED",
+      "cancelled-during-authorization/COMPENSATED",
+      "terminal-authorization-decline/COMPENSATED"
+    ],
+    "providers": {
+      "postgres": "18.6",
+      "rabbitmq": "4.3.6",
+      "redis": "8.10.2"
+    },
+    "artifacts": [
+      {
+        "id": 13143428436,
+        "sha256": "7bbb2c445cf6b5d7d4ed5ae0691c37cd27bb877ad32e49679363c53e1a15f18e"
+      },
+      {
+        "id": 13144351941,
+        "sha256": "2f70164ff3c763efc65e24746aad0a7da3c39681bb2a5977049ef38ae912b6ea"
+      }
+    ]
+  },
+  "proofBoundary": "Current-source Linux G4 correctness/runtime certification. Actual public authenticated intake and production lifecycle handlers; no public accept/start/complete HTTP claim. Does not certify W13 measurements. Perf scripts/evidence may advance only with unchanged src/tests, separately verified harness behavior and final exact-tree CI.",
+  "humanReview": "WAIVED by explicit project-lead instruction; no human review/rerun claimed"
+}

@@ -158,8 +158,10 @@ def compose(*args: str, timeout: float | None = 600, check: bool = False) -> sub
 def compose_up(services: Iterable[str], *, build: bool = True, scale: int | None = None,
                wait_timeout: int = 240) -> None:
     args = ["up", "-d", "--wait", "--wait-timeout", str(wait_timeout)]
-    if build:
+    if build and os.environ.get("W13_USE_PREBUILT_IMAGES") != "1":
         args.append("--build")
+    else:
+        args.append("--no-build")
     if scale is not None:
         args.extend(["--scale", f"matching={scale}"])
     else:
