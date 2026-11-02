@@ -17,6 +17,7 @@ using RideHailing.TripService.Integration.Observability;
 // requests safely receive 401 until shared middleware populates it.
 
 var builder = WebApplication.CreateBuilder(args);
+RideHailing.Security.RideAuthentication.AddRideAuthentication(builder.Services, builder.Configuration);
 RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("trip-service");
 // A-W12-01/02: Trip domain spans and metrics ride the SAME OpenTelemetry
@@ -73,11 +74,23 @@ builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddTripMessaging(builder.Configuration, builder.Environment);
+if (builder.Configuration.GetValue<bool>("TripMessaging:Enabled"))
+{
+    builder.Services.AddTransient<RideHailing.Security.ServiceTokenHandler>();
+    builder.Services.AddHttpClient("matching-cleanup", client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["Services:MatchingBaseUrl"] ?? "http://localhost:8104/");
+        client.Timeout = TimeSpan.FromSeconds(5);
+    }).AddHttpMessageHandler<RideHailing.Security.ServiceTokenHandler>();
+    builder.Services.AddHostedService<MatchingCleanupReconciler>();
+}
 // A-W12-02: durable saga-backlog observation (saga.active{step}) runs in every
 // host: it only reads the Trip-owned database and never touches the broker.
 builder.Services.AddHostedService<TripMetricsObserver>();
 
 var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // (A-W08) Opt-in Trip auto-migrate for compose local/CI reproducibility.
 // Platform contract (C-owned): /health/ready requires zero pending Trip

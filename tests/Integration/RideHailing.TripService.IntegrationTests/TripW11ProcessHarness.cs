@@ -322,9 +322,11 @@ internal sealed class TripProcess : IAsyncDisposable
         var runDirectory = Path.Combine(Path.GetTempPath(), $"trip-w11-{label}-{Guid.NewGuid():N}");
         Directory.CreateDirectory(runDirectory);
 
+        using var signingKey = System.Security.Cryptography.RSA.Create(2048);
         var environment = new Dictionary<string, string>
         {
             ["ASPNETCORE_ENVIRONMENT"] = "Development",
+            ["Auth__PublicKeyBase64"] = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(signingKey.ExportSubjectPublicKeyInfoPem())),
             ["ASPNETCORE_URLS"] = $"http://127.0.0.1:{port}",
             ["ConnectionStrings__Postgres"] = connectionString,
             ["TripDatabase__AutoMigrate"] = "true",

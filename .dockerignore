@@ -13,4 +13,6 @@ TestResults/
 **/*.pfx
 secrets/
 logs/
+plans/
+**/__pycache__/
 evidence/**/raw/

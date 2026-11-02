@@ -42,6 +42,8 @@ jobs:
   build-test:
     name: build-test
     runs-on: ubuntu-latest
+    env:
+      B12_AUDIT_OUTPUT_DIR: ${{ github.workspace }}/TestResults/b12-audit
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -60,16 +62,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose config
+      - run: docker compose config --quiet
   platform-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       COMPOSE_PROJECT_NAME: ride-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      TRIP_MESSAGING_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: python3 scripts/security/init-local-auth.py
       - run: docker compose --profile obs up -d --build
       - run: python3 scripts/test/platform-smoke.py
+      - run: python3 scripts/test/security-gate.py --identity-tests
+      - run: dotnet build scripts/test/w10-g3-harness/RideHailing.W10Harness.csproj -c Release
+      - run: python3 scripts/test/core-runtime-gate.py
       - run: python3 scripts/test/payment-smoke.py
       - run: python3 scripts/test/topology-smoke.py
       - if: always()
@@ -78,6 +88,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: platform-smoke-${{ github.run_id }}-${{ github.run_attempt }}
-          path: platform-smoke.log
+          path: |
+            platform-smoke.log
+            plans/reports/security-gate.json
+            plans/reports/identity-gate.log
+            plans/reports/core-runtime-gate.json
+            TestResults/identity-gate/
       - if: always()
         run: docker compose --profile obs down -v

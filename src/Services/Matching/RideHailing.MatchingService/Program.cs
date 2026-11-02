@@ -28,8 +28,11 @@ using RideHailing.Messaging.Outbox;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Observability;
 using StackExchange.Redis;
+using RideHailing.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddRideAuthentication(builder.Configuration);
+builder.Services.AddTransient<ServiceTokenHandler>();
 RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("matching-service");
 builder.AddMatchingTelemetry();
@@ -79,7 +82,7 @@ builder.Services.AddHttpClient<IDriverClient, HttpDriverClient>((_, http) =>
     http.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
     var seconds = builder.Configuration.GetValue("DriverClient:TimeoutSeconds", 5);
     http.Timeout = TimeSpan.FromSeconds(seconds);
-});
+}).AddHttpMessageHandler<ServiceTokenHandler>();
 builder.Services.AddScoped(sp => new MatchingReserveOrchestrator(
     sp.GetRequiredService<MatchingAttemptRepository>(),
     sp.GetRequiredService<IDriverClient>(),
@@ -196,6 +199,25 @@ if (mux is not null)
 }
 
 var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/internal/matching"))
+    {
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+        if (!RideAuthentication.HasServicePermission(context.User, "trip", "matching:manage"))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+    }
+    await next(context);
+});
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "matching-service" }));
 app.MapRideReadiness();
