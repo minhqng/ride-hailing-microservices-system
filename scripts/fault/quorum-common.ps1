@@ -11,8 +11,15 @@ function Invoke-ComposeCommand {
         [switch]$AllowFailure
     )
 
-    $output = & docker @Compose @Arguments 2>&1 | Out-String
-    $exitCode = $LASTEXITCODE
+    $previousErrorPreference = $ErrorActionPreference
+    try {
+        # PowerShell 5 wraps native stderr as ErrorRecord even for readiness
+        # probes. Inspect the actual native exit code below in every case.
+        $ErrorActionPreference = 'Continue'
+        $output = & docker @Compose @Arguments 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $previousErrorPreference }
     if (-not $AllowFailure -and $exitCode -ne 0) {
         throw "docker compose $($Arguments -join ' ') failed with exit code $exitCode`n$output"
     }
