@@ -16,6 +16,7 @@ using RideHailing.TripService.Integration.Messaging;
 // requests safely receive 401 until shared middleware populates it.
 
 var builder = WebApplication.CreateBuilder(args);
+RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("trip-service");
 builder.Services.AddHealthChecks();
 
