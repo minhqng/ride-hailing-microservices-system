@@ -66,7 +66,15 @@ try {
         $during = Get-OnlineQuorumMembers -Compose $compose -Queue $queue -ControlService $controlService
         $leaderDuring = @($during.Rows | Where-Object { $_.'Raft State' -eq 'leader' })
         if ($leaderDuring.Count -ne 1) { throw 'Node-loss state must have exactly one live leader.' }
-        $queueState = Get-PaymentQueueState -ManagementUrl $ManagementUrl -Headers $headers
+        $drainDeadline = (Get-Date).AddSeconds($WorkloadTimeoutSeconds)
+        do {
+            $queueState = Get-PaymentQueueState -ManagementUrl $ManagementUrl -Headers $headers
+            $allAcknowledged = $null -ne $queueState.Ack -and
+                ($queueState.Ack - [long]$baseline.Ack) -ge $published.RoutedDeliveries
+            if ($queueState.Consumers -ge 1 -and $queueState.Ready -eq 0 -and $queueState.Unacked -eq 0 -and $allAcknowledged) { break }
+            Start-Sleep -Seconds 2
+        } until ((Get-Date) -gt $drainDeadline)
+        if (-not $allAcknowledged) { throw 'Actual broker acknowledgements do not cover every unique and duplicate probe.' }
         if ($during.Total -ne 3 -or $during.Online -ne 2) {
             throw "Quorum did not remain 2/3 through the workload; observed $($during.Online)/$($during.Total)."
         }

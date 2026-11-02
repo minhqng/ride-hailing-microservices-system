@@ -183,6 +183,10 @@ function Get-PaymentQueueState {
         Consumers = [int]$queue.consumers
         Ready = [int]$queue.messages_ready
         Unacked = [int]$queue.messages_unacknowledged
+        # Management omits cumulative counters until the first real delivery.
+        # A successful post-workload proof requires an actual non-null counter.
+        Ack = if ($null -ne $queue.message_stats.ack) { [long]$queue.message_stats.ack } else { $null }
+        Redelivered = if ($null -ne $queue.message_stats.redeliver) { [long]$queue.message_stats.redeliver } else { $null }
     }
 }
 

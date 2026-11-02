@@ -7,6 +7,7 @@ param(
     [ValidateRange(2, 200)][int]$ProbeCount = 12,
     [int]$BacklogTimeoutSeconds = 90,
     [int]$DrainTimeoutSeconds = 240,
+    [string]$EvidencePath,
     [switch]$Execute
 )
 $ErrorActionPreference = 'Stop'
@@ -95,15 +96,24 @@ try {
                     $_.client_properties.connection_name -eq 'payment-service' -and
                     [long]$_.connected_at -ge $recoveryStart
                 })
+            $allAcknowledged = $null -ne $drained.Ack -and
+                ($drained.Ack - [long]$baseline.Ack) -ge $published.RoutedDeliveries
             if ($drained.Consumers -ge 1 -and $drained.Ready -eq 0 -and
-                $drained.Unacked -eq 0 -and $connections.Count -gt 0) { break }
+                $drained.Unacked -eq 0 -and $connections.Count -gt 0 -and $allAcknowledged) { break }
             Start-Sleep -Seconds 2
         } until ((Get-Date) -gt $drainDeadline)
         if ($drained.Consumers -lt 1 -or $drained.Ready -ne 0 -or
-            $drained.Unacked -ne 0 -or $connections.Count -eq 0) {
+            $drained.Unacked -ne 0 -or $connections.Count -eq 0 -or -not $allAcknowledged) {
             throw "Payment did not reconnect and drain the probe backlog: consumers=$($drained.Consumers) ready=$($drained.Ready) unacked=$($drained.Unacked) freshConnections=$($connections.Count)."
         }
 
+        if ($EvidencePath) {
+            [ordered]@{ runId = $runId; sourceCommit = (& git rev-parse HEAD); sourceTree = (& git rev-parse 'HEAD^{tree}');
+                before = $beforeQuorum; during = $degraded; after = $restoredQuorum;
+                baseline = $baseline; backlog = $backlog; published = $published;
+                final = $final; queue = $drained; freshConnections = $connections.Count } |
+                ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $EvidencePath -Encoding utf8
+        }
         Write-Output ("FINAL: quorum={0}/{1}; operations={2}; providerEffects={3}; dedupMarkers={4}; outboxPublished={5}; queue ready={6} unacked={7}" -f `
             $restoredQuorum.Online, $restoredQuorum.Total, $final.operations,
             $final.providerEffects, $final.processedMessages, $final.outboxPublished,
