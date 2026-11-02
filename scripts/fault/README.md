@@ -1,4 +1,36 @@
-# fault — deterministic faultpoint platform (W11)
+# Deterministic faultpoint platform
+
+## Integrated controls
+
+The shared provider gates consumer commit-before-ACK, confirmed Outbox publish
+before mark, Payment provider commit before response, Driver reserve commit
+before response, and Saga commit before dispatch. Hosts use their effective
+environment: activation is accepted only in `Testing` or `Development`.
+Production remains inert even when activation variables are present.
+
+Set `RIDE_FAULTPOINTS` to comma-separated canonical names. For external process
+control, set `RIDE_FAULT_SIGNAL_DIRECTORY` to a fresh harness-owned directory.
+The provider atomically writes `faultpoint-<name>.reached`; the harness creates
+`faultpoint-<name>.release` to continue. Holds are bounded at 30 seconds by
+default. Use a fresh directory per scenario to avoid reusing a release marker.
+There is no shared HTTP activation endpoint.
+
+The Trip marker-file adapter and Driver token-controlled adapter remain
+compatible with the original process harnesses. The Driver adapter implements
+the shared interface while retaining its stricter Testing/control-token gate.
+Trip uses its existing adapter when configured and otherwise the shared provider.
+The Driver control endpoints are Testing-only and require the control token.
+
+Run `bash scripts/fault/team-fault-campaign.sh` on a clean Linux checkout with
+.NET 10, Docker, Python 3 and Node.js. It executes five controlled passes of
+Trip process faults, shared delivery/Payment windows and the Driver/Matching
+campaign. CI runs this additional campaign for the final W11 integration PR.
+Outputs retain checkout SHA/tree and TRX counts, reject zero discovery/skips,
+and stay under ignored evidence output directories.
+
+## Original owner handoff context
+
+The notes below retain the source contributions' historical claim boundaries.
 
 Team-shared fault infrastructure lives here once C delivers the W11 platform
 (Doc 05C §30: `FaultPointProvider`, `Consumer.AfterCommitBeforeAck`,

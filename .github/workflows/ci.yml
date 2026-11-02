@@ -8,6 +8,25 @@ on:
     # main, otherwise CI never runs on the stacked PRs.
     branches: [main, 'MemC-*-Distributed', 'feature/A-W09-trip-outbox', 'feature/B-W09-driver-outbox']
 jobs:
+  fault-campaign:
+    if: github.event_name == 'pull_request' && github.head_ref == 'integration/team-w11-final'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: bash scripts/fault/team-fault-campaign.sh
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fault-campaign-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            evidence/team/fault-campaign/outputs/
+            evidence/member-b/w11-fault-proofs/raw/
   hygiene:
     name: hygiene
     runs-on: ubuntu-latest
