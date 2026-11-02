@@ -72,6 +72,25 @@ def fixture(root: Path) -> dict:
 
 
 class RecoveryAnalysisTests(unittest.TestCase):
+    def test_observed_resource_drift_is_rejected_before_acceptance(self):
+        names = ("postgres", "redis", "rabbitmq", "identity", "driver", "matching",
+                 "prometheus", "otel-collector", "jaeger")
+        environment = {"configured": {"composeServices": {
+            name: {"cpus": 1, "memLimitBytes": 1024} for name in names}},
+            "observed": {"containers": [{"service": name, "inspect": {
+                "image": "synthetic-parser-control", "nanoCpus": 1_000_000_000, "memoryBytes": 1024}}
+                for name in names]}}
+        manifest = {"environment": environment, "environmentAfter": copy.deepcopy(environment),
+                    "fingerprint": lib.environment_fingerprint(environment)}
+        analyze.validate_environment(manifest)
+        manifest["environmentAfter"]["observed"]["containers"][0]["inspect"]["nanoCpus"] = 0
+        with self.assertRaisesRegex(ValueError, "resource limit"):
+            analyze.validate_environment(manifest)
+        manifest["environmentAfter"] = copy.deepcopy(environment)
+        manifest["environmentAfter"]["observed"]["containers"][0]["inspect"]["image"] = "drift"
+        with self.assertRaisesRegex(ValueError, "frozen environment"):
+            analyze.validate_environment(manifest)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
