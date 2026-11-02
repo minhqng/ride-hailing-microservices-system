@@ -43,7 +43,7 @@ try {
         }
         Write-Output "BEFORE: $queue online=$($before.Online)/$($before.Total) consumers=$($baseline.Consumers) ready=0 unacked=0"
 
-        Invoke-ComposeCommand -Compose $compose -Arguments @('stop', $Node) | Out-Null
+        Invoke-ComposeCommand -Compose $compose -Arguments @('kill', '-s', 'SIGKILL', $Node) | Out-Null
         $nodeStopped = $true
 
         $deadline = (Get-Date).AddSeconds(90)
@@ -106,7 +106,7 @@ finally {
 if ($null -ne $failure) { throw $failure }
 if ($EvidencePath) {
     [ordered]@{ runId = $runId; sourceCommit = (& git rev-parse HEAD); sourceTree = (& git rev-parse 'HEAD^{tree}');
-        node = $Node; before = $before; during = $during; after = $rejoined;
+        node = $Node; fault = 'SIGKILL'; baseline = $baseline; before = $before; during = $during; after = $rejoined;
         published = $published; final = $final; queue = $queueState } |
         ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $EvidencePath -Encoding utf8
 }
