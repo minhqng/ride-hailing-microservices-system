@@ -6,6 +6,7 @@ transport. It never fabricates authority events or writes business rows directly
 """
 import json
 import math
+from decimal import Decimal, ROUND_HALF_EVEN
 import os
 from pathlib import Path
 import subprocess
@@ -84,7 +85,7 @@ def projection():
 wait("Matching location projection", projection, lambda value: "AVAILABLE" in value and "latitude" in value)
 scenarios = []
 assignment_proofs = []
-for scenario in ["completed", "cancelled-during-authorization"]:
+for scenario in ["completed", "cancelled-during-authorization", "terminal-authorization-decline"]:
     _, rider_token = account("Rider")
     trace_id = uuid.uuid4().hex
     trace_parent = "00-" + trace_id + "-" + uuid.uuid4().hex[:16] + "-01"
@@ -109,7 +110,7 @@ for scenario in ["completed", "cancelled-during-authorization"]:
         actor("complete", trip_id, driver_id, reservation)
         saga_terminal = "COMPLETED"
         operations = {"AUTHORIZE", "CAPTURE"}
-    else:
+    elif scenario == "cancelled-during-authorization":
         # Bound the cancellation window by stopping this dedicated Payment
         # process before acceptance. No timing assumption decides whether the
         # authorization has already happened. Real queued work resumes after
@@ -123,11 +124,37 @@ for scenario in ["completed", "cancelled-during-authorization"]:
             subprocess.run(["docker", "compose", "start", "payment"], cwd=root, capture_output=True, check=True)
         saga_terminal = "COMPENSATED"
         operations = {"AUTHORIZE", "VOID"}
+    else:
+        # Configure a real simulator result through its Development control
+        # API before the production authorization command arrives. No outcome
+        # event or authority database row is fabricated by this harness.
+        assert assigned["fare_currency"] == "VND"
+        amount = int(Decimal(str(assigned["fare_amount"])).quantize(Decimal("1"), rounding=ROUND_HALF_EVEN))
+        request = urllib.request.Request("http://127.0.0.1:8105/simulator/operations", method="POST",
+            headers={"Content-Type": "application/json", "traceparent": trace_parent},
+            data=json.dumps({"operationKey": trip_id + ":authorize:v1", "tripId": trip_id, "type": "Authorize",
+                             "amountMinor": amount, "currency": "VND", "mode": "Decline"}).encode())
+        with urllib.request.urlopen(request, timeout=10) as response:
+            declined = json.load(response)
+        assert declined["state"] == "Declined" and not declined["providerEffectOccurred"]
+        actor("accept", trip_id, driver_id, reservation)
+        saga_terminal = "COMPENSATED"
+        operations = {"AUTHORIZE"}
     wait("terminal Saga", lambda: rows("trip_db", "SELECT * FROM ride_sagas WHERE trip_id='" + trip_id + "'"), lambda value: value and value[0]["status"] == saga_terminal)
     wait("Driver recovery", lambda: rows("driver_db", "SELECT * FROM drivers WHERE driver_id='" + driver_id + "'"), lambda value: value[0]["status"] == "AVAILABLE" and value[0]["reservation_id"] is None and value[0]["active_trip_id"] is None)
     payment = rows("payment_db", "SELECT * FROM payment_operations WHERE trip_id='" + trip_id + "'")
-    assert len(payment) == 2 and {item["operation_type"] for item in payment} == operations
-    assert all(item["state"] == "SUCCEEDED" and item["provider_effect_occurred"] for item in payment)
+    assert len(payment) == len(operations) and {item["operation_type"] for item in payment} == operations
+    if scenario == "terminal-authorization-decline":
+        assert payment[0]["state"] == "DECLINED" and not payment[0]["provider_effect_occurred"]
+        assert state()[0]["state"] == "CANCELLED"
+        saga = rows("trip_db", "SELECT * FROM ride_sagas WHERE trip_id='" + trip_id + "'")[0]
+        assert saga["last_error_code"] == "DECLINED"
+        release = rows("trip_db", "SELECT message_id,payload_json FROM outbox_messages WHERE aggregate_id='" + trip_id + "' AND message_type='ReleaseDriverReservationV1'")
+        assert len(release) == 1
+        payload = release[0]["payload_json"]
+        assert payload["driverId"] == driver_id and payload["reservationId"] == reservation
+    else:
+        assert all(item["state"] == "SUCCEEDED" and item["provider_effect_occurred"] for item in payment)
     scenarios.append({"scenario": scenario, "tripId": trip_id, "driverId": driver_id, "reservationId": reservation, "terminalSaga": saga_terminal, "traceId": trace_id})
 
 # Independent final authority reads; no Trip-local proxies and no writes.
@@ -152,7 +179,7 @@ audit("AUD-02", all((item["status"] in ("AVAILABLE", "OFFLINE") and all(item[key
                      (item["status"] == "RESERVED" and item["reservation_id"] is not None and item["reserved_trip_id"] is not None and item["active_trip_id"] is None) or
                      (item["status"] == "ON_TRIP" and item["active_trip_id"] is not None and item["reserved_trip_id"] is None and item["reservation_id"] is None) for item in drivers), ["driver_db"])
 audit("AUD-03", len({item["trip_id"] for item in trips}) == len(trips) and all((item["assigned_driver_id"] is None) == (item["reservation_id"] is None) for item in trips), ["trip_db"])
-audit("AUD-04", len(assignment_proofs) == 2 and all(any(driver["driver_id"] == trip["assigned_driver_id"] and
+audit("AUD-04", len(assignment_proofs) == 3 and all(any(driver["driver_id"] == trip["assigned_driver_id"] and
       ((trip["state"] == "IN_PROGRESS" and driver["active_trip_id"] == trip["trip_id"]) or
        (driver["reservation_id"] == trip["reservation_id"] and driver["reserved_trip_id"] == trip["trip_id"]))
       for driver in drivers) for trip in trips if trip["state"] in active_states), ["trip_db", "driver_db", "matching_db"])
@@ -204,4 +231,4 @@ output = root / "plans/reports/core-runtime-gate.json"
 output.parent.mkdir(parents=True, exist_ok=True)
 output.write_text(json.dumps({"project": project, "source": source, "providers": providers, "metrics": metrics, "scenarios": scenarios, "assignmentProofs": assignment_proofs, "checks": checks,
     "proofBoundary": "Real authenticated public ride intake; controlled production lifecycle handlers; live service authorities, providers and broker. No public accept/start/complete HTTP transport claim."}, indent=2) + "\n")
-print("PASS: completed ride and exact authorized cancellation/void across real providers; AUD-01..08 inspected owning authorities.")
+print("PASS: completed ride, exact authorization cancellation/void and terminal decline/release across real providers; AUD-01..08 inspected owning authorities.")
