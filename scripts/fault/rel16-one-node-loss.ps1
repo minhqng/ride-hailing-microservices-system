@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory=$true)][ValidateSet('rabbitmq-2','rabbitmq-3')][string]$Node,
+    [Parameter(Mandatory=$true)][ValidateSet('rabbitmq','rabbitmq-2','rabbitmq-3')][string]$Node,
     [ValidatePattern('^[a-z0-9][a-z0-9_-]+$')][string]$ProjectName = 'ride-memc-ha',
     [string]$ManagementUrl = 'http://localhost:15672',
     [string]$RabbitUser = $env:RABBITMQ_USER,
@@ -7,6 +7,7 @@ param(
     [ValidateRange(2, 200)][int]$ProbeCount = 12,
     [int]$WorkloadTimeoutSeconds = 240,
     [int]$RejoinTimeoutSeconds = 180,
+    [string]$EvidencePath,
     [switch]$Execute
 )
 $ErrorActionPreference = 'Stop'
@@ -21,6 +22,7 @@ if ([string]::IsNullOrWhiteSpace($RabbitPassword)) { $RabbitPassword = 'ride_dev
 $headers = New-RabbitManagementHeaders -Username $RabbitUser -Password $RabbitPassword
 $runId = "rel16-$([DateTimeOffset]::UtcNow.ToString('yyyyMMddHHmmss'))-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
 $queue = 'payment.commands.q'
+$controlService = if ($Node -eq 'rabbitmq') { 'rabbitmq-2' } else { 'rabbitmq' }
 $nodeStopped = $false
 $failure = $null
 
@@ -31,7 +33,9 @@ try {
         Invoke-ComposeCommand -Compose $compose -Arguments @(
             'exec', '-T', $Node, 'rabbitmq-queues', 'check_if_node_is_quorum_critical') | Out-Null
 
-        $before = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 -TimeoutSeconds 60
+        $before = Wait-ForQuorumOnline -Compose $compose -Queue $queue -ControlService $controlService -Online 3 -TimeoutSeconds 60
+        $leaderBefore = @($before.Rows | Where-Object { $_.'Raft State' -eq 'leader' })
+        if ($leaderBefore.Count -ne 1) { throw 'Baseline must have exactly one quorum leader.' }
         $baseline = Get-PaymentQueueState -ManagementUrl $ManagementUrl -Headers $headers
         if ($baseline.Consumers -lt 1) { throw 'Payment has no consumer before REL-16.' }
         if ($baseline.Ready -ne 0 -or $baseline.Unacked -ne 0) {
@@ -45,7 +49,7 @@ try {
         $deadline = (Get-Date).AddSeconds(90)
         $degraded = $null
         do {
-            try { $degraded = Get-OnlineQuorumMembers -Compose $compose -Queue $queue }
+            try { $degraded = Get-OnlineQuorumMembers -Compose $compose -Queue $queue -ControlService $controlService }
             catch { $degraded = $null }
             if ($null -ne $degraded -and $degraded.Total -eq 3 -and $degraded.Online -eq 2) { break }
             Start-Sleep -Seconds 2
@@ -59,7 +63,9 @@ try {
             -RunId $runId -Count $ProbeCount -Copies 2
         $final = Wait-PaymentProbeConvergence -Compose $compose -RunId $runId `
             -Expected $ProbeCount -TimeoutSeconds $WorkloadTimeoutSeconds
-        $during = Get-OnlineQuorumMembers -Compose $compose -Queue $queue
+        $during = Get-OnlineQuorumMembers -Compose $compose -Queue $queue -ControlService $controlService
+        $leaderDuring = @($during.Rows | Where-Object { $_.'Raft State' -eq 'leader' })
+        if ($leaderDuring.Count -ne 1) { throw 'Node-loss state must have exactly one live leader.' }
         $queueState = Get-PaymentQueueState -ManagementUrl $ManagementUrl -Headers $headers
         if ($during.Total -ne 3 -or $during.Online -ne 2) {
             throw "Quorum did not remain 2/3 through the workload; observed $($during.Online)/$($during.Total)."
@@ -78,7 +84,7 @@ try {
         Invoke-ComposeCommand -Compose $compose -Arguments @('start', $Node) | Out-Null
         $nodeStopped = $false
     }
-    $rejoined = Wait-ForQuorumOnline -Compose $compose -Queue $queue -Online 3 `
+    $rejoined = Wait-ForQuorumOnline -Compose $compose -Queue $queue -ControlService $controlService -Online 3 `
         -TimeoutSeconds $RejoinTimeoutSeconds
     Write-Output "AFTER REJOIN: $queue online=$($rejoined.Online)/$($rejoined.Total)"
 }
@@ -90,4 +96,10 @@ finally {
 }
 
 if ($null -ne $failure) { throw $failure }
+if ($EvidencePath) {
+    [ordered]@{ runId = $runId; sourceCommit = (& git rev-parse HEAD); sourceTree = (& git rev-parse 'HEAD^{tree}');
+        node = $Node; before = $before; during = $during; after = $rejoined;
+        published = $published; final = $final; queue = $queueState } |
+        ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $EvidencePath -Encoding utf8
+}
 Write-Output "PASS: REL-16 kept a 2/3 quorum while $Node was stopped, processed exactly $ProbeCount unique commands plus exact duplicates, confirmed all result Outbox publications, kept the consumer draining and returned to 3/3 after rejoin."
