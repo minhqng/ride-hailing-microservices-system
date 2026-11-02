@@ -569,7 +569,8 @@ def _run_configuration_inner(
     })
     metrics_ok, metric_file = w13_metrics.capture(run_dir, "E03", start=measurement_started_iso, end=measurement_end_iso)
     assertions["declaredMetricsPresentAndFinite"] = metrics_ok
-    target_series = (((lib.read_json(metric_file).get("queries") or {}).get("service_targets") or {}).get("result") or []
+    metric_snapshot = lib.read_json(metric_file)
+    target_series = ((metric_snapshot.get("queries") or {}).get("service_targets") or {}).get("result") or []
     observed_instances = {item.get("metric", {}).get("exported_instance") for item in target_series
                           if item.get("metric", {}).get("exported_job") == "matching-service"}
     expected_instances = {container.get("hostname") for container in containers}
