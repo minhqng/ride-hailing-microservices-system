@@ -1,0 +1,933 @@
+{
+  "scenario": "broker",
+  "project": "team-w12-w14-ha",
+  "startedAtUtc": "2026-11-02T16:21:16.716284+00:00",
+  "source": {
+    "commit": "26b81ecc86190e8a41523892ce9d3c575f366ddf",
+    "tree": "f4bc7b5ee902e37bcb778e854281a72e1f3eeccd",
+    "status": ""
+  },
+  "status": "FAIL",
+  "before": {
+    "atUtc": "2026-11-02T16:21:16.913322+00:00",
+    "cluster": "rabbit@rabbitmq",
+    "rabbitmqVersion": "4.3.6",
+    "nodes": [
+      {
+        "name": "rabbit@rabbitmq",
+        "running": true
+      },
+      {
+        "name": "rabbit@rabbitmq-2",
+        "running": true
+      },
+      {
+        "name": "rabbit@rabbitmq-3",
+        "running": true
+      }
+    ],
+    "queues": [
+      {
+        "name": "driver.commands.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "driver.commands.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.commands.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.commands.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.driver-projection.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.driver-projection.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.ride-requested.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.ride-requested.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "notification.business-events.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "notification.business-events.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "payment.commands.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "payment.commands.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "ride.quarantine.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.driver-state.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.driver-state.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.matching-outcome.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.matching-outcome.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.payment-outcome.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.payment-outcome.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      }
+    ]
+  },
+  "applicationsBefore": {
+    "identity": {
+      "id": "aa46567c2a500ee58e10843d38b89cd65192f26b7dba464f607cc0197c4768c3",
+      "image": "sha256:4615a264c120b90d6b10d2b07ea62beb125fbce46236ffb9e55630587ed7cd46",
+      "startedAt": "2026-11-02T16:20:19.596072909Z",
+      "restarts": 0
+    },
+    "gateway": {
+      "id": "f495a5e8ed31c0a25f1329d4317f7e03cac8c660a1232726a62cdf735845f7ae",
+      "image": "sha256:318b1e1a3dab0a1e8eef59047effe46368078127b8df6e4ed372f65b2f5d9382",
+      "startedAt": "2026-11-02T16:20:18.461699513Z",
+      "restarts": 0
+    },
+    "driver": {
+      "id": "7d7c31bd8f2454039cf5099b281980476b44f657212d9a5cb5d527408a062334",
+      "image": "sha256:035c57eba49ade3e56ae74d568341854fe3caf671d5c901fca443ffc1dc1d71a",
+      "startedAt": "2026-11-02T16:20:19.853380425Z",
+      "restarts": 0
+    },
+    "trip": {
+      "id": "0de0b0e6a4a38be5b2ab42f01ae6266770b8105e5ec83e9e91528bed46ed58dd",
+      "image": "sha256:cf0754f0309c9ab348f75d9e675c0e7a8c7052ff1badb0f7c7cd18d1ba6deae2",
+      "startedAt": "2026-11-02T16:20:20.103444267Z",
+      "restarts": 0
+    },
+    "matching": {
+      "id": "79b3af2000fa51eb248f149d54828bcdf2ff7dbc77d713f3150d81c6efa871e5",
+      "image": "sha256:49276c0a09ba71f69a3c38af046f9a65561ab6202f22902d7ca018a581a68089",
+      "startedAt": "2026-11-02T16:20:24.492742105Z",
+      "restarts": 0
+    },
+    "payment": {
+      "id": "d7ba7c05e52fde30c8c49ac78dc7a8ed88a3ce32592bbdb77256e8c5091b6d75",
+      "image": "sha256:848a00c68d99b17328a48f0e4c61ebc7ddf3ace213908aaa056f8381ca73e55b",
+      "startedAt": "2026-11-02T16:21:08.004681693Z",
+      "restarts": 0
+    },
+    "notification": {
+      "id": "d41a6d2c578064bd741bc079a048f7cfff0cb98e3fb038c54ba3dd15b612f659",
+      "image": "sha256:41d4fcf00369f15c63764b5f9c684eaffece0d1dbfe7da486d5aee587d19c198",
+      "startedAt": "2026-11-02T16:19:54.001518945Z",
+      "restarts": 0
+    }
+  },
+  "workStartedAtUtc": "2026-11-02T16:21:18.568198+00:00",
+  "error": "AssertionError: Core runtime gate failed; inspect retained log",
+  "afterRestore": {
+    "atUtc": "2026-11-02T16:24:25.972722+00:00",
+    "cluster": "rabbit@rabbitmq",
+    "rabbitmqVersion": "4.3.6",
+    "nodes": [
+      {
+        "name": "rabbit@rabbitmq",
+        "running": true
+      },
+      {
+        "name": "rabbit@rabbitmq-2",
+        "running": true
+      },
+      {
+        "name": "rabbit@rabbitmq-3",
+        "running": true
+      }
+    ],
+    "queues": [
+      {
+        "name": "driver.commands.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "driver.commands.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.commands.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.commands.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-2",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.driver-projection.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.driver-projection.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.ride-requested.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "matching.ride-requested.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "notification.business-events.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": {
+          "ack": 2,
+          "ack_details": {
+            "rate": 0.0
+          },
+          "deliver": 2,
+          "deliver_details": {
+            "rate": 0.0
+          },
+          "deliver_get": 2,
+          "deliver_get_details": {
+            "rate": 0.0
+          },
+          "deliver_no_ack": 0,
+          "deliver_no_ack_details": {
+            "rate": 0.0
+          },
+          "get": 0,
+          "get_details": {
+            "rate": 0.0
+          },
+          "get_empty": 0,
+          "get_empty_details": {
+            "rate": 0.0
+          },
+          "get_no_ack": 0,
+          "get_no_ack_details": {
+            "rate": 0.0
+          },
+          "publish": 1,
+          "publish_details": {
+            "rate": 0.0
+          },
+          "redeliver": 0,
+          "redeliver_details": {
+            "rate": 0.0
+          }
+        }
+      },
+      {
+        "name": "notification.business-events.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "payment.commands.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": {
+          "ack": 1,
+          "ack_details": {
+            "rate": 0.0
+          },
+          "deliver": 1,
+          "deliver_details": {
+            "rate": 0.0
+          },
+          "deliver_get": 1,
+          "deliver_get_details": {
+            "rate": 0.0
+          },
+          "deliver_no_ack": 0,
+          "deliver_no_ack_details": {
+            "rate": 0.0
+          },
+          "get": 0,
+          "get_details": {
+            "rate": 0.0
+          },
+          "get_empty": 0,
+          "get_empty_details": {
+            "rate": 0.0
+          },
+          "get_no_ack": 0,
+          "get_no_ack_details": {
+            "rate": 0.0
+          },
+          "publish": 1,
+          "publish_details": {
+            "rate": 0.0
+          },
+          "redeliver": 0,
+          "redeliver_details": {
+            "rate": 0.0
+          }
+        }
+      },
+      {
+        "name": "payment.commands.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "ride.quarantine.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.driver-state.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.driver-state.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.matching-outcome.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.matching-outcome.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      },
+      {
+        "name": "trip.payment-outcome.q",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 1,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": {
+          "ack": 2,
+          "ack_details": {
+            "rate": 0.0
+          },
+          "deliver": 2,
+          "deliver_details": {
+            "rate": 0.0
+          },
+          "deliver_get": 2,
+          "deliver_get_details": {
+            "rate": 0.0
+          },
+          "deliver_no_ack": 0,
+          "deliver_no_ack_details": {
+            "rate": 0.0
+          },
+          "get": 0,
+          "get_details": {
+            "rate": 0.0
+          },
+          "get_empty": 0,
+          "get_empty_details": {
+            "rate": 0.0
+          },
+          "get_no_ack": 0,
+          "get_no_ack_details": {
+            "rate": 0.0
+          },
+          "publish": 1,
+          "publish_details": {
+            "rate": 0.0
+          },
+          "redeliver": 0,
+          "redeliver_details": {
+            "rate": 0.0
+          }
+        }
+      },
+      {
+        "name": "trip.payment-outcome.q.dead",
+        "type": "quorum",
+        "leader": "rabbit@rabbitmq-3",
+        "members": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "online": [
+          "rabbit@rabbitmq",
+          "rabbit@rabbitmq-2",
+          "rabbit@rabbitmq-3"
+        ],
+        "consumers": 0,
+        "messages_ready": 0,
+        "messages_unacknowledged": 0,
+        "message_stats": null
+      }
+    ]
+  },
+  "finishedAtUtc": "2026-11-02T16:24:25.981683+00:00"
+}
