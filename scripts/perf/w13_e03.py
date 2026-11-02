@@ -218,6 +218,18 @@ def _wait_drain(*, timeout: float = 120) -> tuple[bool, float]:
     return False, time.monotonic() - started
 
 
+def _wait_acknowledgements(expected: int, *, timeout: float) -> tuple[bool, dict[str, Any], float]:
+    started = time.monotonic()
+    queue = {}
+    while time.monotonic() - started < timeout:
+        queue = _queue_snapshot()
+        stats = queue.get("message_stats") or {}
+        if stats.get("ack") == expected and stats.get("deliver_get") == expected and queue.get("messages") == 0:
+            return True, queue, time.monotonic() - started
+        time.sleep(1)
+    return False, queue, time.monotonic() - started
+
+
 def _round_rows(started_at: str) -> list[dict[str, Any]]:
     return lib.psql_json_rows(
         "matching_db",
@@ -240,6 +252,11 @@ def _matching_state() -> dict[str, Any]:
             "matching_db",
             "SELECT count(*)::text FROM (SELECT input_message_id, count(*) "
             "FROM matching_rounds GROUP BY input_message_id HAVING count(*) > 1) duplicates;",
+        ),
+        "undispatchableRounds": lib.psql_scalar(
+            "matching_db",
+            "SELECT count(*) FROM matching_rounds WHERE auto_execute IS NOT TRUE "
+            "OR pickup_longitude IS NULL OR pickup_latitude IS NULL OR input_message_id IS NULL;",
         ),
         "roundStatusCounts": lib.psql_json_rows(
             "matching_db",
@@ -371,6 +388,14 @@ def _run_configuration_inner(
         duplicate_every=0, start_sequence=0,
     )
     warmup_drain, warmup_drain_seconds = _wait_drain(timeout=args.drain_timeout)
+    warmup_acks, _, warmup_ack_seconds = _wait_acknowledgements(len(warmup_deliveries), timeout=args.drain_timeout)
+    if not warmup_acks:
+        raise lib.HarnessError("Broker did not confirm exact warmup delivery/ACK totals")
+    telemetry_warmup_started = time.perf_counter()
+    warmup_metrics_ok, warmup_metrics_file = w13_metrics.capture(run_dir, "E03", name="warmup-prometheus.json")
+    telemetry_warmup_seconds = time.perf_counter() - telemetry_warmup_started
+    if not warmup_metrics_ok:
+        raise lib.HarnessError("Warmup did not establish the declared Prometheus series")
 
     poll_samples: list[dict[str, Any]] = []
     stop_poll = __import__("threading").Event()
@@ -387,12 +412,14 @@ def _run_configuration_inner(
     )
     measurement_finished = time.perf_counter()
     drain_ok, drain_seconds = _wait_drain(timeout=args.drain_timeout)
+    exact_acks, queue_after, ack_observation_seconds = _wait_acknowledgements(
+        len(warmup_deliveries) + len(deliveries), timeout=args.drain_timeout)
+    measurement_end_iso = lib.iso()
     stop_poll.set()
     poll_thread.join(timeout=5)
     rows = _round_rows(measurement_started_iso)
     state = _matching_state()
     consumer_counts = _consumer_log_counts(containers, [record["tripId"] for record in unique])
-    queue_after = _queue_snapshot()
     environment_after = lib.capture_environment(include_observed=True)
 
     sent = {record["messageId"]: record["sentAtUtc"] for record in unique}
@@ -415,7 +442,7 @@ def _run_configuration_inner(
     redelivery = (max(redeliver_values) - min(redeliver_values)) if redeliver_values else 0
     per_replica_measured = [int(item["measuredConsumedLines"]) for item in consumer_counts]
     per_replica_nonzero = all(value > 0 for value in per_replica_measured) if replicas > 1 else True
-    distribution_total_matches = sum(per_replica_measured) == unique_count
+    distribution_total_matches = sum(per_replica_measured) == delivery_count
     schedule_lateness = [float(record.get("scheduleLatenessMs") or 0.0) for record in deliveries]
     assertions = {
         "replicaContainerCount": len(containers) == replicas,
@@ -426,7 +453,9 @@ def _run_configuration_inner(
         "roundsCreatedEqualsUnique": rounds_created == unique_count,
         "noDuplicateRounds": int(state.get("duplicateRounds") or 0) == 0,
         "noDuplicateInputIds": int(state.get("duplicateInputIds") or 0) == 0,
+        "durableIntakeWorkConserved": int(state["undispatchableRounds"]) == 0,
         "queueDrained": drain_ok,
+        "exactBrokerDeliveryAndAckTotals": exact_acks,
         "allReplicasConsumedWork": per_replica_nonzero,
         "measuredDistributionTotalMatches": distribution_total_matches,
         "zeroMissingLatencySamples": missing_latency == 0,
@@ -455,9 +484,16 @@ def _run_configuration_inner(
         "warmupMessages": len(warmup_unique),
         "warmupDurationSeconds": warmup_duration,
         "warmupDrainSeconds": warmup_drain_seconds,
+        "warmupAckObservationSeconds": warmup_ack_seconds,
+        "telemetryReadinessSeconds": telemetry_warmup_seconds,
         "roundsCreated": rounds_created,
         "achievedConsumeRatePerSecond": rounds_created / (duration + drain_seconds) if duration + drain_seconds > 0 else None,
         "consumeObservationSeconds": duration + drain_seconds,
+        "brokerAckObservationSeconds": duration + drain_seconds + ack_observation_seconds,
+        "brokerAckStatsWaitSeconds": ack_observation_seconds,
+        "measuredBrokerAcknowledgements": ((queue_after.get("message_stats") or {}).get("ack", 0) - len(warmup_deliveries)),
+        "measuredBrokerDeliveries": ((queue_after.get("message_stats") or {}).get("deliver_get", 0) - len(warmup_deliveries)),
+        "observedAcknowledgementRatePerSecond": delivery_count / (duration + drain_seconds + ack_observation_seconds),
         "p50IntakeLatencyMs": lib.percentile_nearest_rank(latencies, 50),
         "p95IntakeLatencyMs": lib.percentile_nearest_rank(latencies, 95),
         "latencySampleCount": len(latencies),
@@ -482,6 +518,14 @@ def _run_configuration_inner(
         smoke=not args.report_grade, g4=g4, seed=args.seed + repeat + replicas,
     )
     manifest["environment"] = environment
+    audit_checks = {key: assertions[key] for key in (
+        "roundsCreatedEqualsUnique", "noDuplicateRounds", "noDuplicateInputIds", "durableIntakeWorkConserved", "duplicateIntakeSuppressed")}
+    if args.worker_mode == "disabled":
+        audit_checks["workerIsolation"] = assertions["workerIsolation"]
+    manifest["auditor"] = {
+        "status": "PASS" if all(audit_checks.values()) else "FAIL", "checks": audit_checks,
+        "scope": "Independent read-only Matching authority for durable intake/dedup; pending work is retained with production execution metadata, not claimed as completed rides",
+    }
     manifest["workload"] = {
         "model": "fixed-rate RabbitMQ publisher -> real Matching RideRequestedV1 intake consumer",
         "configured": {
@@ -500,7 +544,7 @@ def _run_configuration_inner(
             "cooldownSeconds": args.cooldown_seconds,
         },
         "achieved": achieved,
-        "warmupSeconds": warmup_duration + warmup_drain_seconds,
+        "warmupSeconds": warmup_duration + warmup_drain_seconds + warmup_ack_seconds + telemetry_warmup_seconds,
         "measurementSeconds": measurement_finished - measurement_started,
         "cooldownSeconds": drain_seconds,
         "datasetSeed": args.seed + repeat + replicas,
@@ -523,14 +567,24 @@ def _run_configuration_inner(
         "consumerCounts": consumer_counts,
         "queueAfter": queue_after,
     })
-    metrics_ok, metric_file = w13_metrics.capture(run_dir, "E03", start=measurement_started_iso)
+    metrics_ok, metric_file = w13_metrics.capture(run_dir, "E03", start=measurement_started_iso, end=measurement_end_iso)
     assertions["declaredMetricsPresentAndFinite"] = metrics_ok
+    target_series = (((lib.read_json(metric_file).get("queries") or {}).get("service_targets") or {}).get("result") or []
+    observed_instances = {item.get("metric", {}).get("exported_instance") for item in target_series
+                          if item.get("metric", {}).get("exported_job") == "matching-service"}
+    expected_instances = {container.get("hostname") for container in containers}
+    assertions["uniqueMatchingTelemetryInstances"] = (
+        len(expected_instances) == replicas and None not in expected_instances
+        and observed_instances == expected_instances)
+    achieved["observedTelemetryInstances"] = sorted(instance for instance in observed_instances if instance)
+    if not assertions["uniqueMatchingTelemetryInstances"]:
+        status, reason = "FAIL", "Matching telemetry identities do not match actual replicas"
     if not metrics_ok:
         status, reason = "FAIL", "declared metrics missing or invalid"
     lib.finalize_manifest(
         manifest, run_dir=run_dir, status=status, reason=reason,
         samples=deliveries, latency_values=latencies, assertions=assertions,
-        raw_files=[raw_samples, poll_file, commands_file, metric_file],
+        raw_files=[raw_samples, poll_file, commands_file, metric_file, warmup_metrics_file],
         final_state_files=[final_state_path],
         commands=commands,
         extra_workload={},
@@ -640,7 +694,7 @@ def build_parser() -> argparse.ArgumentParser:
                         default=list(DEFAULT_REPLICAS))
     parser.add_argument("--rate", type=float, default=20.0)
     parser.add_argument("--duration", default="20s")
-    parser.add_argument("--warmup-seconds", type=float, default=3.0)
+    parser.add_argument("--warmup-seconds", type=float, default=30.0)
     parser.add_argument("--cooldown-seconds", type=float, default=3.0)
     parser.add_argument("--drain-timeout", type=float, default=120.0)
     parser.add_argument("--duplicate-every", type=int, default=0)

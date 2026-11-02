@@ -30,6 +30,17 @@ def materialize(name: str, target: Path, **manifest_overrides) -> tuple[dict, Pa
     return manifest, run_dir
 
 
+def synthetic_resource_shape(manifest: dict) -> None:
+    # Parser fixture only, explicitly synthetic and never acceptance evidence.
+    names = ("postgres", "rabbitmq", "identity", "driver", "prometheus", "otel-collector", "jaeger")
+    manifest["environment"]["configured"]["composeServices"] = {
+        name: {"cpus": 1, "memLimitBytes": "1024"} for name in names}
+    manifest["environment"]["observed"]["containers"] = [
+        {"service": name, "state": "running", "inspect": {
+            "image": "synthetic-never-executed", "nanoCpus": 1_000_000_000, "memoryBytes": 1024}}
+        for name in names]
+
+
 class PercentileTests(unittest.TestCase):
     def test_nearest_rank(self) -> None:
         values = [float(value) for value in range(1, 11)]
@@ -49,6 +60,13 @@ class PercentileTests(unittest.TestCase):
 
 
 class ManifestValidationTests(unittest.TestCase):
+    def test_observed_resource_drift_invalidates_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, run_dir = materialize("report-gated", Path(tmp))
+            synthetic_resource_shape(manifest)
+            manifest["environment"]["observed"]["containers"][0]["inspect"]["nanoCpus"] = 2_000_000_000
+            self.assertIn("observed CPU limit differs", "\n".join(lib.validate_manifest(manifest, run_dir)))
+
     def test_nonfinite_measurement_cannot_be_accepted(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             manifest, run_dir = materialize("e01-smoke", Path(tmp))
@@ -121,6 +139,7 @@ class RedactionAndGateTests(unittest.TestCase):
                     "sourceCommit": lib.run(["git", "rev-parse", "HEAD"], check=True).stdout.strip()})
                 self.assertTrue(lib.g4_readiness(certificate)["green"])
                 source.write_text("changed authority", encoding="utf-8")
+                self.assertFalse(lib.g4_readiness(certificate)["green"])
                 lib.run(["git", "add", "src"], check=True)
                 lib.run(commit, check=True)
                 stale = lib.g4_readiness(certificate)
@@ -183,6 +202,7 @@ class AnalyzerTests(unittest.TestCase):
             # A synthetic green G4 is used only to exercise the repeat/coverage
             # gate; the synthetic marker still prevents acceptance.
             manifest["g4"] = {"green": True, "verdict": "GREEN", "evidencePath": "synthetic", "blockers": []}
+            synthetic_resource_shape(manifest)
             (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             manifests, errors = analyze._load("E01", Path(tmp) / "runs")
             result = analyze.analyze_e01(manifests, errors, 3)
