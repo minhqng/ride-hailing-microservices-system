@@ -11,8 +11,19 @@ root = Path(__file__).resolve().parents[2]
 target = root / ".env"
 text = target.read_text(encoding="utf-8") if target.exists() else (root / ".env.example").read_text(encoding="utf-8")
 existing = dict(line.split("=", 1) for line in text.splitlines() if "=" in line and not line.startswith("#"))
+def initialize_cookie(value: str) -> str:
+    lines = value.splitlines()
+    cookie = next((line.split("=", 1)[1] for line in lines if line.startswith("RABBITMQ_ERLANG_COOKIE=")), "")
+    if not cookie or cookie == "ride_local_cookie_change_me":
+        lines = [line for line in lines if not line.startswith("RABBITMQ_ERLANG_COOKIE=")]
+        lines.append("RABBITMQ_ERLANG_COOKIE=" + secrets.token_hex(32))
+    return "\n".join(lines) + "\n"
+
 names = ["AUTH_PUBLIC_KEY_BASE64", "AUTH_PRIVATE_KEY_BASE64", "AUTH_MATCHING_SECRET", "AUTH_TRIP_SECRET"]
 if all(existing.get(name) for name in names):
+    target.write_text(initialize_cookie(text), encoding="utf-8")
+    if os.name != "nt":
+        target.chmod(0o600)
     print("Local authentication credentials already initialized.")
     raise SystemExit(0)
 if any(existing.get(name) for name in names):
@@ -32,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix="ride-auth-") as directory:
     values = dict(zip(names, [base64.b64encode(public.read_bytes()).decode(), base64.b64encode(private.read_bytes()).decode(), secrets.token_urlsafe(48), secrets.token_urlsafe(48)]))
 lines = [line for line in text.splitlines() if line.split("=", 1)[0] not in names]
 lines.extend(name + "=" + values[name] for name in names)
-target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+target.write_text(initialize_cookie("\n".join(lines)), encoding="utf-8")
 if os.name != "nt":
     target.chmod(0o600)
 print("Initialized disposable local authentication credentials in ignored .env.")

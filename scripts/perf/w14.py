@@ -192,12 +192,16 @@ def run_one(args, repeat: int, group: str) -> Path:
         if lib.PROJECT != "ride-hailing-w14":
             raise lib.HarnessError("refusing destructive reset outside isolated W14 project")
         lib.compose_down(volumes=True)
-        lib.compose_up(["postgres", "redis", "rabbitmq", "driver", "matching"], scale=1)
+        lib.compose_up(["postgres", "redis", "rabbitmq", "identity", "driver", "matching"], scale=1)
+        import w13_auth
+        w13_auth.reset()
+        owner_id, owner_token = w13_auth.account("Driver")
         wait_for(lambda: queue()["consumers"] == 1, "healthy intake consumer")
         driver_id = lib.seeded_uuid(args.seed + repeat, "e04-offline-driver")
         status, _, _, _ = lib.http_request("POST",
             f"http://127.0.0.1:{os.environ['W13_DRIVER_PORT']}/drivers",
-            body={"driverId": driver_id, "userId": lib.seeded_uuid(args.seed + repeat, "e04-owner")})
+            body={"driverId": driver_id, "userId": owner_id},
+            headers={"Authorization": "Bearer " + owner_token})
         if status != 201:
             raise lib.HarnessError(f"OFFLINE Driver seed failed: HTTP {status}")
         manifest["environment"] = lib.capture_environment()
