@@ -91,8 +91,9 @@ try {
         $drainDeadline = (Get-Date).AddSeconds($DrainTimeoutSeconds)
         do {
             $drained = Get-PaymentQueueState -ManagementUrl $PrimaryManagementUrl -Headers $headers
-            $connections = @(Invoke-RabbitManagementApi -ManagementUrl $PrimaryManagementUrl -Headers $headers `
-                -Path '/api/connections' | Where-Object {
+            $observedConnections = Invoke-RabbitManagementApi -ManagementUrl $PrimaryManagementUrl -Headers $headers `
+                -Path '/api/connections'
+            $connections = @($observedConnections | Where-Object {
                     $_.client_properties.connection_name -eq 'payment-service' -and
                     [long]$_.connected_at -ge $recoveryStart
                 })
