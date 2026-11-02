@@ -1,0 +1,115 @@
+{
+  "week": "W12",
+  "baseMainSha": "e8efc1e90f34cd6a82b95e0e031c98744d02c111",
+  "baseMainTree": "ce3c74a318015ee269a6e52dabae95a5d92b8549",
+  "verifiedCodeCommit": "7be3441b48a0621acc97aad102fd242978a097bb",
+  "verifiedCodeTree": "5ec550726fdd878a5c9c72cb947cd32dfb74c10f",
+  "ciCheckoutSha": "89aef8af01f3dceb67ed1c6c4e4f41536363f5d7",
+  "ciCheckoutTree": "5ec550726fdd878a5c9c72cb947cd32dfb74c10f",
+  "ciRunUrl": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41432807889",
+  "prUrl": "https://github.com/minhqng/ride-hailing-microservices-system/pull/58",
+  "requiredJobs": [
+    "hygiene",
+    "build-test",
+    "compose-config",
+    "platform-smoke"
+  ],
+  "verifiedCodeJobs": "SUCCESS",
+  "regression": {
+    "total": 1207,
+    "executed": 1206,
+    "passed": 1206,
+    "failed": 0,
+    "notExecuted": 0,
+    "skipped": 1
+  },
+  "identityGate": {
+    "total": 7,
+    "executed": 7,
+    "passed": 7,
+    "failed": 0,
+    "notExecuted": 0,
+    "skipped": 0
+  },
+  "runtimeSecurityChecks": 55,
+  "authorityAuditor": {
+    "AUD-01": "PASS",
+    "AUD-02": "PASS",
+    "AUD-03": "PASS",
+    "AUD-04": "PASS",
+    "AUD-05": "PASS",
+    "AUD-06": "PASS",
+    "AUD-07": "PASS",
+    "AUD-08": "PASS"
+  },
+  "providerVersions": {
+    "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+    "rabbitmq": "Asking node rabbit@cddfb8785cb4 for its RabbitMQ version...\n4.3.6",
+    "redis": "Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=9afb359f90603816"
+  },
+  "metrics": [
+    {
+      "name": "trip_created_trips_total",
+      "series": 1
+    },
+    {
+      "name": "saga_compensation_sagas_total",
+      "series": 1
+    },
+    {
+      "name": "driver_reserve_success_total",
+      "series": 1
+    },
+    {
+      "name": "matching_round_total",
+      "series": 1
+    },
+    {
+      "name": "outbox_publish_messages_total",
+      "series": 4
+    },
+    {
+      "name": "payment_operation_operations_total",
+      "series": 2
+    },
+    {
+      "name": "rabbitmq_detailed_queue_messages_ready",
+      "series": 19
+    }
+  ],
+  "sourceMapping": {
+    "A": {
+      "pr": 43,
+      "head": "132ecfd4ebc7f452af5e28f030bf66754e9b0df7",
+      "weeklyCommits": 4
+    },
+    "B": {
+      "pr": 45,
+      "head": "61d7328838befa0adbbc9974a7b5c1635cdecf2d",
+      "weeklyCommits": 18
+    },
+    "C": {
+      "pr": 51,
+      "head": "459352e1cec674ed5ce6c91444fe3ce5354f68ab",
+      "weeklyCommits": 1
+    }
+  },
+  "integratorCorrection": "7be3441b48a0621acc97aad102fd242978a097bb",
+  "humanGates": {
+    "status": "WAIVED",
+    "authority": "Explicit project lead instruction: i mean skip human review",
+    "performed": false
+  },
+  "artifacts": [
+    {
+      "id": 13136165348,
+      "sha256": "83aea2deba3cbc833aedb16afc09fa29f275e7e8513aef4f87e8828f52f70eb5"
+    },
+    {
+      "id": 13135471692,
+      "sha256": "dc6bdfaaf0ef9ebfc14f7b70e576d184ed6e3fb7d7f1b1b7eee77d51bd1fd546"
+    }
+  ],
+  "finalAcceptance": "PENDING: strengthened live terminal-decline scenario and final candidate tree must pass fresh CI; merge/post-merge verification recorded in PR #58 and campaign report",
+  "scopeLimit": "W12 G4 only; W13 report-grade performance and W14 HA/G5 not accepted here"
+}
