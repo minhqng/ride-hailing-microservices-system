@@ -17,6 +17,7 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
 using RideHailing.TripService.Integration.Messaging;
+using RideHailing.TripService.Domain.Sagas;
 
 namespace RideHailing.TripService.Integration.Observability;
 
@@ -38,7 +39,10 @@ public static class TripSagaBacklog
         await using var connection = await dataSource.OpenConnectionAsync(token);
         await using var command = new NpgsqlCommand(SagaActiveSql, connection);
         await using var reader = await command.ExecuteReaderAsync(token);
-        var counts = new Dictionary<string, long>(StringComparer.Ordinal);
+        // A successful empty aggregate proves zero backlog for each known step.
+        // No snapshot is published when opening or reading the database fails.
+        var counts = Enum.GetValues<RideSagaStep>().ToDictionary(
+            step => step.ToCanonicalName(), _ => 0L, StringComparer.Ordinal);
         while (await reader.ReadAsync(token))
             counts[reader.GetString(0)] = reader.GetInt64(1);
         return counts;
