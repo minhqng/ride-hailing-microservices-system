@@ -1,0 +1,556 @@
+{
+  "run": "W13-E03-20261102T143000Z-051d9012",
+  "capturedAt": "2026-11-02T14:31:05.308765+00:00",
+  "policy": "consumer count may vary; prefetch/DB pool/retry policy must remain fixed",
+  "requiredQueries": [
+    "consumer_delivery_rate",
+    "consumer_processing_p95_ms",
+    "consumer_redelivery_rate",
+    "dedup_rate",
+    "outbox_oldest_pending_age",
+    "outbox_pending",
+    "queue_ready",
+    "queue_unacked",
+    "redelivery_rate",
+    "service_targets"
+  ],
+  "range": null,
+  "queries": {
+    "service_targets": {
+      "query": "target_info",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {
+            "__name__": "target_info",
+            "deployment_environment": "Production",
+            "exported_instance": "08d9223c096a",
+            "exported_job": "matching-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "telemetry_sdk_language": "dotnet",
+            "telemetry_sdk_name": "opentelemetry",
+            "telemetry_sdk_version": "1.17.0"
+          },
+          "value": [
+            1793629865.325,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "target_info",
+            "deployment_environment": "Production",
+            "exported_instance": "58a6a80008e5",
+            "exported_job": "matching-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "telemetry_sdk_language": "dotnet",
+            "telemetry_sdk_name": "opentelemetry",
+            "telemetry_sdk_version": "1.17.0"
+          },
+          "value": [
+            1793629865.325,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "target_info",
+            "deployment_environment": "Production",
+            "exported_instance": "9d805a8a08c2",
+            "exported_job": "matching-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "telemetry_sdk_language": "dotnet",
+            "telemetry_sdk_name": "opentelemetry",
+            "telemetry_sdk_version": "1.17.0"
+          },
+          "value": [
+            1793629865.325,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "target_info",
+            "deployment_environment": "Production",
+            "exported_instance": "c5927b82eb7b",
+            "exported_job": "matching-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "telemetry_sdk_language": "dotnet",
+            "telemetry_sdk_name": "opentelemetry",
+            "telemetry_sdk_version": "1.17.0"
+          },
+          "value": [
+            1793629865.325,
+            "1"
+          ]
+        }
+      ]
+    },
+    "queue_ready": {
+      "query": "sum by (queue) (rabbitmq_detailed_queue_messages_ready)",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {
+            "queue": "matching.driver-projection.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "ride.quarantine.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.driver-state.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.matching-outcome.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.payment-outcome.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "payment.commands.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.ride-requested.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.payment-outcome.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "notification.business-events.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.ride-requested.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "driver.commands.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.commands.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.commands.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.driver-projection.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "payment.commands.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.driver-state.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "notification.business-events.q"
+          },
+          "value": [
+            1793629865.328,
+            "545"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "driver.commands.q.dead"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.matching-outcome.q"
+          },
+          "value": [
+            1793629865.328,
+            "0"
+          ]
+        }
+      ]
+    },
+    "queue_unacked": {
+      "query": "sum by (queue) (rabbitmq_detailed_queue_messages_unacked)",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {
+            "queue": "matching.driver-projection.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "ride.quarantine.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.driver-state.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.matching-outcome.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.payment-outcome.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "payment.commands.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.ride-requested.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.payment-outcome.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "notification.business-events.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.ride-requested.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "driver.commands.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.commands.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.commands.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "matching.driver-projection.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "payment.commands.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.driver-state.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "notification.business-events.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "driver.commands.q.dead"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        },
+        {
+          "metric": {
+            "queue": "trip.matching-outcome.q"
+          },
+          "value": [
+            1793629865.33,
+            "0"
+          ]
+        }
+      ]
+    },
+    "redelivery_rate": {
+      "query": "sum by (queue) (rate(rabbitmq_detailed_queue_messages_redelivered_total[1m]))",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {
+            "queue": "matching.ride-requested.q"
+          },
+          "value": [
+            1793629865.333,
+            "0"
+          ]
+        }
+      ]
+    },
+    "consumer_delivery_rate": {
+      "query": "sum(rate({__name__=~'consumer_delivery(_messages)?_total'}[1m]))",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1793629865.357,
+            "8.826333333333332"
+          ]
+        }
+      ]
+    },
+    "consumer_redelivery_rate": {
+      "query": "sum(rate({__name__=~'consumer_redelivery(_messages)?_total'}[1m]))",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1793629865.36,
+            "0"
+          ]
+        }
+      ]
+    },
+    "consumer_processing_p95_ms": {
+      "query": "histogram_quantile(0.95, sum by (le) (rate({__name__=~'consumer_processing_duration(_milliseconds|_ms)?_bucket'}[1m])))",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1793629865.362,
+            "9.88013698630137"
+          ]
+        }
+      ]
+    },
+    "dedup_rate": {
+      "query": "sum by (outcome) (rate({__name__=~'dedup_processed(_messages)?_total'}[1m]))",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {
+            "outcome": "applied"
+          },
+          "value": [
+            1793629865.365,
+            "8.829"
+          ]
+        }
+      ]
+    },
+    "outbox_pending": {
+      "query": "sum({__name__=~'outbox_pending(_messages)?'})",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1793629865.367,
+            "0"
+          ]
+        }
+      ]
+    },
+    "outbox_oldest_pending_age": {
+      "query": "max({__name__=~'outbox_oldest_pending_age(_seconds)?'})",
+      "required": true,
+      "empty": false,
+      "result": [
+        {
+          "metric": {},
+          "value": [
+            1793629865.387,
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "emptyQueries": [],
+  "invalidQueries": [],
+  "verdict": "PASS"
+}

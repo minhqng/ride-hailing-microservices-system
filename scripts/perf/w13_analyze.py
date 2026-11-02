@@ -433,8 +433,10 @@ def markdown(result: dict[str, Any]) -> str:
     lines = [
         f"# W13 analysis — {result['experiment']}",
         "",
-        f"Verdict: **{result['verdict']}**  ",
-        f"Acceptance: **{'YES' if result.get('acceptance') else 'NO'}**  ",
+        f"Verdict: **{result['verdict']}**",
+        "",
+        f"Acceptance: **{'YES' if result.get('acceptance') else 'NO'}**",
+        "",
         f"Runs: {result['runCount']} · reportGrade: {result.get('reportGrade')} · G4 green: {result.get('g4Green')}",
         "",
     ]
