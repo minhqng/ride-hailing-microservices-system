@@ -14,6 +14,8 @@
 #
 # It does not change service code or production behavior.
 name: ride-hailing-w13
+x-perf-telemetry: &perf-telemetry
+  OTEL_METRIC_EXPORT_INTERVAL: "5000"
 
 services:
   otel-collector:
@@ -50,11 +52,13 @@ services:
     mem_limit: ${W13_RABBIT_MEM:-1g}
 
   gateway:
+    environment: *perf-telemetry
     ports: !override ["127.0.0.1:${W13_GATEWAY_PORT:-18080}:8080"]
     cpus: ${W13_GATEWAY_CPUS:-1.0}
     mem_limit: ${W13_GATEWAY_MEM:-512m}
 
   identity:
+    environment: *perf-telemetry
     ports: !override ["127.0.0.1:${W13_IDENTITY_PORT:-18101}:8080"]
     cpus: ${W13_IDENTITY_CPUS:-0.5}
     mem_limit: ${W13_IDENTITY_MEM:-256m}
@@ -64,6 +68,7 @@ services:
     cpus: ${W13_DRIVER_CPUS:-2.0}
     mem_limit: ${W13_DRIVER_MEM:-1g}
     environment:
+      <<: *perf-telemetry
       ConnectionStrings__Postgres: "Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:-driver_dev_pw};Maximum Pool Size=${W13_DB_POOL:-20}"
 
   # No host port: E03 scales this service with `--scale matching=N`.
@@ -72,6 +77,7 @@ services:
     cpus: ${W13_MATCHING_CPUS:-2.0}
     mem_limit: ${W13_MATCHING_MEM:-1g}
     environment:
+      <<: *perf-telemetry
       ServiceInstanceId: !reset null
       ConnectionStrings__Postgres: "Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:-matching_dev_pw};Maximum Pool Size=${W13_DB_POOL:-20}"
       Matching__Worker__Enabled: "${W13_MATCHING_WORKER_ENABLED:-true}"
@@ -84,17 +90,20 @@ services:
     cpus: ${W13_TRIP_CPUS:-2.0}
     mem_limit: ${W13_TRIP_MEM:-1g}
     environment:
+      <<: *perf-telemetry
       # E02 targets the canonical POST /trips surface; the durable
       # RideRequested intent must be written in the same call.
       TripMessaging__Enabled: "true"
       ConnectionStrings__Postgres: "Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:-trip_dev_pw};Maximum Pool Size=${W13_DB_POOL:-20}"
 
   payment:
+    environment: *perf-telemetry
     ports: !override ["127.0.0.1:${W13_PAYMENT_PORT:-18105}:8080"]
     cpus: ${W13_PAYMENT_CPUS:-1.0}
     mem_limit: ${W13_PAYMENT_MEM:-512m}
 
   notification:
+    environment: *perf-telemetry
     ports: !override []
     cpus: ${W13_NOTIFICATION_CPUS:-1.0}
     mem_limit: ${W13_NOTIFICATION_MEM:-512m}
