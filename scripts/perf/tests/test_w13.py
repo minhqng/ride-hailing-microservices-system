@@ -61,7 +61,7 @@ class ProvenanceTests(unittest.TestCase):
             lib.write_json(path, evidence)
             import subprocess
             with patch.object(lib, "EVIDENCE_ROOT", root), patch.object(lib, "run",
-                    return_value=subprocess.CompletedProcess([], 0, "a" * 40, "")):
+                    side_effect=lambda command, **kwargs: subprocess.CompletedProcess(command, 0, "a" * 40 if command[1] == "rev-parse" else "", "")):
                 self.assertTrue(lib.g4_readiness(path)["green"])
                 evidence["checks"]["securityBaseline"] = "FAIL"
                 lib.write_json(path, evidence)

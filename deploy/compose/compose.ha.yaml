@@ -5,7 +5,7 @@ services:
     hostname: rabbitmq
     environment:
       RABBITMQ_NODENAME: rabbit@rabbitmq
-      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-ride_local_cookie_change_me}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
 
   rabbitmq-2:
     image: rabbitmq:4.3.6-management
@@ -13,7 +13,7 @@ services:
     hostname: rabbitmq-2
     environment:
       RABBITMQ_NODENAME: rabbit@rabbitmq-2
-      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-ride_local_cookie_change_me}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
     command: ["sh", "/etc/rabbitmq/join-cluster.sh", "rabbit@rabbitmq"]
@@ -40,7 +40,7 @@ services:
     hostname: rabbitmq-3
     environment:
       RABBITMQ_NODENAME: rabbit@rabbitmq-3
-      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:-ride_local_cookie_change_me}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
     command: ["sh", "/etc/rabbitmq/join-cluster.sh", "rabbit@rabbitmq"]
