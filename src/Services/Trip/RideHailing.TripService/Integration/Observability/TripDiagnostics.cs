@@ -70,14 +70,18 @@ public static class TripDiagnostics
     // Durable-state snapshot refreshed by TripMetricsObserver; an ObservableGauge
     // re-reads this on scrape, so after a process restart the gauge re-derives
     // from the database instead of a lost in-memory count.
-    private static volatile IReadOnlyDictionary<string, long> sagaActiveByStep =
-        new Dictionary<string, long>();
+    private static volatile TripSagaBacklogSnapshot sagaBacklog =
+        new(new Dictionary<string, long>(), null);
 
     private static readonly ObservableGauge<long> SagaActive = Meter.CreateObservableGauge<long>(
         "saga.active",
         () => SnapshotSagaActive(),
         "sagas",
         "Non-terminal sagas (ACTIVE, COMPENSATING, REQUIRES_REVIEW) per current step, from durable rows.");
+
+    private static readonly ObservableGauge<double> SagaOldestPendingAge = Meter.CreateObservableGauge<double>(
+        "saga.oldest_pending.age", () => SnapshotSagaAge(), "s",
+        "Age since creation of the oldest non-terminal durable saga; absent before a successful database observation.");
 
     /// <summary>Bounded domain-rejection reasons used as the only metric dimension.</summary>
     public static class RejectionReasons
@@ -95,7 +99,7 @@ public static class TripDiagnostics
 
     // Static constructors do not run until the type is touched; touch the
     // gauge so it exists even if no counter fires first.
-    static TripDiagnostics() => _ = SagaActive;
+    static TripDiagnostics() { _ = SagaActive; _ = SagaOldestPendingAge; }
 
     public static void RecordTripCreated() => TripCreated.Add(1);
 
@@ -115,11 +119,20 @@ public static class TripDiagnostics
     /// inventing a zero.
     /// </summary>
     public static void ObserveSagaActive(IReadOnlyDictionary<string, long> countsByStep) =>
-        sagaActiveByStep = new Dictionary<string, long>(countsByStep, StringComparer.Ordinal);
+        sagaBacklog = new(new Dictionary<string, long>(countsByStep, StringComparer.Ordinal), null);
+
+    public static void ObserveSagaBacklog(TripSagaBacklogSnapshot snapshot) =>
+        sagaBacklog = new(new Dictionary<string, long>(snapshot.CountsByStep, StringComparer.Ordinal), snapshot.OldestAgeSeconds);
 
     private static IEnumerable<Measurement<long>> SnapshotSagaActive()
     {
-        foreach (var (step, count) in sagaActiveByStep)
+        foreach (var (step, count) in sagaBacklog.CountsByStep)
             yield return new Measurement<long>(count, new TagList { { "step", step } });
+    }
+
+    private static IEnumerable<Measurement<double>> SnapshotSagaAge()
+    {
+        if (sagaBacklog.OldestAgeSeconds is { } seconds)
+            yield return new Measurement<double>(seconds);
     }
 }

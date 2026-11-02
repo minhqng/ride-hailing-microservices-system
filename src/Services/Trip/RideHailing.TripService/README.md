@@ -199,6 +199,10 @@
   `outbox.oldest_pending.age`, `outbox.failed_visible`) stay C-owned shared
   instruments refreshed by the shared relay from durable rows; Trip adds no
   duplicate measurement.
+  The same successful query supplies `saga.oldest_pending.age` in seconds since
+  the oldest non-terminal Saga was created. A successful empty query emits zero
+  backlog and age; unavailable observations retain the last snapshot and never
+  invent a zero. Counts and age have no business-identity labels.
 - Cardinality contract: only bounded vocabularies are dimensions
   (`reason` from a fixed rejection-class set, `step` from the six canonical
   saga steps). tripId/sagaId/reservationId/operationKey/messageId are span

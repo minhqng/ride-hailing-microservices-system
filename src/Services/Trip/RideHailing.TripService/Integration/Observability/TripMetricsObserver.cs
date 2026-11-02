@@ -21,19 +21,27 @@ using RideHailing.TripService.Domain.Sagas;
 
 namespace RideHailing.TripService.Integration.Observability;
 
+public sealed record TripSagaBacklogSnapshot(
+    IReadOnlyDictionary<string, long> CountsByStep, double? OldestAgeSeconds);
+
 /// <summary>Reads the durable saga-backlog aggregate behind saga.active.</summary>
 public static class TripSagaBacklog
 {
     // One indexed aggregate; non-terminal statuses only, grouped by the
     // bounded canonical step vocabulary.
     private const string SagaActiveSql = """
-        SELECT current_step, COUNT(*)::bigint
+        SELECT current_step, COUNT(*)::bigint,
+               GREATEST(0, EXTRACT(EPOCH FROM (now() - MIN(created_at))))::double precision
         FROM ride_sagas
         WHERE status IN ('ACTIVE', 'COMPENSATING', 'REQUIRES_REVIEW')
         GROUP BY current_step
         """;
 
     public static async Task<IReadOnlyDictionary<string, long>> QueryAsync(
+        NpgsqlDataSource dataSource, CancellationToken token = default) =>
+        (await QuerySnapshotAsync(dataSource, token)).CountsByStep;
+
+    public static async Task<TripSagaBacklogSnapshot> QuerySnapshotAsync(
         NpgsqlDataSource dataSource, CancellationToken token = default)
     {
         await using var connection = await dataSource.OpenConnectionAsync(token);
@@ -43,9 +51,13 @@ public static class TripSagaBacklog
         // No snapshot is published when opening or reading the database fails.
         var counts = Enum.GetValues<RideSagaStep>().ToDictionary(
             step => step.ToCanonicalName(), _ => 0L, StringComparer.Ordinal);
+        var oldestAge = 0d;
         while (await reader.ReadAsync(token))
+        {
             counts[reader.GetString(0)] = reader.GetInt64(1);
-        return counts;
+            oldestAge = Math.Max(oldestAge, reader.GetDouble(2));
+        }
+        return new TripSagaBacklogSnapshot(counts, oldestAge);
     }
 }
 
@@ -85,7 +97,7 @@ public sealed class TripMetricsObserver(
                 // configuration surfaces as NotReady instead of a startup
                 // crash (same lifetime contract as the Outbox relay worker).
                 dataSource ??= services.GetRequiredService<NpgsqlDataSource>();
-                TripDiagnostics.ObserveSagaActive(await TripSagaBacklog.QueryAsync(dataSource, stoppingToken));
+                TripDiagnostics.ObserveSagaBacklog(await TripSagaBacklog.QuerySnapshotAsync(dataSource, stoppingToken));
             }
             catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException or ArgumentException
                 or OperationCanceledException)
