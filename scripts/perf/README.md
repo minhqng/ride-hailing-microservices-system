@@ -51,6 +51,11 @@ configuration. Application metric export is fixed at five seconds. E02/E03
 preserve actual Prometheus range samples for the measured interval; E01 retains
 an authoritative post-contention Outbox snapshot. Matching's existing intake
 records dedup only after database commit, and shared ACK metrics only after ACK.
+E02 warms ten concurrent requests from the separate preflight Rider every three
+seconds for 30 seconds; E03 warms its broker intake for 30 seconds at the fixed
+offered rate. Both wait for the declared finite metric series
+(bounded at 75 seconds) before measurement so Prometheus rate windows have a
+real baseline. Measured range endpoints exclude later evidence collection.
 
 `reset` destroys only this compose project's volumes:
 
@@ -153,9 +158,11 @@ issuance latency is excluded from API measurements.
 - The autonomous Matching worker is disabled in E03 by default (recorded in
   the manifest) so consumer count is the only scaled capacity variable.
   `--worker-mode enabled` is a separate, documented confounded variant.
-- Every run also records an authoritative final-state artifact. Report-grade
-  campaigns must rerun the B-owned invariant auditor (`w13.py audit`) and
-  record `auditor.status = PASS` before analysis can accept the campaign.
+- Every run records a separate read-only owning-database oracle and its actual
+  `auditor.status`: E01 Driver contention/cleanup, E02 cross-owner no-fleet
+  closure, E03 durable intake/dedup/work conservation. Pending E03 work is not
+  claimed as completed rides. Current-source G4 and the B-owned auditor fixture
+  suite (`w13.py audit`) separately prove the exercised business/failure paths.
 
 ## Team acceptance dependencies
 

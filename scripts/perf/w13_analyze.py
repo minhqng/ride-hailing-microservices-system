@@ -134,7 +134,7 @@ def _acceptance_gate(result: dict[str, Any], manifests: list[dict[str, Any]], mi
         if len(result["environmentFingerprints"]) != 1:
             reasons.append("report-grade runs did not share one configured environment fingerprint")
         if not result["auditor"]["allPass"]:
-            reasons.append("the authoritative B-owned invariant auditor did not PASS for every run")
+            reasons.append("the independent scoped authority auditor did not PASS for every run")
     if extra_reasons:
         reasons.extend(extra_reasons)
     statuses = [(manifest.get("result") or {}).get("status") for manifest in manifests]
@@ -393,7 +393,7 @@ def analyze_e03(manifests: list[dict[str, Any]], errors: list[str], min_repeats:
                 if (item.get("missingLatencySamples") or 0) != 0:
                     reasons.append(f"replicas={replicas}: measured latency samples are missing")
                 measured = item.get("perReplicaMeasuredConsumed") or []
-                if sum(int(value or 0) for value in measured) != int(item.get("uniqueMessages") or 0):
+                if sum(int(value or 0) for value in measured) != int(item.get("deliveries") or 0):
                     reasons.append(f"replicas={replicas}: per-replica measured work does not sum to unique messages")
             if any(str(mode) != "disabled" for mode in group["workerMode"]):
                 reasons.append(f"replicas={replicas}: worker-enabled mode is not an isolated consumer-scaling configuration")
