@@ -24,16 +24,20 @@ re-evaluates the live gate instead of trusting manifest booleans, and ignores
 attempts to lower the canonical repeat/rate floors. A smoke run may execute the
 harness, but its analysis verdict is never `ACCEPTED`.
 
-Current state (2026-10-30): **G4 RED** — `SEC-AUTH-01..04` are open, the
-shared Identity/Gateway authentication is a skeleton, A/C acceptance is
-unmerged, and the team-level auditor is not green. E02 is therefore blocked at
-the authenticated-API preflight before any load is generated.
+The original member certificate records the historical G4 RED result. TEAM W12
+subsequently integrated real Identity/Gateway/service authentication and passed
+G4 on main `421c059`. W13 changes production source, so report-grade execution
+still requires a new certificate backed by current-source checks. Select that
+certificate with `W13_G4_EVIDENCE`; preserve the historical certificate.
 
 ## Isolation and reset
 
 All commands use:
 
 ```bash
+# Generate disposable ignored credentials before starting the stack
+python scripts/security/init-local-auth.py
+
 docker compose -f compose.yaml -f scripts/perf/compose.w13.yaml ...
 ```
 
@@ -61,7 +65,7 @@ python scripts/perf/w13.py g4
 # E01 harness smoke (functional only)
 python scripts/perf/w13.py e01 --mode smoke --n 1,2,10
 
-# E02 readiness boundary (blocked while shared auth is absent)
+# E02 with ten real disposable Rider accounts plus a separate preflight Rider
 python scripts/perf/w13.py e02 --mode smoke
 # Optional: point at the trip host and provide a token file to test the boundary
 python scripts/perf/w13.py e02 --preflight-base-url http://127.0.0.1:18103 \
@@ -100,9 +104,12 @@ Every run manifest records, separately:
 - G4 gate outcome and blockers;
 - workload, warm-up, measurement, cooldown, dataset seed.
 
-Secrets are never recorded: password/token/secret/PASS environment keys and
-connection-string password values are redacted, and E02 token files are
-written into a gitignored run path before being mounted into k6.
+Password/token/secret/private-key/PASS environment keys and connection-string
+passwords are redacted. E01 registers real Driver owners and obtains scoped
+Matching/Trip service grants outside measurement. E02 registers a fresh Rider
+cohort after every reset, with a separate preflight Rider. k6 token files live
+under ignored `plans/.w13-credentials/`, outside artifacts, and are removed after
+the k6 process exits. Token issuance latency is excluded from API measurements.
 
 ## Outcome and latency discipline
 
@@ -123,6 +130,13 @@ written into a gitignored run path before being mounted into k6.
   work distribution by matching measured trip identities in each replica's
   consumption log. Starting containers is not proof, and warm-up messages are
   excluded from the distribution count.
+- Matching replicas use their container hostname as the unique telemetry
+  instance identity. E03 intake latency rejects negative/non-finite samples;
+  its observed consumption rate includes the measured publish and drain time.
+- `scripts/evidence/performance-snapshot.py` requires every declared series to
+  exist and be finite. The default declares all queries; `--queries` records an
+  explicit experiment scope. Missing idle counters are an incomplete snapshot,
+  never fabricated zero-valued observations.
 - The autonomous Matching worker is disabled in E03 by default (recorded in
   the manifest) so consumer count is the only scaled capacity variable.
   `--worker-mode enabled` is a separate, documented confounded variant.
@@ -130,13 +144,13 @@ written into a gitignored run path before being mounted into k6.
   campaigns must rerun the B-owned invariant auditor (`w13.py audit`) and
   record `auditor.status = PASS` before analysis can accept the campaign.
 
-## Dependencies that remain with A/C
+## Team acceptance dependencies
 
-- A: authenticated Rider principal, Gateway routing, Trip/Saga acceptance and
-  Trip-side metrics under load.
-- C: token issuance/validation, Gateway network boundary, RabbitMQ replica
-  management and shared broker metrics, Payment/platform acceptance.
-- Lead: G4 approval, peer reruns, CI triggering for the stacked base.
+- Current-source Trip/Saga, Driver/Matching, Payment/platform and security G4
+  verification, independent authoritative audit and required metrics under load.
+- Repeated report-grade measurements, current-tree CI and post-merge main CI.
+- Human reviews/reruns are waived by the project lead for this campaign. This
+  waiver does not represent a performed review or change technical gates.
 
 W14 (`E04` backlog recovery, `REL-16` quorum node loss) is explicitly out of
 scope here.

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import time
 import urllib.parse
@@ -26,6 +27,7 @@ from pathlib import Path
 from typing import Any
 
 import w13lib as lib
+import w13_metrics
 
 DEFAULT_REPLICAS = [1, 2, 4]
 QUEUE = "matching.ride-requested.q"
@@ -428,6 +430,7 @@ def _run_configuration_inner(
         "allReplicasConsumedWork": per_replica_nonzero,
         "measuredDistributionTotalMatches": distribution_total_matches,
         "zeroMissingLatencySamples": missing_latency == 0,
+        "validLatencySamples": len(latencies) == unique_count and all(math.isfinite(value) and value >= 0 for value in latencies),
         "duplicateIntakeSuppressed": duplicate_deliveries == 0 or rounds_created == unique_count,
     }
     if args.worker_mode == "disabled":
@@ -453,7 +456,8 @@ def _run_configuration_inner(
         "warmupDurationSeconds": warmup_duration,
         "warmupDrainSeconds": warmup_drain_seconds,
         "roundsCreated": rounds_created,
-        "achievedConsumeRatePerSecond": rounds_created / duration if duration > 0 else None,
+        "achievedConsumeRatePerSecond": rounds_created / (duration + drain_seconds) if duration + drain_seconds > 0 else None,
+        "consumeObservationSeconds": duration + drain_seconds,
         "p50IntakeLatencyMs": lib.percentile_nearest_rank(latencies, 50),
         "p95IntakeLatencyMs": lib.percentile_nearest_rank(latencies, 95),
         "latencySampleCount": len(latencies),
@@ -519,10 +523,14 @@ def _run_configuration_inner(
         "consumerCounts": consumer_counts,
         "queueAfter": queue_after,
     })
+    metrics_ok, metric_file = w13_metrics.capture(run_dir, "E03", start=measurement_started_iso)
+    assertions["declaredMetricsPresentAndFinite"] = metrics_ok
+    if not metrics_ok:
+        status, reason = "FAIL", "declared metrics missing or invalid"
     lib.finalize_manifest(
         manifest, run_dir=run_dir, status=status, reason=reason,
         samples=deliveries, latency_values=latencies, assertions=assertions,
-        raw_files=[raw_samples, poll_file, commands_file],
+        raw_files=[raw_samples, poll_file, commands_file, metric_file],
         final_state_files=[final_state_path],
         commands=commands,
         extra_workload={},

@@ -30,7 +30,7 @@ if (tokens.length === 0) {
 const baseUrl = (__ENV.K6_BASE_URL || 'http://gateway:8080').replace(/\/+$/, '');
 const endpoint = __ENV.K6_ENDPOINT || '/trips';
 const rate = Number.parseInt(__ENV.K6_RATE || '10', 10);
-const duration = __ENV.K6_DURATION || '30s';
+const duration = __ENV.W13_MEASUREMENT_DURATION || '30s';
 const preAllocatedVUs = Number.parseInt(__ENV.K6_PREALLOC_VUS || '30', 10);
 const maxVUs = Number.parseInt(__ENV.K6_MAX_VUS || '80', 10);
 const seed = __ENV.K6_SEED || '1302';
@@ -46,7 +46,7 @@ export const options = {
       maxVUs: maxVUs,
     },
   },
-  summaryTrendStats: ['avg', 'min', 'med', 'p(50)', 'p(90)', 'p(95)', 'p(99)', 'max'],
+  summaryTrendStats: ['avg', 'min', 'med', 'p(50)', 'p(90)', 'p(95)', 'p(99)', 'max', 'count'],
   // No invented SOTA thresholds before the baseline exists. Interpretation is
   // owned by the W13 analyzer and the experiment record.
   thresholds: {},
