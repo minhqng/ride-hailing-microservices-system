@@ -57,6 +57,15 @@ offered rate. Both wait for the declared finite metric series
 (bounded at 75 seconds) before measurement so Prometheus rate windows have a
 real baseline. Measured range endpoints exclude later evidence collection.
 
+Report-grade campaigns build application images once before the first measured
+reset, record their identities, then set `W13_USE_PREBUILT_IMAGES=1`. Every reset
+uses `--no-build`; a missing image fails instead of silently rebuilding. The
+analyzer requires the same actual image identities across repetitions. Build:
+
+```bash
+docker compose --profile obs -f compose.yaml -f scripts/perf/compose.w13.yaml build gateway identity driver matching trip payment
+```
+
 `reset` destroys only this compose project's volumes:
 
 ```bash
