@@ -1,0 +1,38 @@
+TEAM W13 — executed evidence closeout
+
+BASE_MAIN_SHA=421c0595cdb033759bbdeb88c09bc97bc46c4de6
+BASE_MAIN_TREE=96579e526b856e28359280fa42fc970cfd2103b8
+BASE_MAIN_PUSH_CI=41442368340 SUCCESS
+
+MEASURED_HEAD_SHA=d291f0430faa389e4351377ce4db361aa681648b
+MEASURED_TREE=87222fee80d5ce35cfc351b7a0f5e8c5cdac667d
+MEASURED_SOURCE_CI=41456434549 SUCCESS
+CI_CHECKOUT_SHA=15fdd30faf93b74a071a90ae074723beb517c70a
+CI_CHECKOUT_TREE=87222fee80d5ce35cfc351b7a0f5e8c5cdac667d
+APPLICABLE_JOBS=hygiene,build-test,compose-config,platform-smoke — all SUCCESS
+
+SUPPORT_HEAD_SHA=b777c7b809c7dbfe3a484275971d1d557931fa72
+SUPPORT_TREE=8eccbdc6953e9272a89a16ae794688a3ba4cf0e3
+SUPPORT_CI=41464187181 SUCCESS
+SUPPORT_CHECKOUT_SHA=002fdcc19ea54f812c9064d89b2485fdd799e6d3
+SUPPORT_CHECKOUT_TREE=8eccbdc6953e9272a89a16ae794688a3ba4cf0e3
+REGRESSION=1207 passed,0 failed,1 ordinary opt-in Identity theory skipped
+REAL_IDENTITY_RUNTIME=7 passed,0 failed,0 skipped
+PYTHON_HARNESS=18 passed; every performance/evidence entry point compiled
+HTTP_SECURITY=55 executed checks
+G4_RUNTIME=completed/captured; cancel-during-authorization/compensated; terminal-decline/released
+AUTHORITATIVE_AUDITOR=AUD-01..AUD-08 PASS
+EXERCISED_PAYMENT_OBSERVATIONS=PASS;5 operations,4 provider effects,live empty queue with consumers,finite cumulative processing/delivery/ACK/dedup metrics,read-only PostgreSQL statistics
+
+E01=ACCEPTED;3 independent resets;N=1,10,25,50,100;558 requests;15 winners;543 expected conflicts;exact winner release and durable-state proof
+E02=ACCEPTED;3 runs per rate;10,25,50,100 requests/s;16661 requests;0 system/auth failures;0 dropped iterations;exact independent no-fleet authority closure
+E03=ACCEPTED;3 runs per replica count;1,2,4 consumers;3600 unique durable intakes;3960 actual deliveries/ACKs;360 deliberate duplicates;0 duplicate durable rounds;distinct actual telemetry identities
+CONTROLS=one frozen image set reused without rebuilding;observed cgroup limits equal configuration;one image/host/config fingerprint per experiment;prefetch16;DB pool20 per instance
+PROVIDERS=PostgreSQL18.6;RabbitMQ4.3.6;Redis8.10.2;k6:0.54.0
+CURATION=24 runs independently checked;99 portable curated files;114 original raw-file hashes
+ORIGINAL_SOURCE_AUTHORSHIP=verified on all13 imported weekly commits
+HUMAN_REVIEW=WAIVED by explicit project-lead instruction;no human rerun or approval fabricated
+
+FINAL_WEEK_PR=https://github.com/minhqng/ride-hailing-microservices-system/pull/60
+Final PR-head exact-tree CI, GitHub protection/merge state and fresh post-merge main CI must be verified separately; experiment acceptance does not assert a merge.
+W14 E04/HA/G5 and W15/W16 acceptance are not claimed here.

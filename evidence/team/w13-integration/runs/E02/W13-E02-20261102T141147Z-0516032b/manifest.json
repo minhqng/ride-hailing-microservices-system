@@ -1,0 +1,1633 @@
+{
+  "schemaVersion": 1,
+  "experiment": "E02",
+  "runId": "W13-E02-20261102T141147Z-0516032b",
+  "reportGrade": true,
+  "smoke": false,
+  "source": {
+    "commit": "d291f0430faa389e4351377ce4db361aa681648b",
+    "tree": "87222fee80d5ce35cfc351b7a0f5e8c5cdac667d",
+    "branch": "integration/team-w13-final",
+    "remote": "https://github.com/minhqng/ride-hailing-microservices-system.git",
+    "dirty": false,
+    "statusDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "statusPreview": [],
+    "evidenceChanges": true
+  },
+  "g4": {
+    "green": true,
+    "verdict": "GREEN",
+    "evidencePath": "D:\\rh-team-w13-final\\evidence\\member-b\\w13-performance-campaign\\g4\\team-integration-readiness.json",
+    "blockers": []
+  },
+  "dataset": {
+    "seed": 1302,
+    "resetPolicy": "fresh compose project volumes per measured run"
+  },
+  "environment": {
+    "capturedAtUtc": "2026-11-02T14:11:44.080505Z",
+    "host": {
+      "platform": "Windows-11-10.0.26200-SP0",
+      "machine": "AMD64",
+      "os": "nt",
+      "python": "3.15.2",
+      "logicalCpus": 12,
+      "cpuModel": "AMD Ryzen 5 6600H with Radeon Graphics",
+      "memoryBytes": 7900803072,
+      "hostId": "833295b7a334a5d5fafdd60beaa4805ab26ee9d41306182fe34b807fd5adab81"
+    },
+    "docker": {
+      "client": {
+        "Version": "29.8.2",
+        "ApiVersion": "1.56",
+        "DefaultAPIVersion": "1.56",
+        "GitCommit": "7fc2dff",
+        "GoVersion": "go1.26.8",
+        "Os": "windows",
+        "Arch": "amd64",
+        "BuildTime": "Wed Sep 30 19:35:42 2026",
+        "Context": "desktop-linux"
+      },
+      "server": {
+        "Platform": {
+          "Name": "Docker Desktop 4.95.0 (242831)"
+        },
+        "Version": "29.8.2",
+        "ApiVersion": "1.56",
+        "MinAPIVersion": "1.40",
+        "Os": "linux",
+        "Arch": "amd64",
+        "Components": [
+          {
+            "Name": "Engine",
+            "Version": "29.8.2",
+            "Details": {
+              "ApiVersion": "1.56",
+              "Arch": "amd64",
+              "BuildTime": "Wed Sep 30 19:32:25 2026",
+              "Experimental": "false",
+              "GitCommit": "8af9fe3",
+              "GoVersion": "go1.26.8",
+              "KernelVersion": "6.18.54.1-microsoft-standard-WSL2",
+              "MinAPIVersion": "1.40",
+              "Module": "github.com/moby/moby/v2",
+              "ModuleVersion": "v2.0.0+unknown",
+              "Os": "linux"
+            }
+          },
+          {
+            "Name": "containerd",
+            "Version": "v2.3.6",
+            "Details": {
+              "GitCommit": "ee2735368117d2eb259779949d5e75cdafec9761"
+            }
+          },
+          {
+            "Name": "runc",
+            "Version": "1.5.1",
+            "Details": {
+              "GitCommit": "v1.5.1-0-g8f2685a4"
+            }
+          },
+          {
+            "Name": "docker-init",
+            "Version": "0.19.0",
+            "Details": {
+              "GitCommit": "de40ad0"
+            }
+          }
+        ],
+        "GitCommit": "8af9fe3",
+        "GoVersion": "go1.26.8",
+        "KernelVersion": "6.18.54.1-microsoft-standard-WSL2",
+        "BuildTime": "2026-09-30T19:32:25.000000000+00:00"
+      },
+      "compose": "5.6.0"
+    },
+    "tooling": {
+      "dotnet": "10.0.403",
+      "python": "3.15.2",
+      "k6Installed": null,
+      "k6Image": {
+        "reference": "grafana/k6:0.54.0",
+        "id": "sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755",
+        "repoDigests": [
+          "grafana/k6@sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755"
+        ],
+        "created": "2024-09-30T09:44:57.858943115Z"
+      }
+    },
+    "images": {
+      "postgres": {
+        "reference": "postgres:18.6",
+        "id": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+        "repoDigests": [
+          "postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336"
+        ],
+        "created": "2026-10-06T01:33:04.259528511Z"
+      },
+      "redis": {
+        "reference": "redis:8.10.2",
+        "id": "sha256:2c2dff791878316e3b083188be0d578423b24813cdda5de0e80ea4f7b3e6bfd6",
+        "repoDigests": [
+          "redis@sha256:2c2dff791878316e3b083188be0d578423b24813cdda5de0e80ea4f7b3e6bfd6"
+        ],
+        "created": "2026-10-06T01:39:38.284518021Z"
+      },
+      "rabbitmq": {
+        "reference": "rabbitmq:4.3.6-management",
+        "id": "sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
+        "repoDigests": [
+          "rabbitmq@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58"
+        ],
+        "created": "2026-10-17T01:31:28.564354503Z"
+      }
+    },
+    "project": "ride-hailing-w13",
+    "configured": {
+      "composeServices": {
+        "driver": {
+          "image": "build:src/Services/Driver/RideHailing.DriverService/Dockerfile",
+          "cpus": 2,
+          "memLimitBytes": "1073741824",
+          "publishedPorts": [
+            "18102"
+          ],
+          "environment": {
+            "ASPNETCORE_URLS": "http://+:8080",
+            "Auth__Audience": "ride-hailing-api",
+            "Auth__Issuer": "ride-hailing-identity",
+            "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=<redacted>;Maximum Pool Size=20",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "RabbitMq__Host": "rabbitmq",
+            "RabbitMq__Password": "<redacted>",
+            "RabbitMq__Username": "ride_app",
+            "ServiceInstanceId": "driver-local"
+          }
+        },
+        "gateway": {
+          "image": "build:src/Gateway/RideHailing.Gateway/Dockerfile",
+          "cpus": 1,
+          "memLimitBytes": "536870912",
+          "publishedPorts": [
+            "18080"
+          ],
+          "environment": {
+            "ASPNETCORE_URLS": "http://+:8080",
+            "Auth__Audience": "ride-hailing-api",
+            "Auth__Issuer": "ride-hailing-identity",
+            "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "ServiceInstanceId": "gateway-local",
+            "Services__DriverBaseUrl": "http://driver:8080",
+            "Services__IdentityBaseUrl": "http://identity:8080",
+            "Services__MatchingBaseUrl": "http://matching:8080",
+            "Services__PaymentBaseUrl": "http://payment:8080",
+            "Services__TripBaseUrl": "http://trip:8080"
+          }
+        },
+        "grafana": {
+          "image": "grafana/grafana:12.4.0",
+          "cpus": null,
+          "memLimitBytes": null,
+          "publishedPorts": [
+            "3000"
+          ],
+          "environment": {}
+        },
+        "identity": {
+          "image": "build:src/Services/Identity/RideHailing.IdentityService/Dockerfile",
+          "cpus": 0.5,
+          "memLimitBytes": "268435456",
+          "publishedPorts": [
+            "18101"
+          ],
+          "environment": {
+            "ASPNETCORE_URLS": "http://+:8080",
+            "Auth__Audience": "ride-hailing-api",
+            "Auth__Issuer": "ride-hailing-identity",
+            "Auth__PrivateKeyBase64": "<redacted>",
+            "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+            "Auth__ServiceClients__matching__Secret": "<redacted>",
+            "Auth__ServiceClients__trip__Secret": "<redacted>",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=<redacted>",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "ServiceInstanceId": "identity-local"
+          }
+        },
+        "jaeger": {
+          "image": "jaegertracing/all-in-one:1.76.0",
+          "cpus": 0.5,
+          "memLimitBytes": "536870912",
+          "publishedPorts": [
+            "26686"
+          ],
+          "environment": {
+            "COLLECTOR_OTLP_ENABLED": "true"
+          }
+        },
+        "matching": {
+          "image": "build:src/Services/Matching/RideHailing.MatchingService/Dockerfile",
+          "cpus": 2,
+          "memLimitBytes": "1073741824",
+          "publishedPorts": [],
+          "environment": {
+            "ASPNETCORE_URLS": "http://+:8080",
+            "Auth__Audience": "ride-hailing-api",
+            "Auth__ClientId": "matching",
+            "Auth__ClientSecret": "<redacted>",
+            "Auth__Issuer": "ride-hailing-identity",
+            "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+            "Auth__TokenEndpoint": "<redacted>",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=<redacted>;Maximum Pool Size=20",
+            "Matching__Worker__BatchSize": "16",
+            "Matching__Worker__Enabled": "true",
+            "Matching__Worker__MaxConcurrentRounds": "4",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "RabbitMq__Host": "rabbitmq",
+            "RabbitMq__Password": "<redacted>",
+            "RabbitMq__Prefetch": "16",
+            "RabbitMq__Username": "ride_app",
+            "Redis__ConnectionString": "redis:6379",
+            "Services__DriverBaseUrl": "http://driver:8080"
+          }
+        },
+        "notification": {
+          "image": "build:src/Workers/Notification/RideHailing.NotificationWorker/Dockerfile",
+          "cpus": 1,
+          "memLimitBytes": "536870912",
+          "publishedPorts": [],
+          "environment": {
+            "ConnectionStrings__Postgres": "Host=postgres;Database=notification_db;Username=notification_app;Password=<redacted>",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "RabbitMq__Host": "rabbitmq",
+            "RabbitMq__Password": "<redacted>",
+            "RabbitMq__Username": "ride_app",
+            "ServiceInstanceId": "notification-local"
+          }
+        },
+        "otel-collector": {
+          "image": "otel/opentelemetry-collector-contrib:0.120.0",
+          "cpus": 0.5,
+          "memLimitBytes": "268435456",
+          "publishedPorts": [],
+          "environment": {}
+        },
+        "payment": {
+          "image": "build:src/Services/Payment/RideHailing.PaymentService/Dockerfile",
+          "cpus": 1,
+          "memLimitBytes": "536870912",
+          "publishedPorts": [
+            "18105"
+          ],
+          "environment": {
+            "ASPNETCORE_ENVIRONMENT": "Development",
+            "ASPNETCORE_URLS": "http://+:8080",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=<redacted>",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "RabbitMq__Host": "rabbitmq",
+            "RabbitMq__Password": "<redacted>",
+            "RabbitMq__Username": "ride_app",
+            "ServiceInstanceId": "payment-local"
+          }
+        },
+        "postgres": {
+          "image": "postgres:18.6",
+          "cpus": 2,
+          "memLimitBytes": "2147483648",
+          "publishedPorts": [
+            "15432"
+          ],
+          "environment": {
+            "DRIVER_DB_PASSWORD": "<redacted>",
+            "IDENTITY_DB_PASSWORD": "<redacted>",
+            "MATCHING_DB_PASSWORD": "<redacted>",
+            "NOTIFICATION_DB_PASSWORD": "<redacted>",
+            "PAYMENT_DB_PASSWORD": "<redacted>",
+            "POSTGRES_DB": "postgres",
+            "POSTGRES_PASSWORD": "<redacted>",
+            "POSTGRES_USER": "postgres",
+            "TRIP_DB_PASSWORD": "<redacted>"
+          }
+        },
+        "prometheus": {
+          "image": "prom/prometheus:v3.10.0",
+          "cpus": 0.5,
+          "memLimitBytes": "536870912",
+          "publishedPorts": [
+            "19090"
+          ],
+          "environment": {}
+        },
+        "rabbitmq": {
+          "image": "rabbitmq:4.3.6-management",
+          "cpus": 2,
+          "memLimitBytes": "1073741824",
+          "publishedPorts": [
+            "15673",
+            "25672"
+          ],
+          "environment": {
+            "RABBITMQ_DEFAULT_PASS": "<redacted>",
+            "RABBITMQ_DEFAULT_USER": "ride_app"
+          }
+        },
+        "redis": {
+          "image": "redis:8.10.2",
+          "cpus": 1,
+          "memLimitBytes": "536870912",
+          "publishedPorts": [
+            "16379"
+          ],
+          "environment": {}
+        },
+        "trip": {
+          "image": "build:src/Services/Trip/RideHailing.TripService/Dockerfile",
+          "cpus": 2,
+          "memLimitBytes": "1073741824",
+          "publishedPorts": [
+            "18103"
+          ],
+          "environment": {
+            "ASPNETCORE_URLS": "http://+:8080",
+            "Auth__Audience": "ride-hailing-api",
+            "Auth__ClientId": "trip",
+            "Auth__ClientSecret": "<redacted>",
+            "Auth__Issuer": "ride-hailing-identity",
+            "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+            "Auth__TokenEndpoint": "<redacted>",
+            "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=<redacted>;Maximum Pool Size=20",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+            "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+            "RabbitMq__Host": "rabbitmq",
+            "RabbitMq__Password": "<redacted>",
+            "RabbitMq__Username": "ride_app",
+            "ServiceInstanceId": "trip-local",
+            "Services__MatchingBaseUrl": "http://matching:8080/",
+            "TripDatabase__AutoMigrate": "true",
+            "TripMessaging__Enabled": "true"
+          }
+        }
+      },
+      "w13Environment": {
+        "W13_G4_EVIDENCE": "D:\\rh-team-w13-final\\evidence\\member-b\\w13-performance-campaign\\g4\\team-integration-readiness.json",
+        "W13_RUNS_ROOT": "D:\\rh-team-w13-final\\evidence\\team\\w13-integration\\runs",
+        "W13_USE_PREBUILT_IMAGES": "1"
+      }
+    },
+    "observed": {
+      "containers": [
+        {
+          "service": "driver",
+          "name": "ride-hailing-w13-driver-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "a22d7ac3d1fb1fd5eb51d76076845fee6d77d55e23aa9fac8c9853445c67907e",
+            "name": "ride-hailing-w13-driver-1",
+            "image": "sha256:2c4101d8b9eba8d57b854b14efdbee3c5e3366f11fd2195bcd52d133992c6ca7",
+            "hostname": "a22d7ac3d1fb",
+            "startedAt": "2026-11-02T14:11:35.050008022Z",
+            "status": "running",
+            "nanoCpus": 2000000000,
+            "memoryBytes": 1073741824,
+            "env": {
+              "RabbitMq__Password": "<redacted>",
+              "RabbitMq__Host": "rabbitmq",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "Auth__Issuer": "ride-hailing-identity",
+              "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+              "RabbitMq__Username": "ride_app",
+              "Auth__Audience": "ride-hailing-api",
+              "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+              "ServiceInstanceId": "driver-local",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=<redacted>;Maximum Pool Size=20",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "APP_UID": "1654",
+              "ASPNETCORE_HTTP_PORTS": "8080",
+              "DOTNET_RUNNING_IN_CONTAINER": "true",
+              "DOTNET_VERSION": "10.0.14",
+              "ASPNET_VERSION": "10.0.14"
+            }
+          }
+        },
+        {
+          "service": "gateway",
+          "name": "ride-hailing-w13-gateway-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "2faf463ed89277fd219c5065851020fd63a18cb7d8bb7fb62fda628fb4c3112d",
+            "name": "ride-hailing-w13-gateway-1",
+            "image": "sha256:0ae2c6474a88461e845e7ca7d1ac514e15a2441353546a2ce7adf15ab589a5be",
+            "hostname": "2faf463ed892",
+            "startedAt": "2026-11-02T14:11:21.276075491Z",
+            "status": "running",
+            "nanoCpus": 1000000000,
+            "memoryBytes": 536870912,
+            "env": {
+              "Services__DriverBaseUrl": "http://driver:8080",
+              "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+              "Services__TripBaseUrl": "http://trip:8080",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "Auth__Issuer": "ride-hailing-identity",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "Services__IdentityBaseUrl": "http://identity:8080",
+              "Services__MatchingBaseUrl": "http://matching:8080",
+              "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+              "ServiceInstanceId": "gateway-local",
+              "Services__PaymentBaseUrl": "http://payment:8080",
+              "Auth__Audience": "ride-hailing-api",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "APP_UID": "1654",
+              "ASPNETCORE_HTTP_PORTS": "8080",
+              "DOTNET_RUNNING_IN_CONTAINER": "true",
+              "DOTNET_VERSION": "10.0.14",
+              "ASPNET_VERSION": "10.0.14"
+            }
+          }
+        },
+        {
+          "service": "identity",
+          "name": "ride-hailing-w13-identity-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "6f5cf7c38d67cc9e7995648f729e1b82e536961d1655b23eeb1b7ae70cef555e",
+            "name": "ride-hailing-w13-identity-1",
+            "image": "sha256:91bd1bdd86d075c40ef700f67b5677d5e4490996c2a01c14ad6e46f5a9ccdf9e",
+            "hostname": "6f5cf7c38d67",
+            "startedAt": "2026-11-02T14:11:28.39013391Z",
+            "status": "running",
+            "nanoCpus": 500000000,
+            "memoryBytes": 268435456,
+            "env": {
+              "ServiceInstanceId": "identity-local",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=<redacted>",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "Auth__ServiceClients__matching__Secret": "<redacted>",
+              "Auth__PrivateKeyBase64": "<redacted>",
+              "Auth__ServiceClients__trip__Secret": "<redacted>",
+              "Auth__Issuer": "ride-hailing-identity",
+              "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+              "Auth__Audience": "ride-hailing-api",
+              "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "APP_UID": "1654",
+              "ASPNETCORE_HTTP_PORTS": "8080",
+              "DOTNET_RUNNING_IN_CONTAINER": "true",
+              "DOTNET_VERSION": "10.0.14",
+              "ASPNET_VERSION": "10.0.14"
+            }
+          }
+        },
+        {
+          "service": "jaeger",
+          "name": "ride-hailing-w13-jaeger-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "c674a4ee7e900114857487519617b4f2f3e2bd0f787c11c97e616639774ff431",
+            "name": "ride-hailing-w13-jaeger-1",
+            "image": "sha256:ab6f1a1f0fb49ea08bcd19f6b84f6081d0d44b364b6de148e1798eb5816bacac",
+            "hostname": "c674a4ee7e90",
+            "startedAt": "2026-11-02T14:11:22.086048637Z",
+            "status": "running",
+            "nanoCpus": 500000000,
+            "memoryBytes": 536870912,
+            "env": {
+              "COLLECTOR_OTLP_ENABLED": "true",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "SAMPLING_STRATEGIES_FILE": "/etc/jaeger/sampling_strategies.json"
+            }
+          }
+        },
+        {
+          "service": "matching",
+          "name": "ride-hailing-w13-matching-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "31219b3181ce709a589df6a0d169396f8f06697110a2e580cc6d3eedbd8fcaba",
+            "name": "ride-hailing-w13-matching-1",
+            "image": "sha256:f57f372278d547d8a7efc2dfae77367cf0e5b68ec55801c7d90057c678ea129f",
+            "hostname": "31219b3181ce",
+            "startedAt": "2026-11-02T14:11:34.365834831Z",
+            "status": "running",
+            "nanoCpus": 2000000000,
+            "memoryBytes": 1073741824,
+            "env": {
+              "Auth__Issuer": "ride-hailing-identity",
+              "Matching__Worker__MaxConcurrentRounds": "4",
+              "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+              "RabbitMq__Username": "ride_app",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=<redacted>;Maximum Pool Size=20",
+              "Matching__Worker__BatchSize": "16",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "Redis__ConnectionString": "redis:6379",
+              "RabbitMq__Password": "<redacted>",
+              "Auth__ClientSecret": "<redacted>",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "Auth__ClientId": "matching",
+              "Auth__TokenEndpoint": "<redacted>",
+              "RabbitMq__Host": "rabbitmq",
+              "Auth__Audience": "ride-hailing-api",
+              "RabbitMq__Prefetch": "16",
+              "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+              "Services__DriverBaseUrl": "http://driver:8080",
+              "Matching__Worker__Enabled": "true",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "APP_UID": "1654",
+              "ASPNETCORE_HTTP_PORTS": "8080",
+              "DOTNET_RUNNING_IN_CONTAINER": "true",
+              "DOTNET_VERSION": "10.0.14",
+              "ASPNET_VERSION": "10.0.14"
+            }
+          }
+        },
+        {
+          "service": "otel-collector",
+          "name": "ride-hailing-w13-otel-collector-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "00be60a8557ac10e7535785d82917e4d36891f2384e3f2e14a22adf6c48c1d95",
+            "name": "ride-hailing-w13-otel-collector-1",
+            "image": "sha256:85ac41c2db88d0df9bd6145e608a3cb023f5d8443868adbfbbf66efb51087917",
+            "hostname": "00be60a8557a",
+            "startedAt": "2026-11-02T14:11:21.846768315Z",
+            "status": "running",
+            "nanoCpus": 500000000,
+            "memoryBytes": 268435456,
+            "env": {
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            }
+          }
+        },
+        {
+          "service": "payment",
+          "name": "ride-hailing-w13-payment-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "391fb96e01571d8261c5702fb3579e1c1166f94378fcc113d0b84339137612d2",
+            "name": "ride-hailing-w13-payment-1",
+            "image": "sha256:6d169f75f10fe6b57ab667b31a3ef6dab8c041f139d48bc8c455e91b0af91d75",
+            "hostname": "391fb96e0157",
+            "startedAt": "2026-11-02T14:11:34.578964477Z",
+            "status": "running",
+            "nanoCpus": 1000000000,
+            "memoryBytes": 536870912,
+            "env": {
+              "RabbitMq__Username": "ride_app",
+              "ASPNETCORE_ENVIRONMENT": "Development",
+              "ServiceInstanceId": "payment-local",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "RabbitMq__Password": "<redacted>",
+              "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+              "RabbitMq__Host": "rabbitmq",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=<redacted>",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "APP_UID": "1654",
+              "ASPNETCORE_HTTP_PORTS": "8080",
+              "DOTNET_RUNNING_IN_CONTAINER": "true",
+              "DOTNET_VERSION": "10.0.14",
+              "ASPNET_VERSION": "10.0.14"
+            }
+          }
+        },
+        {
+          "service": "postgres",
+          "name": "ride-hailing-w13-postgres-1",
+          "state": "running",
+          "health": "healthy",
+          "inspect": {
+            "id": "0df5568bbc4f68e342c3abe5dfae1abd9c121f285599e19e8dee27c4dfcf270e",
+            "name": "ride-hailing-w13-postgres-1",
+            "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+            "hostname": "0df5568bbc4f",
+            "startedAt": "2026-11-02T14:11:22.630615443Z",
+            "status": "running",
+            "nanoCpus": 2000000000,
+            "memoryBytes": 2147483648,
+            "env": {
+              "POSTGRES_PASSWORD": "<redacted>",
+              "NOTIFICATION_DB_PASSWORD": "<redacted>",
+              "DRIVER_DB_PASSWORD": "<redacted>",
+              "PAYMENT_DB_PASSWORD": "<redacted>",
+              "TRIP_DB_PASSWORD": "<redacted>",
+              "MATCHING_DB_PASSWORD": "<redacted>",
+              "POSTGRES_DB": "postgres",
+              "IDENTITY_DB_PASSWORD": "<redacted>",
+              "POSTGRES_USER": "postgres",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin",
+              "GOSU_VERSION": "1.19",
+              "LANG": "en_US.utf8",
+              "PG_MAJOR": "18",
+              "PG_VERSION": "18.6-1.pgdg13+2",
+              "PGDATA": "/var/lib/postgresql/18/docker"
+            }
+          }
+        },
+        {
+          "service": "prometheus",
+          "name": "ride-hailing-w13-prometheus-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "3e7dc03830ca1f0e70a447055f55d4d6a566f7911701594e91175d51ea53cb82",
+            "name": "ride-hailing-w13-prometheus-1",
+            "image": "sha256:4a61322ac1103a0e3aea2a61ef1718422a48fa046441f299d71e660a3bc71ae9",
+            "hostname": "3e7dc03830ca",
+            "startedAt": "2026-11-02T14:11:20.976674254Z",
+            "status": "running",
+            "nanoCpus": 500000000,
+            "memoryBytes": 536870912,
+            "env": {
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            }
+          }
+        },
+        {
+          "service": "rabbitmq",
+          "name": "ride-hailing-w13-rabbitmq-1",
+          "state": "running",
+          "health": "healthy",
+          "inspect": {
+            "id": "1817f858d7f031a7a8a8925df8ff40ccb4127f28430bf079e99c579587f7cc34",
+            "name": "ride-hailing-w13-rabbitmq-1",
+            "image": "sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
+            "hostname": "1817f858d7f0",
+            "startedAt": "2026-11-02T14:11:22.337347542Z",
+            "status": "running",
+            "nanoCpus": 2000000000,
+            "memoryBytes": 1073741824,
+            "env": {
+              "RABBITMQ_DEFAULT_USER": "ride_app",
+              "RABBITMQ_DEFAULT_PASS": "<redacted>",
+              "PATH": "/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "ERLANG_INSTALL_PATH_PREFIX": "/opt/erlang",
+              "OPENSSL_INSTALL_PATH_PREFIX": "/opt/openssl",
+              "RABBITMQ_DATA_DIR": "/var/lib/rabbitmq",
+              "RABBITMQ_VERSION": "4.3.6",
+              "RABBITMQ_PGP_KEY_ID": "0x0A9AF2115F4687BD29803A206B73A36E6026DFCA",
+              "RABBITMQ_HOME": "/opt/rabbitmq",
+              "HOME": "/var/lib/rabbitmq",
+              "LANG": "C.UTF-8",
+              "LANGUAGE": "C.UTF-8",
+              "LC_ALL": "C.UTF-8",
+              "RUNNING_UNDER_SYSTEMD": "true"
+            }
+          }
+        },
+        {
+          "service": "redis",
+          "name": "ride-hailing-w13-redis-1",
+          "state": "running",
+          "health": "healthy",
+          "inspect": {
+            "id": "8b74d4dd92ab0494a384d35ce32bb2ee420186f4cc997d06b01a971baa1a7b93",
+            "name": "ride-hailing-w13-redis-1",
+            "image": "sha256:2c2dff791878316e3b083188be0d578423b24813cdda5de0e80ea4f7b3e6bfd6",
+            "hostname": "8b74d4dd92ab",
+            "startedAt": "2026-11-02T14:11:21.548829698Z",
+            "status": "running",
+            "nanoCpus": 1000000000,
+            "memoryBytes": 536870912,
+            "env": {
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "REDIS_VERSION": "8.10.2"
+            }
+          }
+        },
+        {
+          "service": "trip",
+          "name": "ride-hailing-w13-trip-1",
+          "state": "running",
+          "health": null,
+          "inspect": {
+            "id": "bc1ccd91274a313c4264fab4b42f9963540d254cd63d3ded2e700e2d42416801",
+            "name": "ride-hailing-w13-trip-1",
+            "image": "sha256:5c7d93d291556a5a551c5328a3637edcb5d6ccbddde03cf0f165802528a439dc",
+            "hostname": "bc1ccd91274a",
+            "startedAt": "2026-11-02T14:11:34.817279254Z",
+            "status": "running",
+            "nanoCpus": 2000000000,
+            "memoryBytes": 1073741824,
+            "env": {
+              "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+              "TripMessaging__Enabled": "true",
+              "Auth__ClientId": "trip",
+              "RabbitMq__Username": "ride_app",
+              "ASPNETCORE_URLS": "http://+:8080",
+              "ServiceInstanceId": "trip-local",
+              "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+              "Auth__Audience": "ride-hailing-api",
+              "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=<redacted>;Maximum Pool Size=20",
+              "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+              "Auth__TokenEndpoint": "<redacted>",
+              "Auth__Issuer": "ride-hailing-identity",
+              "Services__MatchingBaseUrl": "http://matching:8080/",
+              "RabbitMq__Host": "rabbitmq",
+              "RabbitMq__Password": "<redacted>",
+              "TripDatabase__AutoMigrate": "true",
+              "Auth__ClientSecret": "<redacted>",
+              "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+              "APP_UID": "1654",
+              "ASPNETCORE_HTTP_PORTS": "8080",
+              "DOTNET_RUNNING_IN_CONTAINER": "true",
+              "DOTNET_VERSION": "10.0.14",
+              "ASPNET_VERSION": "10.0.14"
+            }
+          }
+        }
+      ],
+      "database": {
+        "serverVersion": "18.6 (Debian 18.6-1.pgdg13+2)",
+        "maxConnections": "100",
+        "sharedBuffers": "128MB",
+        "workMem": "4MB",
+        "activeConnections": "5"
+      },
+      "broker": {
+        "version": "4.3.6",
+        "cluster": "rabbit@1817f858d7f0",
+        "queueTotals": {
+          "messages": 0,
+          "messages_ready": 0,
+          "messages_unacknowledged": 0,
+          "messages_details": {
+            "rate": 0.0
+          },
+          "messages_unacknowledged_details": {
+            "rate": 0.0
+          },
+          "messages_ready_details": {
+            "rate": 0.0
+          }
+        },
+        "objectTotals": {
+          "channels": 8,
+          "consumers": 8,
+          "queues": 19,
+          "exchanges": 12,
+          "connections": 8
+        }
+      },
+      "redis": {
+        "server": "Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=7e3bb15252fca6f9",
+        "version": "8.10.2"
+      }
+    },
+    "observedAfter": {
+      "capturedAtUtc": "2026-11-02T14:12:54.244757Z",
+      "observed": {
+        "containers": [
+          {
+            "service": "driver",
+            "name": "ride-hailing-w13-driver-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "a22d7ac3d1fb1fd5eb51d76076845fee6d77d55e23aa9fac8c9853445c67907e",
+              "name": "ride-hailing-w13-driver-1",
+              "image": "sha256:2c4101d8b9eba8d57b854b14efdbee3c5e3366f11fd2195bcd52d133992c6ca7",
+              "hostname": "a22d7ac3d1fb",
+              "startedAt": "2026-11-02T14:11:35.050008022Z",
+              "status": "running",
+              "nanoCpus": 2000000000,
+              "memoryBytes": 1073741824,
+              "env": {
+                "RabbitMq__Password": "<redacted>",
+                "RabbitMq__Host": "rabbitmq",
+                "ASPNETCORE_URLS": "http://+:8080",
+                "Auth__Issuer": "ride-hailing-identity",
+                "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+                "RabbitMq__Username": "ride_app",
+                "Auth__Audience": "ride-hailing-api",
+                "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+                "ServiceInstanceId": "driver-local",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+                "ConnectionStrings__Postgres": "Host=postgres;Database=driver_db;Username=driver_app;Password=<redacted>;Maximum Pool Size=20",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "APP_UID": "1654",
+                "ASPNETCORE_HTTP_PORTS": "8080",
+                "DOTNET_RUNNING_IN_CONTAINER": "true",
+                "DOTNET_VERSION": "10.0.14",
+                "ASPNET_VERSION": "10.0.14"
+              }
+            }
+          },
+          {
+            "service": "gateway",
+            "name": "ride-hailing-w13-gateway-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "2faf463ed89277fd219c5065851020fd63a18cb7d8bb7fb62fda628fb4c3112d",
+              "name": "ride-hailing-w13-gateway-1",
+              "image": "sha256:0ae2c6474a88461e845e7ca7d1ac514e15a2441353546a2ce7adf15ab589a5be",
+              "hostname": "2faf463ed892",
+              "startedAt": "2026-11-02T14:11:21.276075491Z",
+              "status": "running",
+              "nanoCpus": 1000000000,
+              "memoryBytes": 536870912,
+              "env": {
+                "Services__DriverBaseUrl": "http://driver:8080",
+                "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+                "Services__TripBaseUrl": "http://trip:8080",
+                "ASPNETCORE_URLS": "http://+:8080",
+                "Auth__Issuer": "ride-hailing-identity",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+                "Services__IdentityBaseUrl": "http://identity:8080",
+                "Services__MatchingBaseUrl": "http://matching:8080",
+                "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+                "ServiceInstanceId": "gateway-local",
+                "Services__PaymentBaseUrl": "http://payment:8080",
+                "Auth__Audience": "ride-hailing-api",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "APP_UID": "1654",
+                "ASPNETCORE_HTTP_PORTS": "8080",
+                "DOTNET_RUNNING_IN_CONTAINER": "true",
+                "DOTNET_VERSION": "10.0.14",
+                "ASPNET_VERSION": "10.0.14"
+              }
+            }
+          },
+          {
+            "service": "identity",
+            "name": "ride-hailing-w13-identity-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "6f5cf7c38d67cc9e7995648f729e1b82e536961d1655b23eeb1b7ae70cef555e",
+              "name": "ride-hailing-w13-identity-1",
+              "image": "sha256:91bd1bdd86d075c40ef700f67b5677d5e4490996c2a01c14ad6e46f5a9ccdf9e",
+              "hostname": "6f5cf7c38d67",
+              "startedAt": "2026-11-02T14:11:28.39013391Z",
+              "status": "running",
+              "nanoCpus": 500000000,
+              "memoryBytes": 268435456,
+              "env": {
+                "ServiceInstanceId": "identity-local",
+                "ASPNETCORE_URLS": "http://+:8080",
+                "ConnectionStrings__Postgres": "Host=postgres;Database=identity_db;Username=identity_app;Password=<redacted>",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+                "Auth__ServiceClients__matching__Secret": "<redacted>",
+                "Auth__PrivateKeyBase64": "<redacted>",
+                "Auth__ServiceClients__trip__Secret": "<redacted>",
+                "Auth__Issuer": "ride-hailing-identity",
+                "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+                "Auth__Audience": "ride-hailing-api",
+                "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "APP_UID": "1654",
+                "ASPNETCORE_HTTP_PORTS": "8080",
+                "DOTNET_RUNNING_IN_CONTAINER": "true",
+                "DOTNET_VERSION": "10.0.14",
+                "ASPNET_VERSION": "10.0.14"
+              }
+            }
+          },
+          {
+            "service": "jaeger",
+            "name": "ride-hailing-w13-jaeger-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "c674a4ee7e900114857487519617b4f2f3e2bd0f787c11c97e616639774ff431",
+              "name": "ride-hailing-w13-jaeger-1",
+              "image": "sha256:ab6f1a1f0fb49ea08bcd19f6b84f6081d0d44b364b6de148e1798eb5816bacac",
+              "hostname": "c674a4ee7e90",
+              "startedAt": "2026-11-02T14:11:22.086048637Z",
+              "status": "running",
+              "nanoCpus": 500000000,
+              "memoryBytes": 536870912,
+              "env": {
+                "COLLECTOR_OTLP_ENABLED": "true",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "SAMPLING_STRATEGIES_FILE": "/etc/jaeger/sampling_strategies.json"
+              }
+            }
+          },
+          {
+            "service": "matching",
+            "name": "ride-hailing-w13-matching-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "31219b3181ce709a589df6a0d169396f8f06697110a2e580cc6d3eedbd8fcaba",
+              "name": "ride-hailing-w13-matching-1",
+              "image": "sha256:f57f372278d547d8a7efc2dfae77367cf0e5b68ec55801c7d90057c678ea129f",
+              "hostname": "31219b3181ce",
+              "startedAt": "2026-11-02T14:11:34.365834831Z",
+              "status": "running",
+              "nanoCpus": 2000000000,
+              "memoryBytes": 1073741824,
+              "env": {
+                "Auth__Issuer": "ride-hailing-identity",
+                "Matching__Worker__MaxConcurrentRounds": "4",
+                "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+                "RabbitMq__Username": "ride_app",
+                "ConnectionStrings__Postgres": "Host=postgres;Database=matching_db;Username=matching_app;Password=<redacted>;Maximum Pool Size=20",
+                "Matching__Worker__BatchSize": "16",
+                "ASPNETCORE_URLS": "http://+:8080",
+                "Redis__ConnectionString": "redis:6379",
+                "RabbitMq__Password": "<redacted>",
+                "Auth__ClientSecret": "<redacted>",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+                "Auth__ClientId": "matching",
+                "Auth__TokenEndpoint": "<redacted>",
+                "RabbitMq__Host": "rabbitmq",
+                "Auth__Audience": "ride-hailing-api",
+                "RabbitMq__Prefetch": "16",
+                "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+                "Services__DriverBaseUrl": "http://driver:8080",
+                "Matching__Worker__Enabled": "true",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "APP_UID": "1654",
+                "ASPNETCORE_HTTP_PORTS": "8080",
+                "DOTNET_RUNNING_IN_CONTAINER": "true",
+                "DOTNET_VERSION": "10.0.14",
+                "ASPNET_VERSION": "10.0.14"
+              }
+            }
+          },
+          {
+            "service": "otel-collector",
+            "name": "ride-hailing-w13-otel-collector-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "00be60a8557ac10e7535785d82917e4d36891f2384e3f2e14a22adf6c48c1d95",
+              "name": "ride-hailing-w13-otel-collector-1",
+              "image": "sha256:85ac41c2db88d0df9bd6145e608a3cb023f5d8443868adbfbbf66efb51087917",
+              "hostname": "00be60a8557a",
+              "startedAt": "2026-11-02T14:11:21.846768315Z",
+              "status": "running",
+              "nanoCpus": 500000000,
+              "memoryBytes": 268435456,
+              "env": {
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              }
+            }
+          },
+          {
+            "service": "payment",
+            "name": "ride-hailing-w13-payment-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "391fb96e01571d8261c5702fb3579e1c1166f94378fcc113d0b84339137612d2",
+              "name": "ride-hailing-w13-payment-1",
+              "image": "sha256:6d169f75f10fe6b57ab667b31a3ef6dab8c041f139d48bc8c455e91b0af91d75",
+              "hostname": "391fb96e0157",
+              "startedAt": "2026-11-02T14:11:34.578964477Z",
+              "status": "running",
+              "nanoCpus": 1000000000,
+              "memoryBytes": 536870912,
+              "env": {
+                "RabbitMq__Username": "ride_app",
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ServiceInstanceId": "payment-local",
+                "ASPNETCORE_URLS": "http://+:8080",
+                "RabbitMq__Password": "<redacted>",
+                "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+                "RabbitMq__Host": "rabbitmq",
+                "ConnectionStrings__Postgres": "Host=postgres;Database=payment_db;Username=payment_app;Password=<redacted>",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "APP_UID": "1654",
+                "ASPNETCORE_HTTP_PORTS": "8080",
+                "DOTNET_RUNNING_IN_CONTAINER": "true",
+                "DOTNET_VERSION": "10.0.14",
+                "ASPNET_VERSION": "10.0.14"
+              }
+            }
+          },
+          {
+            "service": "postgres",
+            "name": "ride-hailing-w13-postgres-1",
+            "state": "running",
+            "health": "healthy",
+            "inspect": {
+              "id": "0df5568bbc4f68e342c3abe5dfae1abd9c121f285599e19e8dee27c4dfcf270e",
+              "name": "ride-hailing-w13-postgres-1",
+              "image": "sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336",
+              "hostname": "0df5568bbc4f",
+              "startedAt": "2026-11-02T14:11:22.630615443Z",
+              "status": "running",
+              "nanoCpus": 2000000000,
+              "memoryBytes": 2147483648,
+              "env": {
+                "POSTGRES_PASSWORD": "<redacted>",
+                "NOTIFICATION_DB_PASSWORD": "<redacted>",
+                "DRIVER_DB_PASSWORD": "<redacted>",
+                "PAYMENT_DB_PASSWORD": "<redacted>",
+                "TRIP_DB_PASSWORD": "<redacted>",
+                "MATCHING_DB_PASSWORD": "<redacted>",
+                "POSTGRES_DB": "postgres",
+                "IDENTITY_DB_PASSWORD": "<redacted>",
+                "POSTGRES_USER": "postgres",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin",
+                "GOSU_VERSION": "1.19",
+                "LANG": "en_US.utf8",
+                "PG_MAJOR": "18",
+                "PG_VERSION": "18.6-1.pgdg13+2",
+                "PGDATA": "/var/lib/postgresql/18/docker"
+              }
+            }
+          },
+          {
+            "service": "prometheus",
+            "name": "ride-hailing-w13-prometheus-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "3e7dc03830ca1f0e70a447055f55d4d6a566f7911701594e91175d51ea53cb82",
+              "name": "ride-hailing-w13-prometheus-1",
+              "image": "sha256:4a61322ac1103a0e3aea2a61ef1718422a48fa046441f299d71e660a3bc71ae9",
+              "hostname": "3e7dc03830ca",
+              "startedAt": "2026-11-02T14:11:20.976674254Z",
+              "status": "running",
+              "nanoCpus": 500000000,
+              "memoryBytes": 536870912,
+              "env": {
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              }
+            }
+          },
+          {
+            "service": "rabbitmq",
+            "name": "ride-hailing-w13-rabbitmq-1",
+            "state": "running",
+            "health": "healthy",
+            "inspect": {
+              "id": "1817f858d7f031a7a8a8925df8ff40ccb4127f28430bf079e99c579587f7cc34",
+              "name": "ride-hailing-w13-rabbitmq-1",
+              "image": "sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
+              "hostname": "1817f858d7f0",
+              "startedAt": "2026-11-02T14:11:22.337347542Z",
+              "status": "running",
+              "nanoCpus": 2000000000,
+              "memoryBytes": 1073741824,
+              "env": {
+                "RABBITMQ_DEFAULT_USER": "ride_app",
+                "RABBITMQ_DEFAULT_PASS": "<redacted>",
+                "PATH": "/opt/rabbitmq/sbin:/opt/erlang/bin:/opt/openssl/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "ERLANG_INSTALL_PATH_PREFIX": "/opt/erlang",
+                "OPENSSL_INSTALL_PATH_PREFIX": "/opt/openssl",
+                "RABBITMQ_DATA_DIR": "/var/lib/rabbitmq",
+                "RABBITMQ_VERSION": "4.3.6",
+                "RABBITMQ_PGP_KEY_ID": "0x0A9AF2115F4687BD29803A206B73A36E6026DFCA",
+                "RABBITMQ_HOME": "/opt/rabbitmq",
+                "HOME": "/var/lib/rabbitmq",
+                "LANG": "C.UTF-8",
+                "LANGUAGE": "C.UTF-8",
+                "LC_ALL": "C.UTF-8",
+                "RUNNING_UNDER_SYSTEMD": "true"
+              }
+            }
+          },
+          {
+            "service": "redis",
+            "name": "ride-hailing-w13-redis-1",
+            "state": "running",
+            "health": "healthy",
+            "inspect": {
+              "id": "8b74d4dd92ab0494a384d35ce32bb2ee420186f4cc997d06b01a971baa1a7b93",
+              "name": "ride-hailing-w13-redis-1",
+              "image": "sha256:2c2dff791878316e3b083188be0d578423b24813cdda5de0e80ea4f7b3e6bfd6",
+              "hostname": "8b74d4dd92ab",
+              "startedAt": "2026-11-02T14:11:21.548829698Z",
+              "status": "running",
+              "nanoCpus": 1000000000,
+              "memoryBytes": 536870912,
+              "env": {
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "REDIS_VERSION": "8.10.2"
+              }
+            }
+          },
+          {
+            "service": "trip",
+            "name": "ride-hailing-w13-trip-1",
+            "state": "running",
+            "health": null,
+            "inspect": {
+              "id": "bc1ccd91274a313c4264fab4b42f9963540d254cd63d3ded2e700e2d42416801",
+              "name": "ride-hailing-w13-trip-1",
+              "image": "sha256:5c7d93d291556a5a551c5328a3637edcb5d6ccbddde03cf0f165802528a439dc",
+              "hostname": "bc1ccd91274a",
+              "startedAt": "2026-11-02T14:11:34.817279254Z",
+              "status": "running",
+              "nanoCpus": 2000000000,
+              "memoryBytes": 1073741824,
+              "env": {
+                "Auth__PublicKeyBase64": "LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQm9qQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FZOEFNSUlCaWdLQ0FZRUE0b2RaTzYrMUFyRGEvSFVNcEdjOQpwa0owNlh4NDVpaFFJc0hsY0cvMmIyZTFDeEdJaVB3N0JIdFJ1NFE0N1htUTlNaVJnckhtTzVYMElXcGx6Y0NaCnMyWmxHTlhuM3JNSmhLSnFKeWpIbTJVSVpvVHJGSlVnQ3hkSVRXRDBTTEEzNmdIcjFRUkdYZ3pRdUxUVVVjK0gKK3FadzgwUS9nWDhMeVNFS2NLTkpKRGtzL0FveXhhQmtYb0VlNmNoWWVxZWJhZ0JTd3lDaDgyRTl6OHpseHlQLwphT3ZmdFNudDhyanNvOXNOOFJsaGZXc0w2am85a1BKd3ZNMjF5cDdRNDN0MmdMUlRpZnJ1NDRObFd5cHBxU0NzCmdleTFWajVZMWRBMWFmMWxiL0tDdDZBRFdoZzlmNk5kZkExMTNxYXVpZW9NSGxpUWtHKzFCOGU0Rk9FbldhMVkKdS9jNUZhN3dKSXQ1b3FHYzNMZjFwMEhBNjhyenU4ZGJaa3NndEtrcDgvdWZDZVYvZXFYNVB4ZGRTOEswNmQrYQo0c1BTTC90MHVnYlh0UFQ5aVh3aFB1ZmpwWWM0K1h4eU9KenhYclVuSDR0ZXRidlFOZit1dWp2aHEvcTk0MS96CldzOVpaOStPQVVUVUdaZUJHcWI2cEdsdllZRVh2b2V4VUQvYW9qQkhkVU4xQWdNQkFBRT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==",
+                "TripMessaging__Enabled": "true",
+                "Auth__ClientId": "trip",
+                "RabbitMq__Username": "ride_app",
+                "ASPNETCORE_URLS": "http://+:8080",
+                "ServiceInstanceId": "trip-local",
+                "OTEL_METRIC_EXPORT_INTERVAL": "5000",
+                "Auth__Audience": "ride-hailing-api",
+                "ConnectionStrings__Postgres": "Host=postgres;Database=trip_db;Username=trip_app;Password=<redacted>;Maximum Pool Size=20",
+                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://otel-collector:4317",
+                "Auth__TokenEndpoint": "<redacted>",
+                "Auth__Issuer": "ride-hailing-identity",
+                "Services__MatchingBaseUrl": "http://matching:8080/",
+                "RabbitMq__Host": "rabbitmq",
+                "RabbitMq__Password": "<redacted>",
+                "TripDatabase__AutoMigrate": "true",
+                "Auth__ClientSecret": "<redacted>",
+                "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "APP_UID": "1654",
+                "ASPNETCORE_HTTP_PORTS": "8080",
+                "DOTNET_RUNNING_IN_CONTAINER": "true",
+                "DOTNET_VERSION": "10.0.14",
+                "ASPNET_VERSION": "10.0.14"
+              }
+            }
+          }
+        ],
+        "database": {
+          "serverVersion": "18.6 (Debian 18.6-1.pgdg13+2)",
+          "maxConnections": "100",
+          "sharedBuffers": "128MB",
+          "workMem": "4MB",
+          "activeConnections": "25"
+        },
+        "broker": {
+          "version": "4.3.6",
+          "cluster": "rabbit@1817f858d7f0",
+          "queueTotals": {
+            "messages": 412,
+            "messages_ready": 412,
+            "messages_unacknowledged": 0,
+            "messages_details": {
+              "rate": 17.6
+            },
+            "messages_unacknowledged_details": {
+              "rate": 0.0
+            },
+            "messages_ready_details": {
+              "rate": 17.6
+            }
+          },
+          "objectTotals": {
+            "channels": 10,
+            "consumers": 8,
+            "queues": 19,
+            "exchanges": 12,
+            "connections": 10
+          }
+        },
+        "redis": {
+          "server": "Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=7e3bb15252fca6f9",
+          "version": "8.10.2"
+        }
+      },
+      "runtimeStats": [
+        {
+          "BlockIO": "0B / 4.1kB",
+          "CPUPerc": "0.54%",
+          "Container": "31219b3181ce709a589df6a0d169396f8f06697110a2e580cc6d3eedbd8fcaba",
+          "ID": "31219b3181ce",
+          "MemPerc": "7.97%",
+          "MemUsage": "81.59MiB / 1GiB",
+          "Name": "ride-hailing-w13-matching-1",
+          "NetIO": "5.76MB / 6.14MB",
+          "PIDs": "37"
+        },
+        {
+          "BlockIO": "0B / 4.1kB",
+          "CPUPerc": "0.27%",
+          "Container": "a22d7ac3d1fb1fd5eb51d76076845fee6d77d55e23aa9fac8c9853445c67907e",
+          "ID": "a22d7ac3d1fb",
+          "MemPerc": "4.50%",
+          "MemUsage": "46.07MiB / 1GiB",
+          "Name": "ride-hailing-w13-driver-1",
+          "NetIO": "155kB / 215kB",
+          "PIDs": "23"
+        },
+        {
+          "BlockIO": "0B / 4.1kB",
+          "CPUPerc": "0.63%",
+          "Container": "6f5cf7c38d67cc9e7995648f729e1b82e536961d1655b23eeb1b7ae70cef555e",
+          "ID": "6f5cf7c38d67",
+          "MemPerc": "17.12%",
+          "MemUsage": "43.82MiB / 256MiB",
+          "Name": "ride-hailing-w13-identity-1",
+          "NetIO": "45.6kB / 100kB",
+          "PIDs": "21"
+        },
+        {
+          "BlockIO": "0B / 4.1kB",
+          "CPUPerc": "0.59%",
+          "Container": "bc1ccd91274a313c4264fab4b42f9963540d254cd63d3ded2e700e2d42416801",
+          "ID": "bc1ccd91274a",
+          "MemPerc": "12.55%",
+          "MemUsage": "128.5MiB / 1GiB",
+          "Name": "ride-hailing-w13-trip-1",
+          "NetIO": "8.39MB / 9.02MB",
+          "PIDs": "25"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.59%",
+          "Container": "391fb96e01571d8261c5702fb3579e1c1166f94378fcc113d0b84339137612d2",
+          "ID": "391fb96e0157",
+          "MemPerc": "7.44%",
+          "MemUsage": "38.09MiB / 512MiB",
+          "Name": "ride-hailing-w13-payment-1",
+          "NetIO": "263kB / 317kB",
+          "PIDs": "20"
+        },
+        {
+          "BlockIO": "0B / 177MB",
+          "CPUPerc": "0.90%",
+          "Container": "0df5568bbc4f68e342c3abe5dfae1abd9c121f285599e19e8dee27c4dfcf270e",
+          "ID": "0df5568bbc4f",
+          "MemPerc": "6.86%",
+          "MemUsage": "140.5MiB / 2GiB",
+          "Name": "ride-hailing-w13-postgres-1",
+          "NetIO": "11.2MB / 9.3MB",
+          "PIDs": "36"
+        },
+        {
+          "BlockIO": "0B / 176kB",
+          "CPUPerc": "0.00%",
+          "Container": "3e7dc03830ca1f0e70a447055f55d4d6a566f7911701594e91175d51ea53cb82",
+          "ID": "3e7dc03830ca",
+          "MemPerc": "5.70%",
+          "MemUsage": "29.16MiB / 512MiB",
+          "Name": "ride-hailing-w13-prometheus-1",
+          "NetIO": "298kB / 141kB",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 4.1kB",
+          "CPUPerc": "0.01%",
+          "Container": "2faf463ed89277fd219c5065851020fd63a18cb7d8bb7fb62fda628fb4c3112d",
+          "ID": "2faf463ed892",
+          "MemPerc": "12.25%",
+          "MemUsage": "62.73MiB / 512MiB",
+          "Name": "ride-hailing-w13-gateway-1",
+          "NetIO": "5.65MB / 7.22MB",
+          "PIDs": "20"
+        },
+        {
+          "BlockIO": "4.1kB / 28.7kB",
+          "CPUPerc": "3.02%",
+          "Container": "8b74d4dd92ab0494a384d35ce32bb2ee420186f4cc997d06b01a971baa1a7b93",
+          "ID": "8b74d4dd92ab",
+          "MemPerc": "1.44%",
+          "MemUsage": "7.367MiB / 512MiB",
+          "Name": "ride-hailing-w13-redis-1",
+          "NetIO": "191kB / 50.5kB",
+          "PIDs": "6"
+        },
+        {
+          "BlockIO": "0B / 9.74MB",
+          "CPUPerc": "1.44%",
+          "Container": "1817f858d7f031a7a8a8925df8ff40ccb4127f28430bf079e99c579587f7cc34",
+          "ID": "1817f858d7f0",
+          "MemPerc": "12.91%",
+          "MemUsage": "132.2MiB / 1GiB",
+          "Name": "ride-hailing-w13-rabbitmq-1",
+          "NetIO": "714kB / 835kB",
+          "PIDs": "45"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.16%",
+          "Container": "00be60a8557ac10e7535785d82917e4d36891f2384e3f2e14a22adf6c48c1d95",
+          "ID": "00be60a8557a",
+          "MemPerc": "23.40%",
+          "MemUsage": "59.89MiB / 256MiB",
+          "Name": "ride-hailing-w13-otel-collector-1",
+          "NetIO": "3.78MB / 689kB",
+          "PIDs": "17"
+        },
+        {
+          "BlockIO": "0B / 0B",
+          "CPUPerc": "0.03%",
+          "Container": "c674a4ee7e900114857487519617b4f2f3e2bd0f787c11c97e616639774ff431",
+          "ID": "c674a4ee7e90",
+          "MemPerc": "6.04%",
+          "MemUsage": "30.91MiB / 512MiB",
+          "Name": "ride-hailing-w13-jaeger-1",
+          "NetIO": "598kB / 17.7kB",
+          "PIDs": "6"
+        }
+      ]
+    },
+    "k6": {
+      "reference": "grafana/k6:0.54.0",
+      "pulled": false,
+      "id": "sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755",
+      "repoDigests": [
+        "grafana/k6@sha256:1f40432b1cbe7234e977f96c362c9bc550a2d2b583d014dd8669fe40d3e9e755"
+      ]
+    }
+  },
+  "workload": {
+    "model": "k6 constant-arrival-rate (open model) against the authenticated POST /trips surface",
+    "configured": {
+      "configuredRatePerSecond": 100,
+      "duration": "30s",
+      "executor": "constant-arrival-rate",
+      "endpoint": "/trips",
+      "preflightBaseUrl": "http://127.0.0.1:18080",
+      "k6BaseUrl": "http://gateway:8080",
+      "preAllocatedVUs": 30,
+      "maxVUs": 80,
+      "tokenCount": 11,
+      "loadTokenCount": 10,
+      "preflightTokenExcludedFromLoad": true,
+      "unauthenticatedProbe": {
+        "reachable": true,
+        "status": 401,
+        "elapsedMs": 93.23760005645454,
+        "bodySnippet": "",
+        "unauthenticatedMutationRejected": true,
+        "unauthenticatedMutationAccepted": false
+      },
+      "reportGradeTargetCanonical": true,
+      "warmupPolicy": "30s: ten real concurrent preflight-Rider requests every 3s, then declared metric readiness (75s bound)",
+      "cooldownSeconds": 0,
+      "preflight": {
+        "baseUrl": "http://127.0.0.1:18080",
+        "endpoint": "/trips",
+        "ready": true,
+        "checks": [
+          {
+            "probe": "/health/ready",
+            "status": 200
+          }
+        ],
+        "status": 201,
+        "code": null,
+        "elapsedMs": 393.79319990985096,
+        "bodySnippet": "{\"tripId\":\"b290e27e-a262-4f88-bd59-127ffb13523c\"}",
+        "preflightTripId": "b290e27e-a262-4f88-bd59-127ffb13523c"
+      }
+    },
+    "achieved": {
+      "configuredRatePerSecond": 100,
+      "achievedRatePerSecond": 100.02472985289798,
+      "iterations": 3001,
+      "httpRequests": 3001,
+      "successCount": 196,
+      "domainConflictCount": 2805,
+      "systemErrorCount": 0,
+      "authFailureCount": 0,
+      "unexpectedCount": 0,
+      "sampleCount": 3001,
+      "droppedIterations": 0,
+      "vusMax": 30,
+      "vus": 0,
+      "p50Ms": 3.450826,
+      "p95Ms": 11.064585,
+      "latencyCount": 3001,
+      "latencyByOutcome": {
+        "success": {
+          "p50": 11.8047975,
+          "p95": 16.93917925,
+          "count": 196
+        },
+        "domainConflict": {
+          "p50": 3.418988,
+          "p95": 4.358810199999999,
+          "count": 2805
+        },
+        "authFailure": {
+          "p50": null,
+          "p95": null,
+          "count": null
+        },
+        "systemError": {
+          "p50": null,
+          "p95": null,
+          "count": null
+        },
+        "unexpected": {
+          "p50": null,
+          "p95": null,
+          "count": null
+        }
+      },
+      "elapsedSeconds": 31.086460900027305
+    },
+    "warmupSeconds": 30.219799200072885,
+    "warmup": {
+      "statuses": [
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        201,
+        409,
+        409,
+        409,
+        409,
+        409
+      ],
+      "seconds": 30.219799200072885,
+      "scope": "separate preflight Rider; excluded from measured requests",
+      "requestSeconds": 30.000982700148597
+    },
+    "measurementSeconds": 31.086460900027305,
+    "cooldownSeconds": 0,
+    "datasetSeed": 1302
+  },
+  "result": {
+    "status": "PASS",
+    "reason": "k6 open-model run completed with authoritative final-state agreement",
+    "sampleCount": 3001,
+    "outcomes": {
+      "success": 196,
+      "domainConflict": 2805,
+      "systemError": 0,
+      "timeout": 0,
+      "unexpected": 0
+    },
+    "latencyMs": {
+      "p50": 3.450826,
+      "p95": 11.064585,
+      "count": 3001
+    },
+    "assertions": {
+      "k6SummaryPresent": true,
+      "k6ExitZero": true,
+      "preflightReady": true,
+      "sampleCountMatchesIterations": true,
+      "zeroAuthFailures": true,
+      "zeroUnexpected": true,
+      "successesObserved": true,
+      "systemErrorsZero": true,
+      "notAllDomainConflicts": true,
+      "finalStateAvailable": true,
+      "activeTripsPerRiderViolationsZero": true,
+      "duplicateIdempotencyResourcesZero": true,
+      "tripCountMatchesSuccesses": true,
+      "idempotencyCountMatchesSuccesses": true,
+      "independentAuthoritiesPass": true,
+      "offeredStartsMatchConfiguredArrivalRate": true,
+      "oneHttpRequestPerIteration": true,
+      "latencyCountMatchesHttpRequests": true,
+      "finiteNonnegativeLatencyQuantiles": true,
+      "declaredMetricsPresentAndFinite": true
+    }
+  },
+  "artifacts": {
+    "runDirectory": "evidence/team/w13-integration/runs/E02/W13-E02-20261102T141147Z-0516032b",
+    "commands": [
+      "python scripts/perf/w13.py e02 --preflight-base-url http://127.0.0.1:18080 --k6-base-url http://gateway:8080 --endpoint /trips --rate 100 --duration 30s --seed 1302 --mode report"
+    ],
+    "rawSamples": [
+      "raw/k6-summary.json",
+      "commands.txt",
+      "raw/prometheus.json",
+      "raw/warmup-prometheus.json"
+    ],
+    "finalState": [
+      "final-state/e02-trip-state.json"
+    ],
+    "rawRetainedLocally": true
+  },
+  "limitations": [
+    "No thresholds were invented before a baseline; the analyzer reports configured vs achieved load and outcome classes.",
+    "Domain conflicts are expected when the Rider active-Trip guard rejects a repeated Rider; they are not system failures.",
+    "Real Identity Rider accounts authenticate through Gateway. The finite Rider cohort and active-Trip conflicts are part of the declared workload; offered request rate is not business completion throughput.",
+    "k6 JSON points and console output remain local; the summary export is the curated input."
+  ],
+  "auditor": {
+    "status": "PASS",
+    "checks": {
+      "nonemptyMeasuredIntake": true,
+      "allTripsTerminalNoDriver": true,
+      "noAssignmentWithoutFleet": true,
+      "oneTerminalRoundPerTrip": true,
+      "allRoundsNoDriver": true,
+      "noSpuriousSagaOrPaymentEffect": true,
+      "allOutboxesDrained": true,
+      "noUnresolvedCleanup": true
+    },
+    "proofBoundary": "Independent read-only owning-database oracle after real no-fleet public intake; not an exercised Payment/Saga throughput claim",
+    "tripCountIncludingPreflight": 206,
+    "roundCount": 206,
+    "driverCount": 0,
+    "sagaCount": 0,
+    "paymentCount": 0,
+    "providerEffectCount": 0,
+    "pendingOutboxes": {
+      "trip_db": 0,
+      "matching_db": 0,
+      "driver_db": 0,
+      "payment_db": 0
+    },
+    "pendingCleanup": 0
+  }
+}

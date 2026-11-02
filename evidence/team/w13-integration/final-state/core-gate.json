@@ -1,0 +1,420 @@
+{
+  "project": "ride-ci-41464187181-1",
+  "source": {
+    "commit": "002fdcc19ea54f812c9064d89b2485fdd799e6d3",
+    "tree": "8eccbdc6953e9272a89a16ae794688a3ba4cf0e3",
+    "status": "",
+    "runId": "41464187181",
+    "checkoutSha": "002fdcc19ea54f812c9064d89b2485fdd799e6d3"
+  },
+  "providers": {
+    "postgres": "18.6 (Debian 18.6-1.pgdg13+2)",
+    "rabbitmq": "Asking node rabbit@cab8d62c1975 for its RabbitMQ version...\n4.3.6",
+    "redis": "Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=9afb359f90603816"
+  },
+  "metrics": [
+    {
+      "name": "trip_created_trips_total",
+      "series": 1
+    },
+    {
+      "name": "saga_compensation_sagas_total",
+      "series": 1
+    },
+    {
+      "name": "driver_reserve_success_total",
+      "series": 1
+    },
+    {
+      "name": "matching_round_total",
+      "series": 1
+    },
+    {
+      "name": "outbox_publish_messages_total",
+      "series": 4
+    },
+    {
+      "name": "payment_operation_operations_total",
+      "series": 2
+    },
+    {
+      "name": "rabbitmq_detailed_queue_messages_ready",
+      "series": 19
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario": "completed",
+      "tripId": "66083306-9685-480f-9d9e-ca7d85715412",
+      "driverId": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+      "reservationId": "50d4ac41-dc72-4318-beb1-4b4cb91b50a2",
+      "terminalSaga": "COMPLETED",
+      "traceId": "ab75bc338a2d4cc0b2d633cfec66973b",
+      "traceServices": [
+        "driver-service",
+        "gateway-service",
+        "identity-service",
+        "matching-service",
+        "notification-service",
+        "payment-service",
+        "trip-service"
+      ]
+    },
+    {
+      "scenario": "cancelled-during-authorization",
+      "tripId": "1807620a-0644-47ed-850c-351e16ca039f",
+      "driverId": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+      "reservationId": "280d3ccc-dace-4808-a051-bc896e3278a0",
+      "terminalSaga": "COMPENSATED",
+      "traceId": "77d1084075a24445849a0d293ec91d4f",
+      "traceServices": [
+        "driver-service",
+        "gateway-service",
+        "matching-service",
+        "notification-service",
+        "payment-service",
+        "trip-service"
+      ]
+    },
+    {
+      "scenario": "terminal-authorization-decline",
+      "tripId": "08ec1534-d7f6-4aba-b6a8-0d3e08b12cc7",
+      "driverId": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+      "reservationId": "bb333f17-98fc-42a7-95f3-17c969d2b91d",
+      "terminalSaga": "COMPENSATED",
+      "traceId": "3330ba18bf0a4986bd540af69657336b",
+      "traceServices": [
+        "driver-service",
+        "gateway-service",
+        "matching-service",
+        "notification-service",
+        "payment-service",
+        "trip-service"
+      ]
+    }
+  ],
+  "assignmentProofs": [
+    {
+      "trip": {
+        "trip_id": "66083306-9685-480f-9d9e-ca7d85715412",
+        "rider_id": "38bf65f6-2808-430b-86de-74232a82f1fc",
+        "state": "DRIVER_RESERVED",
+        "created_at": "2026-11-02T14:45:01.60496+00:00",
+        "version": 2,
+        "assigned_driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "matching_round": 1,
+        "reservation_id": "50d4ac41-dc72-4318-beb1-4b4cb91b50a2",
+        "dropoff_latitude": 10.78,
+        "dropoff_longitude": 106.71,
+        "fare_amount": 15260.47,
+        "fare_created_at": "2026-11-02T14:45:01.60496+00:00",
+        "fare_currency": "VND",
+        "fare_policy_version": "p0-w4-v1",
+        "pickup_latitude": 10.7769,
+        "pickup_longitude": 106.7009,
+        "current_matching_round": 1,
+        "updated_at": "2026-11-02T14:45:03.194967+00:00"
+      },
+      "driver": {
+        "driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "user_id": "c206c3e6-e354-4e1c-aee2-9c23e245fb9c",
+        "status": "RESERVED",
+        "version": 3,
+        "reserved_trip_id": "66083306-9685-480f-9d9e-ca7d85715412",
+        "reservation_id": "50d4ac41-dc72-4318-beb1-4b4cb91b50a2",
+        "active_trip_id": null,
+        "vehicle_id": null,
+        "created_at": "2026-11-02T14:45:00.401663+00:00",
+        "updated_at": "2026-11-02T14:45:02.756924+00:00",
+        "reserved_round": 1
+      },
+      "round": {
+        "trip_id": "66083306-9685-480f-9d9e-ca7d85715412",
+        "matching_round": 1,
+        "input_message_id": "trip:660833069685480f9d9eca7d85715412:ride-requested:1",
+        "status": "RESERVED",
+        "current_stage": "S0",
+        "cancel_requested": false,
+        "ranking_config_version": "v1",
+        "candidate_snapshot_hash": "072fcf9bf3a3a19daf7f689fde4dacf1a43660b5d985b5027ec3dbca10733c5d",
+        "selected_driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "selected_reservation_id": "50d4ac41-dc72-4318-beb1-4b4cb91b50a2",
+        "result_message_id": null,
+        "created_at": "2026-11-02T14:45:02.289662+00:00",
+        "updated_at": "2026-11-02T14:45:02.771544+00:00",
+        "candidate_count": 1,
+        "next_attempt_ordinal": 1,
+        "candidate_snapshot_json": [
+          {
+            "score": 0.0001,
+            "stage": "S0",
+            "ordinal": 0,
+            "version": 2,
+            "driverId": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+            "capturedAt": "2026-11-02T14:45:00+00:00",
+            "distanceKm": 0.0001,
+            "reservationId": "50d4ac41-dc72-4318-beb1-4b4cb91b50a2"
+          }
+        ],
+        "pickup_longitude": 106.7009,
+        "pickup_latitude": 10.7769,
+        "auto_execute": true,
+        "work_checked_at": "2026-11-02T14:45:02.775778+00:00",
+        "work_error_code": null,
+        "stage_evaluated": "S0",
+        "intake_traceparent": "00-ab75bc338a2d4cc0b2d633cfec66973b-03c56ae87c2f42d7-01"
+      },
+      "winningAttempt": {
+        "trip_id": "66083306-9685-480f-9d9e-ca7d85715412",
+        "matching_round": 1,
+        "ordinal": 0,
+        "driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "reservation_id": "50d4ac41-dc72-4318-beb1-4b4cb91b50a2",
+        "state": "RESERVED",
+        "last_error_code": null,
+        "created_at": "2026-11-02T14:45:02.436612+00:00",
+        "updated_at": "2026-11-02T14:45:02.768654+00:00",
+        "max_dispatched_version": 2,
+        "stage": "S0",
+        "last_checked_at": null
+      }
+    },
+    {
+      "trip": {
+        "trip_id": "1807620a-0644-47ed-850c-351e16ca039f",
+        "rider_id": "1528e6ed-0043-4204-9658-09a5e1ff254f",
+        "state": "DRIVER_RESERVED",
+        "created_at": "2026-11-02T14:45:14.64241+00:00",
+        "version": 2,
+        "assigned_driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "matching_round": 1,
+        "reservation_id": "280d3ccc-dace-4808-a051-bc896e3278a0",
+        "dropoff_latitude": 10.78,
+        "dropoff_longitude": 106.71,
+        "fare_amount": 15260.47,
+        "fare_created_at": "2026-11-02T14:45:14.64241+00:00",
+        "fare_currency": "VND",
+        "fare_policy_version": "p0-w4-v1",
+        "pickup_latitude": 10.7769,
+        "pickup_longitude": 106.7009,
+        "current_matching_round": 1,
+        "updated_at": "2026-11-02T14:45:16.279754+00:00"
+      },
+      "driver": {
+        "driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "user_id": "c206c3e6-e354-4e1c-aee2-9c23e245fb9c",
+        "status": "RESERVED",
+        "version": 6,
+        "reserved_trip_id": "1807620a-0644-47ed-850c-351e16ca039f",
+        "reservation_id": "280d3ccc-dace-4808-a051-bc896e3278a0",
+        "active_trip_id": null,
+        "vehicle_id": null,
+        "created_at": "2026-11-02T14:45:00.401663+00:00",
+        "updated_at": "2026-11-02T14:45:15.817738+00:00",
+        "reserved_round": 1
+      },
+      "round": {
+        "trip_id": "1807620a-0644-47ed-850c-351e16ca039f",
+        "matching_round": 1,
+        "input_message_id": "trip:1807620a064447ed850c351e16ca039f:ride-requested:1",
+        "status": "RESERVED",
+        "current_stage": "S0",
+        "cancel_requested": false,
+        "ranking_config_version": "v1",
+        "candidate_snapshot_hash": "8c56978fe63b354432174ef661b58e15c47759569defc87ac68f7d7092a4d8cf",
+        "selected_driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "selected_reservation_id": "280d3ccc-dace-4808-a051-bc896e3278a0",
+        "result_message_id": null,
+        "created_at": "2026-11-02T14:45:15.414304+00:00",
+        "updated_at": "2026-11-02T14:45:15.820225+00:00",
+        "candidate_count": 1,
+        "next_attempt_ordinal": 1,
+        "candidate_snapshot_json": [
+          {
+            "score": 0.0001,
+            "stage": "S0",
+            "ordinal": 0,
+            "version": 5,
+            "driverId": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+            "capturedAt": "2026-11-02T14:45:00+00:00",
+            "distanceKm": 0.0001,
+            "reservationId": "280d3ccc-dace-4808-a051-bc896e3278a0"
+          }
+        ],
+        "pickup_longitude": 106.7009,
+        "pickup_latitude": 10.7769,
+        "auto_execute": true,
+        "work_checked_at": "2026-11-02T14:45:15.821702+00:00",
+        "work_error_code": null,
+        "stage_evaluated": "S0",
+        "intake_traceparent": "00-77d1084075a24445849a0d293ec91d4f-1e8bd98850bbb553-01"
+      },
+      "winningAttempt": {
+        "trip_id": "1807620a-0644-47ed-850c-351e16ca039f",
+        "matching_round": 1,
+        "ordinal": 0,
+        "driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "reservation_id": "280d3ccc-dace-4808-a051-bc896e3278a0",
+        "state": "RESERVED",
+        "last_error_code": null,
+        "created_at": "2026-11-02T14:45:15.803157+00:00",
+        "updated_at": "2026-11-02T14:45:15.81927+00:00",
+        "max_dispatched_version": 5,
+        "stage": "S0",
+        "last_checked_at": null
+      }
+    },
+    {
+      "trip": {
+        "trip_id": "08ec1534-d7f6-4aba-b6a8-0d3e08b12cc7",
+        "rider_id": "43175b50-2a20-46cf-8031-77a00bedbce9",
+        "state": "DRIVER_RESERVED",
+        "created_at": "2026-11-02T14:45:22.518678+00:00",
+        "version": 2,
+        "assigned_driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "matching_round": 1,
+        "reservation_id": "bb333f17-98fc-42a7-95f3-17c969d2b91d",
+        "dropoff_latitude": 10.78,
+        "dropoff_longitude": 106.71,
+        "fare_amount": 15260.47,
+        "fare_created_at": "2026-11-02T14:45:22.518678+00:00",
+        "fare_currency": "VND",
+        "fare_policy_version": "p0-w4-v1",
+        "pickup_latitude": 10.7769,
+        "pickup_longitude": 106.7009,
+        "current_matching_round": 1,
+        "updated_at": "2026-11-02T14:45:24.322484+00:00"
+      },
+      "driver": {
+        "driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "user_id": "c206c3e6-e354-4e1c-aee2-9c23e245fb9c",
+        "status": "RESERVED",
+        "version": 8,
+        "reserved_trip_id": "08ec1534-d7f6-4aba-b6a8-0d3e08b12cc7",
+        "reservation_id": "bb333f17-98fc-42a7-95f3-17c969d2b91d",
+        "active_trip_id": null,
+        "vehicle_id": null,
+        "created_at": "2026-11-02T14:45:00.401663+00:00",
+        "updated_at": "2026-11-02T14:45:23.859522+00:00",
+        "reserved_round": 1
+      },
+      "round": {
+        "trip_id": "08ec1534-d7f6-4aba-b6a8-0d3e08b12cc7",
+        "matching_round": 1,
+        "input_message_id": "trip:08ec1534d7f64abab6a80d3e08b12cc7:ride-requested:1",
+        "status": "RESERVED",
+        "current_stage": "S0",
+        "cancel_requested": false,
+        "ranking_config_version": "v1",
+        "candidate_snapshot_hash": "0b9e6ecee63bf98c1aa081a8d080e6cc719ba28e7944869897f290c8315442e2",
+        "selected_driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "selected_reservation_id": "bb333f17-98fc-42a7-95f3-17c969d2b91d",
+        "result_message_id": null,
+        "created_at": "2026-11-02T14:45:23.486673+00:00",
+        "updated_at": "2026-11-02T14:45:23.86833+00:00",
+        "candidate_count": 1,
+        "next_attempt_ordinal": 1,
+        "candidate_snapshot_json": [
+          {
+            "score": 0.0001,
+            "stage": "S0",
+            "ordinal": 0,
+            "version": 7,
+            "driverId": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+            "capturedAt": "2026-11-02T14:45:00+00:00",
+            "distanceKm": 0.0001,
+            "reservationId": "bb333f17-98fc-42a7-95f3-17c969d2b91d"
+          }
+        ],
+        "pickup_longitude": 106.7009,
+        "pickup_latitude": 10.7769,
+        "auto_execute": true,
+        "work_checked_at": "2026-11-02T14:45:23.87138+00:00",
+        "work_error_code": null,
+        "stage_evaluated": "S0",
+        "intake_traceparent": "00-3330ba18bf0a4986bd540af69657336b-41a1cb8d4388e99f-01"
+      },
+      "winningAttempt": {
+        "trip_id": "08ec1534-d7f6-4aba-b6a8-0d3e08b12cc7",
+        "matching_round": 1,
+        "ordinal": 0,
+        "driver_id": "f9a550dc-b038-4e44-9123-c91ed094cae2",
+        "reservation_id": "bb333f17-98fc-42a7-95f3-17c969d2b91d",
+        "state": "RESERVED",
+        "last_error_code": null,
+        "created_at": "2026-11-02T14:45:23.839262+00:00",
+        "updated_at": "2026-11-02T14:45:23.865722+00:00",
+        "max_dispatched_version": 7,
+        "stage": "S0",
+        "last_checked_at": null
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "AUD-01",
+      "status": "PASS",
+      "authorities": [
+        "driver_db",
+        "trip_db"
+      ]
+    },
+    {
+      "id": "AUD-02",
+      "status": "PASS",
+      "authorities": [
+        "driver_db"
+      ]
+    },
+    {
+      "id": "AUD-03",
+      "status": "PASS",
+      "authorities": [
+        "trip_db"
+      ]
+    },
+    {
+      "id": "AUD-04",
+      "status": "PASS",
+      "authorities": [
+        "trip_db",
+        "driver_db",
+        "matching_db"
+      ]
+    },
+    {
+      "id": "AUD-05",
+      "status": "PASS",
+      "authorities": [
+        "payment_db",
+        "provider_effects"
+      ]
+    },
+    {
+      "id": "AUD-06",
+      "status": "PASS",
+      "authorities": [
+        "matching_db"
+      ]
+    },
+    {
+      "id": "AUD-07",
+      "status": "PASS",
+      "authorities": [
+        "trip_db",
+        "driver_db"
+      ]
+    },
+    {
+      "id": "AUD-08",
+      "status": "PASS",
+      "authorities": [
+        "trip_db",
+        "driver_db",
+        "matching_db",
+        "payment_db"
+      ]
+    }
+  ],
+  "proofBoundary": "Real authenticated public ride intake; controlled production lifecycle handlers; live service authorities, providers and broker. No public accept/start/complete HTTP transport claim."
+}
