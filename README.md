@@ -74,6 +74,7 @@ Closed on this branch (W08 round-lineage hardening): `DriverReservedV1` now carr
 
 ```bash
 cp .env.example .env
+python3 scripts/security/init-local-auth.py
 docker compose up -d --build
 curl http://localhost:8080/health/live
 curl http://localhost:8101/health/live
@@ -86,6 +87,8 @@ docker compose ps
 docker compose --profile obs up -d  # optional: Jaeger 16686, Prometheus 9090, Grafana 3000, OTel 4317/4318
 docker compose down
 ```
+
+Public business requests require signed Identity grants. See [authentication runtime](docs/authentication-runtime.md) for registration/login, service permissions and local key setup. Python and OpenSSL are required for the disposable local/CI credential initialization.
 
 Payment simulator (Development-only, not mobile API):
 

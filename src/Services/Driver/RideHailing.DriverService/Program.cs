@@ -12,8 +12,10 @@ using RideHailing.DriverService.Infrastructure.Telemetry;
 using RideHailing.Messaging.Outbox;
 using RideHailing.Messaging.Reliability;
 using RideHailing.Observability;
+using RideHailing.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddRideAuthentication(builder.Configuration);
 RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("driver-service");
 builder.AddDriverTelemetry();
@@ -87,6 +89,9 @@ if (brokerOptions.CommandsEnabled)
 }
 
 var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseDriverAccessGuard();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "driver-service" }));
 app.MapRideReadiness();

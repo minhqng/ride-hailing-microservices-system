@@ -63,7 +63,8 @@ public sealed class RideRequestedHandler
             payload.InputMessageId,
             payload.PickupLongitude,
             payload.PickupLatitude,
-            ct);
+            ct,
+            Activity.Current?.Id);
         if (_work is not null)
         {
             await _work.ApplyPendingCancelAsync(payload.TripId, payload.MatchingRound, ct);
