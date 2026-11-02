@@ -47,6 +47,7 @@ public static class TripMessagingRegistration
         // explicit enable in Production at startup is fail-fast misconfiguration
         // handling — the flag must never survive into a production host.
         var faultPoints = TripFaultPointSettings.FromConfiguration(config);
+        var sharedFaultPoint = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(environment.EnvironmentName);
         if (faultPoints.Enabled && environment.IsProduction())
         {
             throw new InvalidOperationException(
@@ -97,14 +98,18 @@ public static class TripMessagingRegistration
             PollInterval = TimeSpan.FromMilliseconds(config.GetValue<int?>("Outbox:PollIntervalMs") ?? 1000),
             MaxAttempts = config.GetValue<int?>("Outbox:MaxAttempts") ?? 5,
             RetryDelay = TimeSpan.FromSeconds(config.GetValue<int?>("Outbox:RetryDelaySeconds") ?? 1),
-            // A-W11-01: the deterministic pre-dispatch faultpoint rides the
-            // same relay seam C's shared platform will use. Null (seam off) in
-            // every host without explicitly activated test faultpoints.
+            // Preserve the Trip harness protocol when configured; otherwise
+            // use the shared provider at the same committed dispatch boundary.
             BeforePublish = faultPoints.Enabled
                 ? (message, token) => sp.GetRequiredService<TripFaultPointGate>().HoldBeforePublishAsync(
                     TripFaultPointNames.SagaAfterPersistBeforeDispatch,
                     message.MessageType, message.MessageId, token)
-                : null,
+                : sharedFaultPoint.IsEnabled(RideHailing.Messaging.FaultPointNames.SagaAfterPersistBeforeDispatch)
+                    ? (message, token) => TripFaultPointNames.IsSagaDispatch(message.MessageType)
+                        ? sharedFaultPoint.HitAsync(
+                            RideHailing.Messaging.FaultPointNames.SagaAfterPersistBeforeDispatch, token)
+                        : Task.CompletedTask
+                    : null,
         });
         services.AddSingleton<OutboxRelay>();
         services.AddHostedService<TripOutboxRelayWorker>();

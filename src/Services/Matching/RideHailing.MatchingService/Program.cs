@@ -30,6 +30,7 @@ using RideHailing.Observability;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("matching-service");
 builder.Services.AddHealthChecks();
 
