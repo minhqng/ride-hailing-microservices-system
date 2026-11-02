@@ -197,20 +197,51 @@ public class BrokerConsumeTests
 
         using var cts = new CancellationTokenSource();
         var handler = new RideRequestedHandler(Rounds(), new TestLogger<RideRequestedHandler>());
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var continueHandling = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completed = 0;
+        async Task<HandlerOutcome> HandleDuplicate(BrokerDelivery delivery, CancellationToken token)
+        {
+            if (!delivery.Body.SequenceEqual(body))
+                return await handler.HandleAsync(delivery, token);
+
+            entered.TrySetResult();
+            await continueHandling.Task.WaitAsync(token);
+            var outcome = await handler.HandleAsync(delivery, token);
+            Interlocked.Increment(ref completed);
+            return outcome;
+        }
         var run = Task.WhenAll(
             BrokerConsume.RunAsync(Factory(), "matching.ride-requested.q", 8, 3,
-                (d, ct) => handler.HandleAsync(d, ct),
+                HandleDuplicate,
                 new TestLogger<BrokerConsumeTests>(), cts.Token),
             BrokerConsume.RunAsync(Factory(), "matching.ride-requested.q", 8, 3,
-                (d, ct) => handler.HandleAsync(d, ct),
+                HandleDuplicate,
                 new TestLogger<BrokerConsumeTests>(), cts.Token));
 
-        await PollUntilAsync(async () =>
-            await QueueDepthAsync("matching.ride-requested.q") == 0, "duplicate drain");
-        cts.Cancel();
-        await run.WaitAsync(TimeSpan.FromSeconds(30));
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await PollUntilAsync(async () =>
+                await QueueDepthAsync("matching.ride-requested.q") == 0, "duplicates prefetched");
+            // AMQP MessageCount excludes unacknowledged deliveries. Zero READY
+            // messages can coexist with every own handler blocked before SQL.
+            Assert.Null(await Rounds().LoadRoundAsync(trip, 2));
+            continueHandling.TrySetResult();
+            await PollUntilAsync(() => Task.FromResult(Volatile.Read(ref completed) >= 4),
+                "all four duplicate deliveries committed through the real handler");
+        }
+        finally
+        {
+            continueHandling.TrySetResult();
+            cts.Cancel();
+            await run.WaitAsync(TimeSpan.FromSeconds(30));
+        }
 
-        Assert.NotNull(await Rounds().LoadRoundAsync(trip, 2));
+        var round = await Rounds().LoadRoundAsync(trip, 2);
+        Assert.NotNull(round);
+        Assert.Equal(msg, round.InputMessageId);
+        Assert.Equal(MatchingRoundStatuses.Processing, round.Status);
         Assert.Empty(await Rounds().LoadAttemptsAsync(trip, 2));
     }
 

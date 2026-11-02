@@ -30,6 +30,7 @@ from typing import Any
 import w13lib as lib
 import w13_auth as auth
 import w13_metrics
+import w13_authority
 
 DEFAULT_ENDPOINT = "/trips"
 
@@ -423,19 +424,16 @@ def run(args: argparse.Namespace) -> int:
         raw_dir.mkdir(parents=True, exist_ok=True)
         commands_file = run_dir / "commands.txt"
         lib.write_text(commands_file, "\n".join(commands) + "\n")
-        mount_root = lib.ROOT.as_posix()
         k6_token_path = _write_token_file(load_tokens, run_dir)
-        relative_token = lib.container_path(k6_token_path)
-        run_relative = lib.container_path(run_dir)
-        summary_rel = f"{run_relative}/raw/k6-summary.json"
-        points_rel = f"{run_relative}/raw/k6-points.json"
         console_file = raw_dir / "k6-console.txt"
         k6_command = [
             "docker", "run", "--rm",
             "--network", network,
-            "-v", f"{mount_root}:/work",
-            "-w", "/work",
-            "-e", f"K6_TOKEN_FILE=/work/{relative_token}",
+            "-v", f"{(lib.PERF_DIR / 'k6').as_posix()}:/scripts:ro",
+            "-v", f"{raw_dir.as_posix()}:/results",
+            "-v", f"{k6_token_path.as_posix()}:/secrets/riders.txt:ro",
+            "-w", "/scripts",
+            "-e", "K6_TOKEN_FILE=/secrets/riders.txt",
             "-e", f"K6_BASE_URL={args.k6_base_url}",
             "-e", f"K6_ENDPOINT={args.endpoint}",
             "-e", f"K6_RATE={args.rate}",
@@ -444,9 +442,9 @@ def run(args: argparse.Namespace) -> int:
             "-e", f"K6_MAX_VUS={args.max_vus}",
             "-e", f"K6_SEED={seed + repeat}",
             lib.K6_IMAGE, "run",
-            "--summary-export", f"/work/{summary_rel}",
-            "--out", f"json=/work/{points_rel}",
-            "/work/scripts/perf/k6/e02-create-ride.js",
+            "--summary-export", "/results/k6-summary.json",
+            "--out", "json=/results/k6-points.json",
+            "/scripts/e02-create-ride.js",
         ]
         started = time.perf_counter()
         started_iso = lib.iso()
@@ -460,11 +458,13 @@ def run(args: argparse.Namespace) -> int:
         summary = lib.read_json(summary_path) if summary_path.exists() else None
         final_state_path = run_dir / "final-state" / "e02-trip-state.json"
         final_state = _trip_final_state(started_iso) if summary is not None else {}
+        authority = w13_authority.audit_no_fleet() if summary is not None else {"status": "FAIL"}
         lib.write_json(final_state_path, {
             "synthetic": False,
             "reportGrade": args.report_grade,
             "startedAtUtc": started_iso,
             "finalState": final_state,
+            "independentAuthorities": authority,
         })
 
         if summary is None:
@@ -520,6 +520,7 @@ def run(args: argparse.Namespace) -> int:
                 "elapsedSeconds": elapsed,
             }
             final_checks = _trip_final_checks(final_state, success)
+            final_checks["independentAuthoritiesPass"] = authority["status"] == "PASS"
             assertions = {
                 "k6SummaryPresent": True,
                 "k6ExitZero": k6_result.returncode == 0,

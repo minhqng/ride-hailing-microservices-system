@@ -115,7 +115,9 @@ passwords are redacted. E01 registers real Driver owners and obtains scoped
 Matching/Trip service grants outside measurement. E02 registers a fresh Rider
 cohort after every reset, with a separate preflight Rider. k6 token files live
 under ignored `plans/.w13-credentials/`, outside artifacts, and are removed after
-the k6 process exits. Token issuance latency is excluded from API measurements.
+the k6 process exits. k6 receives only its script, result directory and Rider
+token file; the repository and Identity private key are not mounted. Token
+issuance latency is excluded from API measurements.
 
 ## Outcome and latency discipline
 
@@ -132,6 +134,11 @@ the k6 process exits. Token issuance latency is excluded from API measurements.
   restricted to the canonical `/trips`; report-grade mode requires the Gateway
   target, an observed rejected no-token mutation, and at least two rider
   tokens (the preflight token is excluded from the load pool).
+- The default E02 cohort has no Driver fleet. Accepted creations resolve through
+  actual Matching/broker paths to MATCH_FAILED. A separate read-only oracle
+  checks every Trip/round, assignment absence, idle Payment/provider state,
+  complete Outbox drain and cleanup. This measures public intake and no-driver
+  resolution; G4 separately exercises successful rides and Saga compensation.
 - E03 proves replica registration from the broker consumer count and actual
   work distribution by matching measured trip identities in each replica's
   consumption log. Starting containers is not proof, and warm-up messages are
