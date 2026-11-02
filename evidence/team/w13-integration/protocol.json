@@ -27,7 +27,8 @@
       "rabbitmq": "4.3.6",
       "redis": "8.10.2"
     },
-    "metricExportMilliseconds": 5000
+    "metricExportMilliseconds": 5000,
+    "imageBuildPolicy": "Build all six required application images once from the frozen source; record IDs; reuse them with W13_USE_PREBUILT_IMAGES=1 and --no-build for every reset/configuration."
   },
   "reportRoot": "evidence/team/w13-integration/runs",
   "g4Certificate": "evidence/member-b/w13-performance-campaign/g4/team-integration-readiness.json",
@@ -104,5 +105,12 @@
     "W14 implementation in this candidate",
     "W15",
     "W16"
-  ]
+  ],
+  "protocolRevision": 2,
+  "prebuildCommand": "docker compose --profile obs -f compose.yaml -f scripts/perf/compose.w13.yaml build gateway identity driver matching trip payment",
+  "rejectedPredecessor": {
+    "source": "005735022accaa6fdf72e34bbb1e97d18a3b3324",
+    "path": "rejected-campaigns/source-005-image-drift",
+    "reason": "Application image identities changed between rebuilds. No image equivalence proof is available; correctness passes do not establish controlled performance acceptance."
+  }
 }
