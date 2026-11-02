@@ -11,7 +11,7 @@ def capture(run_dir: Path, experiment: str, *, start: str | None = None) -> tupl
     queries = ["outbox_pending", "outbox_oldest_pending_age"]
     if experiment != "E01":
         queries += ["queue_ready", "queue_unacked", "redelivery_rate", "consumer_delivery_rate",
-                    "consumer_redelivery_rate", "dedup_rate"]
+                    "consumer_redelivery_rate", "consumer_processing_p95_ms", "dedup_rate"]
     if experiment == "E02":
         queries += ["saga_active", "trip_transition_rejected_rate"]
     path = run_dir / "raw" / "prometheus.json"

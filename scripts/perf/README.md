@@ -38,13 +38,19 @@ All commands use:
 # Generate disposable ignored credentials before starting the stack
 python scripts/security/init-local-auth.py
 
-docker compose -f compose.yaml -f scripts/perf/compose.w13.yaml ...
+docker compose --profile obs -f compose.yaml -f scripts/perf/compose.w13.yaml ...
 ```
 
 The override fixes the project name to `ride-hailing-w13`, remaps every host
 port, removes the Matching host port so replicas can be scaled, and freezes
 CPU/memory limits plus the PostgreSQL pool size. It never touches the normal
 development stack.
+
+The same bounded collector, Prometheus and Jaeger services run for every
+configuration. Application metric export is fixed at five seconds. E02/E03
+preserve actual Prometheus range samples for the measured interval; E01 retains
+an authoritative post-contention Outbox snapshot. Matching's existing intake
+records dedup only after database commit, and shared ACK metrics only after ACK.
 
 `reset` destroys only this compose project's volumes:
 

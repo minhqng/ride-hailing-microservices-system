@@ -143,7 +143,7 @@ def docker(*args: str, timeout: float | None = 120, check: bool = False) -> subp
 
 
 def compose_args(*args: str) -> list[str]:
-    command: list[str] = ["docker", "compose"]
+    command: list[str] = ["docker", "compose", "--profile", "obs"]
     for compose_file in COMPOSE_FILES:
         command.extend(["-f", compose_file])
     command.extend(args)

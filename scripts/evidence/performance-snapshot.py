@@ -15,6 +15,7 @@ QUERIES = {
     "redelivery_rate": "sum by (queue) (rate(rabbitmq_detailed_queue_messages_redelivered_total[1m]))",
     "consumer_delivery_rate": "sum(rate({__name__=~'consumer_delivery(_messages)?_total'}[1m]))",
     "consumer_redelivery_rate": "sum(rate({__name__=~'consumer_redelivery(_messages)?_total'}[1m]))",
+    "consumer_processing_p95_ms": "histogram_quantile(0.95, sum by (le) (rate({__name__=~'consumer_processing_duration(_milliseconds|_ms)?_bucket'}[1m])))",
     "dedup_rate": "sum by (outcome) (rate({__name__=~'dedup_processed(_messages)?_total'}[1m]))",
     "outbox_pending": "sum({__name__=~'outbox_pending(_messages)?'})",
     "outbox_oldest_pending_age": "max({__name__=~'outbox_oldest_pending_age(_seconds)?'})",
