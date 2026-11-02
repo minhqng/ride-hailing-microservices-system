@@ -228,6 +228,7 @@ public sealed class MatchingAttemptRepository
         }
 
         await tx.CommitAsync(ct);
+        RideHailing.Messaging.Observability.MessagingMetrics.RecordDedup(duplicate: inserted == 0);
         return (await LoadRoundAsync(tripId, round, ct))!;
     }
 

@@ -9,11 +9,13 @@
 // no breaker. Converges onto C's consumer base when that lands (same
 // exchanges/queues/envelope/ACK-after-commit discipline).
 using System.Text.Json;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Topology;
+using RideHailing.Messaging.Observability;
 
 namespace RideHailing.MatchingService.Application.Messaging;
 
@@ -121,6 +123,9 @@ public static class BrokerConsume
         BasicDeliverEventArgs delivery,
         CancellationToken ct)
     {
+        MessagingMetrics.RecordDelivery(delivery.Redelivered);
+        var started = Stopwatch.GetTimestamp();
+        var processingOutcome = "failed";
         var headers = new Dictionary<string, object?>(StringComparer.Ordinal);
         if (delivery.BasicProperties?.Headers is not null)
         {
@@ -166,11 +171,14 @@ public static class BrokerConsume
                 ct);
             if (outcome == HandlerOutcome.Retry)
             {
+                processingOutcome = "retry";
                 await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: true, ct);
                 return;
             }
 
             await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, ct);
+            MessagingMetrics.RecordAcknowledged();
+            processingOutcome = "acknowledged";
         }
         catch (Exception ex)
         {
@@ -187,6 +195,11 @@ public static class BrokerConsume
                     await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, ct);
                     break;
             }
+        }
+        finally
+        {
+            MessagingMetrics.RecordProcessingDuration(
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds, processingOutcome);
         }
     }
 }

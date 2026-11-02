@@ -538,7 +538,7 @@ def _run_configuration_inner(
             "The autonomous Matching worker is disabled by default to isolate intake consumer scaling; "
             "worker-enabled runs are a separate, confounded variant.",
             "Intake latency is published-at to durable-round-created-at; it is not full workflow latency.",
-            "C-owned broker replica management and shared metrics remain external dependencies.",
+            "Broker replication is outside E03; these are application consumer replicas on one broker. Declared broker/application metrics are required.",
             "Report-grade execution additionally requires a green G4 gate and the campaign analyzer.",
         ],
         raw_retained_locally=True,
