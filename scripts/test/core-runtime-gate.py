@@ -85,6 +85,30 @@ def projection():
 wait("Matching location projection", projection, lambda value: "AVAILABLE" in value and "latitude" in value)
 scenarios = []
 assignment_proofs = []
+broker_recovery = []
+ha_recovery = os.environ.get("W14_BROKER_RECOVERY") == "1"
+if ha_recovery and (project != "team-w12-w14-ha" or not os.environ.get("COMPOSE_FILE")):
+    raise SystemExit("Broker recovery is restricted to the explicit disposable W14 HA project.")
+
+
+def brokers(action):
+    subprocess.run(["docker", "compose", action, "rabbitmq", "rabbitmq-2", "rabbitmq-3"],
+                   cwd=root, capture_output=True, check=True)
+
+
+def pending_authorization(trip_id):
+    query = ("SELECT message_id,status,published_at FROM outbox_messages WHERE aggregate_id='" + trip_id
+             + "' AND message_type='AuthorizePaymentV1'")
+    pending = wait("durable authorization while brokers unavailable", lambda: rows("trip_db", query), bool)
+    assert len(pending) == 1 and pending[0]["status"] != "PUBLISHED" and pending[0]["published_at"] is None
+    assert not rows("payment_db", "SELECT * FROM payment_operations WHERE trip_id='" + trip_id + "'")
+    time.sleep(5)
+    later = rows("trip_db", query)
+    assert len(later) == 1 and later[0]["status"] != "PUBLISHED" and later[0]["published_at"] is None
+    assert later[0]["message_id"] == pending[0]["message_id"]
+    broker_recovery.append({"tripId": trip_id, "before": pending, "during": later,
+                            "infrastructureAction": "restore brokers only; all applications remain running"})
+
 for scenario in ["completed", "cancelled-during-authorization", "terminal-authorization-decline"]:
     _, rider_token = account("Rider")
     trace_id = uuid.uuid4().hex
@@ -103,7 +127,15 @@ for scenario in ["completed", "cancelled-during-authorization", "terminal-author
     assert len(attempts) == 1 and attempts[0]["driver_id"] == driver_id and attempts[0]["reservation_id"] == reservation
     assignment_proofs.append({"trip": assigned, "driver": driver_truth, "round": round_truth, "winningAttempt": attempts[0]})
     if scenario == "completed":
-        actor("accept", trip_id, driver_id, reservation)
+        if ha_recovery:
+            brokers("stop")
+        try:
+            actor("accept", trip_id, driver_id, reservation)
+            if ha_recovery:
+                pending_authorization(trip_id)
+        finally:
+            if ha_recovery:
+                brokers("start")
         wait("real Payment authorization", state, lambda value: value[0]["state"] == "READY_TO_START")
         actor("start", trip_id, driver_id, reservation)
         wait("real Driver start effect", lambda: rows("driver_db", "SELECT * FROM drivers WHERE driver_id='" + driver_id + "'"), lambda value: value[0]["status"] == "ON_TRIP")
@@ -115,13 +147,21 @@ for scenario in ["completed", "cancelled-during-authorization", "terminal-author
         # process before acceptance. No timing assumption decides whether the
         # authorization has already happened. Real queued work resumes after
         # cancellation and must drive the exact real-provider void.
-        subprocess.run(["docker", "compose", "stop", "payment"], cwd=root, capture_output=True, check=True)
+        if ha_recovery:
+            brokers("stop")
+        else:
+            subprocess.run(["docker", "compose", "stop", "payment"], cwd=root, capture_output=True, check=True)
         try:
             actor("accept", trip_id, driver_id, reservation)
             wait("pending authorization", state, lambda value: value[0]["state"] == "DRIVER_ACCEPTED")
+            if ha_recovery:
+                pending_authorization(trip_id)
             http("POST", "/trips/" + trip_id + "/cancel", {}, rider_token)
         finally:
-            subprocess.run(["docker", "compose", "start", "payment"], cwd=root, capture_output=True, check=True)
+            if ha_recovery:
+                brokers("start")
+            else:
+                subprocess.run(["docker", "compose", "start", "payment"], cwd=root, capture_output=True, check=True)
         saga_terminal = "COMPENSATED"
         operations = {"AUTHORIZE", "VOID"}
     else:
@@ -229,6 +269,6 @@ for service, command in [("rabbitmq", ["rabbitmq-diagnostics", "server_version"]
     providers[service] = subprocess.check_output(["docker", "compose", "exec", "-T", service, *command], cwd=root, text=True).strip()
 output = root / "plans/reports/core-runtime-gate.json"
 output.parent.mkdir(parents=True, exist_ok=True)
-output.write_text(json.dumps({"project": project, "source": source, "providers": providers, "metrics": metrics, "scenarios": scenarios, "assignmentProofs": assignment_proofs, "checks": checks,
+output.write_text(json.dumps({"project": project, "source": source, "providers": providers, "metrics": metrics, "scenarios": scenarios, "assignmentProofs": assignment_proofs, "checks": checks, "brokerRecovery": broker_recovery,
     "proofBoundary": "Real authenticated public ride intake; controlled production lifecycle handlers; live service authorities, providers and broker. No public accept/start/complete HTTP transport claim."}, indent=2) + "\n")
 print("PASS: completed ride, exact authorization cancellation/void and terminal decline/release across real providers; AUD-01..08 inspected owning authorities.")
