@@ -265,8 +265,11 @@ def git(*arguments):
 source = {"commit": git("rev-parse", "HEAD"), "tree": git("rev-parse", "HEAD^{tree}"), "status": git("status", "--porcelain"),
           "runId": os.environ.get("GITHUB_RUN_ID"), "checkoutSha": os.environ.get("GITHUB_SHA")}
 providers = {"postgres": rows("trip_db", "SELECT current_setting('server_version') AS version")[0]["version"]}
-for service, command in [("rabbitmq", ["rabbitmq-diagnostics", "server_version"]), ("redis", ["redis-server", "--version"])]:
-    providers[service] = subprocess.check_output(["docker", "compose", "exec", "-T", service, *command], cwd=root, text=True).strip()
+rabbit_control = os.environ.get("W14_RABBIT_CONTROL_SERVICE", "rabbitmq")
+assert rabbit_control in ("rabbitmq", "rabbitmq-2", "rabbitmq-3")
+for service, control, command in [("rabbitmq", rabbit_control, ["rabbitmq-diagnostics", "server_version"]), ("redis", "redis", ["redis-server", "--version"])]:
+    providers[service] = subprocess.check_output(["docker", "compose", "exec", "-T", control, *command], cwd=root, text=True).strip()
+providers["rabbitmqControlService"] = rabbit_control
 output = root / "plans/reports/core-runtime-gate.json"
 output.parent.mkdir(parents=True, exist_ok=True)
 output.write_text(json.dumps({"project": project, "source": source, "providers": providers, "metrics": metrics, "scenarios": scenarios, "assignmentProofs": assignment_proofs, "checks": checks, "brokerRecovery": broker_recovery,
