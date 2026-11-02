@@ -161,7 +161,7 @@ for scenario in ["completed", "cancelled-during-authorization", "terminal-author
             if ha_recovery:
                 brokers("start")
             else:
-                subprocess.run(["docker", "compose", "start", "payment"], cwd=root, capture_output=True, check=True)
+                subprocess.run(["docker", "compose", "up", "-d", "--no-deps", "--no-build", "payment"], cwd=root, capture_output=True, check=True)
         saga_terminal = "COMPENSATED"
         operations = {"AUTHORIZE", "VOID"}
     else:
