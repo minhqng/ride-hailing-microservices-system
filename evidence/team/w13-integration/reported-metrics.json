@@ -1,0 +1,326 @@
+{
+  "E01": [
+    {
+      "point": 1,
+      "runs": 3,
+      "samples": 3,
+      "winners": 3,
+      "conflicts": 0,
+      "p50Ms": {
+        "count": 3,
+        "median": 7.104600081220269,
+        "min": 6.852800026535988,
+        "max": 7.481900043785572,
+        "sampleStdDev": 0.31662947877980163
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 7.104600081220269,
+        "min": 6.852800026535988,
+        "max": 7.481900043785572,
+        "sampleStdDev": 0.31662947877980163
+      }
+    },
+    {
+      "point": 10,
+      "runs": 3,
+      "samples": 30,
+      "winners": 3,
+      "conflicts": 27,
+      "p50Ms": {
+        "count": 3,
+        "median": 14.668500050902367,
+        "min": 14.200499979779124,
+        "max": 23.3708000741899,
+        "sampleStdDev": 5.1646789765262255
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 20.43320005759597,
+        "min": 19.756099907681346,
+        "max": 27.92430017143488,
+        "sampleStdDev": 4.533110430990974
+      }
+    },
+    {
+      "point": 25,
+      "runs": 3,
+      "samples": 75,
+      "winners": 3,
+      "conflicts": 72,
+      "p50Ms": {
+        "count": 3,
+        "median": 30.333200003951788,
+        "min": 30.311900191009045,
+        "max": 35.64129979349673,
+        "sampleStdDev": 3.0708000363855863
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 38.73110003769398,
+        "min": 38.558200001716614,
+        "max": 44.646799797192216,
+        "sampleStdDev": 3.4664209577130616
+      }
+    },
+    {
+      "point": 50,
+      "runs": 3,
+      "samples": 150,
+      "winners": 3,
+      "conflicts": 147,
+      "p50Ms": {
+        "count": 3,
+        "median": 23.444199934601784,
+        "min": 22.387299919500947,
+        "max": 30.404299963265657,
+        "sampleStdDev": 4.355692056620669
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 39.48469995521009,
+        "min": 37.613899912685156,
+        "max": 47.82300000078976,
+        "sampleStdDev": 5.435268546848486
+      }
+    },
+    {
+      "point": 100,
+      "runs": 3,
+      "samples": 300,
+      "winners": 3,
+      "conflicts": 297,
+      "p50Ms": {
+        "count": 3,
+        "median": 46.330800047144294,
+        "min": 41.297500021755695,
+        "max": 46.79689998738468,
+        "sampleStdDev": 3.0494468974397364
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 76.65709988214076,
+        "min": 67.86629999987781,
+        "max": 77.12209993042052,
+        "sampleStdDev": 5.214790183844549
+      }
+    }
+  ],
+  "E02": [
+    {
+      "point": 10,
+      "runs": 3,
+      "samples": 903,
+      "success": 429,
+      "conflicts": 474,
+      "systemErrors": 0,
+      "authFailures": 0,
+      "dropped": 0,
+      "achievedRps": {
+        "count": 3,
+        "median": 10.03186093001861,
+        "min": 10.029906644146429,
+        "max": 10.032111268355141,
+        "sampleStdDev": 0.0012070812216929004
+      },
+      "p50Ms": {
+        "count": 3,
+        "median": 4.251588,
+        "min": 4.171346,
+        "max": 11.525626,
+        "sampleStdDev": 4.22302225746775
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 15.746796,
+        "min": 14.754307,
+        "max": 15.801048,
+        "sampleStdDev": 0.5892996430376762
+      }
+    },
+    {
+      "point": 25,
+      "runs": 3,
+      "samples": 2253,
+      "success": 488,
+      "conflicts": 1765,
+      "systemErrors": 0,
+      "authFailures": 0,
+      "dropped": 0,
+      "achievedRps": {
+        "count": 3,
+        "median": 25.023528633528848,
+        "min": 25.022777180345127,
+        "max": 25.030531760195085,
+        "sampleStdDev": 0.004276719413290115
+      },
+      "p50Ms": {
+        "count": 3,
+        "median": 3.978627,
+        "min": 3.960923,
+        "max": 3.978873,
+        "sampleStdDev": 0.010293158180720394
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 13.031970999999999,
+        "min": 12.865595500000001,
+        "max": 13.353595,
+        "sampleStdDev": 0.2480814101514861
+      }
+    },
+    {
+      "point": 50,
+      "runs": 3,
+      "samples": 4502,
+      "success": 475,
+      "conflicts": 4027,
+      "systemErrors": 0,
+      "authFailures": 0,
+      "dropped": 0,
+      "achievedRps": {
+        "count": 3,
+        "median": 50.02631189366259,
+        "min": 50.00170762998468,
+        "max": 50.02971798579281,
+        "sampleStdDev": 0.015283712939103382
+      },
+      "p50Ms": {
+        "count": 3,
+        "median": 3.761512,
+        "min": 3.73555,
+        "max": 3.781909,
+        "sampleStdDev": 0.023235102517527362
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 12.037188,
+        "min": 11.944662,
+        "max": 13.0525989,
+        "sampleStdDev": 0.6147010833047798
+      }
+    },
+    {
+      "point": 100,
+      "runs": 3,
+      "samples": 9003,
+      "success": 699,
+      "conflicts": 8304,
+      "systemErrors": 0,
+      "authFailures": 0,
+      "dropped": 0,
+      "achievedRps": {
+        "count": 3,
+        "median": 100.02354418243364,
+        "min": 100.02296539617551,
+        "max": 100.02472985289798,
+        "sampleStdDev": 0.0008994549746070204
+      },
+      "p50Ms": {
+        "count": 3,
+        "median": 3.450826,
+        "min": 3.445495,
+        "max": 3.456177,
+        "sampleStdDev": 0.005341003120513168
+      },
+      "p95Ms": {
+        "count": 3,
+        "median": 11.361219,
+        "min": 11.064585,
+        "max": 11.647112,
+        "sampleStdDev": 0.2912800036431158
+      }
+    }
+  ],
+  "E03": [
+    {
+      "point": 1,
+      "runs": 3,
+      "deliveries": 1320,
+      "uniqueIntakes": 1200,
+      "acknowledgements": 1320,
+      "ackObservedRps": {
+        "count": 3,
+        "median": 17.515225049786338,
+        "min": 17.494811396647375,
+        "max": 18.253043745683144,
+        "sampleStdDev": 0.4319933333539691
+      },
+      "storedCreationProxyP95Ms": {
+        "count": 3,
+        "median": 43.224,
+        "min": 42.376,
+        "max": 44.117000000000004,
+        "sampleStdDev": 0.8705969216577819
+      },
+      "ackStatsWaitSeconds": {
+        "count": 3,
+        "median": 5.060772799886763,
+        "min": 4.058027500053868,
+        "max": 5.083328099921346,
+        "sampleStdDev": 0.5855550355553302
+      }
+    },
+    {
+      "point": 2,
+      "runs": 3,
+      "deliveries": 1320,
+      "uniqueIntakes": 1200,
+      "acknowledgements": 1320,
+      "ackObservedRps": {
+        "count": 3,
+        "median": 18.205636646183372,
+        "min": 17.519823819918315,
+        "max": 18.249762348820383,
+        "sampleStdDev": 0.4092873005356566
+      },
+      "storedCreationProxyP95Ms": {
+        "count": 3,
+        "median": 42.514,
+        "min": 42.114,
+        "max": 43.693000000000005,
+        "sampleStdDev": 0.8209021460157958
+      },
+      "ackStatsWaitSeconds": {
+        "count": 3,
+        "median": 4.097100300015882,
+        "min": 4.044231299776584,
+        "max": 5.043665600009263,
+        "sampleStdDev": 0.5623833092028138
+      }
+    },
+    {
+      "point": 4,
+      "runs": 3,
+      "deliveries": 1320,
+      "uniqueIntakes": 1200,
+      "acknowledgements": 1320,
+      "ackObservedRps": {
+        "count": 3,
+        "median": 17.511090728712638,
+        "min": 17.50590102043902,
+        "max": 17.524590216119968,
+        "sampleStdDev": 0.009647584044954216
+      },
+      "storedCreationProxyP95Ms": {
+        "count": 3,
+        "median": 42.431000000000004,
+        "min": 42.083000000000006,
+        "max": 42.982,
+        "sampleStdDev": 0.4533037980574732
+      },
+      "ackStatsWaitSeconds": {
+        "count": 3,
+        "median": 0.003180899890139699,
+        "min": 0.002897700062021613,
+        "max": 5.062333900015801,
+        "sampleStdDev": 2.9209851026747056
+      }
+    }
+  ],
+  "definitions": {
+    "E01": "Direct authenticated Driver contention latency after preconnection; quantiles include expected conflicts. N=1 has only three observations across resets.",
+    "E02": "Authenticated Gateway POST /trips; finite real Rider cohort, no fleet, real terminal no-driver closure. Request rate is not completed-ride throughput.",
+    "E03": "Stored creation proxy is publish-start to PostgreSQL row created_at, not commit/ACK/full-workflow latency. Reported completed-delivery rate uses exact broker ACK counts and the entire observation interval, including management-statistics visibility delay. Prometheus processing histograms use their declared sliding windows and are supporting telemetry, not a separate per-message latency claim."
+  }
+}

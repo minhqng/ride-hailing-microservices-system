@@ -1,0 +1,111 @@
+{
+  "synthetic": false,
+  "reportGrade": true,
+  "driverId": "352dcdab-5e50-5d6d-85ba-cadc94c41881",
+  "expectedVersion": 2,
+  "winner": {
+    "status": 200,
+    "code": null,
+    "responseOutcome": "won",
+    "latencyMs": 13.652099994942546,
+    "outcome": "success",
+    "index": 23,
+    "tripId": "acaaa9af-48bc-5ea3-9828-5be1b0af1460",
+    "reservationId": "2963b044-386a-5931-b9e0-ee4b481d0437",
+    "barrierSpreadMs": 14.1823,
+    "wallMs": 133.7927000131458
+  },
+  "final": {
+    "driver": {
+      "driver_id": "352dcdab-5e50-5d6d-85ba-cadc94c41881",
+      "user_id": "165c1b2b-c543-41b5-8e86-356130b9aa7e",
+      "status": "RESERVED",
+      "version": 3,
+      "reserved_trip_id": "acaaa9af-48bc-5ea3-9828-5be1b0af1460",
+      "reservation_id": "2963b044-386a-5931-b9e0-ee4b481d0437",
+      "active_trip_id": null,
+      "reserved_round": 1
+    },
+    "activeReservationRows": [
+      {
+        "driver_id": "352dcdab-5e50-5d6d-85ba-cadc94c41881",
+        "reservation_id": "2963b044-386a-5931-b9e0-ee4b481d0437",
+        "reserved_trip_id": "acaaa9af-48bc-5ea3-9828-5be1b0af1460"
+      }
+    ],
+    "reserveOutbox": [
+      {
+        "message_id": "78b007bb788c551f4487f7b96294fb25",
+        "message_type": "DriverReservedV1",
+        "status": "PUBLISHED",
+        "aggregate_id": "352dcdab5e505d6d85bacadc94c41881",
+        "reservation_id": "2963b044-386a-5931-b9e0-ee4b481d0437",
+        "trip_id": "acaaa9af-48bc-5ea3-9828-5be1b0af1460"
+      }
+    ],
+    "lifecycleEffects": [],
+    "reservationHolders": [
+      {
+        "driver_id": "352dcdab-5e50-5d6d-85ba-cadc94c41881",
+        "status": "RESERVED"
+      }
+    ]
+  },
+  "afterExactRelease": {
+    "driver": {
+      "driver_id": "352dcdab-5e50-5d6d-85ba-cadc94c41881",
+      "user_id": "165c1b2b-c543-41b5-8e86-356130b9aa7e",
+      "status": "AVAILABLE",
+      "version": 4,
+      "reserved_trip_id": null,
+      "reservation_id": null,
+      "active_trip_id": null,
+      "reserved_round": null
+    },
+    "activeReservationRows": [],
+    "reserveOutbox": [
+      {
+        "message_id": "78b007bb788c551f4487f7b96294fb25",
+        "message_type": "DriverReservedV1",
+        "status": "PUBLISHED",
+        "aggregate_id": "352dcdab5e505d6d85bacadc94c41881",
+        "reservation_id": "2963b044-386a-5931-b9e0-ee4b481d0437",
+        "trip_id": "acaaa9af-48bc-5ea3-9828-5be1b0af1460"
+      }
+    ],
+    "lifecycleEffects": [],
+    "reservationHolders": []
+  },
+  "aud01": {
+    "status": "PASS",
+    "checks": {
+      "driverExists": true,
+      "reservedState": true,
+      "singleActiveRow": true,
+      "oneReservationHolder": true,
+      "winnerReservationMatches": true,
+      "winnerTripMatches": true,
+      "oneReserveOutboxIntent": true,
+      "outboxPayloadMatchesWinner": true,
+      "driverVersionIncrementedOnce": true,
+      "reservedRoundRecorded": true,
+      "noLifecycleEffect": true
+    }
+  },
+  "assertions": {
+    "sampleCountEqualsContenders": true,
+    "exactlyOneWinner": true,
+    "expectedConflicts": true,
+    "zeroSystemErrors": true,
+    "zeroUnexpected": true,
+    "knownConflictCodes": true,
+    "driversReserved": true,
+    "singleActiveReservation": true,
+    "singleReserveOutbox": true,
+    "aud01Pass": true,
+    "driverVersionIncrementedOnce": true,
+    "reservedRoundRecorded": true,
+    "outboxPayloadMatchesWinner": true,
+    "exactWinnerReleasedAfterMeasurement": true
+  }
+}

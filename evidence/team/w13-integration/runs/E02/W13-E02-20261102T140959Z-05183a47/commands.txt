@@ -1,0 +1,1 @@
+python scripts/perf/w13.py e02 --preflight-base-url http://127.0.0.1:18080 --k6-base-url http://gateway:8080 --endpoint /trips --rate 50 --duration 30s --seed 1302 --mode report
