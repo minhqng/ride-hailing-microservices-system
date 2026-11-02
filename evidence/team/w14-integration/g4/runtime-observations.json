@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": "2026-11-02T17:02:29.273051+00:00",
+  "project": "ride-ci-41486346643-1",
+  "source": {
+    "commit": "16e2ea80cb6522620e4295d1aca80cd3fa51c6fb",
+    "tree": "3799ca9a2ea5a19d03949c4d0c4644c81c14a168"
+  },
+  "scope": "Functional cross-owner observability support after real G4 journeys; cumulative metric/database/consumer snapshots, not a Payment throughput or latency benchmark",
+  "metricPolicy": "Every declared series must exist, be finite and nonnegative; exercised counters and consumer count must be positive; finished queue must be empty. No missing series is converted to zero.",
+  "queries": {
+    "payment_operations": {
+      "query": "payment_operation_operations_total",
+      "result": [
+        {
+          "metric": {
+            "__name__": "payment_operation_operations_total",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "outcome": "succeeded",
+            "type": "authorize"
+          },
+          "value": [
+            1793638948.753,
+            "1"
+          ]
+        },
+        {
+          "metric": {
+            "__name__": "payment_operation_operations_total",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "outcome": "succeeded",
+            "type": "capture"
+          },
+          "value": [
+            1793638948.753,
+            "1"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_consumer_deliveries": {
+      "query": "consumer_delivery_messages_total{exported_job=\"payment-service\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "consumer_delivery_messages_total",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel"
+          },
+          "value": [
+            1793638948.755,
+            "2"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_consumer_acknowledgements": {
+      "query": "consumer_ack_messages_total{exported_job=\"payment-service\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "consumer_ack_messages_total",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel"
+          },
+          "value": [
+            1793638948.755,
+            "2"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_consumer_processing_count": {
+      "query": "consumer_processing_duration_milliseconds_count{exported_job=\"payment-service\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "consumer_processing_duration_milliseconds_count",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "outcome": "success"
+          },
+          "value": [
+            1793638948.756,
+            "2"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_consumer_processing_sum_ms": {
+      "query": "consumer_processing_duration_milliseconds_sum{exported_job=\"payment-service\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "consumer_processing_duration_milliseconds_sum",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "outcome": "success"
+          },
+          "value": [
+            1793638948.757,
+            "137.7288"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_consumer_dedup": {
+      "query": "dedup_processed_messages_total{exported_job=\"payment-service\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "dedup_processed_messages_total",
+            "exported_instance": "payment-local",
+            "exported_job": "payment-service",
+            "instance": "otel-collector:8889",
+            "job": "application-otel",
+            "outcome": "applied"
+          },
+          "value": [
+            1793638948.757,
+            "2"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_queue_consumers": {
+      "query": "rabbitmq_detailed_queue_consumers{queue=\"payment.commands.q\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "rabbitmq_detailed_queue_consumers",
+            "instance": "rabbitmq:15692",
+            "job": "rabbitmq-detailed",
+            "queue": "payment.commands.q",
+            "vhost": "/"
+          },
+          "value": [
+            1793638948.758,
+            "1"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_queue_ready": {
+      "query": "rabbitmq_detailed_queue_messages_ready{queue=\"payment.commands.q\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "rabbitmq_detailed_queue_messages_ready",
+            "instance": "rabbitmq:15692",
+            "job": "rabbitmq-detailed",
+            "queue": "payment.commands.q",
+            "vhost": "/"
+          },
+          "value": [
+            1793638948.758,
+            "0"
+          ]
+        }
+      ],
+      "usable": true
+    },
+    "payment_queue_unacked": {
+      "query": "rabbitmq_detailed_queue_messages_unacked{queue=\"payment.commands.q\"}",
+      "result": [
+        {
+          "metric": {
+            "__name__": "rabbitmq_detailed_queue_messages_unacked",
+            "instance": "rabbitmq:15692",
+            "job": "rabbitmq-detailed",
+            "queue": "payment.commands.q",
+            "vhost": "/"
+          },
+          "value": [
+            1793638948.759,
+            "0"
+          ]
+        }
+      ],
+      "usable": true
+    }
+  },
+  "missingOrInvalid": [],
+  "paymentOperations": [
+    {
+      "operation_type": "AUTHORIZE",
+      "state": "DECLINED",
+      "count": 1
+    },
+    {
+      "operation_type": "AUTHORIZE",
+      "state": "SUCCEEDED",
+      "count": 2
+    },
+    {
+      "operation_type": "CAPTURE",
+      "state": "SUCCEEDED",
+      "count": 1
+    },
+    {
+      "operation_type": "VOID",
+      "state": "SUCCEEDED",
+      "count": 1
+    }
+  ],
+  "providerEffects": [
+    {
+      "count": 4
+    }
+  ],
+  "database": [
+    {
+      "datname": "payment_db",
+      "numbackends": 3,
+      "xact_commit": 1123,
+      "xact_rollback": 5,
+      "blks_read": 361,
+      "blks_hit": 27075,
+      "deadlocks": 0
+    }
+  ],
+  "tables": [
+    {
+      "relname": "outbox_messages",
+      "n_live_tup": 5,
+      "n_dead_tup": 6,
+      "seq_scan": 257,
+      "idx_scan": 268
+    },
+    {
+      "relname": "payment_operations",
+      "n_live_tup": 5,
+      "n_dead_tup": 10,
+      "seq_scan": 11,
+      "idx_scan": 36
+    },
+    {
+      "relname": "processed_messages",
+      "n_live_tup": 5,
+      "n_dead_tup": 0,
+      "seq_scan": 2,
+      "idx_scan": 5
+    },
+    {
+      "relname": "provider_effects",
+      "n_live_tup": 4,
+      "n_dead_tup": 0,
+      "seq_scan": 4,
+      "idx_scan": 13
+    }
+  ],
+  "verdict": "PASS"
+}

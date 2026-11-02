@@ -1,0 +1,171 @@
+{
+  "runId": "rel15-20261102160414-ddc3f3ee",
+  "sourceCommit": "b95c97b1b3668940182616d3296791dc44faed5e",
+  "sourceTree": "c2b698a87e74a0edc1a36cee877e9acf9da75e9b",
+  "before": {
+    "Queue": "payment.commands.q",
+    "Online": 3,
+    "Total": 3,
+    "Rows": [
+      {
+        "Node Name": "rabbit@rabbitmq",
+        "Raft State": "follower",
+        "Membership": "voter",
+        "Last Log Index": 250,
+        "Last Written": 250,
+        "Last Applied": 250,
+        "Commit Index": 250,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      },
+      {
+        "Node Name": "rabbit@rabbitmq-2",
+        "Raft State": "leader",
+        "Membership": "voter",
+        "Last Log Index": 250,
+        "Last Written": 250,
+        "Last Applied": 250,
+        "Commit Index": 250,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      },
+      {
+        "Node Name": "rabbit@rabbitmq-3",
+        "Raft State": "follower",
+        "Membership": "voter",
+        "Last Log Index": 250,
+        "Last Written": 250,
+        "Last Applied": 250,
+        "Commit Index": 250,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      }
+    ]
+  },
+  "during": {
+    "Queue": "payment.commands.q",
+    "Online": 2,
+    "Total": 3,
+    "Rows": [
+      {
+        "Node Name": "rabbit@rabbitmq",
+        "Raft State": "noconnection",
+        "Membership": "",
+        "Last Log Index": "",
+        "Last Written": "",
+        "Last Applied": "",
+        "Commit Index": "",
+        "Snapshot Index": "",
+        "Term": "",
+        "Machine Version": ""
+      },
+      {
+        "Node Name": "rabbit@rabbitmq-2",
+        "Raft State": "leader",
+        "Membership": "voter",
+        "Last Log Index": 252,
+        "Last Written": 252,
+        "Last Applied": 252,
+        "Commit Index": 252,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      },
+      {
+        "Node Name": "rabbit@rabbitmq-3",
+        "Raft State": "follower",
+        "Membership": "voter",
+        "Last Log Index": 252,
+        "Last Written": 252,
+        "Last Applied": 252,
+        "Commit Index": 252,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      }
+    ]
+  },
+  "after": {
+    "Queue": "payment.commands.q",
+    "Online": 3,
+    "Total": 3,
+    "Rows": [
+      {
+        "Node Name": "rabbit@rabbitmq",
+        "Raft State": "follower",
+        "Membership": "voter",
+        "Last Log Index": 324,
+        "Last Written": 324,
+        "Last Applied": 324,
+        "Commit Index": 324,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      },
+      {
+        "Node Name": "rabbit@rabbitmq-2",
+        "Raft State": "leader",
+        "Membership": "voter",
+        "Last Log Index": 324,
+        "Last Written": 324,
+        "Last Applied": 324,
+        "Commit Index": 324,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      },
+      {
+        "Node Name": "rabbit@rabbitmq-3",
+        "Raft State": "follower",
+        "Membership": "voter",
+        "Last Log Index": 324,
+        "Last Written": 324,
+        "Last Applied": 324,
+        "Commit Index": 324,
+        "Snapshot Index": -1,
+        "Term": 7,
+        "Machine Version": 8
+      }
+    ]
+  },
+  "baseline": {
+    "Consumers": 1,
+    "Ready": 0,
+    "Unacked": 0,
+    "Ack": 24,
+    "Redelivered": 0
+  },
+  "backlog": {
+    "Consumers": 0,
+    "Ready": 24,
+    "Unacked": 0,
+    "Ack": 24,
+    "Redelivered": 0
+  },
+  "published": {
+    "RunId": "rel15-20261102160414-ddc3f3ee",
+    "UniqueCommands": 12,
+    "Copies": 2,
+    "RoutedDeliveries": 24
+  },
+  "final": {
+    "operations": 12,
+    "succeeded": 12,
+    "providerEffects": 12,
+    "processedMessages": 12,
+    "outboxMessages": 12,
+    "outboxPublished": 12,
+    "outboxFailedVisible": 0
+  },
+  "queue": {
+    "Consumers": 1,
+    "Ready": 0,
+    "Unacked": 0,
+    "Ack": 48,
+    "Redelivered": 0
+  },
+  "freshConnections": 2
+}

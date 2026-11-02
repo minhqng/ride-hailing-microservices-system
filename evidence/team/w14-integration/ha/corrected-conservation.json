@@ -1,0 +1,591 @@
+{
+  "runId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+  "source": {
+    "commit": "18f0fc161ddc3588b076c69d31e04d985bc74f84",
+    "tree": "8bb8d8f6936a5f9927fb6341f9efe0f18c615c6c",
+    "status": ""
+  },
+  "startedAtUtc": "2026-11-02T16:37:28.323240+00:00",
+  "status": "PASS",
+  "before": {
+    "atUtc": "2026-11-02T16:37:42.665737+00:00",
+    "members": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "online": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "leader": "rabbit@rabbitmq",
+    "consumers": 1,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "message_stats": null
+  },
+  "envelopes": [
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-000",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:46.580326+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "b2aa6485-1105-493e-86f6-97aa5d9928fe",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-000",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:b2aa6485-1105-493e-86f6-97aa5d9928fe",
+      "payload": {
+        "tripId": "b2aa6485-1105-493e-86f6-97aa5d9928fe",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:b2aa6485-1105-493e-86f6-97aa5d9928fe",
+        "amountMinor": 10000,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-001",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.230974+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "43be6af6-e6d1-4b9b-8227-420d6ba32d68",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-001",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:43be6af6-e6d1-4b9b-8227-420d6ba32d68",
+      "payload": {
+        "tripId": "43be6af6-e6d1-4b9b-8227-420d6ba32d68",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:43be6af6-e6d1-4b9b-8227-420d6ba32d68",
+        "amountMinor": 10001,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-002",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.244602+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "29a152dd-3426-4246-a5b4-687d2f27e479",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-002",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:29a152dd-3426-4246-a5b4-687d2f27e479",
+      "payload": {
+        "tripId": "29a152dd-3426-4246-a5b4-687d2f27e479",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:29a152dd-3426-4246-a5b4-687d2f27e479",
+        "amountMinor": 10002,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-003",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.259384+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "efaa0bfe-ac7e-434a-b0f1-8c2aced85858",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-003",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:efaa0bfe-ac7e-434a-b0f1-8c2aced85858",
+      "payload": {
+        "tripId": "efaa0bfe-ac7e-434a-b0f1-8c2aced85858",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:efaa0bfe-ac7e-434a-b0f1-8c2aced85858",
+        "amountMinor": 10003,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-004",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.274779+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "54c30b50-0dc2-49e5-b6a9-821b900ed872",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-004",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:54c30b50-0dc2-49e5-b6a9-821b900ed872",
+      "payload": {
+        "tripId": "54c30b50-0dc2-49e5-b6a9-821b900ed872",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:54c30b50-0dc2-49e5-b6a9-821b900ed872",
+        "amountMinor": 10004,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-005",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.289570+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "73b278ec-e53f-4c17-af4d-d263aded4672",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-005",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:73b278ec-e53f-4c17-af4d-d263aded4672",
+      "payload": {
+        "tripId": "73b278ec-e53f-4c17-af4d-d263aded4672",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:73b278ec-e53f-4c17-af4d-d263aded4672",
+        "amountMinor": 10005,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-006",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.304120+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "280e4aa1-2cff-44ec-ad8e-b64f93a95650",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-006",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:280e4aa1-2cff-44ec-ad8e-b64f93a95650",
+      "payload": {
+        "tripId": "280e4aa1-2cff-44ec-ad8e-b64f93a95650",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:280e4aa1-2cff-44ec-ad8e-b64f93a95650",
+        "amountMinor": 10006,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-007",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.319175+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "a5ebae1c-8b1a-4f19-9bd3-e0721f183959",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-007",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:a5ebae1c-8b1a-4f19-9bd3-e0721f183959",
+      "payload": {
+        "tripId": "a5ebae1c-8b1a-4f19-9bd3-e0721f183959",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:a5ebae1c-8b1a-4f19-9bd3-e0721f183959",
+        "amountMinor": 10007,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-008",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.334017+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "a9fce57c-80f2-45ce-9c06-afeef00e0d97",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-008",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:a9fce57c-80f2-45ce-9c06-afeef00e0d97",
+      "payload": {
+        "tripId": "a9fce57c-80f2-45ce-9c06-afeef00e0d97",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:a9fce57c-80f2-45ce-9c06-afeef00e0d97",
+        "amountMinor": 10008,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-009",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.348344+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "edc935d2-a48c-4d1a-b180-843b954e0022",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-009",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:edc935d2-a48c-4d1a-b180-843b954e0022",
+      "payload": {
+        "tripId": "edc935d2-a48c-4d1a-b180-843b954e0022",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:edc935d2-a48c-4d1a-b180-843b954e0022",
+        "amountMinor": 10009,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-010",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.362524+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "2426cbf3-f157-4408-9ecc-70864dc14bdc",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-010",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:2426cbf3-f157-4408-9ecc-70864dc14bdc",
+      "payload": {
+        "tripId": "2426cbf3-f157-4408-9ecc-70864dc14bdc",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:2426cbf3-f157-4408-9ecc-70864dc14bdc",
+        "amountMinor": 10010,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-011",
+      "messageType": "AuthorizePaymentV1",
+      "schemaVersion": 1,
+      "occurredAt": "2026-11-02T16:37:47.377714+00:00",
+      "correlationId": "conserve-0efa53a9211d40e78c0caa19bdec7a43",
+      "aggregateType": "Trip",
+      "aggregateId": "d9585d67-e4b0-4460-8337-e42d148b3bbf",
+      "sagaId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-saga-011",
+      "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:d9585d67-e4b0-4460-8337-e42d148b3bbf",
+      "payload": {
+        "tripId": "d9585d67-e4b0-4460-8337-e42d148b3bbf",
+        "operationKey": "conserve-0efa53a9211d40e78c0caa19bdec7a43:authorize:d9585d67-e4b0-4460-8337-e42d148b3bbf",
+        "amountMinor": 10011,
+        "currency": "VND",
+        "paymentType": 0
+      }
+    }
+  ],
+  "receipts": [
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-000",
+      "sentAtUtc": "2026-11-02T16:37:47.0999115+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2203522+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 120.4499,
+      "copy": 0,
+      "bodySha256": "45a283a576998efa046a9efbf9fcf2d50a1f5d8ec3b2b3b8770a3a551b6a8dc3"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-000",
+      "sentAtUtc": "2026-11-02T16:37:47.2237606+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2307418+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.9825,
+      "copy": 1,
+      "bodySha256": "45a283a576998efa046a9efbf9fcf2d50a1f5d8ec3b2b3b8770a3a551b6a8dc3"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-001",
+      "sentAtUtc": "2026-11-02T16:37:47.2310953+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2375384+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.444,
+      "copy": 0,
+      "bodySha256": "8087aeaacb46c3eb572eaecaecf120f4e079847f2aa50afcb551124225d585b6"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-001",
+      "sentAtUtc": "2026-11-02T16:37:47.237772+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2444304+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.6593,
+      "copy": 1,
+      "bodySha256": "8087aeaacb46c3eb572eaecaecf120f4e079847f2aa50afcb551124225d585b6"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-002",
+      "sentAtUtc": "2026-11-02T16:37:47.2447297+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.252406+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.6771,
+      "copy": 0,
+      "bodySha256": "aafb4074f7cd9944fe6ff86442581e74109969bed90daac94b6a1fb2887eb63e"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-002",
+      "sentAtUtc": "2026-11-02T16:37:47.2526407+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2591908+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.5512,
+      "copy": 1,
+      "bodySha256": "aafb4074f7cd9944fe6ff86442581e74109969bed90daac94b6a1fb2887eb63e"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-003",
+      "sentAtUtc": "2026-11-02T16:37:47.2594904+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2670564+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.5666,
+      "copy": 0,
+      "bodySha256": "8a5f98aa5ca62709a5877caf519fd766f58d2fa757a109f98c79957a924bbd2c"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-003",
+      "sentAtUtc": "2026-11-02T16:37:47.2673015+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2746172+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.3165,
+      "copy": 1,
+      "bodySha256": "8a5f98aa5ca62709a5877caf519fd766f58d2fa757a109f98c79957a924bbd2c"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-004",
+      "sentAtUtc": "2026-11-02T16:37:47.2749232+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2817928+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.8704,
+      "copy": 0,
+      "bodySha256": "a9763d77ca9b450519a6e0a6b5da696f16e11e151c39fc35ed54cef8a2adfd13"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-004",
+      "sentAtUtc": "2026-11-02T16:37:47.2820401+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2894014+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.3623,
+      "copy": 1,
+      "bodySha256": "a9763d77ca9b450519a6e0a6b5da696f16e11e151c39fc35ed54cef8a2adfd13"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-005",
+      "sentAtUtc": "2026-11-02T16:37:47.2896922+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.2971561+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.4645,
+      "copy": 0,
+      "bodySha256": "4658b2da49e4a1e0317c87f02dd1098cbe285008fc8a719a17237ff8c41136aa"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-005",
+      "sentAtUtc": "2026-11-02T16:37:47.2973746+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3039716+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.5978,
+      "copy": 1,
+      "bodySha256": "4658b2da49e4a1e0317c87f02dd1098cbe285008fc8a719a17237ff8c41136aa"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-006",
+      "sentAtUtc": "2026-11-02T16:37:47.3042521+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3119182+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.6671,
+      "copy": 0,
+      "bodySha256": "0c97c8c59404d63ec080b808d3fdf9898f9126c901505852d2d137051dcfa7de"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-006",
+      "sentAtUtc": "2026-11-02T16:37:47.3121484+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3189932+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.8454,
+      "copy": 1,
+      "bodySha256": "0c97c8c59404d63ec080b808d3fdf9898f9126c901505852d2d137051dcfa7de"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-007",
+      "sentAtUtc": "2026-11-02T16:37:47.3193168+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3259776+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.6618,
+      "copy": 0,
+      "bodySha256": "527c713465146ceb958beec2fb537ffebbf0b1746070e49d06439cca63322c40"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-007",
+      "sentAtUtc": "2026-11-02T16:37:47.3262221+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3338483+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.6276,
+      "copy": 1,
+      "bodySha256": "527c713465146ceb958beec2fb537ffebbf0b1746070e49d06439cca63322c40"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-008",
+      "sentAtUtc": "2026-11-02T16:37:47.3341346+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3411093+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.9755,
+      "copy": 0,
+      "bodySha256": "bb648022a2795cf03013331c260cc38483f7735239e6117054438f04e288270d"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-008",
+      "sentAtUtc": "2026-11-02T16:37:47.3413248+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.348162+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.838,
+      "copy": 1,
+      "bodySha256": "bb648022a2795cf03013331c260cc38483f7735239e6117054438f04e288270d"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-009",
+      "sentAtUtc": "2026-11-02T16:37:47.3485076+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3554999+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.9931,
+      "copy": 0,
+      "bodySha256": "790750ae5799e1d0cfcae6d221dd595fb3432a5750c077d9450c707f9e2a11c2"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-009",
+      "sentAtUtc": "2026-11-02T16:37:47.3556966+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3623413+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.6456,
+      "copy": 1,
+      "bodySha256": "790750ae5799e1d0cfcae6d221dd595fb3432a5750c077d9450c707f9e2a11c2"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-010",
+      "sentAtUtc": "2026-11-02T16:37:47.3626288+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3700693+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.4412,
+      "copy": 0,
+      "bodySha256": "2a38cfe7a8b5c3c8941c99346b016e2051d9ec28d1b04e74f8e2c0116948f645"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-010",
+      "sentAtUtc": "2026-11-02T16:37:47.3703351+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3775276+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.1931,
+      "copy": 1,
+      "bodySha256": "2a38cfe7a8b5c3c8941c99346b016e2051d9ec28d1b04e74f8e2c0116948f645"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-011",
+      "sentAtUtc": "2026-11-02T16:37:47.3778903+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3856712+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 7.7819,
+      "copy": 0,
+      "bodySha256": "6de9850c567846a958d30512b895ae44a51b6292b6584e2f1dee35e3d896530b"
+    },
+    {
+      "messageId": "conserve-0efa53a9211d40e78c0caa19bdec7a43-message-011",
+      "sentAtUtc": "2026-11-02T16:37:47.3859008+00:00",
+      "confirmedAtUtc": "2026-11-02T16:37:47.3922112+00:00",
+      "confirmed": true,
+      "error": null,
+      "latencyMs": 6.3114,
+      "copy": 1,
+      "bodySha256": "6de9850c567846a958d30512b895ae44a51b6292b6584e2f1dee35e3d896530b"
+    }
+  ],
+  "durableBeforeStop": {
+    "atUtc": "2026-11-02T16:37:51.480177+00:00",
+    "members": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "online": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "leader": "rabbit@rabbitmq",
+    "consumers": 0,
+    "messages_ready": 24,
+    "messages_unacknowledged": 0,
+    "message_stats": null
+  },
+  "stopRequestedAtUtc": "2026-11-02T16:37:51.480208+00:00",
+  "allStoppedAtUtc": "2026-11-02T16:37:59.204916+00:00",
+  "restoredBacklog": {
+    "atUtc": "2026-11-02T16:38:16.696049+00:00",
+    "members": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "online": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "leader": "rabbit@rabbitmq-3",
+    "consumers": 0,
+    "messages_ready": 24,
+    "messages_unacknowledged": 0,
+    "message_stats": null
+  },
+  "membershipRestoredWithoutJoin": {
+    "rabbitmq-2": true,
+    "rabbitmq-3": true
+  },
+  "final": {
+    "operations": 12,
+    "succeeded": 12,
+    "effects": 12,
+    "processed": 12,
+    "outbox": 12,
+    "published": 12
+  },
+  "drained": {
+    "atUtc": "2026-11-02T16:38:26.996351+00:00",
+    "members": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "online": [
+      "rabbit@rabbitmq",
+      "rabbit@rabbitmq-2",
+      "rabbit@rabbitmq-3"
+    ],
+    "leader": "rabbit@rabbitmq-3",
+    "consumers": 1,
+    "messages_ready": 0,
+    "messages_unacknowledged": 0,
+    "message_stats": {
+      "ack": 24,
+      "ack_details": {
+        "rate": 0.0
+      },
+      "deliver": 24,
+      "deliver_details": {
+        "rate": 0.0
+      },
+      "deliver_get": 24,
+      "deliver_get_details": {
+        "rate": 0.0
+      },
+      "deliver_no_ack": 0,
+      "deliver_no_ack_details": {
+        "rate": 0.0
+      },
+      "get": 0,
+      "get_details": {
+        "rate": 0.0
+      },
+      "get_empty": 0,
+      "get_empty_details": {
+        "rate": 0.0
+      },
+      "get_no_ack": 0,
+      "get_no_ack_details": {
+        "rate": 0.0
+      },
+      "redeliver": 0,
+      "redeliver_details": {
+        "rate": 0.0
+      }
+    }
+  },
+  "ackDeltaAfterRestore": 24,
+  "finishedAtUtc": "2026-11-02T16:38:27.828917+00:00"
+}

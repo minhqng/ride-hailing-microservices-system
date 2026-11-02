@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "713dbd6f8f3a4efb1e7343e85567039e13a54f52",
-  "sourceTree": "274716cdfbd8c62d5f0b9dedc03c7e739b4b3d15",
+  "sourceCommit": "724d6c69aa9ee590c3aa4bb4afd1622ae6aa8719",
+  "sourceTree": "3799ca9a2ea5a19d03949c4d0c4644c81c14a168",
   "verdict": "GREEN",
   "blockers": [],
   "checks": {
@@ -15,9 +15,9 @@
     "stableEnvironment": "PASS"
   },
   "evidence": {
-    "run": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41473532922",
-    "checkoutCommit": "dfcce43b73204ec47ddaef115c5b241953ab7312",
-    "checkoutTree": "274716cdfbd8c62d5f0b9dedc03c7e739b4b3d15",
+    "run": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41486346643",
+    "checkoutCommit": "16e2ea80cb6522620e4295d1aca80cd3fa51c6fb",
+    "checkoutTree": "3799ca9a2ea5a19d03949c4d0c4644c81c14a168",
     "regressionPassed": 1223,
     "regressionFailed": 0,
     "ordinaryOptInIdentitySkipped": 1,
@@ -26,8 +26,8 @@
     "httpSecurityChecks": 55,
     "journeys": 3,
     "auditor": "AUD-01..08 PASS",
-    "testsArchiveSha256": "ccbc5901539792ca923336da62de19eba9541d1b06445179b8263f6cb97aa7d2",
-    "platformArchiveSha256": "4908fa499be2dfbc80144d078f393c621d14ee8836da7f7f96ea3a72624b42ad"
+    "testsArchiveSha256": "86934867557ab7fdcec9d3aca668a22ce676378a0128d31df5ae0a92e5c50cda",
+    "platformArchiveSha256": "933d1297c8a43f6fd42d431fdeb8a6645346307bb1ac6ba64b57e311e357c4b1"
   },
   "scope": "Real authenticated intake and controlled production lifecycle handlers; provider-backed authorities; no public lifecycle HTTP transport claim. Subsequent production/test changes invalidate this certificate."
 }
