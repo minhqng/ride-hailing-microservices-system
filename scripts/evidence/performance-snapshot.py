@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 
 QUERIES = {
+    "service_targets": "target_info",
     "queue_ready": "sum by (queue) (rabbitmq_detailed_queue_messages_ready)",
     "queue_unacked": "sum by (queue) (rabbitmq_detailed_queue_messages_unacked)",
     "redelivery_rate": "sum by (queue) (rate(rabbitmq_detailed_queue_messages_redelivered_total[1m]))",
@@ -20,6 +21,7 @@ QUERIES = {
     "outbox_pending": "sum({__name__=~'outbox_pending(_messages)?'})",
     "outbox_oldest_pending_age": "max({__name__=~'outbox_oldest_pending_age(_seconds)?'})",
     "saga_active": "sum by (step) ({__name__=~'saga_active(_sagas)?'})",
+    "saga_oldest_pending_age": "max({__name__=~'saga_oldest_pending_age(_seconds)?'})",
     "trip_transition_rejected_rate": "sum by (reason) (rate({__name__=~'trip_transition_rejected(_transitions)?_total'}[1m]))",
     "payment_rate": "sum by (type,outcome) (rate({__name__=~'payment_operation(_operations)?_total'}[1m]))",
 }

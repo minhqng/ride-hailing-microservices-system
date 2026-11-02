@@ -555,6 +555,11 @@ def run(args: argparse.Namespace) -> int:
             return 3
 
         all_pass = all(all(value for value in outcome["assertions"].values()) for outcome in outcomes)
+        manifest["auditor"] = {
+            "status": "PASS" if all_pass else "FAIL",
+            "scope": "Independent read-only Driver authority, exact winner identity, one reserve intent and post-measurement exact release for every N",
+            "finalState": [str(path.relative_to(run_dir)).replace("\\", "/") for path in final_files],
+        }
         metrics_ok, metric_file = w13_metrics.capture(run_dir, "E01")
         assertions["declaredMetricsPresentAndFinite"] = metrics_ok
         raw_files.append(metric_file)
@@ -564,7 +569,8 @@ def run(args: argparse.Namespace) -> int:
         achieved = {
             "runs": outcomes,
             "warmup": warmup_result,
-            "measurementSeconds": time.perf_counter() - started,
+            "measurementSeconds": sum(outcome["wallMs"] for outcome in outcomes) / 1000.0,
+            "harnessElapsedSeconds": time.perf_counter() - started,
         }
         lib.finalize_manifest(
             manifest, run_dir=run_dir, status=status, reason=reason,
