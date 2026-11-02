@@ -255,11 +255,22 @@ public sealed class TripW12TelemetryTests : IDisposable
         // The gauge source of truth is the durable GROUP BY, the same query
         // the background observer runs; the snapshot is what a scrape reads.
         await using var dataSource = NpgsqlDataSource.Create(_fixture.ConnectionString);
-        TripDiagnostics.ObserveSagaActive(await TripSagaBacklog.QueryAsync(dataSource));
+        await using (var ageConnection = await dataSource.OpenConnectionAsync())
+        await using (var ageCommand = new NpgsqlCommand(
+            "UPDATE ride_sagas SET created_at=now()-interval '2 minutes' WHERE trip_id=@trip", ageConnection))
+        {
+            ageCommand.Parameters.AddWithValue("trip", tripId);
+            Assert.Equal(1, await ageCommand.ExecuteNonQueryAsync());
+        }
+        var backlog = await TripSagaBacklog.QuerySnapshotAsync(dataSource);
+        TripDiagnostics.ObserveSagaBacklog(backlog);
 
         using var meter = new MeterRecorder();
         var gaugeEvents = meter.Flush().Where(e => e.Instrument == "saga.active").ToList();
         Assert.NotEmpty(gaugeEvents);
+        Assert.NotNull(backlog.OldestAgeSeconds);
+        Assert.True(double.IsFinite(backlog.OldestAgeSeconds.Value) && backlog.OldestAgeSeconds >= 119);
+        Assert.Contains(meter.Flush(), e => e.Instrument == "saga.oldest_pending.age" && e.Value == backlog.OldestAgeSeconds);
 
         // Durable truth per step equals the exported gauge values.
         await using var connection = await dataSource.OpenConnectionAsync();
