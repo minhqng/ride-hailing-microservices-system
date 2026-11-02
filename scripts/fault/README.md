@@ -172,3 +172,33 @@ path degrades, and the gate is reopened. Redis process/data stay alive, so the
 test explicitly reports `survived` separately from
 `eventReplayReconstructed`. The broker projection tests require a receipt for
 every published envelope, so stale deliveries cannot pass by being dropped.
+
+## Full-team recovery validation
+
+Initialize disposable credentials with `python scripts/security/init-local-auth.py`
+before HA startup. The HA entrypoint creates the owner-only shared cookie before
+any server or CLI can generate a random one. Existing authentication keys are kept.
+
+The sibling broker join runs only during first initialization. Normal restarts
+restore persisted membership without invoking `join_cluster`, which prepares a
+node by resetting its state. A persisted seed marker fences accidental changes;
+existing data without that marker fails closed. Archive old disposable HA
+evidence before explicitly resetting its test volumes; never reset an existing
+production cluster through this local profile.
+
+On the fresh, full `team-w12-w14-ha` stack, build the lifecycle actor and run:
+
+```text
+python scripts/fault/team-ha-conservation.py --output plans/reports/conservation.json
+python scripts/fault/team-ha-runtime.py --scenario broker --output plans/reports/broker-runtime.json
+```
+
+Use a fresh test dataset for each full runtime rehearsal. The quorum variation
+uses `--scenario quorum --node rabbitmq` to exercise application endpoint
+failover while a critical queue leader is lost. It retains the complete
+Driver/Matching/Trip/Saga/Payment final states, process/image identities,
+three-member queue observations, source and the independent runtime auditor.
+The conservation check requires 24 AMQP-confirmed persistent deliveries to
+survive a complete broker restart and converge to exactly 12 Payment effects.
+These remain application-level, single-host proofs, with no PostgreSQL/Redis
+HA or arbitrary network-partition claim.
