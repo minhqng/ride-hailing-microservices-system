@@ -230,7 +230,7 @@ def container_stats() -> list[dict[str, Any]]:
 
 def psql(database: str, sql: str, *, user: str = "postgres", timeout: float = 30) -> list[list[str]]:
     result = compose(
-        "exec", "-T", "postgres", "psql", "-U", user, "-d", database,
+        "exec", "-T", "-e", "PGOPTIONS=-c default_transaction_read_only=on", "postgres", "psql", "-U", user, "-d", database,
         "-v", "ON_ERROR_STOP=1", "-tA", "-F", "\t", "-c", sql,
         timeout=timeout,
     )
