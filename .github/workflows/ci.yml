@@ -82,6 +82,7 @@ jobs:
       - run: python3 scripts/test/security-gate.py --identity-tests
       - run: dotnet build scripts/test/w10-g3-harness/RideHailing.W10Harness.csproj -c Release
       - run: python3 scripts/test/core-runtime-gate.py
+      - run: python3 scripts/evidence/runtime-observations.py --output plans/reports/runtime-observations.json
       - run: python3 scripts/test/payment-smoke.py
       - run: python3 scripts/test/topology-smoke.py
       - if: always()
@@ -95,6 +96,7 @@ jobs:
             plans/reports/security-gate.json
             plans/reports/identity-gate.log
             plans/reports/core-runtime-gate.json
+            plans/reports/runtime-observations.json
             TestResults/identity-gate/
       - if: always()
         run: docker compose --profile obs down -v
