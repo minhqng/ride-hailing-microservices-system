@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import http.client
 import json
+import math
 import os
 import platform
 import re
@@ -163,7 +164,7 @@ def compose_up(services: Iterable[str], *, build: bool = True, scale: int | None
         args.extend(["--scale", f"matching={scale}"])
     else:
         args.extend([])
-    args.extend(services)
+    args.extend(dict.fromkeys([*services, "otel-collector", "prometheus", "jaeger"]))
     result = compose(*args, timeout=wait_timeout + 300)
     if result.returncode != 0:
         raise HarnessError(
@@ -371,6 +372,8 @@ def percentile_nearest_rank(values: list[float], percentile: float) -> float | N
     """Nearest-rank percentile (P50/P95 convention documented in the README)."""
     if not values:
         return None
+    if any(not math.isfinite(value) or value < 0 for value in values):
+        raise HarnessError("Latency samples must be finite and non-negative")
     if not 0 < percentile <= 100:
         raise ValueError("percentile must be within (0, 100]")
     ordered = sorted(values)
@@ -401,7 +404,7 @@ def find_k6() -> str | None:
     return shutil.which("k6")
 
 
-_SECRET_KEY_PARTS = ("password", "secret", "token", "credential", "passwd", "pwd")
+_SECRET_KEY_PARTS = ("password", "secret", "token", "credential", "passwd", "pwd", "privatekey", "private_key")
 _CONNECTION_SECRET_RE = re.compile(r"(?i)(password|pwd)=([^;\s]+)")
 
 
@@ -517,7 +520,7 @@ def _container_inspect(container_id: str) -> dict[str, Any] | None:
 
 def _configured_env() -> dict[str, Any]:
     keys = sorted(key for key in os.environ if key.startswith("W13_"))
-    return {key: ("<redacted>" if "PASSWORD" in key or "TOKEN" in key else os.environ[key]) for key in keys}
+    return _redact({key: os.environ[key] for key in keys})
 
 
 def capture_environment(*, include_observed: bool = True) -> dict[str, Any]:
@@ -709,8 +712,7 @@ def g4_readiness(path: Path | None = None) -> dict[str, Any]:
 
     blockers = list(evidence.get("blockers") or [])
     result["blockers"].extend(blockers)
-    if evidence.get("verdict") != "GREEN":
-        result["verdict"] = str(evidence.get("verdict") or "RED")
+    result["verdict"] = str(evidence.get("verdict") or "RED")
     if result["verdict"] == "GREEN" and not result["blockers"]:
         result["green"] = True
     return result
@@ -819,6 +821,18 @@ def finalize_manifest(
 
 def validate_manifest(manifest: dict[str, Any], run_dir: Path | None = None) -> list[str]:
     errors: list[str] = []
+
+    def check_numbers(value: Any, path: str = "manifest") -> None:
+        if isinstance(value, float) and not math.isfinite(value):
+            errors.append(f"{path} contains a non-finite number")
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                check_numbers(item, f"{path}.{key}")
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                check_numbers(item, f"{path}[{index}]")
+
+    check_numbers(manifest)
 
     def require(condition: bool, message: str) -> None:
         if not condition:

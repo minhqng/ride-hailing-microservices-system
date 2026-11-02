@@ -93,7 +93,7 @@ public static class MessagingMetrics
     public static void RecordDelivery(bool redelivered)
     {
         ConsumerDelivery.Add(1);
-        if (redelivered) ConsumerRedelivery.Add(1);
+        ConsumerRedelivery.Add(redelivered ? 1 : 0);
     }
 
     public static void RecordAcknowledged() => ConsumerAck.Add(1);

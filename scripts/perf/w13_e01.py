@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import http.client
 import json
+import os
 import statistics
 import threading
 import time
@@ -22,6 +23,10 @@ from pathlib import Path
 from typing import Any
 
 import w13lib as lib
+import w13_auth as auth
+import w13_metrics
+
+_owners: dict[str, str] = {}
 
 DEFAULT_NS = [1, 10, 25, 50, 100]
 
@@ -42,14 +47,23 @@ def http_json(
     body: Any = None,
     timeout: float = 30,
 ) -> tuple[int, Any, float]:
-    status, _, payload, elapsed = lib.http_request(method, base + path, body=body, timeout=timeout)
+    if path.endswith("/reserve"):
+        token = auth.service("matching")
+    elif path.endswith("/release"):
+        token = auth.service("trip")
+    else:
+        driver_id = (body or {}).get("driverId") if path == "/drivers" else path.split("/")[2]
+        token = _owners[driver_id]
+    status, _, payload, elapsed = lib.http_request(method, base + path, body=body, timeout=timeout,
+                                                 headers={"Authorization": "Bearer " + token})
     return status, lib.parse_json(payload), elapsed
 
 
 def create_and_online(base: str, driver_id: str, *, timeout: float) -> dict[str, Any]:
+    user_id, _owners[driver_id] = auth.account("Driver")
     status, body, _ = http_json(
         base, "POST", "/drivers",
-        body={"driverId": driver_id, "userId": lib.seeded_uuid(0, f"e01-owner-{driver_id}")},
+        body={"driverId": driver_id, "userId": user_id},
         timeout=timeout,
     )
     if status not in (200, 201):
@@ -137,6 +151,7 @@ def contend(
     results: list[dict[str, Any] | None] = [None] * n
     release_lock = threading.Lock()
     barrier_release_ns: list[int] = []
+    token = auth.service("matching")
 
     def worker(index: int) -> None:
         trip_id = lib.seeded_uuid(seed, f"e01-trip-{repeat_index}-{n}-{index}")
@@ -187,7 +202,8 @@ def contend(
         try:
             connection.request(
                 "POST", path, body=json.dumps(payload),
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                headers={"Content-Type": "application/json", "Accept": "application/json",
+                         "Authorization": "Bearer " + token},
             )
             response = connection.getresponse()
             raw = response.read().decode("utf-8", errors="replace")
@@ -370,6 +386,20 @@ def run_one(
     }
     raw_samples = run_dir / "raw" / f"e01-n{n}-samples.json"
     final_file = run_dir / "final-state" / f"e01-n{n}.json"
+    cleanup = None
+    if winner is not None:
+        release_status, _, _ = http_json(base, "POST", f"/drivers/{driver_id}/release",
+            body={"tripId": winner["tripId"], "reservationId": winner["reservationId"]}, timeout=timeout)
+        cleanup = final_state(driver_id, winner)
+        released = cleanup.get("driver") or {}
+        checks["exactWinnerReleasedAfterMeasurement"] = (
+            release_status == 200 and released.get("status") == "AVAILABLE"
+            and released.get("reservation_id") is None and released.get("reserved_trip_id") is None
+            and released.get("version") == expected_version + 2
+            and not cleanup.get("activeReservationRows")
+            and len(cleanup.get("reserveOutbox") or []) == 1)
+    else:
+        checks["exactWinnerReleasedAfterMeasurement"] = False
     lib.write_json(raw_samples, {
         "synthetic": False,
         "reportGrade": report_grade,
@@ -386,6 +416,7 @@ def run_one(
         "expectedVersion": expected_version,
         "winner": winner,
         "final": final,
+        "afterExactRelease": cleanup,
         "aud01": audit,
         "assertions": checks,
     })
@@ -411,7 +442,10 @@ def run_one(
 def _prepare_stack(base: str, *, reset: bool) -> None:
     if reset:
         lib.compose_down(volumes=True)
-    lib.compose_up(["postgres", "rabbitmq", "driver"], build=True, wait_timeout=240)
+    auth.reset()
+    _owners.clear()
+    lib.compose_up(["postgres", "rabbitmq", "identity", "driver"], build=True, wait_timeout=240)
+    lib.wait_http(f"http://127.0.0.1:{os.environ.get('W13_IDENTITY_PORT', '18101')}/health/ready")
     lib.wait_http(base + "/health/ready")
 
 
@@ -521,6 +555,10 @@ def run(args: argparse.Namespace) -> int:
             return 3
 
         all_pass = all(all(value for value in outcome["assertions"].values()) for outcome in outcomes)
+        metrics_ok, metric_file = w13_metrics.capture(run_dir, "E01")
+        assertions["declaredMetricsPresentAndFinite"] = metrics_ok
+        raw_files.append(metric_file)
+        all_pass = all_pass and metrics_ok
         status = "PASS" if all_pass else "FAIL"
         reason = "all E01 assertions passed" if all_pass else "one or more E01 assertions failed"
         achieved = {
@@ -537,7 +575,7 @@ def run(args: argparse.Namespace) -> int:
             extra_workload={"achieved": achieved, "measurementSeconds": achieved["measurementSeconds"]},
             limitations=[
                 "E01 measures the Driver reserve authority directly; HTTP 409 is an expected domain conflict.",
-                "The current Driver surface has no authenticated principal (SEC-AUTH-01); this is a functional contention harness, not a security acceptance.",
+                "Drivers are owned by real Identity accounts; reserve/release use scoped Matching/Trip grants. Token issuance is outside the measured interval.",
                 "Report-grade status additionally requires the campaign analyzer, at least 3 repeats and a green G4 gate.",
             ],
             raw_retained_locally=True,
