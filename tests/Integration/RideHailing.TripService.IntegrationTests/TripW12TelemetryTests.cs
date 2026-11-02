@@ -23,6 +23,7 @@ using RideHailing.Messaging.Contracts;
 using RideHailing.TripService.Api;
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Domain.Trips;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
 using RideHailing.TripService.Integration.Observability;
@@ -272,6 +273,9 @@ public sealed class TripW12TelemetryTests : IDisposable
         var durable = new Dictionary<string, long>();
         while (await reader.ReadAsync())
             durable[reader.GetString(0)] = reader.GetInt64(1);
+        var snapshot = await TripSagaBacklog.QueryAsync(dataSource);
+        foreach (var step in Enum.GetValues<RideSagaStep>())
+            Assert.Equal(durable.GetValueOrDefault(step.ToCanonicalName()), snapshot[step.ToCanonicalName()]);
         foreach (var (step, count) in durable)
             Assert.Equal(count,
                 (long)gaugeEvents.Where(e => e.Tags.GetValueOrDefault("step") == step).Sum(e => e.Value));

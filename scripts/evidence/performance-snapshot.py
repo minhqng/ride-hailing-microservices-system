@@ -23,36 +23,34 @@ QUERIES = {
     "payment_rate": "sum by (type,outcome) (rate({__name__=~'payment_operation(_operations)?_total'}[1m]))",
 }
 
-# These series must exist for the snapshot to prove that the measured run
-# actually exposed queue, Outbox and Saga state. Rate counters may legitimately
-# be absent while idle, so they are reported but do not turn the snapshot into
-# a false PASS.
-REQUIRED_QUERIES = {
-    "queue_ready",
-    "queue_unacked",
-    "outbox_pending",
-    "outbox_oldest_pending_age",
-    "saga_active",
-}
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--prometheus", default="http://localhost:9090")
 parser.add_argument("--output", required=True, type=pathlib.Path)
 parser.add_argument("--run", required=True, help="Run label such as e03-replica2-run1")
+parser.add_argument("--queries", nargs="+", choices=sorted(QUERIES), default=list(QUERIES),
+                    help="Declare the measured scope explicitly; every selected series must exist and be finite")
+parser.add_argument("--start", help="UTC start for a measured range (requires --end)")
+parser.add_argument("--end", help="UTC end for a measured range")
 args = parser.parse_args()
+if bool(args.start) != bool(args.end):
+    parser.error("--start and --end must be provided together")
+REQUIRED_QUERIES = set(args.queries)
 
 
 def finite_series(result: list[dict]) -> bool:
     for series in result:
-        value = series.get("value")
-        if not isinstance(value, list) or len(value) < 2:
+        values = series.get("values", [series.get("value")])
+        if not values:
             return False
-        try:
-            number = float(value[1])
-        except (TypeError, ValueError):
-            return False
-        if not math.isfinite(number):
-            return False
+        for value in values:
+            if not isinstance(value, list) or len(value) < 2:
+                return False
+            try:
+                number = float(value[1])
+            except (TypeError, ValueError):
+                return False
+            if not math.isfinite(number):
+                return False
     return True
 
 snapshot = {
@@ -60,12 +58,20 @@ snapshot = {
     "capturedAt": dt.datetime.now(dt.timezone.utc).isoformat(),
     "policy": "consumer count may vary; prefetch/DB pool/retry policy must remain fixed",
     "requiredQueries": sorted(REQUIRED_QUERIES),
+    "range": {"start": args.start, "end": args.end, "stepSeconds": 15} if args.start else None,
     "queries": {},
 }
 empty_queries: list[str] = []
 invalid_queries: list[str] = []
 for name, query in QUERIES.items():
-    url = args.prometheus.rstrip("/") + "/api/v1/query?" + urllib.parse.urlencode({"query": query})
+    if name not in REQUIRED_QUERIES:
+        continue
+    parameters = {"query": query}
+    endpoint = "/api/v1/query"
+    if args.start:
+        endpoint += "_range"
+        parameters.update(start=args.start, end=args.end, step="15s")
+    url = args.prometheus.rstrip("/") + endpoint + "?" + urllib.parse.urlencode(parameters)
     with urllib.request.urlopen(url, timeout=10) as response:
         payload = json.load(response)
     if payload.get("status") != "success":
@@ -104,8 +110,4 @@ if missing_required or invalid_required:
         f"diagnostic snapshot written to {args.output}"
     )
 
-optional_empty = sorted(set(empty_queries) - REQUIRED_QUERIES)
-message = f"PASS: wrote {len(QUERIES)} metric snapshots to {args.output}; required series present"
-if optional_empty:
-    message += f"; optional empty: {', '.join(optional_empty)}"
-print(message)
+print(f"PASS: wrote {len(REQUIRED_QUERIES)} declared metric snapshots to {args.output}; all series present and finite")

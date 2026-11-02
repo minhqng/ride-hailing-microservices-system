@@ -19,13 +19,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
 import w13lib as lib
+import w13_auth as auth
+import w13_metrics
 
 DEFAULT_ENDPOINT = "/trips"
 
@@ -115,9 +119,12 @@ def preflight(base: str, endpoint: str, token: str, *, timeout: float = 20) -> d
 
 def _metric(summary: dict[str, Any], name: str, field: str = "count", default: float = 0) -> float:
     metric = (summary.get("metrics") or {}).get(name) or {}
-    values = metric.get("values") or {}
+    values = metric.get("values", metric)
     if field in values and values[field] is not None:
-        return values[field]
+        value = values[field]
+        if not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise lib.HarnessError(f"Invalid k6 metric {name}.{field}")
+        return value
     return default
 
 
@@ -213,8 +220,7 @@ def _write_blocked(args: argparse.Namespace, *, reason: str, detail: Any, token_
         extra_workload={"blockedBeforeLoad": True},
         limitations=[
             "BLOCKED means no report-grade measurement was attempted; it is not a performance result.",
-            "E02 requires the shared authenticated Rider principal contract and a canonical route; "
-            "the current repository has no Identity token issuance or Gateway routing.",
+            "E02 requires real Identity Rider grants and the canonical authenticated Gateway route.",
         ],
     )
     lib.print_json({"status": "BLOCKED", "runId": run_id, "reason": reason, "detail": detail})
@@ -224,7 +230,9 @@ def _write_blocked(args: argparse.Namespace, *, reason: str, detail: Any, token_
 def _prepare_stack(*, reset: bool) -> None:
     if reset:
         lib.compose_down(volumes=True)
-    lib.compose_up(["postgres", "rabbitmq", "trip", "gateway"], build=True, wait_timeout=240)
+    auth.reset()
+    lib.compose_up(["postgres", "redis", "rabbitmq", "identity", "driver", "matching", "trip", "payment", "gateway"],
+                   build=True, wait_timeout=240)
     lib.wait_http("http://127.0.0.1:" + os.environ.get("W13_TRIP_PORT", "18103") + "/health/ready")
 
 
@@ -268,14 +276,18 @@ def _target_error(args: argparse.Namespace) -> str | None:
 
 
 def _write_token_file(tokens: list[str], run_dir: Path) -> Path:
-    path = run_dir / "raw" / "tokens.txt"
-    path.parent.mkdir(parents=True, exist_ok=True)
+    directory = lib.ROOT / "plans" / ".w13-credentials"
+    directory.mkdir(parents=True, exist_ok=True)
+    descriptor, name = tempfile.mkstemp(prefix="riders-", suffix=".txt", dir=directory)
+    os.close(descriptor)
+    path = Path(name)
     path.write_text("\n".join(tokens) + "\n", encoding="utf-8", newline="\n")
     return path
 
 
 def _trend_latency(summary: dict[str, Any], metric_name: str) -> dict[str, Any]:
-    values = ((summary.get("metrics") or {}).get(metric_name) or {}).get("values") or {}
+    metric = (summary.get("metrics") or {}).get(metric_name) or {}
+    values = metric.get("values", metric)
     return {
         "p50": values.get("p(50)"),
         "p95": values.get("p(95)"),
@@ -341,6 +353,8 @@ def run(args: argparse.Namespace) -> int:
     no_token_probe = _no_token_probe(args.preflight_base_url, args.endpoint)
     trip_base = args.trip_base_url or f"http://127.0.0.1:{os.environ.get('W13_TRIP_PORT', '18103')}"
     trip_probe = _no_token_probe(trip_base, args.endpoint)
+    if not token_source:
+        tokens = [auth.account("Rider")[1] for _ in range(args.riders + 1)]
     if not tokens:
         return _write_blocked(
             args, reason="AUTH_TOKEN_UNAVAILABLE",
@@ -385,7 +399,7 @@ def run(args: argparse.Namespace) -> int:
     seed = args.seed
     results = []
     for repeat in range(args.repeats):
-        if repeat > 0 or args.reset_each:
+        if repeat > 0:
             try:
                 _prepare_stack(reset=True)
             except Exception as exc:  # noqa: BLE001 - stack setup
@@ -393,6 +407,9 @@ def run(args: argparse.Namespace) -> int:
                     args, reason="STACK_START_FAILED", detail=str(exc),
                     token_count=len(tokens), commands=commands,
                 )
+            if not token_source:
+                tokens = [auth.account("Rider")[1] for _ in range(args.riders + 1)]
+                preflight_token, load_tokens = tokens[-1], tokens[:-1]
         environment = lib.capture_environment()
         pre = preflight(args.preflight_base_url, args.endpoint, preflight_token, timeout=args.preflight_timeout)
         if not pre.get("ready"):
@@ -422,7 +439,7 @@ def run(args: argparse.Namespace) -> int:
             "-e", f"K6_BASE_URL={args.k6_base_url}",
             "-e", f"K6_ENDPOINT={args.endpoint}",
             "-e", f"K6_RATE={args.rate}",
-            "-e", f"K6_DURATION={args.duration}",
+            "-e", f"W13_MEASUREMENT_DURATION={args.duration}",
             "-e", f"K6_PREALLOC_VUS={args.prealloc_vus}",
             "-e", f"K6_MAX_VUS={args.max_vus}",
             "-e", f"K6_SEED={seed + repeat}",
@@ -433,10 +450,10 @@ def run(args: argparse.Namespace) -> int:
         ]
         started = time.perf_counter()
         started_iso = lib.iso()
-        k6_result = lib.run(
-            k6_command,
-            timeout=_duration_seconds(args.duration) + 240,
-        )
+        try:
+            k6_result = lib.run(k6_command, timeout=_duration_seconds(args.duration) + 240)
+        finally:
+            k6_token_path.unlink(missing_ok=True)
         elapsed = time.perf_counter() - started
         lib.write_text(console_file, k6_result.stdout + "\n--- stderr ---\n" + k6_result.stderr)
         summary_path = run_dir / "raw" / "k6-summary.json"
@@ -465,7 +482,7 @@ def run(args: argparse.Namespace) -> int:
             iterations = int(_metric(summary, "iterations"))
             sample_count = success + domain_conflicts + auth_failures + system_errors + unexpected
             durations = (summary.get("metrics") or {}).get("http_req_duration") or {}
-            values = durations.get("values") or {}
+            values = durations.get("values", durations)
             http_requests = int(_metric(summary, "http_reqs"))
             latencies = []
             latency_by_outcome = {
@@ -570,17 +587,21 @@ def run(args: argparse.Namespace) -> int:
             "cooldownSeconds": 0,
             "datasetSeed": seed + repeat,
         }
+        metrics_ok, metric_file = w13_metrics.capture(run_dir, "E02", start=started_iso)
+        assertions["declaredMetricsPresentAndFinite"] = metrics_ok
+        if not metrics_ok:
+            status, reason = "FAIL", "DECLARED_METRICS_MISSING_OR_INVALID"
         lib.finalize_manifest(
             manifest, run_dir=run_dir, status=status, reason=reason,
             samples=samples, latency_values=latencies, assertions=assertions,
-            raw_files=[summary_path, commands_file] if summary_path.exists() else [commands_file],
+            raw_files=[summary_path, commands_file, metric_file] if summary_path.exists() else [commands_file, metric_file],
             final_state_files=[final_state_path],
             commands=commands,
             extra_workload={},
             limitations=[
                 "No thresholds were invented before a baseline; the analyzer reports configured vs achieved load and outcome classes.",
                 "Domain conflicts are expected when the Rider active-Trip guard rejects a repeated Rider; they are not system failures.",
-                "The current shared Identity/Gateway authentication is SYSTEM_AUTH_PENDING; report-grade execution is gated.",
+                "Real Identity Rider accounts authenticate through Gateway. The finite Rider cohort and active-Trip conflicts are part of the declared workload; offered request rate is not business completion throughput.",
                 "k6 JSON points and console output remain local; the summary export is the curated input.",
             ],
             raw_retained_locally=True,
@@ -606,6 +627,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--k6-base-url", default="http://gateway:8080")
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--token-file", default=None)
+    parser.add_argument("--riders", type=int, choices=range(2, 21), default=10,
+                        help="real disposable Rider cohort; token issuance is outside the measured interval")
     parser.add_argument("--rate", type=int, default=10)
     parser.add_argument("--duration", default="30s")
     parser.add_argument("--prealloc-vus", type=int, default=30)

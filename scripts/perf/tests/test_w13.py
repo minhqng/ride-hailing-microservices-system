@@ -5,6 +5,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 PERF_DIR = Path(__file__).resolve().parents[1]
@@ -41,8 +42,19 @@ class PercentileTests(unittest.TestCase):
         self.assertEqual(lib.percentile_nearest_rank([3.5], 50), 3.5)
         self.assertEqual(lib.percentile_nearest_rank([3.5], 95), 3.5)
 
+    def test_invalid_latency_cannot_produce_a_percentile(self) -> None:
+        for value in (float("nan"), float("inf"), -0.1):
+            with self.subTest(value=value), self.assertRaises(lib.HarnessError):
+                lib.percentile_nearest_rank([1.0, value], 95)
+
 
 class ManifestValidationTests(unittest.TestCase):
+    def test_nonfinite_measurement_cannot_be_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest, run_dir = materialize("e01-smoke", Path(tmp))
+            manifest["workload"]["achieved"]["observedThroughput"] = float("nan")
+            self.assertIn("non-finite", "\n".join(lib.validate_manifest(manifest, run_dir)))
+
     def test_valid_synthetic_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             _, run_dir = materialize("e01-smoke", Path(tmp))
@@ -89,16 +101,51 @@ class ManifestValidationTests(unittest.TestCase):
 
 
 class RedactionAndGateTests(unittest.TestCase):
+    def test_certificate_requires_ancestry_and_unchanged_production_source(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            evidence_root = root / "evidence"
+            evidence_root.mkdir()
+            (root / "src").mkdir()
+            source = root / "src" / "authority.txt"
+            source.write_text("original authority", encoding="utf-8")
+            with patch.object(lib, "ROOT", root), patch.object(lib, "EVIDENCE_ROOT", evidence_root):
+                lib.run(["git", "init"], check=True)
+                lib.run(["git", "add", "src"], check=True)
+                commit = ["git", "-c", "user.name=Gate Test", "-c", "user.email=gate@example.invalid", "commit", "-m", "test authority"]
+                lib.run(commit, check=True)
+                certificate = evidence_root / "gate.json"
+                checks = {key: "PASS" for key in ("bOwnedCorrectness", "securityBaseline", "aCorrectnessAcceptance",
+                    "cCorrectnessAcceptance", "authoritativeAuditor", "productionApiSurface", "brokerSurface", "stableEnvironment")}
+                lib.write_json(certificate, {"schemaVersion": 1, "verdict": "GREEN", "checks": checks,
+                    "sourceCommit": lib.run(["git", "rev-parse", "HEAD"], check=True).stdout.strip()})
+                self.assertTrue(lib.g4_readiness(certificate)["green"])
+                source.write_text("changed authority", encoding="utf-8")
+                lib.run(["git", "add", "src"], check=True)
+                lib.run(commit, check=True)
+                stale = lib.g4_readiness(certificate)
+                self.assertFalse(stale["green"])
+                self.assertTrue(any("source changed" in blocker for blocker in stale["blockers"]))
+
     def test_secrets_are_redacted(self) -> None:
         value = {
             "connection": "Host=postgres;Username=driver_app;Password=driver_dev_pw;",
             "RABBITMQ_DEFAULT_PASS": "ride_dev_pw",
+            "services": {"identity": {"environment": {
+                "Auth__PrivateKeyBase64": "private-signing-material",
+                "Auth__ServiceClients__matching__Secret": "service-secret",
+                "Auth__PublicKeyBase64": "public-verification-material",
+            }}},
             "normal": "visible",
         }
         redacted = lib._redact(value)
         self.assertNotIn("driver_dev_pw", json.dumps(redacted))
         self.assertEqual(redacted["RABBITMQ_DEFAULT_PASS"], "<redacted>")
         self.assertEqual(redacted["normal"], "visible")
+        environment = redacted["services"]["identity"]["environment"]
+        self.assertEqual(environment["Auth__PrivateKeyBase64"], "<redacted>")
+        self.assertEqual(environment["Auth__ServiceClients__matching__Secret"], "<redacted>")
+        self.assertEqual(environment["Auth__PublicKeyBase64"], "public-verification-material")
 
     def test_report_grade_rejects_dirty_source(self) -> None:
         g4 = {"green": True, "blockers": [], "verdict": "GREEN"}
