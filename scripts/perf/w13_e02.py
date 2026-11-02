@@ -18,6 +18,7 @@ classes (success, domain conflict, system error, timeout, unexpected).
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import math
 import os
@@ -296,6 +297,28 @@ def _trend_latency(summary: dict[str, Any], metric_name: str) -> dict[str, Any]:
     }
 
 
+def _warmup(base: str, token: str) -> dict[str, Any]:
+    started = time.perf_counter()
+    def create(index):
+        status, _, _, _ = lib.http_request("POST", base.rstrip("/") + "/trips",
+            body={"pickup": {"latitude": 10.7769, "longitude": 106.7009},
+                  "dropoff": {"latitude": 10.7710, "longitude": 106.6950}},
+            headers={"Authorization": "Bearer " + token,
+                     "Idempotency-Key": "w13-e02-preflight-warmup-" + str(time.time_ns()) + "-" + str(index)})
+        return status
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        statuses = []
+        for batch in range(10):
+            statuses.extend(executor.map(create, range(batch * 10, (batch + 1) * 10)))
+            remaining = started + (batch + 1) * 3 - time.perf_counter()
+            if remaining > 0:
+                time.sleep(remaining)
+    if any(status not in (200, 201, 409) for status in statuses):
+        raise lib.HarnessError("Real API warmup returned an unexpected HTTP outcome")
+    return {"statuses": statuses, "seconds": time.perf_counter() - started,
+            "scope": "separate preflight Rider; excluded from measured requests"}
+
+
 def _trip_final_checks(final_state: dict[str, Any], success_count: int) -> dict[str, Any]:
     if not isinstance(final_state, dict) or not final_state or final_state.get("error"):
         return {"finalStateAvailable": False}
@@ -422,6 +445,13 @@ def run(args: argparse.Namespace) -> int:
         run_dir = lib.RUNS_ROOT / "E02" / run_id
         raw_dir = run_dir / "raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
+        warmup_started = time.perf_counter()
+        warmup = _warmup(args.preflight_base_url, preflight_token)
+        warmup_metrics_ok, warmup_metrics_file = w13_metrics.capture(run_dir, "E02", name="warmup-prometheus.json")
+        if not warmup_metrics_ok:
+            raise lib.HarnessError("Warmup did not establish the declared Prometheus series")
+        warmup["requestSeconds"] = warmup["seconds"]
+        warmup["seconds"] = time.perf_counter() - warmup_started
         commands_file = run_dir / "commands.txt"
         lib.write_text(commands_file, "\n".join(commands) + "\n")
         k6_token_path = _write_token_file(load_tokens, run_dir)
@@ -452,6 +482,7 @@ def run(args: argparse.Namespace) -> int:
             k6_result = lib.run(k6_command, timeout=_duration_seconds(args.duration) + 240)
         finally:
             k6_token_path.unlink(missing_ok=True)
+        finished_iso = lib.iso()
         elapsed = time.perf_counter() - started
         lib.write_text(console_file, k6_result.stdout + "\n--- stderr ---\n" + k6_result.stderr)
         summary_path = run_dir / "raw" / "k6-summary.json"
@@ -521,6 +552,15 @@ def run(args: argparse.Namespace) -> int:
             }
             final_checks = _trip_final_checks(final_state, success)
             final_checks["independentAuthoritiesPass"] = authority["status"] == "PASS"
+            expected_starts = args.rate * _duration_seconds(args.duration)
+            dropped = int(_metric(summary, "dropped_iterations"))
+            final_checks.update({
+                "offeredStartsMatchConfiguredArrivalRate": abs(iterations + dropped - expected_starts) <= 1,
+                "oneHttpRequestPerIteration": http_requests == iterations and iterations > 0,
+                "latencyCountMatchesHttpRequests": values.get("count") == http_requests,
+                "finiteNonnegativeLatencyQuantiles": all(isinstance(values.get(key), (int, float))
+                    and math.isfinite(values[key]) and values[key] >= 0 for key in ("p(50)", "p(95)")),
+            })
             assertions = {
                 "k6SummaryPresent": True,
                 "k6ExitZero": k6_result.returncode == 0,
@@ -561,6 +601,7 @@ def run(args: argparse.Namespace) -> int:
         )
         manifest["environment"] = environment
         manifest["environment"]["observedAfter"] = environment_after
+        manifest["auditor"] = authority
         manifest["environment"]["k6"] = k6_image
         manifest["workload"] = {
             "model": "k6 constant-arrival-rate (open model) against the authenticated POST /trips surface",
@@ -578,24 +619,25 @@ def run(args: argparse.Namespace) -> int:
                 "preflightTokenExcludedFromLoad": len(tokens) > 1,
                 "unauthenticatedProbe": no_token_probe,
                 "reportGradeTargetCanonical": args.report_grade,
-                "warmupSeconds": 0,
+                "warmupPolicy": "30s: ten real concurrent preflight-Rider requests every 3s, then declared metric readiness (75s bound)",
                 "cooldownSeconds": 0,
                 "preflight": pre,
             },
             "achieved": achieved,
-            "warmupSeconds": 0,
+            "warmupSeconds": warmup["seconds"],
+            "warmup": warmup,
             "measurementSeconds": elapsed,
             "cooldownSeconds": 0,
             "datasetSeed": seed + repeat,
         }
-        metrics_ok, metric_file = w13_metrics.capture(run_dir, "E02", start=started_iso)
+        metrics_ok, metric_file = w13_metrics.capture(run_dir, "E02", start=started_iso, end=finished_iso)
         assertions["declaredMetricsPresentAndFinite"] = metrics_ok
         if not metrics_ok:
             status, reason = "FAIL", "DECLARED_METRICS_MISSING_OR_INVALID"
         lib.finalize_manifest(
             manifest, run_dir=run_dir, status=status, reason=reason,
             samples=samples, latency_values=latencies, assertions=assertions,
-            raw_files=[summary_path, commands_file, metric_file] if summary_path.exists() else [commands_file, metric_file],
+            raw_files=[summary_path, commands_file, metric_file, warmup_metrics_file] if summary_path.exists() else [commands_file, metric_file, warmup_metrics_file],
             final_state_files=[final_state_path],
             commands=commands,
             extra_workload={},

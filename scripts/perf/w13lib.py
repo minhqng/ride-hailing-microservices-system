@@ -476,7 +476,7 @@ def _host_info() -> dict[str, Any]:
         "logicalCpus": docker_info.get("NCPU") if isinstance(docker_info, dict) else os.cpu_count(),
         "cpuModel": cpu_model or platform.processor() or "unknown",
         "memoryBytes": total_memory,
-        "hostname": socket.gethostname(),
+        "hostId": sha256_text(socket.gethostname()),
     }
 
 
@@ -510,6 +510,7 @@ def _container_inspect(container_id: str) -> dict[str, Any] | None:
         "id": data.get("Id"),
         "name": (data.get("Name") or "").lstrip("/"),
         "image": data.get("Image"),
+        "hostname": config.get("Hostname"),
         "startedAt": (data.get("State") or {}).get("StartedAt"),
         "status": (data.get("State") or {}).get("Status"),
         "nanoCpus": host_config.get("NanoCpus"),
@@ -696,6 +697,9 @@ def g4_readiness(path: Path | None = None) -> dict[str, Any]:
 
     source_commit = evidence.get("sourceCommit")
     current = run(["git", "rev-parse", "HEAD"], timeout=30, check=True).stdout.strip()
+    source_status = run(["git", "status", "--porcelain", "--", "src", "tests"], timeout=30, check=True)
+    if source_status.stdout.strip():
+        result["blockers"].append("production/test source has uncommitted changes; G4 is not valid for this source")
     if not source_commit:
         result["blockers"].append("G4 evidence has no sourceCommit")
     else:
@@ -878,6 +882,28 @@ def validate_manifest(manifest: dict[str, Any], run_dir: Path | None = None) -> 
 
     result = manifest.get("result") or {}
     status = result.get("status")
+    if manifest.get("reportGrade") and status == "PASS":
+        observed = environment.get("observed") or {}
+        containers = observed.get("containers") or []
+        configured_services = (environment.get("configured") or {}).get("composeServices") or {}
+        required_services = {
+            "E01": {"postgres", "rabbitmq", "identity", "driver"},
+            "E02": {"postgres", "redis", "rabbitmq", "identity", "driver", "matching", "trip", "payment", "gateway"},
+            "E03": {"postgres", "redis", "rabbitmq", "matching"},
+        }.get(experiment, set()) | {"prometheus", "otel-collector", "jaeger"}
+        observed_services = {item.get("service") for item in containers if item.get("state") == "running"}
+        require(required_services <= observed_services, "required measured services are missing or not running")
+        for item in containers:
+            name = item.get("service")
+            if name not in required_services:
+                continue
+            expected = configured_services.get(name) or {}
+            actual = item.get("inspect") or {}
+            require(bool(actual.get("image")), f"observed image identity is missing: {name}")
+            require(expected.get("cpus") is not None and actual.get("nanoCpus") == int(float(expected["cpus"]) * 1_000_000_000),
+                    f"observed CPU limit differs from configured: {name}")
+            require(expected.get("memLimitBytes") is not None and actual.get("memoryBytes") == int(expected["memLimitBytes"]),
+                    f"observed memory limit differs from configured: {name}")
     require(status in ("PASS", "FAIL", "BLOCKED", "INVALID", "INCOMPLETE"), "result.status is invalid")
     require(isinstance(result.get("sampleCount"), int) and result.get("sampleCount", -1) >= 0,
             "result.sampleCount must be a non-negative integer")
@@ -956,7 +982,7 @@ def environment_fingerprint(environment: dict[str, Any]) -> str:
     configured = environment.get("configured") or {}
     services = configured.get("composeServices") or {}
     keep = {}
-    for name in ("postgres", "redis", "rabbitmq", "driver", "matching", "trip", "gateway"):
+    for name in sorted(services):
         service = services.get(name) or {}
         keep[name] = {
             "image": service.get("image"),
@@ -964,7 +990,15 @@ def environment_fingerprint(environment: dict[str, Any]) -> str:
             "memLimitBytes": service.get("memLimitBytes"),
             "environment": service.get("environment"),
         }
-    return sha256_text(json.dumps(keep, sort_keys=True))
+    observed_images: dict[str, set[str]] = {}
+    for container in (environment.get("observed") or {}).get("containers") or []:
+        image = (container.get("inspect") or {}).get("image")
+        if image:
+            observed_images.setdefault(container.get("service"), set()).add(image)
+    host = environment.get("host") or {}
+    frozen = {"configured": keep, "images": {name: sorted(images) for name, images in observed_images.items()},
+              "host": {name: host.get(name) for name in ("hostId", "platform", "cpuModel", "logicalCpus", "memoryBytes")}}
+    return sha256_text(json.dumps(frozen, sort_keys=True))
 
 
 def print_json(data: Any) -> None:
