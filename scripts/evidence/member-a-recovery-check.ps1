@@ -40,7 +40,7 @@ function Convert-SeriesValue {
 
 function Get-RequiredScalar {
     param([string]$Name, [string]$Query)
-    $result = Get-PrometheusVector -Name $Name -Query $Query
+    $result = @(Get-PrometheusVector -Name $Name -Query $Query)
     if ($result.Count -eq 0) {
         throw "Prometheus query returned no series: $Name"
     }
@@ -50,7 +50,7 @@ function Get-RequiredScalar {
     return Convert-SeriesValue -Name $Name -Series $result[0]
 }
 
-$sagaResult = Get-PrometheusVector -Name "SagaActive" -Query $queries.SagaActive
+$sagaResult = @(Get-PrometheusVector -Name "SagaActive" -Query $queries.SagaActive)
 foreach ($series in $sagaResult) {
     $null = Convert-SeriesValue -Name "SagaActive" -Series $series
 }
