@@ -22,7 +22,7 @@ public sealed record DriverFaultSnapshot(
     int PendingCount,
     DateTimeOffset? LastReachedAtUtc);
 
-public sealed class DriverFaultPoint
+public sealed class DriverFaultPoint : RideHailing.Messaging.IFaultPoint
 {
     public const string EnabledNamesVariable = "RIDE_FAULTPOINTS";
     public const string MaxHoldSecondsVariable = "RIDE_FAULT_MAX_HOLD_SECONDS";

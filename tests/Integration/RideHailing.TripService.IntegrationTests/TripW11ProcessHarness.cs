@@ -274,7 +274,7 @@ internal static class TripW11Harness
     private static MessageEnvelope<JsonElement> PaymentOutcome(
         string messageType, Guid tripId, Guid sagaId, string operationKey, string? resultCode) =>
         MessageEnvelope<JsonElement>.Create(messageType, tripId.ToString("D"),
-            JsonSerializer.SerializeToElement(new { tripId, resultCode }),
+            JsonSerializer.SerializeToElement(new { tripId, reasonCode = resultCode }),
             sagaId: sagaId.ToString("D"), operationKey: operationKey);
 
     public static MessageEnvelope<JsonElement> PaymentAuthorized(

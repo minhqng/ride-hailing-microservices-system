@@ -122,8 +122,10 @@ public class W9DedupTests(RabbitBackboneFixture fixture)
         Assert.Equal(1, await EffectCountAsync(fixture.Source, scope, messageId));
     }
 
-    [Fact]
-    public async Task CommitBeforeAckRedeliveryFindsCommittedMarkerAndAppliesNoSecondEffect()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CommitBeforeAckRedeliveryFindsCommittedMarkerAndAppliesNoSecondEffect(bool sharedFaultPoint)
     {
         await W9TestSupport.EnsureSchemaAsync(fixture.Source);
         var queue = await fixture.QueueAsync();
@@ -146,7 +148,7 @@ public class W9DedupTests(RabbitBackboneFixture fixture)
             {
                 Assert.Equal(DedupOutcome.Applied, outcome);
                 firstCommitted.TrySetResult();
-                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                if (!sharedFaultPoint) await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return;
             }
 
@@ -154,10 +156,15 @@ public class W9DedupTests(RabbitBackboneFixture fixture)
             secondHandled.TrySetResult();
         }
 
+        var gate = new RideHailing.Messaging.Faults.FaultPoint(
+            [RideHailing.Messaging.FaultPointNames.ConsumerAfterBusinessCommitBeforeAck]);
         await using var first = await ManualAckConsumer.StartAsync(fixture.Factory, publisher, queue,
-            new HashSet<string> { "W9DedupProofV1" }, Handler, prefetch: 1);
+            new HashSet<string> { "W9DedupProofV1" }, Handler, prefetch: 1,
+            faultPoint: sharedFaultPoint ? gate : null);
         await publisher.PublishAsync("ride.commands", queue, message);
         await firstCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        if (sharedFaultPoint)
+            await gate.WaitForHitAsync(RideHailing.Messaging.FaultPointNames.ConsumerAfterBusinessCommitBeforeAck);
 
         // The local commit is durable, but the consumer has not ACKed.
         Assert.Equal(0, first.AcknowledgedCount);

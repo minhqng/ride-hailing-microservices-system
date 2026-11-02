@@ -8,6 +8,31 @@ public class PaymentRecoveryTests(PaymentDatabase database) : IClassFixture<Paym
     private static PaymentOperation Request() => PaymentOperation.Create(Guid.NewGuid().ToString(), Guid.NewGuid(), PaymentOperationType.Authorize, 100, "VND", DateTimeOffset.UtcNow);
 
     [Fact]
+    public async Task SharedFaultAfterProviderCommitPreservesOneEffectAcrossLocalRollback()
+    {
+        await using var provider = new ProviderLedger(database.ConnectionString);
+        var request = Request();
+        var gate = new RideHailing.Messaging.Faults.FaultPoint(
+            [RideHailing.Messaging.FaultPointNames.PaymentAfterProviderEffectBeforeResponse]);
+        var execution = new PaymentExecution(database.Source, new PaymentSimulator(provider, gate));
+        var pending = execution.ExecuteAsync(request, PaymentSimulatorMode.Success, default);
+        await gate.WaitForHitAsync(RideHailing.Messaging.FaultPointNames.PaymentAfterProviderEffectBeforeResponse);
+        var effect = await provider.FindEffectAsync(request.OperationKey, default);
+        Assert.NotNull(effect);
+        Assert.Equal(PaymentOperationState.Pending, (await database.Repository.GetAsync(request.Id, default))!.State);
+        gate.Reset();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+
+        var restarted = new PaymentExecution(database.Source, new PaymentSimulator(provider));
+        var recovered = await restarted.ExecuteAsync(request, PaymentSimulatorMode.Decline, default);
+        Assert.Equal(PaymentOperationState.Succeeded, recovered.State);
+        Assert.Equal(effect, recovered.ProviderEffectId);
+        await using var count = database.Source.CreateCommand("SELECT count(*) FROM provider_effects WHERE operation_key=@key");
+        count.Parameters.AddWithValue("key", request.OperationKey);
+        Assert.Equal(1L, (long)(await count.ExecuteScalarAsync())!);
+    }
+
+    [Fact]
     public async Task LostResponseAfterEffectIsUnknownThenReconcilesSameKeyAfterRestart()
     {
         await using var provider = new ProviderLedger(database.ConnectionString);

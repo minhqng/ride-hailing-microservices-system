@@ -12,12 +12,14 @@ public sealed class OutboxRelay(
     IOutboxStore store,
     IOutboxPublisher publisher,
     OutboxRelayOptions options,
-    TimeProvider? timeProvider = null)
+    TimeProvider? timeProvider = null,
+    RideHailing.Messaging.IFaultPoint? faultPoint = null)
 {
     private readonly IOutboxStore store = store ?? throw new ArgumentNullException(nameof(store));
     private readonly IOutboxPublisher publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
     private readonly OutboxRelayOptions options = Validated(options);
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+    private readonly RideHailing.Messaging.IFaultPoint faultPoint = faultPoint ?? FaultPoints.Current;
 
     public OutboxRelayOptions Options => options;
 
@@ -66,7 +68,7 @@ public sealed class OutboxRelay(
             if (options.AfterPublishBeforeMark is not null)
                 await options.AfterPublishBeforeMark(message, token);
 
-            await RideHailing.Messaging.FaultPoints.Current.HitAsync(
+            await faultPoint.HitAsync(
                 RideHailing.Messaging.FaultPointNames.OutboxAfterPublishBeforeMark, token);
 
             var marked = await store.MarkPublishedAsync(message.MessageId, clock.GetUtcNow(), token);

@@ -13,6 +13,7 @@ using RideHailing.Messaging.Reliability;
 using RideHailing.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("driver-service");
 builder.Services.AddHealthChecks();
 builder.Services.Configure<LocationIngressOptions>(builder.Configuration.GetSection("Location"));
