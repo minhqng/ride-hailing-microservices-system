@@ -27,6 +27,8 @@ var factory = new ConnectionFactory
     AutomaticRecoveryEnabled = true,
     ClientProvidedName = "backlog-confirm-probe",
 };
+var exchange = args is ["publish", _, _] ? args[1] : "ride.events";
+var route = args is ["publish", _, _] ? args[2] : "trip.ride-requested.v1";
 await using var publisher = new ConfirmedPublisher(factory);
 while (await Console.In.ReadLineAsync() is { } line)
 {
@@ -38,7 +40,7 @@ while (await Console.In.ReadLineAsync() is { } line)
     string? error = null;
     try
     {
-        await publisher.PublishAsync("ride.events", "trip.ride-requested.v1", envelope);
+        await publisher.PublishAsync(exchange, route, envelope);
         confirmed = true;
     }
     catch (Exception exception)

@@ -90,6 +90,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scenario", required=True, choices=("broker", "quorum"))
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--node", choices=BROKERS)
     args = parser.parse_args()
     output = args.output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -129,8 +130,13 @@ def main():
         report["before"] = wait(lambda: topology(15672), lambda point: online(point, 3))
         report["applicationsBefore"] = applications()
         if args.scenario == "quorum":
-            queue = next(q for q in report["before"]["queues"] if q["name"] == "matching.ride-requested.q")
+            if args.node:
+                queue = next(q for q in report["before"]["queues"] if q["leader"] == "rabbit@" + args.node
+                             and not q["name"].endswith(".dead") and q["name"] != "ride.quarantine.q")
+            else:
+                queue = next(q for q in report["before"]["queues"] if q["name"] == "matching.ride-requested.q")
             lost = queue["leader"].split("@", 1)[1]
+            report["selectedLeaderQueue"] = queue["name"]
             assert lost in BROKERS
             report["lostNode"] = lost
             report["faultRequestedAtUtc"] = stamp()
