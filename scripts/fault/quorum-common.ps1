@@ -38,7 +38,8 @@ function Get-QuorumStatusRows {
         'exec', '-T', $ControlService, 'rabbitmq-queues', '--formatter', 'json',
         'quorum_status', $Queue)
     try {
-        $rows = @($result.Output | ConvertFrom-Json)
+        $decoded = $result.Output | ConvertFrom-Json
+        $rows = @($decoded)
     }
     catch {
         throw "Could not parse quorum_status JSON for $Queue`n$($result.Output)"
@@ -73,7 +74,8 @@ function Get-QuorumQueueNames {
         'exec', '-T', 'rabbitmq', 'rabbitmqctl', '--formatter', 'json',
         'list_queues', 'name', 'type')
     try {
-        $rows = @($result.Output | ConvertFrom-Json)
+        $decoded = $result.Output | ConvertFrom-Json
+        $rows = @($decoded)
     }
     catch {
         throw "Could not parse list_queues JSON`n$($result.Output)"
