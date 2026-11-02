@@ -261,7 +261,7 @@ SELECT json_build_object(
 );
 "@
     $result = Invoke-ComposeCommand -Compose $Compose -Arguments @(
-        'exec', '-T', 'postgres', 'psql', '-X', '-q', '-A', '-t',
+        'exec', '-T', '-e', 'PGOPTIONS=-c default_transaction_read_only=on', 'postgres', 'psql', '-X', '-q', '-A', '-t',
         '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'payment_db', '-c', $sql)
     $json = @($result.Output -split "`r?`n" | Where-Object { $_.TrimStart().StartsWith('{') }) | Select-Object -Last 1
     if ([string]::IsNullOrWhiteSpace($json)) {
