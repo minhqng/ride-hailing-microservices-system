@@ -101,17 +101,24 @@ def main():
     headers = {"Authorization": "Basic " + base64.b64encode((user + ":" + password).encode()).decode()}
 
     def topology(port):
-        with urllib.request.urlopen(urllib.request.Request(
-                f"http://127.0.0.1:{port}/api/queues/%2F", headers=headers), timeout=10) as response:
-            queues = json.load(response)
-        return {"atUtc": stamp(), "queues": [{key: queue.get(key) for key in
+        def get(path):
+            with urllib.request.urlopen(urllib.request.Request(
+                    f"http://127.0.0.1:{port}/api/" + path, headers=headers), timeout=10) as response:
+                return json.load(response)
+        queues = get("queues/%2F")
+        overview = get("overview")
+        return {"atUtc": stamp(), "cluster": overview["cluster_name"],
+                "rabbitmqVersion": overview["rabbitmq_version"],
+                "nodes": [{"name": n["name"], "running": n["running"]} for n in get("nodes")],
+                "queues": [{key: queue.get(key) for key in
                 ("name", "type", "leader", "members", "online", "consumers",
                  "messages_ready", "messages_unacknowledged", "message_stats")}
                 for queue in queues if queue["type"] == "quorum"]}
 
     def online(snapshot, count):
         queues = snapshot["queues"]
-        return (len(queues) >= 19 and all(len(q["members"] or []) == 3
+        return (len(snapshot["nodes"]) == 3 and sum(n["running"] for n in snapshot["nodes"]) == count
+                and len(queues) >= 19 and all(len(q["members"] or []) == 3
                 and len(q["online"] or []) == count and q["leader"] in q["online"] for q in queues))
 
     report = {"scenario": args.scenario, "project": PROJECT, "startedAtUtc": stamp(),
