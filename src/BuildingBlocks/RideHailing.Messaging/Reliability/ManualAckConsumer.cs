@@ -132,7 +132,8 @@ public sealed class ManualAckConsumer : IAsyncDisposable
                 }
             }
             // Success: handler committed. Failure: retry/error transfer was confirmed. Only now ACK.
-            await faultPoint.HitAsync(RideHailing.Messaging.FaultPointNames.ConsumerAfterBusinessCommitBeforeAck, stopping.Token);
+            if (failure is null)
+                await faultPoint.HitAsync(RideHailing.Messaging.FaultPointNames.ConsumerAfterBusinessCommitBeforeAck, stopping.Token);
             await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, stopping.Token);
             Interlocked.Increment(ref acknowledged);
         }

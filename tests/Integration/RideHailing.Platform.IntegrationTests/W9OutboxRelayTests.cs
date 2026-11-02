@@ -52,8 +52,10 @@ public class W9OutboxRelayTests(RabbitBackboneFixture fixture)
         await channel.BasicAckAsync(delivery.DeliveryTag, false);
     }
 
-    [Fact]
-    public async Task PublishAcceptedThenMarkLostRepublishesSameIdentityAndDedupKeepsOneEffect()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PublishAcceptedThenMarkLostRepublishesSameIdentityAndDedupKeepsOneEffect(bool sharedFaultPoint)
     {
         await PrepareAsync();
         var queue = await fixture.QueueAsync();
@@ -77,13 +79,25 @@ public class W9OutboxRelayTests(RabbitBackboneFixture fixture)
                         delivered.MessageId, delivered.CorrelationId, ct), token);
             }, prefetch: 1);
 
+        var gate = new RideHailing.Messaging.Faults.FaultPoint(
+            [RideHailing.Messaging.FaultPointNames.OutboxAfterPublishBeforeMark]);
+        using var crash = new CancellationTokenSource();
         var relayA = new OutboxRelay(store, new RabbitOutboxPublisher(publisher), new OutboxRelayOptions
         {
             RelayId = "relay-a",
             ClaimLease = TimeSpan.Zero,
-            AfterPublishBeforeMark = (_, _) => Task.FromException(new SimulatedCrashException()),
-        });
-        await Assert.ThrowsAsync<SimulatedCrashException>(() => relayA.RunOnceAsync());
+            AfterPublishBeforeMark = sharedFaultPoint ? null : (_, _) => Task.FromException(new SimulatedCrashException()),
+        }, faultPoint: sharedFaultPoint ? gate : null);
+        if (sharedFaultPoint)
+        {
+            var execution = relayA.RunOnceAsync(crash.Token);
+            await gate.WaitForHitAsync(RideHailing.Messaging.FaultPointNames.OutboxAfterPublishBeforeMark);
+            Assert.Equal(OutboxStatus.Pending, (await store.LoadAsync(row.MessageId))!.Status);
+            crash.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => execution);
+        }
+        else
+            await Assert.ThrowsAsync<SimulatedCrashException>(() => relayA.RunOnceAsync());
 
         await W9TestSupport.EventuallyAsync(async () =>
                 Volatile.Read(ref deliveries) >= 1 &&

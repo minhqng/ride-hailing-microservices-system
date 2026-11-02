@@ -14,6 +14,7 @@ using RideHailing.Messaging.Reliability;
 using RideHailing.Messaging.Topology;
 
 var builder = WebApplication.CreateBuilder(args);
+RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("payment-service");
 builder.Services.AddHealthChecks();
 builder.Services.ConfigureHttpJsonOptions(options =>
