@@ -7,6 +7,15 @@ rabbitmq-server &
 server_pid=$!
 trap 'kill "$server_pid" 2>/dev/null || true' INT TERM EXIT
 
+# The CLI can run before the Erlang distribution port exists. Keep that
+# readiness race separate from join failures, and stop if the server exits.
+attempt=0
+until rabbitmq-diagnostics -q ping >/dev/null 2>&1; do
+    kill -0 "$server_pid" 2>/dev/null || exit 1
+    attempt=$((attempt + 1))
+    [ "$attempt" -lt 60 ] || exit 1
+    sleep 1
+done
 rabbitmqctl await_startup
 attempt=0
 until rabbitmq-diagnostics -q -n "$seed" ping; do
