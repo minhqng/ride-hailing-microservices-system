@@ -3,6 +3,9 @@
 services:
   rabbitmq:
     hostname: rabbitmq
+    command: ["sh", "/etc/rabbitmq/ha-start.sh"]
+    volumes:
+      - ./deploy/rabbitmq/ha-start.sh:/etc/rabbitmq/ha-start.sh:ro
     environment:
       RABBITMQ_NODENAME: rabbit@rabbitmq
       RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
@@ -16,11 +19,12 @@ services:
       RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
-    command: ["sh", "/etc/rabbitmq/join-cluster.sh", "rabbit@rabbitmq"]
+    command: ["sh", "/etc/rabbitmq/ha-start.sh", "rabbit@rabbitmq"]
     volumes:
       - rabbitdata2:/var/lib/rabbitmq
       - ./deploy/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
       - ./deploy/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./deploy/rabbitmq/ha-start.sh:/etc/rabbitmq/ha-start.sh:ro
       - ./deploy/rabbitmq/join-cluster.sh:/etc/rabbitmq/join-cluster.sh:ro
     ports:
       - "127.0.0.1:25672:15672"
@@ -43,11 +47,12 @@ services:
       RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
-    command: ["sh", "/etc/rabbitmq/join-cluster.sh", "rabbit@rabbitmq"]
+    command: ["sh", "/etc/rabbitmq/ha-start.sh", "rabbit@rabbitmq"]
     volumes:
       - rabbitdata3:/var/lib/rabbitmq
       - ./deploy/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
       - ./deploy/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./deploy/rabbitmq/ha-start.sh:/etc/rabbitmq/ha-start.sh:ro
       - ./deploy/rabbitmq/join-cluster.sh:/etc/rabbitmq/join-cluster.sh:ro
     ports:
       - "127.0.0.1:35672:15672"

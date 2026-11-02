@@ -15,8 +15,9 @@ try {
 
     $deadline = (Get-Date).AddMinutes(3)
     do {
-        $status = (& docker @compose exec -T rabbitmq rabbitmqctl cluster_status 2>&1 | Out-String)
-        $ready = $LASTEXITCODE -eq 0 -and $status.Contains('rabbit@rabbitmq-2') -and $status.Contains('rabbit@rabbitmq-3')
+        $probe = Invoke-ComposeCommand -Compose $compose -Arguments @('exec', '-T', 'rabbitmq', 'rabbitmqctl', 'cluster_status') -AllowFailure
+        $status = $probe.Output
+        $ready = $probe.ExitCode -eq 0 -and $status.Contains('rabbit@rabbitmq-2') -and $status.Contains('rabbit@rabbitmq-3')
         if (-not $ready) { Start-Sleep -Seconds 2 }
     } until ($ready -or (Get-Date) -gt $deadline)
     if (-not $ready) { throw "Three-node cluster did not form.`n$status" }
