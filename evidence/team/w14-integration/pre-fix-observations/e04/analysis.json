@@ -1,0 +1,246 @@
+{
+  "status": "ACCEPTED",
+  "errors": [],
+  "runs": [
+    {
+      "confirmedPublications": 36,
+      "samples": 158,
+      "lambdaOutage": 0.4953502610300869,
+      "lambdaRecovery": 0.4996775980200572,
+      "T": 30.281603100011125,
+      "predictedBacklog": 15.0,
+      "peakReady": 16,
+      "peakUnacked": 0,
+      "peakOutstandingBusinessWork": 16,
+      "mu": 1.9987103920802287,
+      "muIntervals": [
+        0.0,
+        0.0,
+        0.0,
+        16.96678434050784,
+        35.31798324043062,
+        0.0,
+        0.0,
+        2.1851795444337796,
+        0.0,
+        0.0,
+        0.0,
+        2.251847528085259,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.2905708198212182,
+        0.0,
+        0.0,
+        0.0,
+        2.371890629071377,
+        0.0,
+        0.0
+      ],
+      "muIntervalRange": [
+        0.0,
+        35.31798324043062
+      ],
+      "drainableUnderMeasuredWorkload": true,
+      "predictedDrainSeconds": 10.6735490133365,
+      "observedSteadySeconds": 11.232085500145331,
+      "firstSuccessfulProcessingSeconds": 2.997430399991572,
+      "consumerReconnectSeconds": 9.879758800147101,
+      "brokerZeroSeconds": 9.879758800147101,
+      "applicationTerminalSeconds": 15.308828300097957,
+      "redeliverDelta": 0,
+      "explicitDuplicateDeliveries": 1,
+      "duplicateBusinessEffects": 0,
+      "confirmLatencyMs": {
+        "n": 36,
+        "p50": 15.3055,
+        "p95": 21.0321
+      },
+      "auditor": {
+        "AUD-01": "PASS",
+        "AUD-02": "PASS",
+        "AUD-03": "NOT_RUN",
+        "AUD-04": "NOT_RUN",
+        "AUD-05": "NOT_RUN",
+        "AUD-06": "PASS",
+        "AUD-07": "NOT_RUN",
+        "AUD-08": "PASS"
+      },
+      "limitations": [
+        "No available Driver: real NO_DRIVER terminal work, not the full Trip/Saga path.",
+        "Queue counters are broker management samples; completion timing has polling resolution.",
+        "Interval \u03bc varies; the formula is an approximation including sampled startup/reconnect effects.",
+        "Manual duplicate replay is distinct from broker redelivery; REL-15 tests prove the latter."
+      ]
+    },
+    {
+      "confirmedPublications": 34,
+      "samples": 147,
+      "lambdaOutage": 0.49967558729058,
+      "lambdaRecovery": 0.5372948825264361,
+      "T": 30.019477399997413,
+      "predictedBacklog": 15.0,
+      "peakReady": 14,
+      "peakUnacked": 0,
+      "peakOutstandingBusinessWork": 16,
+      "mu": 3.223769295158616,
+      "muIntervals": [
+        0.0,
+        0.0,
+        0.0,
+        16.67856056334471,
+        33.21210914755232,
+        0.0,
+        2.290205181231155,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.0969385330907855,
+        0.0
+      ],
+      "muIntervalRange": [
+        0.0,
+        33.21210914755232
+      ],
+      "drainableUnderMeasuredWorkload": true,
+      "predictedDrainSeconds": 5.955761173367501,
+      "observedSteadySeconds": 6.79531339998357,
+      "firstSuccessfulProcessingSeconds": 2.991973000112921,
+      "consumerReconnectSeconds": 5.87074810010381,
+      "brokerZeroSeconds": 5.87074810010381,
+      "applicationTerminalSeconds": 10.820015599951148,
+      "redeliverDelta": 0,
+      "explicitDuplicateDeliveries": 1,
+      "duplicateBusinessEffects": 0,
+      "confirmLatencyMs": {
+        "n": 34,
+        "p50": 15.0578,
+        "p95": 22.6249
+      },
+      "auditor": {
+        "AUD-01": "PASS",
+        "AUD-02": "PASS",
+        "AUD-03": "NOT_RUN",
+        "AUD-04": "NOT_RUN",
+        "AUD-05": "NOT_RUN",
+        "AUD-06": "PASS",
+        "AUD-07": "NOT_RUN",
+        "AUD-08": "PASS"
+      },
+      "limitations": [
+        "No available Driver: real NO_DRIVER terminal work, not the full Trip/Saga path.",
+        "Queue counters are broker management samples; completion timing has polling resolution.",
+        "Interval \u03bc varies; the formula is an approximation including sampled startup/reconnect effects.",
+        "Manual duplicate replay is distinct from broker redelivery; REL-15 tests prove the latter."
+      ]
+    },
+    {
+      "confirmedPublications": 34,
+      "samples": 147,
+      "lambdaOutage": 0.4993727113024275,
+      "lambdaRecovery": 0.5332821951339692,
+      "T": 30.037684600101784,
+      "predictedBacklog": 15.0,
+      "peakReady": 14,
+      "peakUnacked": 0,
+      "peakOutstandingBusinessWork": 17,
+      "mu": 3.3774539025151387,
+      "muIntervals": [
+        0.0,
+        2.2455041081499396,
+        0.0,
+        0.0,
+        34.84052729706286,
+        0.0,
+        0.0,
+        2.142037660764031,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.1752867845482746
+      ],
+      "muIntervalRange": [
+        0.0,
+        34.84052729706286
+      ],
+      "drainableUnderMeasuredWorkload": true,
+      "predictedDrainSeconds": 5.977135612411075,
+      "observedSteadySeconds": 6.796124099986628,
+      "firstSuccessfulProcessingSeconds": 2.148455699905753,
+      "consumerReconnectSeconds": 5.895919600035995,
+      "brokerZeroSeconds": 5.895919600035995,
+      "applicationTerminalSeconds": 10.853692499920726,
+      "redeliverDelta": 0,
+      "explicitDuplicateDeliveries": 1,
+      "duplicateBusinessEffects": 0,
+      "confirmLatencyMs": {
+        "n": 34,
+        "p50": 13.457,
+        "p95": 23.5233
+      },
+      "auditor": {
+        "AUD-01": "PASS",
+        "AUD-02": "PASS",
+        "AUD-03": "NOT_RUN",
+        "AUD-04": "NOT_RUN",
+        "AUD-05": "NOT_RUN",
+        "AUD-06": "PASS",
+        "AUD-07": "NOT_RUN",
+        "AUD-08": "PASS"
+      },
+      "limitations": [
+        "No available Driver: real NO_DRIVER terminal work, not the full Trip/Saga path.",
+        "Queue counters are broker management samples; completion timing has polling resolution.",
+        "Interval \u03bc varies; the formula is an approximation including sampled startup/reconnect effects.",
+        "Manual duplicate replay is distinct from broker redelivery; REL-15 tests prove the latter."
+      ]
+    }
+  ],
+  "statistics": {
+    "lambdaOutage": {
+      "runs": 3,
+      "median": 0.4993727113024275,
+      "min": 0.4953502610300869,
+      "max": 0.49967558729058,
+      "sampleVariance": 5.830047886227248e-06
+    },
+    "lambdaRecovery": {
+      "runs": 3,
+      "median": 0.5332821951339692,
+      "min": 0.4996775980200572,
+      "max": 0.5372948825264361,
+      "sampleVariance": 0.00042673845015531067
+    },
+    "T": {
+      "runs": 3,
+      "median": 30.037684600101784,
+      "min": 30.019477399997413,
+      "max": 30.281603100011125,
+      "sampleVariance": 0.02142293655689042
+    },
+    "peakReady": {
+      "runs": 3,
+      "median": 14,
+      "min": 14,
+      "max": 16,
+      "sampleVariance": 1.3333333333333333
+    },
+    "mu": {
+      "runs": 3,
+      "median": 3.223769295158616,
+      "min": 1.9987103920802287,
+      "max": 3.3774539025151387,
+      "sampleVariance": 0.5708869903527215
+    },
+    "observedSteadySeconds": {
+      "runs": 3,
+      "median": 6.796124099986628,
+      "min": 6.79531339998357,
+      "max": 11.232085500145331,
+      "sampleVariance": 6.5604501449510435
+    }
+  }
+}
