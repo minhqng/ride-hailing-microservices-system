@@ -40,6 +40,26 @@ def artifact(run_dir: Path, item: dict):
     return lib.read_json(path)
 
 
+def validate_environment(manifest: dict) -> None:
+    required = {"postgres", "redis", "rabbitmq", "identity", "driver", "matching",
+                "prometheus", "otel-collector", "jaeger"}
+    for label in ("environment", "environmentAfter"):
+        observed = manifest[label]
+        if lib.environment_fingerprint(observed) != manifest["fingerprint"]:
+            raise ValueError("frozen environment changed: " + label)
+        configured = observed["configured"]["composeServices"]
+        containers = observed["observed"]["containers"]
+        if not required.issubset({c["service"] for c in containers}):
+            raise ValueError("required recovery service observation is missing")
+        for container in containers:
+            name = container["service"]
+            actual = container["inspect"]
+            expected = configured[name]
+            if (actual["nanoCpus"] != int(float(expected["cpus"]) * 1_000_000_000)
+                    or actual["memoryBytes"] != int(expected["memLimitBytes"])):
+                raise ValueError("observed resource limit differs from configured: " + name)
+
+
 def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
     manifest = lib.read_json(run_dir / "manifest.json")
     schema = lib.read_json(lib.PERF_DIR / "schema/w14-manifest.schema.json")
@@ -96,6 +116,7 @@ def validate_run(run_dir: Path, experiment="E04") -> tuple[dict, dict]:
                 raise ValueError(f"missing real provider observation: {key}")
         if not manifest.get("resources") or not manifest.get("environmentAfter"):
             raise ValueError("missing resources or post-recovery environment")
+        validate_environment(manifest)
     samples = artifact(run_dir, manifest["artifacts"]["samples"])
     receipts = artifact(run_dir, manifest["artifacts"]["receipts"])
     final = artifact(run_dir, manifest["artifacts"]["final-state"])
