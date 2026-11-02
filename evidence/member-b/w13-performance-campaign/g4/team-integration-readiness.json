@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "verdict": "GREEN",
-  "sourceCommit": "e90416ec8d3e15620f92857ad40ba18420cef0d6",
-  "sourceTree": "7c0ae0b3e772433c69121cc429fdf4a7a432ab66",
-  "ciCheckoutSha": "bea89ab2edae9b78986ca0781e5d4f59c4df82be",
-  "ciCheckoutTree": "7c0ae0b3e772433c69121cc429fdf4a7a432ab66",
-  "ciRunUrl": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41448881051",
+  "sourceCommit": "005735022accaa6fdf72e34bbb1e97d18a3b3324",
+  "sourceTree": "97353b757dcb61accbbd9973ff0c73c1a6348092",
+  "ciCheckoutSha": "e334acb7bec9c825c929592472fd84e7f1ebcb65",
+  "ciCheckoutTree": "97353b757dcb61accbbd9973ff0c73c1a6348092",
+  "ciRunUrl": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41452827941",
   "checks": {
     "bOwnedCorrectness": "PASS",
     "securityBaseline": "PASS",
@@ -58,15 +58,16 @@
     },
     "artifacts": [
       {
-        "id": 13143428436,
-        "sha256": "7bbb2c445cf6b5d7d4ed5ae0691c37cd27bb877ad32e49679363c53e1a15f18e"
+        "id": 13145064420,
+        "sha256": "62f2672ebf316696e3e51812db4345b398981d69cc2b337be3e77289f9fdead0"
       },
       {
-        "id": 13144351941,
-        "sha256": "2f70164ff3c763efc65e24746aad0a7da3c39681bb2a5977049ef38ae912b6ea"
+        "id": 13145537419,
+        "sha256": "d61759b8b5f0a3fac1762ca22d8df4def6410ca32449abbcb996f132c9bffa83"
       }
     ]
   },
   "proofBoundary": "Current-source Linux G4 correctness/runtime certification. Actual public authenticated intake and production lifecycle handlers; no public accept/start/complete HTTP claim. Does not certify W13 measurements. Perf scripts/evidence may advance only with unchanged src/tests, separately verified harness behavior and final exact-tree CI.",
-  "humanReview": "WAIVED by explicit project-lead instruction; no human review/rerun claimed"
+  "humanReview": "WAIVED by explicit project-lead instruction; no human review/rerun claimed",
+  "previousCertificate": "team-preparation-e904-g4.json"
 }
