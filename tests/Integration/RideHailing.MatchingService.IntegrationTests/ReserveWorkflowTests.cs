@@ -409,70 +409,101 @@ public class ReserveWorkflowTests
         }
     }
 
-    [Fact]
-    public async Task Duplicate_Workers_With_Divergent_Lists_Converge_To_First_View()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Duplicate_Workers_With_Divergent_Lists_Converge_To_First_View(bool reverseFirstView)
     {
-        // Same ordinal, different drivers: whichever interleaving occurs, the
-        // schedule-invariant properties hold — one durable row, every Reserved
-        // agrees with it, any Blocked is UNRESOLVED_ATTEMPT (fail-safe), the
-        // round never marks a non-row winner. (A barrier cannot force true
-        // overlap, so no specific interleaving is asserted.)
+        // Exercise both first-view orders at the exact committed-authority /
+        // unresolved-Matching boundary. The real Driver response is held;
+        // reconciliation must observe its committed reservation over HTTP.
+        // Authentication is independently proved by the system security gate.
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+        var ct = deadline.Token;
         var trip = NewTrip();
-        var d1 = Guid.NewGuid();
-        var other = Guid.NewGuid();
-        var stub = new StubDriverClient
+        var d1 = await SeedAvailableDriverAsync();
+        var d2 = await SeedAvailableDriverAsync();
+        var firstDriver = reverseFirstView ? d2 : d1;
+        var otherDriver = reverseFirstView ? d1 : d2;
+        var faults = RideHailing.DriverService.Infrastructure.Faults.DriverFaultPoint.ForTesting(
+            [RideHailing.DriverService.Infrastructure.Faults.DriverFaultPointNames.AfterReserveCommitBeforeResponse],
+            TimeSpan.FromSeconds(60));
+        await using var authority = await DriverAuthorityHost.StartAsync(_drivers, faults, ct);
+        using var http = new HttpClient
         {
-            OnReserve = (_, _) => Task.FromResult(
-                new DriverReserveResult(DriverReserveOutcomeKind.Reserved, null, 8)),
+            BaseAddress = new Uri(authority.BaseUrl + "/"),
+            Timeout = TimeSpan.FromSeconds(60),
         };
-        var orch = Orchestrator(stub);
-
-        using var barrier = new Barrier(2);
-        var runs = await Task.WhenAll(
-            Task.Run(async () =>
-            {
-                barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-                return await orch.ExecuteRoundAsync(trip, 1, [d1], Guid.NewGuid().ToString("D"));
-            }),
-            Task.Run(async () =>
-            {
-                barrier.SignalAndWait(TimeSpan.FromSeconds(60));
-                return await orch.ExecuteRoundAsync(trip, 1, [other], Guid.NewGuid().ToString("D"));
-            }));
-
-        var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1));
-        foreach (var r in runs)
+        var orchestrator = new MatchingReserveOrchestrator(
+            Attempts(), new HttpDriverClient(http), Terminalizer());
+        var firstTask = orchestrator.ExecuteRoundAsync(
+            trip, 1, [firstDriver], Guid.NewGuid().ToString("D"), ct);
+        Guid reservation;
+        try
         {
-            Assert.True(
-                r.Outcome is RoundOutcome.Reserved or RoundOutcome.BlockedOnUnknown,
-                $"unexpected {r.Outcome}");
-            if (r.Outcome == RoundOutcome.Reserved)
-            {
-                Assert.Equal(row.ReservationId, r.ReservationId);
-                Assert.Equal(row.DriverId, r.DriverId);
-            }
-            else
-            {
-                Assert.Equal("UNRESOLVED_ATTEMPT", r.Code);
-            }
+            await faults.WaitForReachedAsync(TimeSpan.FromSeconds(30), ct);
+            var committed = (await _drivers.CreateRepository().LoadAsync(firstDriver, ct))!;
+            Assert.Equal(DriverStatus.Reserved, committed.Status);
+            Assert.Equal(trip, committed.ReservedTripId);
+            reservation = committed.ReservationId!.Value;
+            var pending = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1, ct));
+            Assert.Equal(MatchingAttemptStates.InFlight, pending.State);
+            Assert.Equal(firstDriver, pending.DriverId);
+            Assert.Equal(reservation, pending.ReservationId);
+
+            var divergent = await orchestrator.ExecuteRoundAsync(
+                trip, 1, [otherDriver], Guid.NewGuid().ToString("D"), ct);
+            Assert.Equal(RoundOutcome.BlockedOnUnknown, divergent.Outcome);
+            Assert.Equal("UNRESOLVED_ATTEMPT", divergent.Code);
+
+            // Same-view recovery crosses the real authority query while the
+            // first response is still held. It must reconcile the original R.
+            var recovered = await orchestrator.ExecuteRoundAsync(
+                trip, 1, [firstDriver], Guid.NewGuid().ToString("D"), ct);
+            Assert.Equal(RoundOutcome.Reserved, recovered.Outcome);
+            Assert.Equal(firstDriver, recovered.DriverId);
+            Assert.Equal(reservation, recovered.ReservationId);
+        }
+        finally
+        {
+            faults.Release(RideHailing.DriverService.Infrastructure.Faults.DriverFaultPointNames.AfterReserveCommitBeforeResponse);
+            await firstTask;
         }
 
-        foreach (var c in stub.Calls.Where(c => c.StartsWith("reserve:", StringComparison.Ordinal)))
-        {
-            Assert.Contains(row.ReservationId.ToString("N"), c, StringComparison.Ordinal);
-        }
+        var first = await firstTask;
+        Assert.Equal(RoundOutcome.Reserved, first.Outcome);
+        Assert.Equal(firstDriver, first.DriverId);
+        Assert.Equal(reservation, first.ReservationId);
+        var replay = await orchestrator.ExecuteRoundAsync(
+            trip, 1, [otherDriver], Guid.NewGuid().ToString("D"), ct);
+        Assert.Equal(RoundOutcome.Reserved, replay.Outcome);
+        Assert.True(replay.Replay);
+        Assert.Equal(firstDriver, replay.DriverId);
+        Assert.Equal(reservation, replay.ReservationId);
 
-        var round = await Attempts().LoadRoundAsync(trip, 1);
-        if (runs.Any(r => r.Outcome == RoundOutcome.Reserved))
-        {
-            Assert.Equal(MatchingRoundStatuses.Reserved, round!.Status);
-            Assert.Equal(row.DriverId, round.SelectedDriverId);
-            Assert.Equal(row.ReservationId, round.SelectedReservationId);
-        }
-        else
-        {
-            Assert.Equal(MatchingRoundStatuses.Processing, round!.Status);
-        }
+        var row = Assert.Single(await Attempts().LoadAttemptsAsync(trip, 1, ct));
+        Assert.Equal(MatchingAttemptStates.Reserved, row.State);
+        Assert.Equal(firstDriver, row.DriverId);
+        Assert.Equal(reservation, row.ReservationId);
+        var round = (await Attempts().LoadRoundAsync(trip, 1, ct))!;
+        Assert.Equal(MatchingRoundStatuses.Reserved, round.Status);
+        Assert.Equal(firstDriver, round.SelectedDriverId);
+        Assert.Equal(reservation, round.SelectedReservationId);
+        var finalAuthority = (await _drivers.CreateRepository().LoadAsync(firstDriver, ct))!;
+        Assert.Equal(DriverStatus.Reserved, finalAuthority.Status);
+        Assert.Equal(trip, finalAuthority.ReservedTripId);
+        Assert.Equal(reservation, finalAuthority.ReservationId);
+        Assert.Equal(3, finalAuthority.Version);
+        var unused = (await _drivers.CreateRepository().LoadAsync(otherDriver, ct))!;
+        Assert.Equal(DriverStatus.Available, unused.Status);
+        Assert.Equal(2, unused.Version);
+        Assert.Null(unused.ReservationId);
+        await using var count = _drivers.DataSource.CreateCommand("""
+            SELECT count(*) FROM outbox_messages
+            WHERE message_type='DriverReservedV1' AND payload_json->>'tripId'=@trip;
+            """);
+        count.Parameters.AddWithValue("trip", trip.ToString("D"));
+        Assert.Equal(1L, (long)(await count.ExecuteScalarAsync(ct))!);
     }
 
     [Fact]
