@@ -1,0 +1,3478 @@
+[
+  {
+    "atUtc": "2026-11-02T16:13:07.431337Z",
+    "elapsed": 0.2549250000156462,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 0,
+    "terminal": 0,
+    "pending": 0,
+    "outbox": {
+      "committed": 0,
+      "published": 0
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:07.875576Z",
+    "elapsed": 0.6991631998680532,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 0,
+    "terminal": 0,
+    "pending": 0,
+    "outbox": {
+      "committed": 0,
+      "published": 0
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:08.328537Z",
+    "elapsed": 1.1521234998945147,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 1,
+    "terminal": 0,
+    "pending": 1,
+    "outbox": {
+      "committed": 0,
+      "published": 0
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:08.747586Z",
+    "elapsed": 1.5711721999105066,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 1,
+    "terminal": 1,
+    "pending": 0,
+    "outbox": {
+      "committed": 1,
+      "published": 0
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:09.261758Z",
+    "elapsed": 2.085346099920571,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 2,
+    "terminal": 1,
+    "pending": 1,
+    "outbox": {
+      "committed": 1,
+      "published": 0
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:09.700878Z",
+    "elapsed": 2.5244694999419153,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 2,
+    "terminal": 2,
+    "pending": 0,
+    "outbox": {
+      "committed": 2,
+      "published": 1
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:10.122186Z",
+    "elapsed": 2.94577130000107,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 2,
+    "terminal": 2,
+    "pending": 0,
+    "outbox": {
+      "committed": 2,
+      "published": 1
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:10.559723Z",
+    "elapsed": 3.3833110998384655,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 2,
+    "terminal": 2,
+    "pending": 0,
+    "outbox": {
+      "committed": 2,
+      "published": 2
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:11.000372Z",
+    "elapsed": 3.8239585999399424,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 2,
+    "terminal": 2,
+    "pending": 0,
+    "outbox": {
+      "committed": 2,
+      "published": 2
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:11.440983Z",
+    "elapsed": 4.264568699989468,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 3,
+    "terminal": 2,
+    "pending": 1,
+    "outbox": {
+      "committed": 2,
+      "published": 2
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:11.886402Z",
+    "elapsed": 4.70998949999921,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 3,
+    "terminal": 3,
+    "pending": 0,
+    "outbox": {
+      "committed": 3,
+      "published": 2
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:12.333671Z",
+    "elapsed": 5.157258699880913,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 0,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 3,
+    "terminal": 3,
+    "pending": 0,
+    "outbox": {
+      "committed": 3,
+      "published": 2
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:12.774721Z",
+    "elapsed": 5.598307400010526,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 3,
+    "terminal": 3,
+    "pending": 0,
+    "outbox": {
+      "committed": 3,
+      "published": 3
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:13.234544Z",
+    "elapsed": 6.058131899917498,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 4,
+    "terminal": 3,
+    "pending": 1,
+    "outbox": {
+      "committed": 3,
+      "published": 3
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:13.667821Z",
+    "elapsed": 6.491407899884507,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 4,
+    "terminal": 3,
+    "pending": 1,
+    "outbox": {
+      "committed": 3,
+      "published": 3
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:14.110304Z",
+    "elapsed": 6.933890299871564,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 4,
+    "terminal": 4,
+    "pending": 0,
+    "outbox": {
+      "committed": 4,
+      "published": 3
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:14.560097Z",
+    "elapsed": 7.383685499895364,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 4,
+    "terminal": 4,
+    "pending": 0,
+    "outbox": {
+      "committed": 4,
+      "published": 4
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:14.999642Z",
+    "elapsed": 7.8232289999723434,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 4,
+    "terminal": 4,
+    "pending": 0,
+    "outbox": {
+      "committed": 4,
+      "published": 4
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:15.434389Z",
+    "elapsed": 8.257975999964401,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 5,
+    "terminal": 4,
+    "pending": 1,
+    "outbox": {
+      "committed": 4,
+      "published": 4
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:15.888935Z",
+    "elapsed": 8.712521999841556,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 5,
+    "terminal": 5,
+    "pending": 0,
+    "outbox": {
+      "committed": 5,
+      "published": 4
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:16.328647Z",
+    "elapsed": 9.15223339991644,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 5,
+    "terminal": 5,
+    "pending": 0,
+    "outbox": {
+      "committed": 5,
+      "published": 4
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:16.782680Z",
+    "elapsed": 9.606265799840912,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 5,
+    "terminal": 5,
+    "pending": 0,
+    "outbox": {
+      "committed": 5,
+      "published": 5
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:17.248354Z",
+    "elapsed": 10.07194419996813,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 3,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 5,
+    "terminal": 5,
+    "pending": 0,
+    "outbox": {
+      "committed": 5,
+      "published": 5
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:17.713837Z",
+    "elapsed": 10.53742459998466,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 6,
+    "terminal": 5,
+    "pending": 1,
+    "outbox": {
+      "committed": 5,
+      "published": 5
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:18.167136Z",
+    "elapsed": 10.990724100032821,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 6,
+    "terminal": 6,
+    "pending": 0,
+    "outbox": {
+      "committed": 6,
+      "published": 5
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:18.606160Z",
+    "elapsed": 11.4297479998786,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 6,
+    "terminal": 6,
+    "pending": 0,
+    "outbox": {
+      "committed": 6,
+      "published": 6
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:19.163961Z",
+    "elapsed": 11.987548199947923,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 6,
+    "terminal": 6,
+    "pending": 0,
+    "outbox": {
+      "committed": 6,
+      "published": 6
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:19.610429Z",
+    "elapsed": 12.43401680001989,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 7,
+    "terminal": 6,
+    "pending": 1,
+    "outbox": {
+      "committed": 6,
+      "published": 6
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:20.071244Z",
+    "elapsed": 12.894832100020722,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 7,
+    "terminal": 7,
+    "pending": 0,
+    "outbox": {
+      "committed": 7,
+      "published": 6
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:20.504219Z",
+    "elapsed": 13.327806199900806,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 7,
+    "terminal": 7,
+    "pending": 0,
+    "outbox": {
+      "committed": 7,
+      "published": 6
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:20.941049Z",
+    "elapsed": 13.764640299836174,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 7,
+    "terminal": 7,
+    "pending": 0,
+    "outbox": {
+      "committed": 7,
+      "published": 7
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:21.397000Z",
+    "elapsed": 14.220587099902332,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 8,
+    "terminal": 7,
+    "pending": 1,
+    "outbox": {
+      "committed": 7,
+      "published": 7
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:21.847885Z",
+    "elapsed": 14.671472399961203,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 8,
+    "terminal": 7,
+    "pending": 1,
+    "outbox": {
+      "committed": 7,
+      "published": 7
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:22.276448Z",
+    "elapsed": 15.100036999909207,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 6,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 8,
+    "terminal": 8,
+    "pending": 0,
+    "outbox": {
+      "committed": 8,
+      "published": 7
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:22.696669Z",
+    "elapsed": 15.520256799878553,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 8,
+    "terminal": 8,
+    "pending": 0,
+    "outbox": {
+      "committed": 8,
+      "published": 8
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:23.137346Z",
+    "elapsed": 15.96093329996802,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 8,
+    "terminal": 8,
+    "pending": 0,
+    "outbox": {
+      "committed": 8,
+      "published": 8
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:23.575739Z",
+    "elapsed": 16.39932579989545,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 9,
+    "terminal": 8,
+    "pending": 1,
+    "outbox": {
+      "committed": 8,
+      "published": 8
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:24.037637Z",
+    "elapsed": 16.86122479988262,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 9,
+    "terminal": 9,
+    "pending": 0,
+    "outbox": {
+      "committed": 9,
+      "published": 8
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:24.488982Z",
+    "elapsed": 17.312571599846706,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 9,
+    "terminal": 9,
+    "pending": 0,
+    "outbox": {
+      "committed": 9,
+      "published": 8
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:24.926904Z",
+    "elapsed": 17.750491099897772,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 9,
+    "terminal": 9,
+    "pending": 0,
+    "outbox": {
+      "committed": 9,
+      "published": 9
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:25.391525Z",
+    "elapsed": 18.215116000035778,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 10,
+    "terminal": 9,
+    "pending": 1,
+    "outbox": {
+      "committed": 9,
+      "published": 9
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:25.835124Z",
+    "elapsed": 18.658710799878463,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 10,
+    "terminal": 9,
+    "pending": 1,
+    "outbox": {
+      "committed": 9,
+      "published": 9
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:26.272732Z",
+    "elapsed": 19.096319699892774,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 10,
+    "terminal": 10,
+    "pending": 0,
+    "outbox": {
+      "committed": 10,
+      "published": 9
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:26.733448Z",
+    "elapsed": 19.557035699952394,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 10,
+    "terminal": 10,
+    "pending": 0,
+    "outbox": {
+      "committed": 10,
+      "published": 10
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:27.201170Z",
+    "elapsed": 20.024759099818766,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 8,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 10,
+    "terminal": 10,
+    "pending": 0,
+    "outbox": {
+      "committed": 10,
+      "published": 10
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:27.652789Z",
+    "elapsed": 20.47637639986351,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 11,
+    "terminal": 10,
+    "pending": 1,
+    "outbox": {
+      "committed": 10,
+      "published": 10
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:28.092877Z",
+    "elapsed": 20.91646880004555,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 11,
+    "terminal": 11,
+    "pending": 0,
+    "outbox": {
+      "committed": 11,
+      "published": 10
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:28.536736Z",
+    "elapsed": 21.36032860004343,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 11,
+    "terminal": 11,
+    "pending": 0,
+    "outbox": {
+      "committed": 11,
+      "published": 10
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:29.042297Z",
+    "elapsed": 21.86589049990289,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 11,
+    "terminal": 11,
+    "pending": 0,
+    "outbox": {
+      "committed": 11,
+      "published": 11
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:29.458949Z",
+    "elapsed": 22.28253489988856,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 12,
+    "terminal": 11,
+    "pending": 1,
+    "outbox": {
+      "committed": 11,
+      "published": 11
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:29.877630Z",
+    "elapsed": 22.701215900015086,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 12,
+    "terminal": 11,
+    "pending": 1,
+    "outbox": {
+      "committed": 11,
+      "published": 11
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:30.317145Z",
+    "elapsed": 23.14073479990475,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 12,
+    "terminal": 12,
+    "pending": 0,
+    "outbox": {
+      "committed": 12,
+      "published": 11
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:30.776908Z",
+    "elapsed": 23.600500599946827,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 12,
+    "terminal": 12,
+    "pending": 0,
+    "outbox": {
+      "committed": 12,
+      "published": 12
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:31.256405Z",
+    "elapsed": 24.07999620004557,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 13,
+    "terminal": 12,
+    "pending": 1,
+    "outbox": {
+      "committed": 12,
+      "published": 12
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:31.697051Z",
+    "elapsed": 24.520637199981138,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 13,
+    "terminal": 12,
+    "pending": 1,
+    "outbox": {
+      "committed": 12,
+      "published": 12
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:32.160450Z",
+    "elapsed": 24.98404169990681,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 13,
+    "terminal": 12,
+    "pending": 1,
+    "outbox": {
+      "committed": 12,
+      "published": 12
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:32.629416Z",
+    "elapsed": 25.45300369989127,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 11,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 13,
+    "terminal": 13,
+    "pending": 0,
+    "outbox": {
+      "committed": 13,
+      "published": 12
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:33.042964Z",
+    "elapsed": 25.866549599915743,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 13,
+    "terminal": 13,
+    "pending": 0,
+    "outbox": {
+      "committed": 13,
+      "published": 13
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:33.488956Z",
+    "elapsed": 26.31254309997894,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 14,
+    "terminal": 13,
+    "pending": 1,
+    "outbox": {
+      "committed": 13,
+      "published": 13
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:33.944730Z",
+    "elapsed": 26.768321699928492,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 14,
+    "terminal": 13,
+    "pending": 1,
+    "outbox": {
+      "committed": 13,
+      "published": 13
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:34.380090Z",
+    "elapsed": 27.203689799876884,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 14,
+    "terminal": 14,
+    "pending": 0,
+    "outbox": {
+      "committed": 14,
+      "published": 13
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:34.822073Z",
+    "elapsed": 27.645659599918872,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 14,
+    "terminal": 14,
+    "pending": 0,
+    "outbox": {
+      "committed": 14,
+      "published": 14
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:35.264983Z",
+    "elapsed": 28.088571599917486,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 15,
+    "terminal": 14,
+    "pending": 1,
+    "outbox": {
+      "committed": 14,
+      "published": 14
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:35.710687Z",
+    "elapsed": 28.534275399986655,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 15,
+    "terminal": 15,
+    "pending": 0,
+    "outbox": {
+      "committed": 15,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:36.157439Z",
+    "elapsed": 28.98102659988217,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 15,
+    "terminal": 15,
+    "pending": 0,
+    "outbox": {
+      "committed": 15,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:36.598659Z",
+    "elapsed": 29.422245499910787,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 15,
+    "terminal": 15,
+    "pending": 0,
+    "outbox": {
+      "committed": 15,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:37.050896Z",
+    "elapsed": 29.87448320002295,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 15,
+    "terminal": 15,
+    "pending": 0,
+    "outbox": {
+      "committed": 15,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:37.495026Z",
+    "elapsed": 30.318613199982792,
+    "phase": "baseline",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 13,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:43.037967Z",
+    "elapsed": 35.861553699942306,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:43.474159Z",
+    "elapsed": 36.297745399875566,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:43.927846Z",
+    "elapsed": 36.75143319997005,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:44.379226Z",
+    "elapsed": 37.2028136998415,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:44.817034Z",
+    "elapsed": 37.640620599966496,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:45.256033Z",
+    "elapsed": 38.07962329988368,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:45.693234Z",
+    "elapsed": 38.5168198000174,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:46.174209Z",
+    "elapsed": 38.99779529985972,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:46.618447Z",
+    "elapsed": 39.44203729997389,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:47.035900Z",
+    "elapsed": 39.859486599918455,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:47.481245Z",
+    "elapsed": 40.304835099959746,
+    "phase": "outage",
+    "ready": 1,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:47.923482Z",
+    "elapsed": 40.74710259982385,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:48.359823Z",
+    "elapsed": 41.18341199983843,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:48.826233Z",
+    "elapsed": 41.64982039993629,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:49.286477Z",
+    "elapsed": 42.11006310000084,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:49.728150Z",
+    "elapsed": 42.55173549987376,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:50.181386Z",
+    "elapsed": 43.00497310003266,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:50.641451Z",
+    "elapsed": 43.46503790002316,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:51.091619Z",
+    "elapsed": 43.915205699857324,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:51.537719Z",
+    "elapsed": 44.3613060999196,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:51.985803Z",
+    "elapsed": 44.809389899950475,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:52.426195Z",
+    "elapsed": 45.24978269985877,
+    "phase": "outage",
+    "ready": 3,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:52.857698Z",
+    "elapsed": 45.681287199957296,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:53.303989Z",
+    "elapsed": 46.12757939985022,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:53.750479Z",
+    "elapsed": 46.574068899964914,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:54.191540Z",
+    "elapsed": 47.01512669981457,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:54.652991Z",
+    "elapsed": 47.476578400004655,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:55.087408Z",
+    "elapsed": 47.9109988999553,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:55.539043Z",
+    "elapsed": 48.362630299991,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:55.997018Z",
+    "elapsed": 48.82060569990426,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:56.440829Z",
+    "elapsed": 49.26441770000383,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:56.880031Z",
+    "elapsed": 49.703618299914524,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:57.319995Z",
+    "elapsed": 50.143581699812785,
+    "phase": "outage",
+    "ready": 6,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:57.761791Z",
+    "elapsed": 50.585377800045535,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:58.205224Z",
+    "elapsed": 51.02881930000149,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:58.644869Z",
+    "elapsed": 51.46846130001359,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:59.180941Z",
+    "elapsed": 52.004534899955615,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:13:59.617014Z",
+    "elapsed": 52.44060009997338,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:00.067745Z",
+    "elapsed": 52.89133300003596,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:00.529554Z",
+    "elapsed": 53.35314359981567,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:00.965403Z",
+    "elapsed": 53.78899539983831,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:01.413354Z",
+    "elapsed": 54.236942399991676,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:01.833461Z",
+    "elapsed": 54.65704760001972,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:02.264428Z",
+    "elapsed": 55.088014299981296,
+    "phase": "outage",
+    "ready": 8,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:02.686014Z",
+    "elapsed": 55.50960320001468,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:03.125585Z",
+    "elapsed": 55.949176099849865,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:03.550375Z",
+    "elapsed": 56.37396409991197,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:03.998314Z",
+    "elapsed": 56.821901299990714,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:04.453100Z",
+    "elapsed": 57.27668669982813,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:04.912632Z",
+    "elapsed": 57.73621869995259,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:05.352604Z",
+    "elapsed": 58.17619140003808,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:05.790896Z",
+    "elapsed": 58.61448520002887,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:06.237241Z",
+    "elapsed": 59.06083029997535,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:06.700782Z",
+    "elapsed": 59.52436979999766,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:07.142221Z",
+    "elapsed": 59.965808499837294,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:07.575888Z",
+    "elapsed": 60.39947609999217,
+    "phase": "outage",
+    "ready": 11,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:09.002269Z",
+    "elapsed": 61.8258613999933,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:09.428771Z",
+    "elapsed": 62.252358600031585,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:09.859977Z",
+    "elapsed": 62.68356339982711,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 16,
+    "terminal": 16,
+    "pending": 0,
+    "outbox": {
+      "committed": 16,
+      "published": 15
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:10.302562Z",
+    "elapsed": 63.12614899990149,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 32,
+    "terminal": 16,
+    "pending": 16,
+    "outbox": {
+      "committed": 16,
+      "published": 16
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:10.774065Z",
+    "elapsed": 63.59765849984251,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 32,
+    "terminal": 24,
+    "pending": 8,
+    "outbox": {
+      "committed": 24,
+      "published": 16
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:11.000581Z",
+    "elapsed": 63.82417199993506,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 32,
+    "terminal": 32,
+    "pending": 0,
+    "outbox": {
+      "committed": 32,
+      "published": 16
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:11.428068Z",
+    "elapsed": 64.25165509991348,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 33,
+    "terminal": 32,
+    "pending": 1,
+    "outbox": {
+      "committed": 32,
+      "published": 32
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:11.865580Z",
+    "elapsed": 64.68916799989529,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 33,
+    "terminal": 32,
+    "pending": 1,
+    "outbox": {
+      "committed": 32,
+      "published": 32
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:12.323208Z",
+    "elapsed": 65.14679629984312,
+    "phase": "recovery",
+    "ready": 13,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 16,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 33,
+    "terminal": 33,
+    "pending": 0,
+    "outbox": {
+      "committed": 33,
+      "published": 32
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:12.740094Z",
+    "elapsed": 65.5636803000234,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 33,
+    "terminal": 33,
+    "pending": 0,
+    "outbox": {
+      "committed": 33,
+      "published": 33
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:13.170586Z",
+    "elapsed": 65.99417169997469,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 33,
+    "terminal": 33,
+    "pending": 0,
+    "outbox": {
+      "committed": 33,
+      "published": 33
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:13.629286Z",
+    "elapsed": 66.45287899998948,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 34,
+    "terminal": 33,
+    "pending": 1,
+    "outbox": {
+      "committed": 33,
+      "published": 33
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:14.073372Z",
+    "elapsed": 66.89695880003273,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 34,
+    "terminal": 34,
+    "pending": 0,
+    "outbox": {
+      "committed": 34,
+      "published": 33
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:14.521945Z",
+    "elapsed": 67.34553239983507,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 34,
+    "terminal": 34,
+    "pending": 0,
+    "outbox": {
+      "committed": 34,
+      "published": 34
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:14.974086Z",
+    "elapsed": 67.79767280002125,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 34,
+    "terminal": 34,
+    "pending": 0,
+    "outbox": {
+      "committed": 34,
+      "published": 34
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:15.413286Z",
+    "elapsed": 68.23687290004455,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 35,
+    "terminal": 34,
+    "pending": 1,
+    "outbox": {
+      "committed": 34,
+      "published": 34
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:15.850389Z",
+    "elapsed": 68.6739751000423,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 35,
+    "terminal": 34,
+    "pending": 1,
+    "outbox": {
+      "committed": 34,
+      "published": 34
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:16.286961Z",
+    "elapsed": 69.11054749996401,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 35,
+    "terminal": 35,
+    "pending": 0,
+    "outbox": {
+      "committed": 35,
+      "published": 34
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:16.733634Z",
+    "elapsed": 69.55722409998998,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 35,
+    "terminal": 35,
+    "pending": 0,
+    "outbox": {
+      "committed": 35,
+      "published": 35
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:17.187970Z",
+    "elapsed": 70.01155709987506,
+    "phase": "recovery",
+    "ready": 16,
+    "unacked": 0,
+    "consumers": 0,
+    "redeliver": 0,
+    "ack": 33,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 35,
+    "terminal": 35,
+    "pending": 0,
+    "outbox": {
+      "committed": 35,
+      "published": 35
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:17.656400Z",
+    "elapsed": 70.47998689999804,
+    "phase": "recovery",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 35,
+    "pending": 1,
+    "outbox": {
+      "committed": 35,
+      "published": 35
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:18.078005Z",
+    "elapsed": 70.90159150003456,
+    "phase": "recovery",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 35
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:18.531390Z",
+    "elapsed": 71.35498029994778,
+    "phase": "recovery",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:19.008723Z",
+    "elapsed": 71.83231359999627,
+    "phase": "recovery",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:19.283937Z",
+    "elapsed": 72.10752319986932,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:19.508673Z",
+    "elapsed": 72.33225899981335,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:19.926996Z",
+    "elapsed": 72.75058759981766,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:20.379057Z",
+    "elapsed": 73.2026545999106,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:20.821372Z",
+    "elapsed": 73.6449616998434,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:21.299366Z",
+    "elapsed": 74.1229558000341,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:21.719714Z",
+    "elapsed": 74.5432998999022,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:22.168683Z",
+    "elapsed": 74.99227029993199,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:22.641190Z",
+    "elapsed": 75.464777499903,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 36,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  },
+  {
+    "atUtc": "2026-11-02T16:14:23.085470Z",
+    "elapsed": 75.9090563999489,
+    "phase": "quiescence",
+    "ready": 0,
+    "unacked": 0,
+    "consumers": 1,
+    "redeliver": 0,
+    "ack": 37,
+    "type": "quorum",
+    "leader": "rabbit@6df78d7778ab",
+    "members": [
+      "rabbit@6df78d7778ab"
+    ],
+    "intake": 36,
+    "terminal": 36,
+    "pending": 0,
+    "outbox": {
+      "committed": 36,
+      "published": 36
+    }
+  }
+]

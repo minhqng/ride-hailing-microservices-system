@@ -1,0 +1,731 @@
+{
+  "rounds": [
+    {
+      "trip_id": "bd2a0946-784b-5929-a58e-0350f359e022",
+      "matching_round": 1,
+      "input_message_id": "344c743a-4e0a-5545-a78f-cb1036fa89d2",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "b4271449-722b-8387-8029-fd880193cfcb",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "26ae4eed-4485-5a31-8753-0e222cd84dfd",
+      "matching_round": 1,
+      "input_message_id": "15c1e066-3431-5288-b63e-6f260e0eaa2e",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "b496d7f8-02fa-8357-bfe3-9fe2f824b86f",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "fe94c1af-9a80-5e07-ad81-2bb74ee388dc",
+      "matching_round": 1,
+      "input_message_id": "78b7eb5a-4370-56e8-b148-d15736c0fac4",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "3848fb9b-8e25-8ea8-a948-1588ab471c60",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "c6f29c9a-6655-5220-b04e-474557e0a265",
+      "matching_round": 1,
+      "input_message_id": "9702ad54-617d-574d-a4cc-8a4748cf455a",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "9c7861f2-41c0-890e-ab57-0f7a5c18d5e3",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "36f1d21f-d880-53a4-9a1e-a1c856249c35",
+      "matching_round": 1,
+      "input_message_id": "6497969d-947b-57fe-93e1-343a30c42dfa",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "ec1ce044-9370-81b4-beb8-e9e5810248c3",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "9e92225c-a376-5f23-b555-910b1f4b9f06",
+      "matching_round": 1,
+      "input_message_id": "d4438e80-aecf-58eb-ad88-a9e9aa8feb6e",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "27b80bb6-4681-8129-a77d-404a73ff0960",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "b5d6b960-7d2a-5a03-8a88-4b0235943155",
+      "matching_round": 1,
+      "input_message_id": "0c9fcd29-d6e7-5fe9-af26-40b963311ccf",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "1aae7012-96e2-8811-978e-fade16a0b16a",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "eea69acf-e9bf-5bc9-ac21-53e72fc2c08b",
+      "matching_round": 1,
+      "input_message_id": "b6db34df-b3be-51a2-8861-932d6454788d",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "34e440cf-b065-8584-9106-8f7c24f3e267",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "7c58c674-919e-5dbf-b280-d5ebb3a2f76b",
+      "matching_round": 1,
+      "input_message_id": "3e2daffb-5a4b-51b4-8035-4561d10bbb88",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "82a0d5f2-26e6-8fe9-85c6-e22d9a82c3e0",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "b1d2f791-5e90-5399-8649-1cafbad878d6",
+      "matching_round": 1,
+      "input_message_id": "b1645131-d356-5aa9-a10c-7a8a3cde46b6",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "28838041-9992-8234-8b28-ce89c84bb4c9",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "fa67613f-501d-57f2-94c9-1fdf8f3cdf7f",
+      "matching_round": 1,
+      "input_message_id": "0cd4e998-9142-5187-a478-910429988a08",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "d8e9e851-eb01-8b15-96c0-2b876ed73c22",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "4acfba6a-c818-55b7-80d6-cc42c674484a",
+      "matching_round": 1,
+      "input_message_id": "fc1dc26e-09fa-5e6e-a6ae-2f1d6723699d",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "a446d35b-1025-8cf8-bb7c-8a67a9370117",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "03333881-59d2-597f-95f8-53af2361efbb",
+      "matching_round": 1,
+      "input_message_id": "c1cec10d-1fe8-527a-ab9f-4daf258caa1c",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "94d518fb-5fa5-8537-a62d-3d5e84a4c9c9",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "51a8bca3-e0a7-56fa-b03b-1d101d00caf2",
+      "matching_round": 1,
+      "input_message_id": "c2fb3800-7f4b-5c9f-adcc-c652d4e4def2",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "ac3b8dd6-8711-8f84-897b-b33287dc652c",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "8adb21ff-ff33-5121-b464-37ed4b1247bf",
+      "matching_round": 1,
+      "input_message_id": "78444d6e-4478-57a8-b91e-8e75ad7186db",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "356bfbbd-deaf-869a-8d6a-130692668228",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "d272a7e1-3347-5efe-acef-9616062ad910",
+      "matching_round": 1,
+      "input_message_id": "fff04df2-9df9-5ef5-a182-0472615cc1db",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "08dc0290-7786-8a1c-805a-cf30d901e4a5",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "c5188013-6b62-5fd8-8f3b-43164ec360af",
+      "matching_round": 1,
+      "input_message_id": "ebd62e75-6141-5a8d-8eb5-0065c5f7475b",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "e00d7903-d03f-8094-9c54-2d3968dbbbe1",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "b7d6f167-3315-5480-a750-6b0413540824",
+      "matching_round": 1,
+      "input_message_id": "ff748242-2819-508a-a73c-f04d4e78bf8c",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "13156393-52ea-892b-bf57-64353892e29e",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "a55407d6-8ce6-5c5e-bde6-7724d8602b82",
+      "matching_round": 1,
+      "input_message_id": "32958d85-1615-5106-ba16-4d899d5df893",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "a24d8ae6-e860-8c71-b3e6-12f6d939ba01",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "b7469f92-683c-5d35-94f0-7836a0c37361",
+      "matching_round": 1,
+      "input_message_id": "326b1462-b57f-51f0-9056-97401f53f06c",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "3eab0648-232c-8105-bc29-fd10d7178215",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "df01d2a0-6839-5330-a277-c4a6c396b2b8",
+      "matching_round": 1,
+      "input_message_id": "31d459da-32a8-5947-a245-8b3b7ef80287",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "b4f495c0-67e0-8069-913b-9c52dcc75eb9",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "87d9478d-2e4b-5607-be3f-93d11ef5de2b",
+      "matching_round": 1,
+      "input_message_id": "df0f6c65-2b04-5350-ad32-3566bae4727e",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "7b918a1f-3a0f-8be1-ace7-0493acdd080d",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "0b75f417-c22c-57ad-9291-22a82b51a472",
+      "matching_round": 1,
+      "input_message_id": "8a919e32-393b-59ce-849d-9133e468b679",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "bed6ddf9-9ce8-8dcd-a9b3-d51aa57502ba",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "55e0eb70-dfba-5b19-a83d-1b22b54340fa",
+      "matching_round": 1,
+      "input_message_id": "991d975c-d406-5afe-9eec-4880e0440595",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "671267af-d17d-8e82-aef3-5a005baa9431",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "3f822343-f110-59a8-8600-2fc9ce6c9a4b",
+      "matching_round": 1,
+      "input_message_id": "72c215ec-73ff-52f8-b1b3-3719cb9017a8",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "46211bb9-b27f-8c2a-aea5-fdaf41eb77ed",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "e893cc9d-137a-5b28-b5bd-67ba1645a21c",
+      "matching_round": 1,
+      "input_message_id": "60fe296d-7832-5852-821a-e3c8d55d56ff",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "7b5184f9-4d24-8886-88a7-92f460e1c09e",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "e517f283-6d46-5e1e-bcf9-e18065b4ea6d",
+      "matching_round": 1,
+      "input_message_id": "1b8a8ab2-ced5-5537-b061-daf590090b99",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "3318a286-6381-8775-b180-8b2fe7cecab0",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "b3afd126-6fa7-5088-8ce5-b5845294dc85",
+      "matching_round": 1,
+      "input_message_id": "67da9e33-a011-547e-8569-6559afa4eae4",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "083dbb71-ed4c-81dd-a296-caf60c9c4133",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "de7b59d7-5197-571d-a1ce-1b932b954f3d",
+      "matching_round": 1,
+      "input_message_id": "6f9f05c3-0302-5e2e-9c8a-5c5a11af730b",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "6493b40c-2127-8ac9-a647-696773a3f850",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "3885fb6a-b41c-5431-b520-e19504f5270a",
+      "matching_round": 1,
+      "input_message_id": "5434da34-a046-5f68-b5f7-75e7cd7818d0",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "c028f0f1-d959-84d3-81ad-d5bcc78de854",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "fa366a0e-7885-50c1-b782-4612900af995",
+      "matching_round": 1,
+      "input_message_id": "033f6139-8723-50f9-ae72-ae16794b0cef",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "67ee1295-7d3a-84fa-961d-2ecac1428a3b",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "84ae570d-e637-56e7-aa2e-ba6ffbc104b4",
+      "matching_round": 1,
+      "input_message_id": "06501b11-d242-5491-a566-a25a58a088f8",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "0b47acc3-e642-8be7-9c04-bea05dadc533",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "5cbfe317-4939-52e3-ad2a-4029c5b6ea85",
+      "matching_round": 1,
+      "input_message_id": "dcdd4712-0601-54ea-a983-03ac9a3f3d6f",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "eb960d9d-e6a1-8e71-b627-6433fa9c2da8",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    },
+    {
+      "trip_id": "c4fd1c43-eb79-5965-80a9-d00b4b11f5f8",
+      "matching_round": 1,
+      "input_message_id": "90527858-6cc9-5139-b4a1-66df2e97957d",
+      "status": "NO_DRIVER",
+      "auto_execute": true,
+      "result_message_id": "809bef61-8350-850b-854b-8d3b204f9e7b",
+      "selected_driver_id": null,
+      "selected_reservation_id": null
+    }
+  ],
+  "attempts": [],
+  "matchingOutbox": [
+    {
+      "message_id": "b4271449-722b-8387-8029-fd880193cfcb",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "bd2a0946-784b-5929-a58e-0350f359e022",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:10.399984+00"
+    },
+    {
+      "message_id": "b496d7f8-02fa-8357-bfe3-9fe2f824b86f",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "26ae4eed-4485-5a31-8753-0e222cd84dfd",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:12.422523+00"
+    },
+    {
+      "message_id": "82a0d5f2-26e6-8fe9-85c6-e22d9a82c3e0",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "7c58c674-919e-5dbf-b280-d5ebb3a2f76b",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:22.5361+00"
+    },
+    {
+      "message_id": "3848fb9b-8e25-8ea8-a948-1588ab471c60",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "fe94c1af-9a80-5e07-ad81-2bb74ee388dc",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:14.437739+00"
+    },
+    {
+      "message_id": "9c7861f2-41c0-890e-ab57-0f7a5c18d5e3",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "c6f29c9a-6655-5220-b04e-474557e0a265",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:17.469491+00"
+    },
+    {
+      "message_id": "7b918a1f-3a0f-8be1-ace7-0493acdd080d",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "87d9478d-2e4b-5607-be3f-93d11ef5de2b",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:34.6946+00"
+    },
+    {
+      "message_id": "27b80bb6-4681-8129-a77d-404a73ff0960",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "9e92225c-a376-5f23-b555-910b1f4b9f06",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:19.487274+00"
+    },
+    {
+      "message_id": "a446d35b-1025-8cf8-bb7c-8a67a9370117",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "4acfba6a-c818-55b7-80d6-cc42c674484a",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:24.553504+00"
+    },
+    {
+      "message_id": "34e440cf-b065-8584-9106-8f7c24f3e267",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "eea69acf-e9bf-5bc9-ac21-53e72fc2c08b",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:21.51162+00"
+    },
+    {
+      "message_id": "13156393-52ea-892b-bf57-64353892e29e",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "b7d6f167-3315-5480-a750-6b0413540824",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:30.638675+00"
+    },
+    {
+      "message_id": "94d518fb-5fa5-8537-a62d-3d5e84a4c9c9",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "03333881-59d2-597f-95f8-53af2361efbb",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:26.583264+00"
+    },
+    {
+      "message_id": "ac3b8dd6-8711-8f84-897b-b33287dc652c",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "51a8bca3-e0a7-56fa-b03b-1d101d00caf2",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:28.613407+00"
+    },
+    {
+      "message_id": "a24d8ae6-e860-8c71-b3e6-12f6d939ba01",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "a55407d6-8ce6-5c5e-bde6-7724d8602b82",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:32.665112+00"
+    },
+    {
+      "message_id": "671267af-d17d-8e82-aef3-5a005baa9431",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "55e0eb70-dfba-5b19-a83d-1b22b54340fa",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:38.732373+00"
+    },
+    {
+      "message_id": "bed6ddf9-9ce8-8dcd-a9b3-d51aa57502ba",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "0b75f417-c22c-57ad-9291-22a82b51a472",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:15:36.708744+00"
+    },
+    {
+      "message_id": "46211bb9-b27f-8c2a-aea5-fdaf41eb77ed",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "3f822343-f110-59a8-8600-2fc9ce6c9a4b",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:12.236648+00"
+    },
+    {
+      "message_id": "7b5184f9-4d24-8886-88a7-92f460e1c09e",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "e893cc9d-137a-5b28-b5bd-67ba1645a21c",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.256813+00"
+    },
+    {
+      "message_id": "6493b40c-2127-8ac9-a647-696773a3f850",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "de7b59d7-5197-571d-a1ce-1b932b954f3d",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.315745+00"
+    },
+    {
+      "message_id": "67ee1295-7d3a-84fa-961d-2ecac1428a3b",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "fa366a0e-7885-50c1-b782-4612900af995",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.384997+00"
+    },
+    {
+      "message_id": "083dbb71-ed4c-81dd-a296-caf60c9c4133",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "b3afd126-6fa7-5088-8ce5-b5845294dc85",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.446+00"
+    },
+    {
+      "message_id": "28838041-9992-8234-8b28-ce89c84bb4c9",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "b1d2f791-5e90-5399-8649-1cafbad878d6",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.303788+00"
+    },
+    {
+      "message_id": "08dc0290-7786-8a1c-805a-cf30d901e4a5",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "d272a7e1-3347-5efe-acef-9616062ad910",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.373026+00"
+    },
+    {
+      "message_id": "0b47acc3-e642-8be7-9c04-bea05dadc533",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "84ae570d-e637-56e7-aa2e-ba6ffbc104b4",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.421331+00"
+    },
+    {
+      "message_id": "eb960d9d-e6a1-8e71-b627-6433fa9c2da8",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "5cbfe317-4939-52e3-ad2a-4029c5b6ea85",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:14.473266+00"
+    },
+    {
+      "message_id": "809bef61-8350-850b-854b-8d3b204f9e7b",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "c4fd1c43-eb79-5965-80a9-d00b4b11f5f8",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:16.495705+00"
+    },
+    {
+      "message_id": "c028f0f1-d959-84d3-81ad-d5bcc78de854",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "3885fb6a-b41c-5431-b520-e19504f5270a",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.327345+00"
+    },
+    {
+      "message_id": "e00d7903-d03f-8094-9c54-2d3968dbbbe1",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "c5188013-6b62-5fd8-8f3b-43164ec360af",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.396893+00"
+    },
+    {
+      "message_id": "b4f495c0-67e0-8069-913b-9c52dcc75eb9",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "df01d2a0-6839-5330-a277-c4a6c396b2b8",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.434103+00"
+    },
+    {
+      "message_id": "ec1ce044-9370-81b4-beb8-e9e5810248c3",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "36f1d21f-d880-53a4-9a1e-a1c856249c35",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.268662+00"
+    },
+    {
+      "message_id": "1aae7012-96e2-8811-978e-fade16a0b16a",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "b5d6b960-7d2a-5a03-8a88-4b0235943155",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.280349+00"
+    },
+    {
+      "message_id": "3318a286-6381-8775-b180-8b2fe7cecab0",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "e517f283-6d46-5e1e-bcf9-e18065b4ea6d",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.291759+00"
+    },
+    {
+      "message_id": "d8e9e851-eb01-8b15-96c0-2b876ed73c22",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "fa67613f-501d-57f2-94c9-1fdf8f3cdf7f",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.339062+00"
+    },
+    {
+      "message_id": "356bfbbd-deaf-869a-8d6a-130692668228",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "8adb21ff-ff33-5121-b464-37ed4b1247bf",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.358312+00"
+    },
+    {
+      "message_id": "3eab0648-232c-8105-bc29-fd10d7178215",
+      "message_type": "MatchingFailedV1",
+      "aggregate_id": null,
+      "payload_json": {
+        "tripId": "b7469f92-683c-5d35-94f0-7836a0c37361",
+        "matchingRound": 1
+      },
+      "status": "PUBLISHED",
+      "published_at": "2026-11-02 16:16:13.408833+00"
+    }
+  ],
+  "drivers": [
+    {
+      "driver_id": "4090ab5d-528d-53f5-9109-e8f298a71177",
+      "status": "OFFLINE",
+      "version": 1,
+      "reservation_id": null,
+      "reserved_trip_id": null
+    }
+  ],
+  "driverOutbox": []
+}

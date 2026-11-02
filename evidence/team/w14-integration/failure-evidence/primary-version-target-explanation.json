@@ -1,0 +1,6 @@
+{
+  "status": "HARNESS_METADATA_FAILURE",
+  "sourceCommit": "ed113e46fc3a7df3247e83b0834e7dbbd551a563",
+  "cause": "Runtime reached its final provider-version observation, which still targeted the intentionally stopped primary broker. The wrapper failed closed and restored the broker.",
+  "correction": "724d6c6 selects the actual surviving broker for version observation; runtime invariants are unchanged and the full quorum rehearsal is rerun."
+}
