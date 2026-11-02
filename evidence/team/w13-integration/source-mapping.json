@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "week": "W13",
+  "scope": "Only week-specific logical deltas; no cumulative W09/W10/W14/W15/W16 import",
+  "owners": [
+    {
+      "owner": "A",
+      "sourcePr": 47,
+      "branch": null,
+      "head": "b875d1c9fd490f03fdfb19a970606cf0283e1f5d",
+      "predecessor": "132ecfd4ebc7f452af5e28f030bf66754e9b0df7",
+      "weeklyCommits": [
+        "3d766aae54ab420d47dc09c1bfccb7fd9ac5bbe8",
+        "d826cf39cb8955bf7878db649670d8df2fafeec2",
+        "b380ba360442877d6a75287c63080d7857f926b6",
+        "b875d1c9fd490f03fdfb19a970606cf0283e1f5d"
+      ],
+      "authorship": "Original Git authors preserved in the team integration commits; no fabricated co-author trailers",
+      "integratedMapping": [
+        {
+          "originalCommit": "3d766aae54ab420d47dc09c1bfccb7fd9ac5bbe8",
+          "integratedCommit": "fe1458d12c5d2f97dee4a122ae1ca6a51bea6bd1",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "d826cf39cb8955bf7878db649670d8df2fafeec2",
+          "integratedCommit": "d9edc21669031f6bef572f8d52f1d8b8f27351ee",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "b380ba360442877d6a75287c63080d7857f926b6",
+          "integratedCommit": "98e3d5e579f66d51d1d2b30552dee88f1d9b1bed",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "b875d1c9fd490f03fdfb19a970606cf0283e1f5d",
+          "integratedCommit": "08eb19939f40e8aa457c391fadba3091847eb037",
+          "originalAuthorshipPreserved": true
+        }
+      ]
+    },
+    {
+      "owner": "B",
+      "sourcePr": null,
+      "branch": "feature/B-W13-performance-campaign",
+      "head": "16dc175a3b205115f6c71aeee00b41c22cad420b",
+      "predecessor": "61d7328838befa0adbbc9974a7b5c1635cdecf2d",
+      "weeklyCommits": [
+        "98eb2745e5dc79f0cacd967aac4f622e77e70ffb",
+        "e8feb2fe9d14697af930a7776383bd21ae5fd400",
+        "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+        "e3c888f7f3367c03f5c26ed637d5c13263a3b6c2",
+        "f513a694e26b4f401a554242b188909283785518",
+        "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a",
+        "16dc175a3b205115f6c71aeee00b41c22cad420b"
+      ],
+      "authorship": "Original Git authors preserved in the team integration commits; no fabricated co-author trailers",
+      "integratedMapping": [
+        {
+          "originalCommit": "98eb2745e5dc79f0cacd967aac4f622e77e70ffb",
+          "integratedCommit": "b5d325548d52a64c32c45719a668721a2bef48c7",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "e8feb2fe9d14697af930a7776383bd21ae5fd400",
+          "integratedCommit": "4a8c2d3647e3fbe1311871863bf7b76f3ef01268",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "1dcc7ee0f7b7c1575cbe4cbddec6a6211a097a58",
+          "integratedCommit": "cc0bda94240f88acdcf4dfb28d93ebb60227ea34",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "e3c888f7f3367c03f5c26ed637d5c13263a3b6c2",
+          "integratedCommit": "0dc725b84552c4c68c0ca1068bf12f246f94a6a7",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "f513a694e26b4f401a554242b188909283785518",
+          "integratedCommit": "f356364fab7b04ebcd11a49fa6105f20bde6e68d",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "b1beb8451f50673bc98445beea7f3c6b6d8f7c4a",
+          "integratedCommit": "f54e8b2becf820e2a8ed342e6aab56b1a64869fa",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "16dc175a3b205115f6c71aeee00b41c22cad420b",
+          "integratedCommit": "4b753a092137c2edc8d3fe21ffc791decbdcb234",
+          "originalAuthorshipPreserved": true
+        }
+      ]
+    },
+    {
+      "owner": "C",
+      "sourcePr": 52,
+      "branch": null,
+      "head": "9d57c4cc67091e02cc1aa15bf0ff69407a6aae3a",
+      "predecessor": "459352e1cec674ed5ce6c91444fe3ce5354f68ab",
+      "weeklyCommits": [
+        "f7ff6f28c0f2788147610ea72b0eb7e7f4d415d3",
+        "9d57c4cc67091e02cc1aa15bf0ff69407a6aae3a"
+      ],
+      "authorship": "Original Git authors preserved in the team integration commits; no fabricated co-author trailers",
+      "integratedMapping": [
+        {
+          "originalCommit": "f7ff6f28c0f2788147610ea72b0eb7e7f4d415d3",
+          "integratedCommit": "cf3519bb10772941c342be6bb07a9993f79191f6",
+          "originalAuthorshipPreserved": true
+        },
+        {
+          "originalCommit": "9d57c4cc67091e02cc1aa15bf0ff69407a6aae3a",
+          "integratedCommit": "358bfeb7ab51a8af2d1797d4e7a03efe0bfe88cd",
+          "originalAuthorshipPreserved": true
+        }
+      ]
+    }
+  ],
+  "integrationCorrections": [
+    {
+      "commit": "0d09b35517f70c5c00c2ca3b2c52444aaa05c827",
+      "subject": "fix(perf): bind campaign measurements to authenticated runtime and real samples"
+    },
+    {
+      "commit": "8899feb7c83e90257e18eeb91da26ab379715b67",
+      "subject": "fix(observability): measure matching intake at durable delivery boundaries"
+    },
+    {
+      "commit": "e90416ec8d3e15620f92857ad40ba18420cef0d6",
+      "subject": "fix(test): await durable duplicate handling and audit load authorities"
+    },
+    {
+      "commit": "44672fcd1b5f5bf5a66e80ee318f29255ba5be1b",
+      "subject": "feat(observability): expose durable saga backlog age"
+    },
+    {
+      "commit": "c546bea0e050a2fba9e569ee4130835b07c518ff",
+      "subject": "fix(perf): freeze observable baselines and verify broker acknowledgements"
+    },
+    {
+      "commit": "005735022accaa6fdf72e34bbb1e97d18a3b3324",
+      "subject": "fix(perf): validate syntax for every campaign entry point"
+    },
+    {
+      "commit": "d291f0430faa389e4351377ce4db361aa681648b",
+      "subject": "fix(perf): reuse frozen images across independent measurements"
+    },
+    {
+      "commit": "b777c7b809c7dbfe3a484275971d1d557931fa72",
+      "subject": "test(observability): preserve measured samples and exercised payment evidence"
+    }
+  ],
+  "sharedFileReconciliation": "A/C performance-snapshot implementations are semantically shared and accounted for once; C README/gitignore/follow-up contributions and original authors are preserved. The shared meter/CI reconciliations retain W12 behavior."
+}

@@ -1,0 +1,38 @@
+{
+  "synthetic": false,
+  "reportGrade": true,
+  "startedAtUtc": "2026-11-02T14:08:47.046940Z",
+  "finalState": {
+    "tripCount": "150",
+    "e02IdempotencyKeys": "150",
+    "activeTripsPerRiderViolations": "0",
+    "duplicateIdempotencyResources": "0"
+  },
+  "independentAuthorities": {
+    "status": "PASS",
+    "checks": {
+      "nonemptyMeasuredIntake": true,
+      "allTripsTerminalNoDriver": true,
+      "noAssignmentWithoutFleet": true,
+      "oneTerminalRoundPerTrip": true,
+      "allRoundsNoDriver": true,
+      "noSpuriousSagaOrPaymentEffect": true,
+      "allOutboxesDrained": true,
+      "noUnresolvedCleanup": true
+    },
+    "proofBoundary": "Independent read-only owning-database oracle after real no-fleet public intake; not an exercised Payment/Saga throughput claim",
+    "tripCountIncludingPreflight": 160,
+    "roundCount": 160,
+    "driverCount": 0,
+    "sagaCount": 0,
+    "paymentCount": 0,
+    "providerEffectCount": 0,
+    "pendingOutboxes": {
+      "trip_db": 0,
+      "matching_db": 0,
+      "driver_db": 0,
+      "payment_db": 0
+    },
+    "pendingCleanup": 0
+  }
+}
