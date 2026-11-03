@@ -205,13 +205,18 @@ def migrate(values):
                            Auth__PublicKeyBase64=values["AUTH_PUBLIC_KEY_BASE64"])
         subprocess.run(["dotnet", "tool", "restore"], cwd=ROOT, check=True,
                        text=True, capture_output=True)
+        subprocess.run(["dotnet", "restore",
+                        "src/Services/Trip/RideHailing.TripService/RideHailing.TripService.csproj"],
+                       cwd=ROOT, check=True, text=True, capture_output=True)
         result = subprocess.run(["dotnet", *ef], cwd=ROOT, env=environment,
                                 text=True, capture_output=True)
     else:
         mount = str(ROOT).replace("\\", "/")
         environment = dict(base_env, ConnectionStrings__Postgres=connection("postgres"),
                            Auth__PublicKeyBase64=values["AUTH_PUBLIC_KEY_BASE64"])
-        command = ("dotnet tool restore && dotnet " + " ".join(ef))
+        command = ("dotnet tool restore && dotnet restore "
+                   "src/Services/Trip/RideHailing.TripService/RideHailing.TripService.csproj && dotnet "
+                   + " ".join(ef))
         result = subprocess.run(
             ["docker", "run", "--rm", "--network", project + "_ride-net",
              "-v", mount + ":/work", "-v", "ride-release-nuget:/tmp/nuget",
