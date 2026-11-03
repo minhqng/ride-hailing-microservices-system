@@ -17,5 +17,8 @@ Reading order: 00 → 01 → 02 → 03 → 04 → 05A/B/C. Priority: 00–03 ove
 
 Runtime guides (implementation usage; canonical specs above remain authoritative):
 
+- [Driver/Matching technical report](driver-matching-report.md): authority,
+  OCC, Redis, durable UNKNOWN recovery, proof diagrams and measured-claim limits.
+
 - [Messaging runtime](messaging-runtime.md): publisher/consumer lifecycle, confirms, ACK and retry ownership.
 - [Payment simulator](../src/Services/Payment/RideHailing.PaymentService/README.md): durable replay, reconciliation and verification commands.
