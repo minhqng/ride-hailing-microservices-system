@@ -26,4 +26,4 @@ else
   docker run --rm -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
 fi
 
-python3 scripts/test/assert-trx.py --results-dir "$TRX_DIR" --min-passed 1200 --min-files 12 --max-skipped 1
+python3 scripts/test/assert-trx.py --results-dir "$TRX_DIR" --min-passed 1200 --min-files 12 --max-skipped 1 --allowed-skip "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState" --required-suites-file scripts/test/required-suites.txt

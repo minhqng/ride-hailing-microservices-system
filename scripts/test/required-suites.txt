@@ -1,0 +1,17 @@
+# Test assemblies that must execute in the solution-wide dotnet test run.
+# Format: assembly-name-substring[:minimum passing tests]
+# The empty SystemTests placeholder produces no TRX result rows and therefore
+# never satisfies a required suite; Identity's exclusive negative cases run in
+# the platform-smoke Identity gate, so the solution run requires presence only.
+ridehailing.b12audit.tests
+ridehailing.driverservice.unittests
+ridehailing.driverservice.integrationtests
+ridehailing.identityservice.integrationtests:0
+ridehailing.matchingservice.unittests
+ridehailing.matchingservice.integrationtests
+ridehailing.notificationworker.unittests
+ridehailing.paymentservice.unittests
+ridehailing.paymentservice.integrationtests
+ridehailing.platform.integrationtests
+ridehailing.tripservice.unittests
+ridehailing.tripservice.integrationtests
