@@ -169,19 +169,19 @@
     },
     {
       "path": "claims-validation.json",
-      "sha256": "47b2d6a3e42639130f4280d8f88b1d4e5941c2574666205636bd47c59bb5d66f"
+      "sha256": "64949874fce534322ffd9085b860870b7551fcf9a1598b1b66ad43d916ee8a62"
     },
     {
       "path": "final-state/freeze-runtime.json",
-      "sha256": "90871771839aa6e580dfe8de3c4ab8b30475dd2e5bc0198bcdea33cf09f9e56c"
+      "sha256": "49ee0b140263ea733354bec7cea70ec40cd6dc124e91f97ab7f56c5f4e3d4ecc"
     },
     {
       "path": "final-state/integrated-main-control.json",
-      "sha256": "1d1435e039ab31a4eed5bc4c15c2846633d996bb99cb83c9e89e2fe59116d945"
+      "sha256": "0bec3a568ec9779d22d9f5744eccc9aa06137bbdbf372d1cea5a367d70b3166c"
     },
     {
       "path": "final-state/regression.json",
-      "sha256": "1ba108bdfec25bae3baf6faaf5c625ac8e6bf80cf15faf06ce830af33c0b052f"
+      "sha256": "5c5fcf5f901e0418fa591e74f93c4cf6cf72e636e9bd68967cbc1c8443c5f7da"
     },
     {
       "path": "README.md",
