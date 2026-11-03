@@ -3,7 +3,7 @@
   "owner": "B Driver/Matching",
   "authority": "Docs00-03 > Doc04 section27 > Doc05B section25",
   "baseBranch": "feature/B-W15-freeze-report",
-  "baseCommit": "99ab1160f3ac3c9b56bb9aa2bccc2e26e8c8d557",
+  "baseCommit": "d2958cf9b16e750fa07d239201f56945af55613d",
   "sourceCommit": "598d89301591c6d38adc159b60e9361f0fd37cba",
   "sourceTree": "752ab9314b2062ed1a2cb1e72dc36e868728a645",
   "status": "PASS",
@@ -220,7 +220,7 @@
     },
     {
       "path": "release-verification.json",
-      "sha256": "a3bca250127f00d1606f596043d15958f0ae4907902ba2edfd95e84b9308ba21"
+      "sha256": "e226fc67b68f055cb500c69ee490963ee9861b87e4621e6abe4f0f05b5a816ee"
     },
     {
       "path": "test-output.txt",

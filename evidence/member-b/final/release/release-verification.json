@@ -21,12 +21,14 @@
     }
   },
   "w15": {
-    "head": "99ab1160f3ac3c9b56bb9aa2bccc2e26e8c8d557",
-    "tree": "d8525afbbb7eeb09b5044776bfad4fef7d97b7eb",
     "ciRun": 41637916153,
     "requiredJobs": "4 SUCCESS",
     "actualCiCheckout": "10f27b2b87b8bc4a84fec1aeb2fbd673c737f7ce",
-    "checkoutTreeEqualsHead": true
+    "checkoutTreeEqualsHead": true,
+    "checkpointHead": "99ab1160f3ac3c9b56bb9aa2bccc2e26e8c8d557",
+    "checkpointTree": "d8525afbbb7eeb09b5044776bfad4fef7d97b7eb",
+    "currentBranchHead": "d2958cf9b16e750fa07d239201f56945af55613d",
+    "currentHeadChecks": "See PR62 exact final head checks; only evidence reproduction overlay isolation changed"
   },
   "bCandidate": {
     "sourceCommit": "598d89301591c6d38adc159b60e9361f0fd37cba",
