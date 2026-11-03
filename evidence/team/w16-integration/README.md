@@ -37,8 +37,11 @@ verification, release/security gates and rehearsal accounting for Member A
   AUD-01..08 PASS. See `test-output.txt` and
   `final-state/rehearsal-summary.json`. `humanParticipation` is
   `NOT PERFORMED`.
-- Exact-tree GitHub CI: recorded by the W16 pull request checks; the checkout
-  tree must equal the candidate tree.
+- Exact-tree GitHub CI: run 41655374106 on PR #65 passed hygiene,
+  compose-config, build-test and platform-smoke; merge-checkout tree
+  `a85b85b3a6d5d33098a6cc792f0a55d6a4b99197` equals the candidate tree.
+  TRX: 1223 passed/0 failed/1 opt-in Identity NotExecuted; dedicated Identity
+  7/7; 55 security checks; core-runtime scenarios + AUD-01..08 PASS.
 
 ## Cross-owner evidence
 
