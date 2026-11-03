@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "week": "W16",
+  "baseMain": {
+    "commit": "6ef99a738f7a3360f2a697dd7695df852365c880",
+    "tree": "7448c1d2cee05aa5b77c880e6031746fd8311a41"
+  },
+  "candidateSource": {
+    "commit": "17ca928d5fdd9ef64bba16574503045317033b27",
+    "tree": "59a740ec266acf219bfbbd9e75d98080b6926e06"
+  },
+  "members": [
+    {
+      "member": "A",
+      "sourcePr": 50,
+      "sourceBranch": "feature/A-W16-release-demo",
+      "sourceHead": "cf9a4a1d08665c12d6fc1cfa1f00aad1e1e14c72",
+      "commits": [
+        {
+          "originalCommit": "fbab1e1d9810db0774a264aec3ec4e5bb1ba4bd7",
+          "originalSubject": "feat(trip): complete W16 release demo and Payment handoff",
+          "integratedCommit": "507cdc6e01b9e100a19231aae687e81ea1269cf7",
+          "integratedSubject": "feat(trip): complete W16 release demo and Payment handoff",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "cf9a4a1d08665c12d6fc1cfa1f00aad1e1e14c72",
+          "originalSubject": "docs(trip): record stacked release warning accurately",
+          "integratedCommit": "db41aaf0975d7c999f9d3857c4d0fe1c09fe3d2c",
+          "integratedSubject": "docs(trip): record stacked release warning accurately",
+          "patchEquivalent": true
+        }
+      ]
+    },
+    {
+      "member": "B",
+      "sourcePr": 63,
+      "sourceBranch": "feature/B-W16-release-demo",
+      "sourceHead": "28187c5e32e55021701ef03cd72ee725d723eebe",
+      "commits": [
+        {
+          "originalCommit": "169415ae8767848661c1ed34bcd6558306060566",
+          "originalSubject": "test(driver-matching): add deterministic release rehearsals and defense workbook",
+          "integratedCommit": "87eadc42a9d45fa887f7a271c3c4902bda36a17e",
+          "integratedSubject": "test(driver-matching): add deterministic release rehearsals and defense workbook",
+          "patchEquivalent": false,
+          "semanticNote": "Only docs/README.md differs: the integrated index keeps the W15 A/C/team links and adds B demo/defense links. Every other committed file matches the source commit; member-b-live.py is later updated by 598d893 as in the source stack.",
+          "semanticEquivalent": true
+        },
+        {
+          "originalCommit": "598d89301591c6d38adc159b60e9361f0fd37cba",
+          "originalSubject": "fix(demo): honor accepted location ingress and exact final-state checks",
+          "integratedCommit": "9f3a68f990a34b342f2a9d3fac025c6847bb4a6e",
+          "integratedSubject": "fix(demo): honor accepted location ingress and exact final-state checks",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "52137ef371642fd345c4f8070b4839f82f87ce90",
+          "originalSubject": "test(driver-matching): preserve release rehearsal authorities and readiness evidence",
+          "integratedCommit": "c97a7ca2e19d1305b22e074f698babf5ba32abdf",
+          "integratedSubject": "test(driver-matching): preserve release rehearsal authorities and readiness evidence",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "89c4c2cdce26963ebd0d53ae6c3a6946b152a0fa",
+          "originalSubject": "chore(evidence): align release verification with finalized freeze base",
+          "integratedCommit": "ce7339d0a402cf2661a613cac22b7217e2972c2e",
+          "integratedSubject": "chore(evidence): align release verification with finalized freeze base",
+          "patchEquivalent": false,
+          "semanticNote": "Source is a merge of B W16 evidence with the already-integrated B W15 base; cherry-picked with -m 1. The reproduce.ps1 overlay lines were already present in W15 main, so the applied patch covers only the remaining evidence updates; final file blobs match the B branch tip, and 28187c5 was applied afterwards.",
+          "semanticEquivalent": true
+        },
+        {
+          "originalCommit": "28187c5e32e55021701ef03cd72ee725d723eebe",
+          "originalSubject": "fix(evidence): distinguish freeze checkpoint and current branch trees",
+          "integratedCommit": "c92bd5d39195561fe269a6540f5d6c90c35539f6",
+          "integratedSubject": "fix(evidence): distinguish freeze checkpoint and current branch trees",
+          "patchEquivalent": true
+        }
+      ]
+    },
+    {
+      "member": "C",
+      "sourcePr": 55,
+      "sourceBranch": "feature/C-W16-release-demo",
+      "sourceHead": "e75af1242c5d1a94c46234e33d5799915d6f0663",
+      "commits": [
+        {
+          "originalCommit": "55e9dc48d7d01341888e02756e584416fc580558",
+          "originalSubject": "chore(release): complete C W16 demo rehearsal",
+          "integratedCommit": "a80b2a05c46e9d4b1952f189b418d96f2309e476",
+          "integratedSubject": "chore(release): complete C W16 demo rehearsal",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "15c09a55711ed494ae2b1660fcdefa63025f3c2e",
+          "originalSubject": "docs(release): point final manifest at C W16",
+          "integratedCommit": "5aeb2e09802feae86b1c2d3524805965c4228bac",
+          "integratedSubject": "docs(release): point final manifest at C W16",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "aa93ea48426bb6aebb783e362e1227849c36495e",
+          "originalSubject": "fix(release): keep the C gate fail-fast",
+          "integratedCommit": "143fa43179a5703faadfb7b4b7f9e7eec728b451",
+          "integratedSubject": "fix(release): keep the C gate fail-fast",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "f465805314c30b16c5120d4e99bacde44ff0fd12",
+          "originalSubject": "docs(evidence): anchor C W16 verification",
+          "integratedCommit": "3cb7f7a33a72295dc3966bc6ee92898db5f8d0be",
+          "integratedSubject": "docs(evidence): anchor C W16 verification",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "9eb02117cb6c52e3294d82103feb8c3c713072ec",
+          "originalSubject": "fix(release): accept any missing secret diagnostic",
+          "integratedCommit": "7f9a598ae5d2cfbffc9cfb341b8f9ab235ef1e0d",
+          "integratedSubject": "fix(release): accept any missing secret diagnostic",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "a1cd9ab7bf55919ae9306518a7d15a9231a55c30",
+          "originalSubject": "docs(evidence): re-anchor C W16 verification",
+          "integratedCommit": "3cc02cc853d02ea69af37780dc03339a530d7a1e",
+          "integratedSubject": "docs(evidence): re-anchor C W16 verification",
+          "patchEquivalent": true
+        },
+        {
+          "originalCommit": "e75af1242c5d1a94c46234e33d5799915d6f0663",
+          "originalSubject": "docs(evidence): re-anchor C W16 after rebase",
+          "integratedCommit": "f67c63ad77a7e600166bb255f28e964d448c53ea",
+          "integratedSubject": "docs(evidence): re-anchor C W16 after rebase",
+          "patchEquivalent": true
+        }
+      ]
+    }
+  ],
+  "pr56Recovery": [
+    {
+      "item": "source-anchor portability",
+      "source": "PR #56 936a2c7",
+      "disposition": "RETAINED in W15 as 6ba7c1e",
+      "evidence": "verify-source-anchor.test.sh portable file-mode fixture"
+    },
+    {
+      "item": "RabbitMQ connection factory HA fix + tests",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "ALREADY PRESENT in main",
+      "evidence": "RabbitConnectionFactory.cs and RabbitConnectionFactoryTests.cs blobs equal main (b3b344ae/0463c533)"
+    },
+    {
+      "item": "operationKey propagation",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "ALREADY PRESENT in main",
+      "evidence": "TripSagaIntents carries operationKey in envelope and payload; PaymentCommandHandlers consumes command.OperationKey; AUD-05 checks one effect per key"
+    },
+    {
+      "item": "snapshot validity checks",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "SUPERSEDED by newer main script",
+      "evidence": "main performance-snapshot.py adds range queries, explicit required-series selection and finite-series checks; PR #56 version is older"
+    },
+    {
+      "item": "release secret handling",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "SUPERSEDED by C W15/W16 final",
+      "evidence": "C release overlay/scanner plus fail-fast release-check are newer; W15/W16 exact-tree CI validates positive and negative renders"
+    },
+    {
+      "item": "HA recovery scripts",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "SUPERSEDED by newer W14 main scripts",
+      "evidence": "main quorum/REL-15/REL-16 scripts include management-API probes and workload proofs; PR #56 versions are older"
+    },
+    {
+      "item": "CI/hygiene",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "ALREADY PRESENT in main/W15",
+      "evidence": "main/W15 ci.yml includes hygiene, release overlay and scanner gates; PR #56 ci.yml is older"
+    },
+    {
+      "item": "A/C docs/evidence wording",
+      "source": "PR #56 6aa5ed5",
+      "disposition": "SUPERSEDED by A/C W16 branch final content",
+      "evidence": "A/C W16 branch tips contain the final release evidence; later branch commits are evidence-only"
+    },
+    {
+      "item": "still required",
+      "source": "PR #56",
+      "disposition": "NONE",
+      "evidence": "No unique PR #56 W16 code or contract fix remains unimplemented"
+    }
+  ],
+  "notImported": [
+    "PR #56 cumulative A+C history",
+    "PR #56 W13/W14 ancestry",
+    "A/C member branch histories",
+    "PR #49/#50/#54/#55/#62/#63 branch refs"
+  ]
+}

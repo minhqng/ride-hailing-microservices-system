@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "week": "W16",
+  "owner": "TEAM integration",
+  "authority": "Docs 00-03 > Doc 04 section 27 > Doc 05A/B/C W16",
+  "baseMain": {
+    "commit": "6ef99a738f7a3360f2a697dd7695df852365c880",
+    "tree": "7448c1d2cee05aa5b77c880e6031746fd8311a41"
+  },
+  "sourceCommit": "17ca928d5fdd9ef64bba16574503045317033b27",
+  "sourceTree": "59a740ec266acf219bfbbd9e75d98080b6926e06",
+  "status": "PASS_WITH_PROCESS_GAPS",
+  "gates": {
+    "releaseCandidate": "PASS: docs/release-candidate.md prepared; tag NOT CREATED",
+    "crossOwnerContracts": "PASS",
+    "journeys": "PASS: integrated completed/cancel/decline + UNKNOWN trials + retained W11/W14 crash/restart proof",
+    "g4g5Preservation": "PASS: no runtime product source change; W14 evidence retains its source",
+    "security": "PASS: scanner, release fail-closed, 55 HTTP checks, Identity 7/7",
+    "automatedTechnicalRehearsals": "PASS: B three integrated trials",
+    "humanTeamRehearsals": "PENDING",
+    "oralDefense": "PENDING",
+    "peerSignOff": "PENDING",
+    "releaseTag": "NOT_CREATED: separate project-lead authorization required"
+  },
+  "pr56Recovery": {
+    "uniqueCodeRequired": "NONE",
+    "retained": [
+      "source-anchor portability 936a2c7 as W15 6ba7c1e"
+    ],
+    "alreadyPresent": [
+      "RabbitConnectionFactory HA fix and tests",
+      "operationKey propagation"
+    ],
+    "superseded": [
+      "performance-snapshot validity (main newer)",
+      "release secret handling (C W15/W16 newer)",
+      "HA recovery scripts (W14 main newer)",
+      "CI/hygiene (main/W15 newer)",
+      "A/C docs wording (branch final newer)"
+    ],
+    "detail": "source-mapping.json"
+  },
+  "verifiedChecks": {
+    "releaseBuild": "PASS 0 errors, 14 warnings",
+    "secretScan": "PASS 1300 tracked paths",
+    "releaseOverlayPositive": "PASS",
+    "releaseOverlayNegative": "FAIL_CLOSED",
+    "hygieneChangedPaths": "29 clean",
+    "sourceAnchorFixtures": "12/12 PASS",
+    "performanceHarnessUnitTests": "35/35 PASS",
+    "bClaimsValidator": "PASS 174 digest checks",
+    "bFreezeHashes": "7/7 PASS",
+    "bReleaseHashes": "14/14 PASS",
+    "bProviderRegression": "564 passed, 0 failed"
+  },
+  "rehearsal": {
+    "source": {
+      "commit": "17ca928d5fdd9ef64bba16574503045317033b27",
+      "tree": "59a740ec266acf219bfbbd9e75d98080b6926e06"
+    },
+    "project": "team-w12-b-release",
+    "humanParticipation": "NOT PERFORMED",
+    "status": "PASS",
+    "providerRegression": {
+      "passed": 564,
+      "failed": 0,
+      "projects": {
+        "DriverService.UnitTests": 131,
+        "DriverService.IntegrationTests": 118,
+        "MatchingService.UnitTests": 115,
+        "MatchingService.IntegrationTests": 200
+      }
+    },
+    "trials": [
+      {
+        "repeat": 1,
+        "status": "PASS",
+        "demoSeconds": 74.21036690007895,
+        "sharedJourneySeconds": 53.87658830010332,
+        "contenders": 10,
+        "winners": 1,
+        "expectedConflicts": 9,
+        "unexpectedErrors": 0,
+        "aud01": "PASS",
+        "unknownState": "UNKNOWN",
+        "sameReservationReconciled": true,
+        "reserveOutboxCount": 1,
+        "authoritativeReservationCount": 1
+      },
+      {
+        "repeat": 2,
+        "status": "PASS",
+        "demoSeconds": 74.5282991998829,
+        "sharedJourneySeconds": 54.020340900169685,
+        "contenders": 10,
+        "winners": 1,
+        "expectedConflicts": 9,
+        "unexpectedErrors": 0,
+        "aud01": "PASS",
+        "unknownState": "UNKNOWN",
+        "sameReservationReconciled": true,
+        "reserveOutboxCount": 1,
+        "authoritativeReservationCount": 1
+      },
+      {
+        "repeat": 3,
+        "status": "PASS",
+        "demoSeconds": 84.86146609997377,
+        "sharedJourneySeconds": 63.44635710003786,
+        "contenders": 10,
+        "winners": 1,
+        "expectedConflicts": 9,
+        "unexpectedErrors": 0,
+        "aud01": "PASS",
+        "unknownState": "UNKNOWN",
+        "sameReservationReconciled": true,
+        "reserveOutboxCount": 1,
+        "authoritativeReservationCount": 1
+      }
+    ],
+    "auditor": "AUD-01..08 PASS in every trial",
+    "redisReplay": "stale state/location rejected; Driver PostgreSQL authority equal before and after",
+    "teardown": {
+      "composeExit": 0,
+      "testRunnerExit": 0,
+      "cacheVolumeExit": 0
+    },
+    "humanTeamRehearsals": "PENDING",
+    "oralDefense": "PENDING",
+    "peerSignOff": "PENDING"
+  },
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "b1914289544a4d5a3c4f44887a2362d67eb2582e8ca474f50bd0ff4fd1668a3f"
+    },
+    {
+      "path": "source-mapping.json",
+      "sha256": "6abb4c9dd27f159c97b53e2383d98a6e0e7e1fd05fef555ddad8d6205316bd65"
+    },
+    {
+      "path": "task-status.md",
+      "sha256": "79cf53ceda64d137f48f6e325f735243628d0759db847a9b84862dd713b97fbb"
+    },
+    {
+      "path": "release-evidence.md",
+      "sha256": "fc820eb5913ff2790a77c3ef7322fbc388e1502d7a7798b83289636ba6f5c67e"
+    },
+    {
+      "path": "test-output.txt",
+      "sha256": "eb3ff499eee8810e67880f0ea4e779ec8a7a339e48d386ff8175c15ef8079ec3"
+    },
+    {
+      "path": "final-state/release-config.json",
+      "sha256": "4f227d72a7d5158983e9a7b9fb2dce4feb7e28a7c56809771f43bd374159aee0"
+    },
+    {
+      "path": "final-state/rehearsal-summary.json",
+      "sha256": "476466225a8558d262e9b66960b88acd4259d365f4c0e28c381eb9e0c93645da"
+    }
+  ],
+  "ci": {
+    "note": "Exact-tree CI is recorded by the integration/team-w16-final pull request checks; the checkout tree must equal the source tree.",
+    "candidateTree": "59a740ec266acf219bfbbd9e75d98080b6926e06"
+  },
+  "limitations": [
+    "Three actual human team rehearsals, oral defense and peer sign-off are PENDING.",
+    "Final release tag/GitHub Release is not created; separate authorization required.",
+    "No whole-system/multi-region HA claim; W14 evidence retains its recorded scope.",
+    "Historical performance measurements retain their recorded environment and sample limits."
+  ]
+}

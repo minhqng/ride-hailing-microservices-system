@@ -7,3 +7,4 @@ Commit manifests/summaries and auditor outputs. Do not commit large raw dumps or
 - Keep blocked or pending live runs explicit; configuration validation is not
   runtime failover evidence.
 - W15 integration gates and source mapping: `evidence/team/w15-integration/`.
+- W16 release, contract and rehearsal evidence: `evidence/team/w16-integration/`.
