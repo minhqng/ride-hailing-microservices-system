@@ -1,0 +1,31 @@
+{
+  "elapsedSeconds": 12.876584599958733,
+  "cases": [
+    {
+      "project": "RideHailing.MatchingService.IntegrationTests",
+      "passed": 1,
+      "failed": 0,
+      "total": 1
+    }
+  ],
+  "authorityProof": {
+    "scenario": "REL-01",
+    "tripId": "9a391173-f4f8-41eb-803c-236340eeecbf",
+    "driverId": "94d101ec-35d2-4800-be40-6ab98c0d88f6",
+    "otherDriverId": "80cf24c4-e2f2-4093-a574-866c7bae645e",
+    "reservationId": "bba9ed46-f114-4802-92a3-35aa722c23a8",
+    "postCommitReservationId": "bba9ed46-f114-4802-92a3-35aa722c23a8",
+    "uncertainState": "UNKNOWN",
+    "uncertainReservationId": "bba9ed46-f114-4802-92a3-35aa722c23a8",
+    "attemptCount": 1,
+    "finalAttemptState": "RESERVED",
+    "finalRoundStatus": "RESERVED",
+    "finalRoundReservationId": "bba9ed46-f114-4802-92a3-35aa722c23a8",
+    "finalDriverStatus": "Reserved",
+    "finalDriverReservationId": "bba9ed46-f114-4802-92a3-35aa722c23a8",
+    "otherDriverStatus": "Available",
+    "reserveOutboxCount": 1,
+    "authoritativeReservationCount": 1
+  },
+  "proofBoundary": "Production Driver Kestrel endpoint/repository/faultpoint and Matching typed HTTP client/orchestrator; full production worker/process recovery in regression"
+}
