@@ -63,6 +63,14 @@ run.
   peer acknowledgement or oral defense is claimed.
 - Final release tag: NOT CREATED.
 
+## Evidence scope note
+
+Member C's W16 manifest records a member-scoped `0 warnings` release build.
+On the integrated W15/W16 candidate the Release solution build is **0 errors,
+14 pre-existing analyzer warnings**; the integrated figure supersedes the
+member-scoped number for any release claim. The warning count is identical to
+B's source-bound freeze record.
+
 ## Limitations
 
 - Human/course gates cannot be manufactured by automation.

@@ -132,7 +132,7 @@
   "artifacts": [
     {
       "path": "README.md",
-      "sha256": "b1914289544a4d5a3c4f44887a2362d67eb2582e8ca474f50bd0ff4fd1668a3f"
+      "sha256": "4a12de066f0de2f6fe9948c72ce9752fa828760fd2d0ec88e105133fda3e0c16"
     },
     {
       "path": "source-mapping.json",
@@ -144,11 +144,11 @@
     },
     {
       "path": "release-evidence.md",
-      "sha256": "fc820eb5913ff2790a77c3ef7322fbc388e1502d7a7798b83289636ba6f5c67e"
+      "sha256": "7546a0789865217ac9afd600a5f9e40ed24ce9f5b3a60d52f61f182ac2c433c1"
     },
     {
       "path": "test-output.txt",
-      "sha256": "eb3ff499eee8810e67880f0ea4e779ec8a7a339e48d386ff8175c15ef8079ec3"
+      "sha256": "d366e19b00eb82b6983ec12d4e152f741e33a272c09e66dc3eb3d2e4961de080"
     },
     {
       "path": "final-state/release-config.json",
@@ -160,8 +160,43 @@
     }
   ],
   "ci": {
-    "note": "Exact-tree CI is recorded by the integration/team-w16-final pull request checks; the checkout tree must equal the source tree.",
-    "candidateTree": "59a740ec266acf219bfbbd9e75d98080b6926e06"
+    "runId": 41655374106,
+    "url": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41655374106",
+    "runHead": "4168a247c539a1478ba88fd3bb7303aadba5313a",
+    "mergeCheckoutSha": "18a5534d0c342bb06e23eac18090c57c376f2d0e",
+    "mergeCheckoutTree": "a85b85b3a6d5d33098a6cc792f0a55d6a4b99197",
+    "candidateTree": "a85b85b3a6d5d33098a6cc792f0a55d6a4b99197",
+    "exactTreeMatch": true,
+    "conclusion": "success",
+    "jobs": {
+      "hygiene": "success",
+      "compose-config": "success",
+      "build-test": "success",
+      "platform-smoke": "success",
+      "fault-campaign": "skipped (W11-only gate)"
+    },
+    "trx": {
+      "passed": 1223,
+      "failed": 0,
+      "optInIdentityNotExecuted": 1,
+      "systemTestsDiscovered": 0
+    },
+    "identityLane": {
+      "passed": 7,
+      "total": 7
+    },
+    "securityChecks": 55,
+    "coreRuntimeScenarios": [
+      "completed",
+      "cancelled-during-authorization",
+      "terminal-authorization-decline"
+    ],
+    "auditorChecks": "AUD-01..08 PASS",
+    "providers": {
+      "postgres": "18.6",
+      "rabbitmq": "4.3.6",
+      "redis": "8.10.2"
+    }
   },
   "limitations": [
     "Three actual human team rehearsals, oral defense and peer sign-off are PENDING.",
