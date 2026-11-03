@@ -25,7 +25,7 @@ public class DbIsolationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _container = new PostgreSqlBuilder("postgres:18.6")
+        _container = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
             .WithAutoRemove(true)
             .Build();
         await _container.StartAsync();

@@ -53,13 +53,13 @@ public sealed class B12AuditFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _driver = new PostgreSqlBuilder("postgres:18.6")
+        _driver = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
             .WithDatabase("driver_db").WithUsername("driver_app").WithPassword("driver_dev_pw")
             .WithAutoRemove(true).Build();
-        _matching = new PostgreSqlBuilder("postgres:18.6")
+        _matching = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
             .WithDatabase("matching_db").WithUsername("matching_app").WithPassword("matching_dev_pw")
             .WithAutoRemove(true).Build();
-        _trip = new PostgreSqlBuilder("postgres:18.6")
+        _trip = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
             .WithDatabase("trip_db").WithUsername("trip_app").WithPassword("trip_dev_pw")
             .WithAutoRemove(true).Build();
 

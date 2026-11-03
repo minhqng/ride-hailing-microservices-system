@@ -14,14 +14,14 @@ namespace RideHailing.Platform.IntegrationTests;
 
 public sealed class RabbitBackboneFixture : IAsyncLifetime
 {
-    public IContainer Broker { get; } = new ContainerBuilder("rabbitmq:4.3.6-management")
+    public IContainer Broker { get; } = new ContainerBuilder("rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58")
         .WithEnvironment("RABBITMQ_DEFAULT_USER", "proof")
         .WithEnvironment("RABBITMQ_DEFAULT_PASS", "proof-local-only")
         .WithResourceMapping(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "broker-reliability.json")), "/tmp/ride-reliability.json")
         .WithPortBinding(5672, true)
         .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("Server startup complete"))
         .Build();
-    private readonly PostgreSqlContainer database = new PostgreSqlBuilder("postgres:18.6").Build();
+    private readonly PostgreSqlContainer database = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81").Build();
     public NpgsqlDataSource Source { get; private set; } = null!;
     public ConnectionFactory Factory => new()
     {

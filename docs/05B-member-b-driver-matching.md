@@ -421,8 +421,10 @@ tests/
 ├─ DriverService.UnitTests/
 ├─ DriverService.IntegrationTests/
 ├─ MatchingService.UnitTests/
-├─ MatchingService.IntegrationTests/
-└─ SystemTests/
+└─ MatchingService.IntegrationTests/
+
+The empty SystemTests placeholder was removed (AUD-09); real system gates
+live in `scripts/test/*.py` (core-runtime-gate, release-smoke, ...).
 ```
 
 ---

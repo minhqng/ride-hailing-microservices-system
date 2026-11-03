@@ -1,7 +1,7 @@
 // B-W08: real RabbitMQ for broker proofs (no fake-green).
 // RABBITMQ_TEST_CONNECTION explicitly set => verified now, failure throws
 // loud. Otherwise disposable Testcontainers RabbitMQ
-// (rabbitmq:4.3.6-management, pinned like compose); any start failure throws
+// (rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58, pinned like compose); any start failure throws
 // loud (Ryuk disabled; cleanup explicit via AutoRemove + DisposeAsync).
 // One container per test run (not per test); topology declared per test run.
 using Testcontainers.RabbitMq;
@@ -28,8 +28,8 @@ public sealed class RabbitMqDatabase : IAsyncLifetime
             return;
         }
 
-        _container = new RabbitMqBuilder("rabbitmq:4.3.6-management")
-            .WithImage("rabbitmq:4.3.6-management")
+        _container = new RabbitMqBuilder("rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58")
+            .WithImage("rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58")
             .WithAutoRemove(true)
             .Build();
         await _container.StartAsync();

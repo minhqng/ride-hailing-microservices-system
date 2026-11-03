@@ -222,7 +222,7 @@ def migrate(values):
              "-v", mount + ":/work", "-v", "ride-release-nuget:/tmp/nuget",
              "-w", "/work", "-e", "NUGET_PACKAGES=/tmp/nuget",
              "-e", "ConnectionStrings__Postgres", "-e", "Auth__PublicKeyBase64",
-             "mcr.microsoft.com/dotnet/sdk:10.0", "bash", "-c", command],
+             "mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b", "bash", "-c", command],
             cwd=ROOT, env=environment, text=True, capture_output=True)
     if result.returncode != 0:
         raise RuntimeError("Trip migration failed:\n" + (result.stdout + result.stderr)[-6000:])
@@ -459,7 +459,7 @@ def main():
         else:
             sentinel = "ride-release-sentinel-" + uuid.uuid4().hex[:12]
             subprocess.run(["docker", "run", "-d", "--rm", "--name", sentinel,
-                            "alpine:3.21", "sleep", "300"], check=True,
+                            "alpine:3.21@sha256:ee16d92f96db08d9d2d07da48555a27f3a69d8f0759021dbc601195ed0d2b5bd", "sleep", "300"], check=True,
                            text=True, capture_output=True)
             try:
                 compose("down", "-v", "--remove-orphans", check=False)

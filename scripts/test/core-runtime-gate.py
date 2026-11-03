@@ -63,7 +63,7 @@ def actor(command, trip, driver, reservation):
     # Only Trip's own connection is supplied to this operator-controlled actor.
     environment = dict(os.environ, TRIP_DB="Host=postgres;Database=trip_db;Username=trip_app;Password=" + settings["TRIP_DB_PASSWORD"], TRACEPARENT=trace_parent)
     args = ["docker", "run", "--rm", "--name", "team-w12-lifecycle-actor", "--network", project + "_ride-net", "-v", str(root).replace("\\", "/") + ":/work:ro", "-w", "/work", "-e", "TRIP_DB", "-e", "TRACEPARENT",
-            "mcr.microsoft.com/dotnet/sdk:10.0", "dotnet", "scripts/test/w10-g3-harness/bin/Release/net10.0/RideHailing.W10Harness.dll", command, trip, driver, reservation]
+            "mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b", "dotnet", "scripts/test/w10-g3-harness/bin/Release/net10.0/RideHailing.W10Harness.dll", command, trip, driver, reservation]
     result = subprocess.run(args, cwd=root, env=environment, capture_output=True, text=True, check=True)
     value = json.loads(result.stdout.strip().splitlines()[-1])
     assert value["ok"], "Production lifecycle handler rejected " + command

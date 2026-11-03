@@ -45,9 +45,6 @@
     <Project Path="tests/Integration/RideHailing.Platform.IntegrationTests/RideHailing.Platform.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj" />
   </Folder>
-  <Folder Name="/tests/System/">
-    <Project Path="tests/System/RideHailing.SystemTests/RideHailing.SystemTests.csproj" />
-  </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/RideHailing.DriverService.UnitTests/RideHailing.DriverService.UnitTests.csproj" />
     <Project Path="tests/Unit/RideHailing.MatchingService.UnitTests/RideHailing.MatchingService.UnitTests.csproj" />

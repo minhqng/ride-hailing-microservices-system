@@ -1,7 +1,7 @@
 // Driver PostgreSQL fixture: REAL infrastructure, never a vacuous pass.
 // Resolution order:
 //   1. DRIVER_TEST_POSTGRES explicitly set => verify now; any failure throws loud.
-//   2. Otherwise disposable Testcontainers PostgreSQL (postgres:18.6, same seed
+//   2. Otherwise disposable Testcontainers PostgreSQL (postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81, same seed
 //      as compose); any start/apply failure throws loud ( Ryuk disabled; cleanup
 //      is explicit via DisposeAsync; the owned container also supports restart proofs).
 // Applies ALL migration scripts in filename order (001, 002, ...).
@@ -51,7 +51,7 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             return;
         }
 
-        _container = new PostgreSqlBuilder("postgres:18.6")
+        _container = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
             .WithDatabase("driver_db")
             .WithUsername("driver_app")
             .WithPassword("driver_dev_pw")

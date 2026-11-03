@@ -22,18 +22,22 @@ public static class AuditEnvironment
     public static string SourceTree => LazyTree.Value;
     public static string SourceStatus => LazyStatus.Value;
 
-    public static string OutputDirectory
-    {
-        get
-        {
-            var configured = Environment.GetEnvironmentVariable("B12_AUDIT_OUTPUT_DIR");
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                return Path.GetFullPath(configured);
-            }
+    public static string OutputDirectory => ResolveOutputDirectory(
+        Environment.GetEnvironmentVariable("B12_AUDIT_OUTPUT_DIR"), RepoRoot);
 
-            return Path.Combine(RepoRoot, "evidence", "member-b", "w12-observability-g4", "auditor");
+    /// <summary>
+    /// Plain test execution must never dirty tracked evidence. The default is
+    /// a gitignored TestResults directory; a curated evidence update requires
+    /// the explicit B12_AUDIT_OUTPUT_DIR path.
+    /// </summary>
+    internal static string ResolveOutputDirectory(string? configured, string repoRoot)
+    {
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return Path.GetFullPath(configured);
         }
+
+        return Path.Combine(repoRoot, "TestResults", "b12-audit");
     }
 
     private static string Git(string arguments)

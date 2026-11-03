@@ -38,7 +38,7 @@ public sealed class MatchingSnapshotPreservationTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _redis = new RedisBuilder("redis:8.10.2").WithAutoRemove(true).Build();
+        _redis = new RedisBuilder("redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901").WithAutoRemove(true).Build();
         await _redis.StartAsync();
         var cs = RedisDatabase.FixContainerHost(_redis.GetConnectionString());
         _mux = (ConnectionMultiplexer)await RedisProjectionUpdater.ConnectAsync(cs);
