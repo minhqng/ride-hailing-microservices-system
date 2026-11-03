@@ -1,0 +1,240 @@
+{
+  "scenario": "CON-01/REL-12/REL-13",
+  "elapsedSeconds": 7.418664600001648,
+  "n": 10,
+  "winners": 1,
+  "expectedConflicts": 9,
+  "unexpectedErrors": 0,
+  "samples": [
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 51.70530010946095,
+      "outcome": "domainConflict",
+      "index": 0,
+      "tripId": "129fd169-4595-54a7-90e5-2952e4eb6d1e",
+      "reservationId": "61921e6c-99a9-5aea-9d67-f4113a4dfc7f",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 42.307000141590834,
+      "outcome": "domainConflict",
+      "index": 1,
+      "tripId": "d95f8858-4c98-52fe-a4fb-cb396fa47235",
+      "reservationId": "e4d3443b-98cc-5d7d-8230-7428cdb7c84a",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 45.428800163790584,
+      "outcome": "domainConflict",
+      "index": 2,
+      "tripId": "797564d8-6794-5e8b-bfa6-7bfc115e8f96",
+      "reservationId": "f80e0dab-00d8-5714-9498-5e7a3047ba47",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 40.76269990764558,
+      "outcome": "domainConflict",
+      "index": 3,
+      "tripId": "57b8b56d-150e-5bf8-be83-1937657cfd69",
+      "reservationId": "6fecafee-980f-57dd-9a85-a90b168d745b",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 200,
+      "code": null,
+      "responseOutcome": "won",
+      "latencyMs": 37.08130004815757,
+      "outcome": "success",
+      "index": 4,
+      "tripId": "3e8985e8-425a-53ec-80ab-407dd784ea05",
+      "reservationId": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 50.97620002925396,
+      "outcome": "domainConflict",
+      "index": 5,
+      "tripId": "288657d9-0451-5d21-8cef-a91af1d6cd5f",
+      "reservationId": "abdd3e7c-28f0-5e48-a8bd-d9b9190a1ede",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 41.737599996849895,
+      "outcome": "domainConflict",
+      "index": 6,
+      "tripId": "efd0af3b-bdde-5b6c-8819-c1d52159915f",
+      "reservationId": "cbe54917-4d9c-5222-b9f2-71f814f1652b",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 47.117199981585145,
+      "outcome": "domainConflict",
+      "index": 7,
+      "tripId": "47f83158-b034-569a-b1fb-4e77d505aad6",
+      "reservationId": "f004ead4-84d1-53dc-baa4-78ba5a13c040",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 46.15389998070896,
+      "outcome": "domainConflict",
+      "index": 8,
+      "tripId": "9b0ca8f1-a46a-5586-a441-87ffcf5b3bb3",
+      "reservationId": "cca5ab71-5453-575b-a569-d6f94782cb73",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    },
+    {
+      "status": 409,
+      "code": "STALE_VERSION",
+      "responseOutcome": null,
+      "latencyMs": 48.317299922928214,
+      "outcome": "domainConflict",
+      "index": 9,
+      "tripId": "0c31caf5-e10a-56bd-bf81-7b9c70804ab2",
+      "reservationId": "32640228-4843-5e80-a35f-0e6341a2d233",
+      "barrierSpreadMs": 1.4947,
+      "wallMs": 72.28339998982847
+    }
+  ],
+  "finalAuthority": {
+    "driver": {
+      "driver_id": "a9277573-67f3-4531-8385-e7cfbc725edc",
+      "user_id": "e880d622-d315-44f0-a4ab-33381c550346",
+      "status": "RESERVED",
+      "version": 3,
+      "reserved_trip_id": "3e8985e8-425a-53ec-80ab-407dd784ea05",
+      "reservation_id": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+      "active_trip_id": null,
+      "reserved_round": 1
+    },
+    "activeReservationRows": [
+      {
+        "driver_id": "a9277573-67f3-4531-8385-e7cfbc725edc",
+        "reservation_id": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+        "reserved_trip_id": "3e8985e8-425a-53ec-80ab-407dd784ea05"
+      }
+    ],
+    "reserveOutbox": [
+      {
+        "message_id": "757ee1ee1e26f60a11667b0e500c3260",
+        "message_type": "DriverReservedV1",
+        "status": "PUBLISHED",
+        "aggregate_id": "a927757367f345318385e7cfbc725edc",
+        "reservation_id": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+        "trip_id": "3e8985e8-425a-53ec-80ab-407dd784ea05"
+      }
+    ],
+    "lifecycleEffects": [],
+    "reservationHolders": [
+      {
+        "driver_id": "a9277573-67f3-4531-8385-e7cfbc725edc",
+        "status": "RESERVED"
+      }
+    ]
+  },
+  "aud01": {
+    "status": "PASS",
+    "checks": {
+      "driverExists": true,
+      "reservedState": true,
+      "singleActiveRow": true,
+      "oneReservationHolder": true,
+      "winnerReservationMatches": true,
+      "winnerTripMatches": true,
+      "oneReserveOutboxIntent": true,
+      "outboxPayloadMatchesWinner": true,
+      "driverVersionIncrementedOnce": true,
+      "reservedRoundRecorded": true,
+      "noLifecycleEffect": true
+    }
+  },
+  "redis": {
+    "staleStateResult": [
+      "stale",
+      "skipped",
+      "removed"
+    ],
+    "staleLocationResult": [
+      "skipped",
+      "stale",
+      "removed"
+    ],
+    "driverBefore": {
+      "driver_id": "a9277573-67f3-4531-8385-e7cfbc725edc",
+      "user_id": "e880d622-d315-44f0-a4ab-33381c550346",
+      "status": "RESERVED",
+      "version": 3,
+      "reserved_trip_id": "3e8985e8-425a-53ec-80ab-407dd784ea05",
+      "reservation_id": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+      "active_trip_id": null,
+      "reserved_round": 1
+    },
+    "driverAfter": {
+      "driver_id": "a9277573-67f3-4531-8385-e7cfbc725edc",
+      "user_id": "e880d622-d315-44f0-a4ab-33381c550346",
+      "status": "RESERVED",
+      "version": 3,
+      "reserved_trip_id": "3e8985e8-425a-53ec-80ab-407dd784ea05",
+      "reservation_id": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+      "active_trip_id": null,
+      "reserved_round": 1
+    },
+    "proofBoundary": "Real accepted state/location replay into production Redis Function; provider handler/receipt path separately regression-tested"
+  },
+  "afterExactReleaseAndOffline": {
+    "driver": {
+      "driver_id": "a9277573-67f3-4531-8385-e7cfbc725edc",
+      "user_id": "e880d622-d315-44f0-a4ab-33381c550346",
+      "status": "OFFLINE",
+      "version": 5,
+      "reserved_trip_id": null,
+      "reservation_id": null,
+      "active_trip_id": null,
+      "reserved_round": null
+    },
+    "activeReservationRows": [],
+    "reserveOutbox": [
+      {
+        "message_id": "757ee1ee1e26f60a11667b0e500c3260",
+        "message_type": "DriverReservedV1",
+        "status": "PUBLISHED",
+        "aggregate_id": "a927757367f345318385e7cfbc725edc",
+        "reservation_id": "6d4c6ae4-5523-5aef-9e21-1bbe59fd48c4",
+        "trip_id": "3e8985e8-425a-53ec-80ab-407dd784ea05"
+      }
+    ],
+    "lifecycleEffects": [],
+    "reservationHolders": []
+  }
+}
