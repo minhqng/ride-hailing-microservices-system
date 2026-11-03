@@ -385,13 +385,14 @@ def main():
             check("COMPLETED-JOURNEY", True)
 
             token, trip_id, reservation, proof = start_trip("cancelled")
-            compose("stop", "payment")
+            # AUD-05 frozen policy: cancel after the authorization succeeded.
+            # READY_TO_START cancellation must release the exact reservation,
+            # void the hold with the stable void key, and compensate the Saga.
             harness("accept", trip_id, driver_id, reservation)
-            wait("accepted before cancellation",
+            wait("authorization before cancellation",
                  lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + trip_id + "'"),
-                 lambda value: value[0]["state"] == "DRIVER_ACCEPTED")
+                 lambda value: value[0]["state"] == "READY_TO_START")
             http("POST", "/trips/" + trip_id + "/cancel", {}, token)
-            compose("start", "payment")
             wait("cancelled saga", lambda: rows("trip_db", "SELECT * FROM ride_sagas WHERE trip_id='" + trip_id + "'"),
                  lambda value: value and value[0]["status"] == "COMPENSATED")
             cancelled = rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + trip_id + "'")[0]
