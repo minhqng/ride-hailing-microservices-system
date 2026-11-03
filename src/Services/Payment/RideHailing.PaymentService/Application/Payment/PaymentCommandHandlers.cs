@@ -79,7 +79,7 @@ public sealed class PaymentCommandHandlers(
                 OperationKey = result.OperationKey,
                 ProviderEffectId = result.ProviderEffectId ?? throw new InvalidOperationException("Missing provider effect.")
             },
-            _ => new PaymentAuthorizationFailedV1
+            _ => new PaymentAuthorizationVoidFailedV1
             {
                 TripId = result.TripId,
                 OperationKey = result.OperationKey,

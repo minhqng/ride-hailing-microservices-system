@@ -116,6 +116,31 @@ public sealed record PaymentOperation
                 ProviderEffectId = effectId, ResultCode = "APPROVED", CompletedAt = now, UpdatedAt = now };
     }
 
+    /// <summary>
+    /// Crash window recovery: the provider committed its effect but Payment's
+    /// local attempt transaction rolled back, leaving the intent PENDING. The
+    /// independently committed effect proves the money moved, so the same
+    /// operation is completed without a second financial operation.
+    /// </summary>
+    public PaymentOperation RecoverCommittedEffect(string effectId, DateTimeOffset now)
+    {
+        if (State != PaymentOperationState.Pending || now < UpdatedAt)
+            throw new InvalidOperationException("Only a pending operation can recover a committed provider effect");
+        if (string.IsNullOrWhiteSpace(effectId))
+            throw new ArgumentException("Invalid provider reference", nameof(effectId));
+
+        return this with
+        {
+            State = PaymentOperationState.Succeeded,
+            ProviderEffectOccurred = true,
+            ProviderEffectId = effectId,
+            ResultCode = "APPROVED",
+            AttemptCount = Math.Max(AttemptCount, 1),
+            CompletedAt = now,
+            UpdatedAt = now
+        };
+    }
+
     public PaymentOperation RequireReview(DateTimeOffset now)
     {
         if (State is not (PaymentOperationState.Pending or PaymentOperationState.Unknown) || AttemptCount == 0 || now < UpdatedAt)

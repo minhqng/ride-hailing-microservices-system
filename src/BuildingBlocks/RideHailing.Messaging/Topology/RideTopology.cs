@@ -18,6 +18,7 @@ public static class RideTopology
         ("trip.payment-outcome.q", EventsExchange, "payment.authorized.v1"),
         ("trip.payment-outcome.q", EventsExchange, "payment.authorization-failed.v1"),
         ("trip.payment-outcome.q", EventsExchange, "payment.authorization-voided.v1"),
+        ("trip.payment-outcome.q", EventsExchange, "payment.void-failed.v1"),
         ("trip.payment-outcome.q", EventsExchange, "payment.captured.v1"),
         ("trip.payment-outcome.q", EventsExchange, "payment.capture-pending.v1"),
         ("trip.payment-outcome.q", EventsExchange, "payment.requires-review.v1"),

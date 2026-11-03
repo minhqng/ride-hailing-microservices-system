@@ -24,7 +24,8 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
             ["trip.matching-outcome.q"] = new HashSet<string>(StringComparer.Ordinal) { "MatchingFailedV1" },
             ["trip.payment-outcome.q"] = new HashSet<string>(StringComparer.Ordinal)
             { "PaymentAuthorizedV1", "PaymentAuthorizationFailedV1", "PaymentAuthorizationVoidedV1",
-              "PaymentCapturedV1", "PaymentCapturePendingV1", "PaymentRequiresReviewV1" }
+              "PaymentAuthorizationVoidFailedV1", "PaymentCapturedV1", "PaymentCapturePendingV1",
+              "PaymentRequiresReviewV1" }
         };
 
     public async Task HandleAsync(string consumer, MessageEnvelope<JsonElement> envelope, CancellationToken token)
@@ -344,7 +345,16 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
             reasonCode = code.GetString();
         }
 
-        return new PaymentOutcomeFact(envelope.MessageType, envelope.OperationKey, envelope.SagaId, reasonCode);
+        var retryable = false;
+        if (envelope.Payload.ValueKind == JsonValueKind.Object &&
+            envelope.Payload.TryGetProperty("retryable", out var flag) &&
+            flag.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            retryable = flag.GetBoolean();
+        }
+
+        return new PaymentOutcomeFact(
+            envelope.MessageType, envelope.OperationKey, envelope.SagaId, reasonCode, retryable);
     }
 
     private static Guid RequiredGuid(JsonElement payload, string name)
