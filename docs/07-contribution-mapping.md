@@ -94,3 +94,28 @@ the final release report.
 
 The automated clean clones, exact-tree CI, release smoke and B trials are real
 technical evidence; they are not substitutes for the human acts above.
+
+## Remediation integration record (AUD-01..AUD-11)
+
+All remediation PRs were merged with history-preserving rebase merges; each
+kept its own Author/Committer fields. The code main below is the runtime tree
+that the final exact-tree CI verified; the evidence PR is documentation and
+evidence only and does not change that runtime tree.
+
+| PR | Scope | Merge SHA |
+| --- | --- | --- |
+| #66 | AUD-01 test-execution integrity | `a6d10e69a90479d489946b107000e10b6776e92a` |
+| #67 | AUD-04 + AUD-06 Production release workflow | `ed9ea900d2584d066e0712895cb9386e1db5a52d` |
+| #68 | AUD-05 pre-start cancellation policy | `0ec290921dd9677853bebc028a4a796d0c0833a6` |
+| #69 | AUD-02 public Driver lifecycle transport | `2950931ec87fe454bf4014ae8275861ff59546d4` |
+| #70 | AUD-08 security hardening | `ce3ab9fe772e7dda20e3ad0de532b36c4337ccfa` |
+| #72 | AUD-03 + AUD-07 Payment recovery and void lineage | `3bccf0fb56ebb0d77145cd74579ffbd12cdff996` |
+| #71 | AUD-09 + AUD-10 isolation, image pins and startup coordination | `6a4c1325523ce789b0b79de2f18990a0fc65d40c` |
+| #73 | AUD-11 mapping and remediation evidence | this evidence PR |
+
+Release code main: `6a4c1325523ce789b0b79de2f18990a0fc65d40c`, tree
+`f17e2359698d8597a750a1c04f448185ac683087`. Exact-tree CI run
+`41683319191` passed hygiene, build-test, compose-config, platform-smoke and
+release-smoke on that tree; the post-merge main CI is recorded in
+`evidence/integration/aud-remediation/manifest.json`. The final report records
+the evidence-main SHA after this PR merges.
