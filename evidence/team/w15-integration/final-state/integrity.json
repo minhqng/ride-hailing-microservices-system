@@ -1,0 +1,43 @@
+{
+  "releaseBuild": {
+    "tool": "mcr.microsoft.com/dotnet/sdk:10.0",
+    "configuration": "Release",
+    "result": "PASS",
+    "warnings": 14,
+    "errors": 0,
+    "warningCountMatchesBSourceBoundFreeze": true
+  },
+  "secretScan": {
+    "command": "python scripts/security/scan-secrets.py",
+    "result": "PASS",
+    "trackedPaths": 1267
+  },
+  "releaseOverlay": {
+    "positiveRenderWithSecrets": "PASS",
+    "negativeRenderWithoutSecrets": "FAIL_CLOSED",
+    "negativeDiagnostic": "must be set for the release overlay"
+  },
+  "hygiene": {
+    "selfTest": "24/24 PASS",
+    "changedPaths": 23,
+    "result": "PASS"
+  },
+  "sourceAnchorFixtures": {
+    "passed": 12,
+    "total": 12
+  },
+  "performanceHarnessUnitTests": {
+    "passed": 35,
+    "total": 35
+  },
+  "bClaimsValidator": {
+    "result": "PASS",
+    "digestChecks": 174,
+    "distinctArtifacts": 162
+  },
+  "bFreezeManifestHashes": {
+    "verified": 7,
+    "total": 7,
+    "canonicalLf": true
+  }
+}
