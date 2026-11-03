@@ -72,6 +72,7 @@ def validate_w13(provenance, results):
     groups = defaultdict(list)
     for path, m in manifests:
         source = m['source']
+        assert source['commit'] == provenance['sourceCommit'] and source['tree'] == provenance['sourceTree'], 'W13 run source differs from curated provenance'
         assert subprocess.check_output(['git', 'rev-parse', source['commit'] + '^{tree}'], cwd=ROOT, text=True).strip() == source['tree']
         rid = m['runId']
         exp = m['experiment']
