@@ -17,8 +17,15 @@ Reading order: 00 → 01 → 02 → 03 → 04 → 05A/B/C. Priority: 00–03 ove
 
 Runtime guides (implementation usage; canonical specs above remain authoritative):
 
+- [Team technical report](team-technical-report.md): W15 freeze synthesis,
+  architecture, methods, verification and contribution traceability.
+- [Trip, Outbox and Saga report](member-a-trip-saga-report.md): Member A
+  lifecycle, Outbox crash windows, compensation and evidence scope.
 - [Driver/Matching technical report](driver-matching-report.md): authority,
   OCC, Redis, durable UNKNOWN recovery, proof diagrams and measured-claim limits.
+- [Messaging and Payment reliability report](member-c-reliability-report.md):
+  Member C confirms, ACK-after-commit, deduplication, Outbox relay, DLQ,
+  Payment idempotency, observability and HA claim boundaries.
 
 - [Messaging runtime](messaging-runtime.md): publisher/consumer lifecycle, confirms, ACK and retry ownership.
 - [Payment simulator](../src/Services/Payment/RideHailing.PaymentService/README.md): durable replay, reconciliation and verification commands.
