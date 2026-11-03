@@ -615,7 +615,11 @@ public class DriverEventPublishTests
     public async Task Publish_Failure_Returns_False_Without_Throwing()
     {
         var dead = new DriverEventPublisher(
-            Options.Create(new DriverBrokerOptions { Host = "localhost", Port = 1, PublishTimeoutSeconds = 2 }),
+            Options.Create(new DriverBrokerOptions
+            {
+                Host = "localhost", Port = 1, PublishTimeoutSeconds = 2,
+                Username = "test", Password = "test",
+            }),
             new TestLogger<DriverEventPublisher>());
         Assert.False(await dead.PublishLocationAsync(new DriverLocationEventPayload(
             Guid.NewGuid(), 0, 0, "s", 0, DateTimeOffset.UtcNow)));

@@ -1,5 +1,6 @@
 // Driver service (Owner B). W3: FSM + location ingress, Npgsql raw, no Redis/Matching yet.
 // W9: authoritative Driver events use C's shared transactional Outbox and relay.
+using Microsoft.AspNetCore.RateLimiting;
 using Npgsql;
 using RabbitMQ.Client;
 using RideHailing.DriverService.Api;
@@ -21,6 +22,11 @@ builder.AddRideTelemetry("driver-service");
 builder.AddDriverTelemetry();
 DriverIngressLimits.Apply(builder);
 builder.Services.AddHealthChecks();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(DriverRateLimitPolicy.Location, DriverRateLimitPolicy.LocationPartition);
+});
 builder.Services.Configure<LocationIngressOptions>(builder.Configuration.GetSection("Location"));
 
 // Fail-fast on missing configuration like TripService: no hard-coded
@@ -82,6 +88,7 @@ if (brokerOptions.CommandsEnabled)
 
 var app = builder.Build();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 app.UseDriverAccessGuard();
 

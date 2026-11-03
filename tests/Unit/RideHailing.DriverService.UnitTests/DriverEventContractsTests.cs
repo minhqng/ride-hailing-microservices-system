@@ -35,10 +35,37 @@ public class DriverEventContractsTests
     [Fact]
     public void Broker_Options_Reject_Bad_Policy()
     {
-        Assert.NotNull(new DriverBrokerOptions { Host = "" }.Validate());
-        Assert.NotNull(new DriverBrokerOptions { PublishTimeoutSeconds = 0 }.Validate());
-        Assert.NotNull(new DriverBrokerOptions { PublishTimeoutSeconds = 61 }.Validate());
-        Assert.Null(new DriverBrokerOptions().Validate());
+        Assert.NotNull(new DriverBrokerOptions { Host = "", Username = "ride_app", Password = "test" }.Validate());
+        Assert.NotNull(new DriverBrokerOptions { PublishTimeoutSeconds = 0, Username = "ride_app", Password = "test" }.Validate());
+        Assert.NotNull(new DriverBrokerOptions { PublishTimeoutSeconds = 61, Username = "ride_app", Password = "test" }.Validate());
+        Assert.Null(new DriverBrokerOptions { Username = "ride_app", Password = "test" }.Validate());
+
+        // No credential fallback: a broker-enabled service without explicit
+        // credentials must fail closed; a broker-disabled one needs neither.
+        Assert.NotNull(new DriverBrokerOptions { Host = "localhost", Password = "test" }.Validate());
+        Assert.NotNull(new DriverBrokerOptions { Host = "localhost", Username = "ride_app" }.Validate());
+        Assert.Null(new DriverBrokerOptions
+        {
+            Host = "localhost",
+            PublishingEnabled = false,
+            CommandsEnabled = false,
+        }.Validate());
+    }
+
+    [Fact]
+    public void Broker_Options_Error_Does_Not_Echo_The_Secret()
+    {
+        var secret = "super-secret-" + Guid.NewGuid().ToString("N");
+        var error = new DriverBrokerOptions
+        {
+            Host = "localhost",
+            Username = "ride_app",
+            Password = secret,
+            PublishTimeoutSeconds = 0,
+        }.Validate();
+
+        Assert.NotNull(error);
+        Assert.DoesNotContain(secret, error);
     }
 
     [Fact]

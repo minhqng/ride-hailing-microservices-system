@@ -11,6 +11,7 @@
 
 using System.Diagnostics;
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Primitives;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Domain.Trips;
@@ -27,7 +28,8 @@ public static class CreateRideEndpoint
     /// <summary>Maps the frozen POST /trips route.</summary>
     public static void MapTripEndpoints(this WebApplication app)
     {
-        app.MapPost(TripRoutes.CreateRide, HandleAsync);
+        app.MapPost(TripRoutes.CreateRide, HandleAsync)
+            .RequireRateLimiting(TripRateLimitPolicy.CreateRide);
     }
 
     private static async Task<IResult> HandleAsync(

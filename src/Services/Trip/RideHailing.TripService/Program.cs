@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using RideHailing.Observability;
@@ -28,6 +29,11 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(t => t.AddSource(TripDiagnostics.ActivitySourceName))
     .WithMetrics(m => m.AddMeter(TripDiagnostics.MeterName));
 builder.Services.AddHealthChecks();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(TripRateLimitPolicy.CreateRide, TripRateLimitPolicy.CreateRidePartition);
+});
 
 // (A-W02-02) Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
 // connection string (key "Postgres", supplied as ConnectionStrings__Postgres
@@ -100,6 +106,7 @@ builder.Services.AddHostedService<TripMetricsObserver>();
 
 var app = builder.Build();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 // (A-W08) Opt-in Trip auto-migrate for compose local/CI reproducibility.
