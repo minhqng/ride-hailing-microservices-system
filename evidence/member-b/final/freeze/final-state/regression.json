@@ -1,0 +1,132 @@
+{
+  "sourceCommit": "19843478187eb556ba276755e01d48d125086d4b",
+  "sourceTree": "69b30a3aac94e7bd3296fb2687809a948c3fa38a",
+  "status": "PASS",
+  "passed": 1223,
+  "failed": 0,
+  "ordinaryIdentityOptInSkip": 1,
+  "systemTestsDiscovered": 0,
+  "projects": [
+    {
+      "project": "RideHailing.B12Audit.Tests",
+      "passed": 18,
+      "failed": 0,
+      "total": 18,
+      "trxSha256": "097e5f7d6da6f4c38e5c5adf0c8db6b031a8a3df31f46db56a08d0131a8605e7"
+    },
+    {
+      "project": "RideHailing.DriverService.IntegrationTests",
+      "passed": 118,
+      "failed": 0,
+      "total": 118,
+      "trxSha256": "4fab5b606e9f1df661c2ae3444e672c5027958fd9f9f75131e4a02c6d59e20fa"
+    },
+    {
+      "project": "RideHailing.IdentityService.IntegrationTests",
+      "passed": 0,
+      "failed": 0,
+      "total": 1,
+      "trxSha256": "85f533020f9304e34bd987703d8dab7e1f7b4dddc161c416a785624d6fb89f04"
+    },
+    {
+      "project": "RideHailing.MatchingService.IntegrationTests",
+      "passed": 200,
+      "failed": 0,
+      "total": 200,
+      "trxSha256": "d624f2ab9021ca99d16a45511f986d6e241c9c495091a9fee47ab159afb1f915"
+    },
+    {
+      "project": "RideHailing.PaymentService.IntegrationTests",
+      "passed": 29,
+      "failed": 0,
+      "total": 29,
+      "trxSha256": "cd65e38cc3f515a709e3d2d228a924f55b4a1bb4a0a8c450459f1f79c69abac3"
+    },
+    {
+      "project": "RideHailing.Platform.IntegrationTests",
+      "passed": 76,
+      "failed": 0,
+      "total": 76,
+      "trxSha256": "35edbd3aadf4dfd91292a44b2d1de0c17e8f9df23d69e0608e0a53ae77a93f5a"
+    },
+    {
+      "project": "RideHailing.TripService.IntegrationTests",
+      "passed": 197,
+      "failed": 0,
+      "total": 197,
+      "trxSha256": "05258e7d7aa338f7e919fe74cfbda9148e701bb1437c4a082fa9ac8fedff1f64"
+    },
+    {
+      "project": "SystemTests (zero discovery)",
+      "passed": 0,
+      "failed": 0,
+      "total": 0,
+      "trxSha256": "6cffeabf5814ae7daeb5722008c6b25fc6c8ca910f56da3e5e3c36e78e9144e9"
+    },
+    {
+      "project": "RideHailing.DriverService.UnitTests",
+      "passed": 131,
+      "failed": 0,
+      "total": 131,
+      "trxSha256": "6a958d17c3712838ca376e3a32487bffe458eaf28f3dd916ff012b9a19aee8ea"
+    },
+    {
+      "project": "RideHailing.MatchingService.UnitTests",
+      "passed": 115,
+      "failed": 0,
+      "total": 115,
+      "trxSha256": "991b5077a957f82ba040d1226e73f8c5436bef27d0944e804538bf9f3a61deef"
+    },
+    {
+      "project": "RideHailing.NotificationWorker.UnitTests",
+      "passed": 2,
+      "failed": 0,
+      "total": 2,
+      "trxSha256": "1e49e8f81011e9d3601fd2c22cbddf5e3cad04e4cb3a16dd8ee156578990604a"
+    },
+    {
+      "project": "RideHailing.PaymentService.UnitTests",
+      "passed": 38,
+      "failed": 0,
+      "total": 38,
+      "trxSha256": "99ee6e13f4527057d7aaee67195bad888c9dc970392336de670bb639ffaed5c5"
+    },
+    {
+      "project": "RideHailing.TripService.UnitTests",
+      "passed": 299,
+      "failed": 0,
+      "total": 299,
+      "trxSha256": "3efdcc53ba185df96f1fd4ac4dcada9a298169281833ac018a4b4c13f2aabea4"
+    }
+  ],
+  "dedicatedIdentity": {
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0
+  },
+  "securityHttpChecks": 55,
+  "fullJourneys": 3,
+  "auditor": "AUD-01..08 PASS",
+  "environment": {
+    "docker": "29.8.2",
+    "compose": "5.6.0",
+    "sdk": "10.0.403",
+    "cpu": "Ryzen 5 6600H",
+    "logicalCpus": 12,
+    "dockerMemoryBytes": 7900803072
+  },
+  "limitations": [
+    "14 existing compiler/analyzer warnings",
+    "SystemTests has no tests; not proof",
+    "No human peer rerun performed",
+    "Local TRX streams remain ignored; hashes are audit references"
+  ],
+  "initialControl": {
+    "source": "2b1b047b450074bd1d3af5a29e1f6f0e3ce8f07d",
+    "parallelSuite": "1222 passed, 1 broker handshake timeout before domain effect, 1 opt-in skip",
+    "isolatedRelay": "3 passed",
+    "entireMatchingRerun": "200 passed",
+    "startup": "Single-step startup hit Identity PostgreSQL TCP refusal; staged infra and final TCP readiness tested",
+    "owner": "Identity/platform C; no A/C production edit made"
+  }
+}
