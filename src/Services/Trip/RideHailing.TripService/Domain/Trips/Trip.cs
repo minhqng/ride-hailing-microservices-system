@@ -707,15 +707,15 @@ public sealed class Trip
     }
 
     /// <summary>
-    /// Cancels the Trip from a pre-start state → CANCELLED. Any present
-    /// assignment is preserved for exact later cleanup (DSI-033) and the
-    /// outcome exposes the cleanup requirement (exact release when an
-    /// assignment exists; matching cancellation when a round was opened).
-    /// Cancellation from CREATED or READY_TO_START depends on product policy
-    /// that is not frozen, so it is left unapplied with
-    /// <see cref="TripErrorCode.CancellationPolicyUnresolved"/> rather than
-    /// inventing an allow/reject semantic. Cancellation from IN_PROGRESS is
-    /// rejected: the physical ride has begun (pivot).
+    /// Cancels the Trip from any pre-start state → CANCELLED. Frozen product
+    /// policy (2026-11-03): cancellation is allowed from CREATED, MATCHING,
+    /// DRIVER_RESERVED, DRIVER_ACCEPTED and READY_TO_START; IN_PROGRESS is
+    /// rejected because the physical ride has begun. Any present assignment
+    /// is preserved for exact later cleanup (DSI-033), and the outcome exposes
+    /// the cleanup requirement (exact release when an assignment exists;
+    /// matching cancellation when a round was opened). READY_TO_START
+    /// cancellation additionally requires the Saga's exact void leg, which the
+    /// handler commits atomically with this transition.
     /// </summary>
     public TripOutcome Cancel(DateTimeOffset now)
     {
@@ -731,9 +731,14 @@ public sealed class Trip
 
         switch (State)
         {
+            case TripState.Created:
+                // Nothing to release: no matching round, assignment or payment.
+                Commit(TripState.Cancelled, now);
+                return TripOutcome.Success();
             case TripState.Matching:
             case TripState.DriverReserved:
             case TripState.DriverAccepted:
+            case TripState.ReadyToStart:
                 var compensation = TripCompensation.None;
                 if (CurrentMatchingRound >= 1)
                 {
@@ -748,11 +753,6 @@ public sealed class Trip
                 AddCancellationCleanup(now);
                 Commit(TripState.Cancelled, now);
                 return TripOutcome.Success(compensation: compensation);
-            case TripState.Created:
-            case TripState.ReadyToStart:
-                return TripOutcome.Fail(
-                    TripErrorCode.CancellationPolicyUnresolved,
-                    $"Cancel from {State.ToCanonicalName()} awaits frozen product policy; the Trip is left unapplied.");
             case TripState.InProgress:
             default:
                 return TripOutcome.Fail(
