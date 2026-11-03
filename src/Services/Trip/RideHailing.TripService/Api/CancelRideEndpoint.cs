@@ -3,10 +3,12 @@
 // THIN ADAPTER ONLY: resolves the authenticated Rider identity, invokes the
 // rider-scoped CancelRideHandler, and maps the application outcome to HTTP.
 // No assignment/round inspection, no cleanup orchestration and no policy
-// invention live here: unfrozen CREATED/READY_TO_START cancellation stays a
-// 409 with an explicit policy code. An already CANCELLED ride replays 200;
-// other terminal states reject cancellation. Cleanup obligations are saved
-// atomically with cancellation and are not exposed on this response.
+// invention live here: the frozen pre-start policy allows cancellation from
+// CREATED through READY_TO_START (READY_TO_START additionally commits the
+// exact void leg in the handler). An already CANCELLED ride replays 200;
+// other terminal states and IN_PROGRESS reject cancellation. Cleanup
+// obligations are saved atomically with cancellation and are not exposed on
+// this response.
 
 using RideHailing.TripService.Application.Trips.Lifecycle;
 using RideHailing.TripService.Domain.Trips;
@@ -94,8 +96,6 @@ public static class CancelRideEndpoint
         var rejection = result.ErrorCode switch
         {
             TripErrorCode.TerminalState => TripDiagnostics.RejectionReasons.TerminalState,
-            TripErrorCode.CancellationPolicyUnresolved =>
-                TripDiagnostics.RejectionReasons.CancellationPolicyUnresolved,
             TripErrorCode.IllegalTransition => TripDiagnostics.RejectionReasons.InvalidTransition,
             TripErrorCode.AssignmentRequired => TripDiagnostics.RejectionReasons.IdentityRequired,
             _ => TripDiagnostics.RejectionReasons.InvalidTransition,
@@ -108,7 +108,6 @@ public static class CancelRideEndpoint
         var code = result.ErrorCode switch
         {
             TripErrorCode.TerminalState => "TERMINAL_STATE",
-            TripErrorCode.CancellationPolicyUnresolved => "CANCELLATION_POLICY_UNRESOLVED",
             TripErrorCode.IllegalTransition => "DOMAIN_CONFLICT",
             TripErrorCode.AssignmentRequired => "VALIDATION_ERROR",
             _ => "DOMAIN_CONFLICT",

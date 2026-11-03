@@ -872,6 +872,7 @@ A terminal Trip does not regress into an active state.
 | Current | Input/Command | Condition | Result |
 |---|---|---|---|
 | CREATED | StartMatching | valid Trip | MATCHING |
+| CREATED | Cancel | not terminal | CANCELLED (no cleanup obligation exists before dispatch) |
 | MATCHING | DriverReserved | same current round, legal assignment | DRIVER_RESERVED |
 | MATCHING | MatchingFailed | same current round, no unresolved reservation | MATCH_FAILED |
 | MATCHING | Cancel | not terminal | CANCELLED + cleanup protocol if needed |
@@ -882,12 +883,22 @@ A terminal Trip does not regress into an active state.
 | DRIVER_ACCEPTED | PaymentFailed terminal | current Payment op | CANCELLED + exact release/void |
 | DRIVER_ACCEPTED | Cancel | pre-start policy allows | CANCELLED + compensation |
 | READY_TO_START | StartTrip | current Driver + authorization satisfied | IN_PROGRESS |
-| READY_TO_START | Cancel | only if frozen product policy allows pre-start cancellation | CANCELLED + cleanup |
+| READY_TO_START | Cancel | pre-start (frozen policy allows) | CANCELLED + exact release + exact void |
 | IN_PROGRESS | CompleteTrip | current Trip/Driver | COMPLETED |
 | IN_PROGRESS | Cancel | not ordinary P0 cancel | reject |
 | COMPLETED | any active transition | — | reject/no-op |
 | CANCELLED | late assignment/payment events | stale/late | remain CANCELLED; may trigger cleanup evidence |
 | MATCH_FAILED | late matching event | stale/late | remain terminal |
+
+**Frozen pre-start cancellation policy (2026-11-03).** A Rider may cancel
+from every pre-start state: `CREATED`, `MATCHING`, `DRIVER_RESERVED`,
+`DRIVER_ACCEPTED` and `READY_TO_START`. `CREATED` has no cleanup obligation.
+Assigned pre-start states commit the exact reservation release and matching
+cancellation. `READY_TO_START` additionally commits the exact Payment void
+with the stable per-Trip void operation key in the same Transaction as the
+Trip transition; the ride never starts afterwards. `IN_PROGRESS` and terminal
+states reject cancellation. Cancellation is idempotent: an already
+`CANCELLED` Trip replays success without a second obligation.
 
 ## 6.6 Trip invariants
 
