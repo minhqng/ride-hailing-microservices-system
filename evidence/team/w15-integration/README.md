@@ -59,6 +59,15 @@ Results are curated in `test-output.txt` and
 analyzer warnings, matching the B source-bound freeze count. B's seven
 manifest hashes were rechecked with canonical-LF bytes.
 
+Exact-tree CI: run `41648524236` on PR #64 passed `hygiene`, `compose-config`,
+`build-test` and `platform-smoke`; the merge-checkout tree
+`72807e2e60d77c2d322acafaa7d1b880d9bcc7f5` equals the candidate head tree.
+TRX recorded 1223 passed, 0 failed and one ordinary opt-in Identity theory
+NotExecuted; the dedicated Identity lane passed 7/7. The security gate executed
+55 real HTTP checks, and the core-runtime gate executed completed,
+cancellation/void and terminal-decline scenarios with AUD-01..08 PASS on real
+PostgreSQL, RabbitMQ and Redis.
+
 ## What this bundle does not claim
 
 - No full local Testcontainers regression rerun. The exact-tree GitHub CI
