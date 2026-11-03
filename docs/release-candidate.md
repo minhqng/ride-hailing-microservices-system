@@ -42,7 +42,7 @@ after the course's human rehearsal and oral-defense gates are complete.
   DLQ/retry ownership, observability, broker HA harness, release overlay,
   secret scanner and release gate.
 
-## Build and deploy
+## Build and deploy (development)
 
 ```bash
 python scripts/security/init-local-auth.py
@@ -54,18 +54,59 @@ python scripts/test/payment-smoke.py
 python scripts/test/topology-smoke.py
 ```
 
-Release overlay (operator secrets are mandatory; rendering fails closed):
+## Production release procedure (runtime-tested)
 
-```bash
-POSTGRES_PASSWORD=... IDENTITY_DB_PASSWORD=... DRIVER_DB_PASSWORD=... \
-TRIP_DB_PASSWORD=... MATCHING_DB_PASSWORD=... PAYMENT_DB_PASSWORD=... \
-NOTIFICATION_DB_PASSWORD=... RABBITMQ_PASSWORD=... \
-docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
-```
+The release overlay must be started and exercised, not only rendered. The
+automated form of this procedure is `scripts/test/release-smoke.py` and the
+`release-smoke` CI job; the manual form is:
 
-The application images run with `ASPNETCORE_ENVIRONMENT=Production`; Trip
-auto-migration is disabled in the release overlay, so migrations are an
-explicit operator step.
+1. Use a clean clone or clean worktree at the candidate SHA. Choose an
+   isolated project so no development volume or container is touched:
+   `export COMPOSE_PROJECT_NAME=ride-release-<unique>`.
+2. Supply every mandatory secret explicitly. The overlay fails closed when any
+   of the eight database/broker passwords or the four authentication values is
+   absent: `POSTGRES_PASSWORD`, `IDENTITY_DB_PASSWORD`, `DRIVER_DB_PASSWORD`,
+   `TRIP_DB_PASSWORD`, `MATCHING_DB_PASSWORD`, `PAYMENT_DB_PASSWORD`,
+   `NOTIFICATION_DB_PASSWORD`, `RABBITMQ_PASSWORD`, `AUTH_PUBLIC_KEY_BASE64`,
+   `AUTH_PRIVATE_KEY_BASE64`, `AUTH_MATCHING_SECRET`, `AUTH_TRIP_SECRET`.
+   `python3 scripts/security/init-local-auth.py` creates a disposable local
+   key pair and client secrets in ignored `.env`; release operators replace
+   every value with environment-specific secrets. Never commit or print them.
+3. Start PostgreSQL/Redis/RabbitMQ, then apply Trip migrations externally from
+   the empty database (the overlay disables Trip auto-migration):
+   ```bash
+   dotnet tool restore
+   ConnectionStrings__Postgres="Host=127.0.0.1;Port=5432;Database=trip_db;Username=trip_app;Password=$TRIP_DB_PASSWORD" \
+   Auth__PublicKeyBase64="$AUTH_PUBLIC_KEY_BASE64" \
+   dotnet ef database update \
+     --project src/Services/Trip/RideHailing.TripService \
+     --startup-project src/Services/Trip/RideHailing.TripService \
+     -c TripDbContext --configuration Release
+   ```
+4. Start the overlay:
+   ```bash
+   docker compose -f compose.yaml -f deploy/compose/compose.release.yaml up -d --build
+   ```
+   The overlay forces `TripMessaging__Enabled=true`,
+   `TripDatabase__AutoMigrate=false` and `ASPNETCORE_ENVIRONMENT=Production`.
+   Services declare the RabbitMQ topology on startup. Payment's simulator
+   routes exist only in Development, so a Production payment plan has no
+   remote decline control; the decline path is verified by the Payment
+   integration suite against the real PostgreSQL provider simulator.
+5. Wait for `/health/ready` on gateway `:8080`, identity `:8101`, driver
+   `:8102`, trip `:8103`, matching `:8104` and payment `:8105`, then run real
+   authenticated journeys. `scripts/test/release-smoke.py` performs the full
+   automated check: fail-closed renders, external migrations, Production
+   environment assertions, topology, a completed ride and a cancellation/void
+   compensation, independent authority reads, and teardown that preserves
+   unrelated Docker resources.
+6. Tear down only the isolated project:
+   `docker compose -f compose.yaml -f deploy/compose/compose.release.yaml down -v`.
+
+The `release-smoke` CI job runs this procedure on a fresh runner with
+disposable secrets and uploads `plans/reports/release-smoke.json`; it is the
+runtime proof that the Production overlay actually starts and processes real
+business work.
 
 ## Clean-clone guide
 

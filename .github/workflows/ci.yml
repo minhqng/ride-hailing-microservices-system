@@ -99,6 +99,19 @@ jobs:
           fi
           cat release-missing-secrets.log
           grep -q 'must be set for the release overlay' release-missing-secrets.log
+      - name: release overlay requires authentication secrets
+        run: |
+          # Database/broker passwords are present in this job's environment;
+          # disabling the .env file leaves only the authentication secrets absent.
+          if docker compose --env-file /dev/null \
+              -f compose.yaml -f deploy/compose/compose.release.yaml config \
+              --quiet > /dev/null 2> release-missing-auth.log; then
+            echo 'release overlay accepted a render without authentication secrets'
+            cat release-missing-auth.log
+            exit 1
+          fi
+          cat release-missing-auth.log
+          grep -q 'AUTH_.*must be set for the release overlay' release-missing-auth.log
       - run: docker compose -f compose.yaml -f deploy/compose/compose.ha.yaml --profile ha config --quiet
       - run: python3 scripts/security/scan-secrets.py
   platform-smoke:
@@ -136,3 +149,35 @@ jobs:
             TestResults/identity-gate/
       - if: always()
         run: docker compose --profile obs down -v
+  release-smoke:
+    name: release-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      COMPOSE_PROJECT_NAME: ride-release-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.100
+      - run: dotnet tool restore
+      - run: dotnet build scripts/test/w10-g3-harness/RideHailing.W10Harness.csproj -c Release
+      - name: Production release overlay runtime smoke
+        run: python3 scripts/test/release-smoke.py
+      - name: Payment decline at the real provider boundary
+        run: |
+          dotnet test tests/Integration/RideHailing.PaymentService.IntegrationTests -c Release \
+            --logger trx --results-directory TestResults/release-payment
+          python3 scripts/test/assert-trx.py --results-dir TestResults/release-payment \
+            --min-passed 1 --min-files 1 --max-skipped 0 \
+            --require-suite ridehailing.paymentservice.integrationtests:1
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            plans/reports/release-smoke.json
+            plans/reports/release-smoke.log
+            TestResults/release-payment/
+      - if: always()
+        run: docker compose -f compose.yaml -f deploy/compose/compose.release.yaml down -v
