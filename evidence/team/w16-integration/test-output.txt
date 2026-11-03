@@ -41,6 +41,20 @@ B real-provider technical rehearsal on the integrated candidate:
 - Teardown exits: compose 0, test runner 0, cache volume 0.
 - humanParticipation: NOT PERFORMED; human team/oral rehearsals remain PENDING.
 
-Exact-tree GitHub CI: recorded by the `integration/team-w16-final` pull
-request checks; the checkout tree must equal the candidate tree. This
-test-output is updated with the exact run in the final evidence revision.
+Exact-tree GitHub CI (pull request #65):
+- Run: 41655374106
+  (https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41655374106)
+- Run head: 4168a247c539a1478ba88fd3bb7303aadba5313a
+- Merge-checkout ref: 18a5534d0c342bb06e23eac18090c57c376f2d0e
+- Merge-checkout tree: a85b85b3a6d5d33098a6cc792f0a55d6a4b99197
+- Candidate head tree: a85b85b3a6d5d33098a6cc792f0a55d6a4b99197 (exact match)
+- hygiene SUCCESS 47s; compose-config SUCCESS 15s; build-test SUCCESS 6m47s;
+  platform-smoke SUCCESS 6m29s; fault-campaign SKIPPED by its W11-only gate.
+- TRX: 1223 passed, 0 failed, one ordinary opt-in Identity theory NotExecuted;
+  SystemTests discovers 0 cases and supplies no proof.
+- Dedicated Identity lane: 7/7 passed.
+- Security gate: 55 real HTTP checks; no credentials recorded.
+- Core runtime gate: completed / cancelled-during-authorization /
+  terminal-authorization-decline; AUD-01..08 PASS; PostgreSQL 18.6,
+  RabbitMQ 4.3.6, Redis 8.10.2.
+- Runtime observations: PASS; no missing/invalid required series.
