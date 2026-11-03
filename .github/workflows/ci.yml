@@ -53,7 +53,10 @@ jobs:
       - run: python3 -m unittest discover -s scripts/perf/tests -p 'test_*.py'
       - run: python3 -m compileall -q scripts/perf scripts/evidence scripts/fault
       - run: dotnet build RideHailing.Distributed.slnx -c Release --no-restore
+      - run: python3 -m unittest discover -s scripts/test -p 'test_assert_trx.py'
       - run: dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory TestResults
+      # Refuse an SDK/VSTest false green with missing or zero test discovery.
+      - run: python3 scripts/test/assert-trx.py --results-dir TestResults --min-passed 1200 --min-files 12 --max-skipped 1
       - if: always()
         uses: actions/upload-artifact@v4
         with:

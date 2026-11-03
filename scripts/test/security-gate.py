@@ -191,8 +191,9 @@ if "--identity-tests" in sys.argv:
     environment = dict(os.environ, GATE_OWNER=owner, GATE_INVALID=invalid, GATE_EXPIRED=expired,
                        GATE_MALFORMED="unsigned-spoofed-token", GATE_RIDER=rider, GATE_FOREIGN=foreign)
     connection = "Host=127.0.0.1;Port=5432;Database=driver_db;Username=driver_app;Password=" + settings["DRIVER_DB_PASSWORD"]
+    identity_result_dir = "TestResults/identity-gate/" + uuid.uuid4().hex
     command = ["dotnet", "test", "tests/Integration/RideHailing.IdentityService.IntegrationTests", "-c", "Release",
-               "--logger", "trx", "--results-directory", "TestResults/identity-gate"]
+               "--logger", "trx", "--results-directory", identity_result_dir]
     if os.name == "nt":
         fixture["BaseUrl"] = "http://host.docker.internal:8102"
         connection = connection.replace("127.0.0.1", "host.docker.internal")
@@ -206,6 +207,18 @@ if "--identity-tests" in sys.argv:
     completed = subprocess.run(command, cwd=root, env=environment, capture_output=True, text=True)
     (root / "plans/reports/identity-gate.log").write_text(completed.stdout + completed.stderr)
     assert completed.returncode == 0, "Real Identity negative test execution failed; inspect identity-gate.log"
+    verified = subprocess.run(
+        [sys.executable, str(root / "scripts/test/assert-trx.py"),
+         "--results-dir", str(root / identity_result_dir),
+         "--min-passed", "7", "--min-files", "1", "--max-skipped", "0"],
+        cwd=root, capture_output=True, text=True,
+    )
+    with (root / "plans/reports/identity-gate.log").open("a", encoding="utf-8") as log:
+        log.write("\nIdentity TRX verification:\n" + verified.stdout + verified.stderr)
+    assert verified.returncode == 0, (
+        "Identity test process returned success but its seven actual cases "
+        "were not verified in fresh TRX; inspect identity-gate.log"
+    )
 output = root / "plans/reports/security-gate.json"
 output.parent.mkdir(parents=True, exist_ok=True)
 source = {key: subprocess.check_output(["git", "rev-parse", expression], cwd=root, text=True).strip()

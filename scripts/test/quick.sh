@@ -2,6 +2,8 @@
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
+# Per-invocation path prevents stale TRX files from satisfying this gate.
+TRX_DIR="TestResults/quick-$(date +%s)-$"
 # Testcontainers-based integration tests need the Docker socket inside the SDK
 # container, with SELinux label disabled so the socket stays connectable
 # (--security-opt label=disable) and the container in the host docker group
@@ -19,7 +21,9 @@ SECURITY_OPT=""
 if [ "$(uname -s)" = "Linux" ]; then SECURITY_OPT="--security-opt label=disable"; fi
 if [ -S /var/run/docker.sock ]; then
   # shellcheck disable=SC2086
-  docker run --rm $SECURITY_OPT $GROUP_ADD -v "$REPO_ROOT:/work:z" -v /var/run/docker.sock:/var/run/docker.sock -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build'
+  docker run --rm $SECURITY_OPT $GROUP_ADD -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -v /var/run/docker.sock:/var/run/docker.sock -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
 else
-  docker run --rm -v "$REPO_ROOT:/work:z" -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build'
+  docker run --rm -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
 fi
+
+python3 scripts/test/assert-trx.py --results-dir "$TRX_DIR" --min-passed 1200 --min-files 12 --max-skipped 1
