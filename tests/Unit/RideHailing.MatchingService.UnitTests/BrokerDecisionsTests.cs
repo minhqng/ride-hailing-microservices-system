@@ -145,11 +145,22 @@ public class BrokerDecisionsTests
     [Fact]
     public void Broker_Options_Reject_Bad_Policy()
     {
-        Assert.NotNull(new RabbitMqOptions { Host = "" }.Validate());
-        Assert.NotNull(new RabbitMqOptions { Prefetch = 0 }.Validate());
-        Assert.NotNull(new RabbitMqOptions { Prefetch = 257 }.Validate());
-        Assert.NotNull(new RabbitMqOptions { MaxRedeliveries = 0 }.Validate());
-        Assert.NotNull(new RabbitMqOptions { RideRequestedQueue = "" }.Validate());
-        Assert.Null(new RabbitMqOptions().Validate());
+        Assert.NotNull(new RabbitMqOptions { Host = "", Username = "ride_app", Password = "test" }.Validate());
+        Assert.NotNull(new RabbitMqOptions { Prefetch = 0, Username = "ride_app", Password = "test" }.Validate());
+        Assert.NotNull(new RabbitMqOptions { Prefetch = 257, Username = "ride_app", Password = "test" }.Validate());
+        Assert.NotNull(new RabbitMqOptions { MaxRedeliveries = 0, Username = "ride_app", Password = "test" }.Validate());
+        Assert.NotNull(new RabbitMqOptions { RideRequestedQueue = "", Username = "ride_app", Password = "test" }.Validate());
+        Assert.Null(new RabbitMqOptions { Username = "ride_app", Password = "test" }.Validate());
+
+        // No credential fallback: a broker-enabled service without explicit
+        // credentials must fail closed; a broker-disabled one needs neither.
+        Assert.NotNull(new RabbitMqOptions { Host = "localhost", Password = "test" }.Validate());
+        Assert.NotNull(new RabbitMqOptions { Host = "localhost", Username = "ride_app" }.Validate());
+        Assert.Null(new RabbitMqOptions
+        {
+            Host = "localhost",
+            ConsumersEnabled = false,
+            PublishingEnabled = false,
+        }.Validate());
     }
 }

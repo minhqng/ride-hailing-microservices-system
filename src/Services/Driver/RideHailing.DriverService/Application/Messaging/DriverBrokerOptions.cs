@@ -9,8 +9,10 @@ public sealed class DriverBrokerOptions
 
     public string Host { get; set; } = "localhost";
     public string? Hosts { get; set; }
-    public string Username { get; set; } = "ride_app";
-    public string Password { get; set; } = "ride_dev_pw";
+    // No credential fallback: broker access must be explicit in every
+    // environment. compose/.env.example provide the local values.
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
     public int Port { get; set; } = 5672;
     public int PublishTimeoutSeconds { get; set; } = 5;
     public bool PublishingEnabled { get; set; } = true;
@@ -21,6 +23,16 @@ public sealed class DriverBrokerOptions
         if (string.IsNullOrWhiteSpace(Host))
         {
             return "RabbitMq:Host must not be empty.";
+        }
+
+        if ((PublishingEnabled || CommandsEnabled) && string.IsNullOrWhiteSpace(Username))
+        {
+            return "RabbitMq:Username must be configured explicitly when the broker is enabled.";
+        }
+
+        if ((PublishingEnabled || CommandsEnabled) && string.IsNullOrWhiteSpace(Password))
+        {
+            return "RabbitMq:Password must be configured explicitly when the broker is enabled.";
         }
 
         if (Hosts is not null && Hosts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length == 0)

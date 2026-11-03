@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -50,6 +52,33 @@ public sealed class DriverLocationIngressTests
         _redis = redis;
         _rabbit = rabbit;
         _output = output;
+    }
+
+    [Fact]
+    public async Task LocationIngress_IsRateLimitedPerActor()
+    {
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+        var ct = deadline.Token;
+        var driverId = Guid.NewGuid();
+        await using var host = BuildHost();
+        await host.StartAsync(ct);
+        using var http = Client(host);
+
+        HttpStatusCode last = HttpStatusCode.Accepted;
+        for (var attempt = 0; attempt <= DriverRateLimitPolicy.PermitLimit; attempt++)
+        {
+            using var response = await http.PostAsJsonAsync($"drivers/{driverId:N}/location", new
+            {
+                deviceSessionId = "rate-limit-session",
+                sequenceNo = attempt + 1,
+                capturedAt = DateTimeOffset.UtcNow.AddSeconds(attempt),
+                latitude = 10.8,
+                longitude = 106.6,
+            }, ct);
+            last = response.StatusCode;
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, last);
     }
 
     [Fact]
@@ -312,6 +341,11 @@ public sealed class DriverLocationIngressTests
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         DriverIngressLimits.Apply(builder);
+        builder.Services.AddRateLimiter(rateLimiter =>
+        {
+            rateLimiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            rateLimiter.AddPolicy(DriverRateLimitPolicy.Location, DriverRateLimitPolicy.LocationPartition);
+        });
 
         var outbox = new NpgsqlOutboxStore(_drivers.DataSource);
         builder.Services.AddSingleton(_drivers.DataSource);
@@ -326,6 +360,7 @@ public sealed class DriverLocationIngressTests
         builder.Services.AddSingleton<DriverEventPublisher>();
 
         var app = builder.Build();
+        app.UseRateLimiter();
         DriverEndpoints.Map(app);
         return app;
     }
