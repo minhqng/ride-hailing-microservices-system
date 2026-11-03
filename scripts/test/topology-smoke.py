@@ -32,7 +32,7 @@ expected = {
     "matching.ride-requested.q": ("ride.events", ["trip.ride-requested.v1"]),
     "trip.driver-state.q": ("ride.events", ["driver.reserved.v1", "driver.reservation-released.v1", "driver.trip-started.v1", "driver.trip-completed.v1"]),
     "trip.matching-outcome.q": ("ride.events", ["matching.failed.v1"]),
-    "trip.payment-outcome.q": ("ride.events", ["payment.authorized.v1", "payment.authorization-failed.v1", "payment.authorization-voided.v1", "payment.captured.v1", "payment.capture-pending.v1", "payment.requires-review.v1"]),
+    "trip.payment-outcome.q": ("ride.events", ["payment.authorized.v1", "payment.authorization-failed.v1", "payment.authorization-voided.v1", "payment.void-failed.v1", "payment.captured.v1", "payment.capture-pending.v1", "payment.requires-review.v1"]),
     "matching.driver-projection.q": ("ride.events", ["driver.available.v1", "driver.offline.v1", "driver.reserved.v1", "driver.reservation-released.v1", "driver.trip-started.v1", "driver.trip-completed.v1", "driver.location-accepted.v1"]),
     "payment.commands.q": ("ride.commands", ["payment.authorize.v1", "payment.capture.v1", "payment.void-authorization.v1"]),
     "driver.commands.q": ("ride.commands", ["driver.release-reservation.v1", "driver.mark-trip-started.v1", "driver.mark-trip-completed.v1"]),

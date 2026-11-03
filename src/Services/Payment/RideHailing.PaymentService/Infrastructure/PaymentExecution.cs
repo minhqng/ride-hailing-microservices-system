@@ -120,6 +120,111 @@ public sealed class PaymentExecution(NpgsqlDataSource source, PaymentSimulator s
         return stored;
     }
 
+    /// <summary>
+    /// Candidate keys for the bounded Production reconciliation worker. The
+    /// worker re-checks and locks each row, so this scan is only a hint.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> ListReconciliationCandidatesAsync(
+        int limit, CancellationToken token)
+    {
+        await using var connection = await source.OpenConnectionAsync(token);
+        await using var command = new NpgsqlCommand("""
+            SELECT operation_key FROM payment_operations
+            WHERE state IN ('UNKNOWN','PROCESSING','PENDING')
+            ORDER BY CASE WHEN state IN ('UNKNOWN','PROCESSING') THEN 0 ELSE 1 END, updated_at
+            LIMIT @limit
+            """, connection);
+        command.Parameters.AddWithValue("limit", limit);
+        var keys = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(token);
+        while (await reader.ReadAsync(token)) keys.Add(reader.GetString(0));
+        return keys;
+    }
+
+    /// <summary>
+    /// Reconciles one operation under SKIP LOCKED fencing. The provider effect
+    /// is read from the independent ledger; a terminal resolution is published
+    /// through the caller's Outbox callback in the SAME Payment transaction.
+    /// Returns null when another worker owns the row or the state is already
+    /// conclusive.
+    /// </summary>
+    public async Task<PaymentOperation?> TryReconcileAsync(
+        string key,
+        ProviderLedger provider,
+        Func<NpgsqlConnection, NpgsqlTransaction, PaymentOperation, CancellationToken, Task>? persistResult,
+        TimeSpan reviewAfter,
+        CancellationToken token)
+    {
+        await using var connection = await source.OpenConnectionAsync(token);
+        await using var transaction = await connection.BeginTransactionAsync(token);
+        var stored = await LoadForReconcileAsync(key, connection, transaction, token);
+        if (stored is null)
+        {
+            await transaction.CommitAsync(token);
+            return null;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var stale = stored.UpdatedAt <= now - reviewAfter;
+        var effect = await provider.FindEffectAsync(stored, token);
+        if (stored.State == PaymentOperationState.Pending)
+        {
+            if (effect is not null)
+            {
+                stored = stored.RecoverCommittedEffect(effect, now);
+            }
+            else if (stored.AttemptCount > 0 && (stored.AttemptCount >= 3 || stale))
+            {
+                stored = stored.RequireReview(now);
+            }
+            else
+            {
+                await transaction.CommitAsync(token);
+                return null;
+            }
+        }
+        else if (stored.State is PaymentOperationState.Unknown or PaymentOperationState.Processing)
+        {
+            stored = stored.Reconcile(effect, now);
+            if (stored.State == PaymentOperationState.Pending &&
+                stored.AttemptCount > 0 && (stored.AttemptCount >= 3 || stale))
+            {
+                stored = stored.RequireReview(now);
+            }
+        }
+        else
+        {
+            await transaction.CommitAsync(token);
+            return null;
+        }
+
+        await PaymentOperationRepository.SaveAsync(stored, connection, transaction, token);
+        if (persistResult is not null &&
+            stored.State is PaymentOperationState.Succeeded or PaymentOperationState.Declined
+                or PaymentOperationState.RequiresReview)
+        {
+            await persistResult(connection, transaction, stored, token);
+        }
+
+        await transaction.CommitAsync(token);
+        PaymentMetrics.RecordReconciliation(stored.State);
+        return stored;
+    }
+
+    private static async Task<PaymentOperation?> LoadForReconcileAsync(
+        string key, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken token)
+    {
+        await using var command = new NpgsqlCommand("""
+            SELECT id,operation_key,trip_id,operation_type,amount_minor,currency,state,
+                   provider_effect_occurred,provider_effect_id,result_code,attempt_count,created_at,updated_at,completed_at
+            FROM payment_operations WHERE operation_key COLLATE "C" = @key COLLATE "C"
+            FOR UPDATE SKIP LOCKED
+            """, connection, transaction);
+        command.Parameters.AddWithValue("key", key);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        return await reader.ReadAsync(token) ? PaymentOperationRepository.Read(reader) : null;
+    }
+
     internal static async Task<PaymentOperation> LoadAsync(string key, NpgsqlConnection connection, NpgsqlTransaction transaction, CancellationToken token)
     {
         await using var command = new NpgsqlCommand("""
