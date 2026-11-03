@@ -1,10 +1,11 @@
 // Trip HTTP route/method mechanical freeze.
 //
-// W2 froze the intended routes as documented constants; W5 registers the
+// W2 froze the intended routes as documented constants; W5 registered the
 // first behavior-backed slice (CreateRide since W4; GetTrip + CancelRide
-// since W5) in Program.cs. Driver-actor lifecycle routes (accept/start/
-// complete) remain future: their transport identity is Driver-fenced and the
-// edge/middleware owner is not Trip, so no route is invented for them here.
+// since W5). The Driver-actor accept/start/complete transport is registered
+// since AUD-02: its identity is the authenticated Driver principal, bound to
+// the Driver-owned profile and the exact Trip assignment. Reject remains
+// unimplemented upstream (no rematch workflow), so no route is invented.
 //
 // W2 MECHANICAL FREEZE — reasons:
 //   - Resource noun "/trips" (not "/rides"): aligns with the canonical
@@ -43,4 +44,13 @@ public static class TripRoutes
 
     /// <summary>POST /trips/{tripId:guid}/cancel — CancelRide (transport shape only).</summary>
     public const string CancelRide = "/trips/{tripId:guid}/cancel";
+
+    /// <summary>POST /trips/{tripId:guid}/accept — Driver accepts the current assignment.</summary>
+    public const string AcceptDriver = "/trips/{tripId:guid}/accept";
+
+    /// <summary>POST /trips/{tripId:guid}/start — Driver starts the authorized ride.</summary>
+    public const string StartTrip = "/trips/{tripId:guid}/start";
+
+    /// <summary>POST /trips/{tripId:guid}/complete — Driver completes the in-progress ride.</summary>
+    public const string CompleteTrip = "/trips/{tripId:guid}/complete";
 }
