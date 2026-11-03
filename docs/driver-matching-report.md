@@ -25,10 +25,12 @@ The next lock holder sees the committed state/version and returns a domain
 conflict. Lock acquisition orders contenders; **successful transaction commit
 is the reservation linearization point**. Rollback establishes no reservation.
 
-The stable `(driverId, tripId, reservationId, matchingRound)` identifies the
-effect. A matching current reservation replay returns the existing effect
-without incrementing version or adding another Outbox row. Exact identity and
-round checks prevent an idempotency key from legitimizing different work.
+The stable `(driverId, tripId, reservationId)` identifies the effect.
+`matchingRound` is write-once provenance retained from the winning request;
+a replay does not replace it, even when its incoming round differs.
+A matching current reservation replay returns the existing effect without
+incrementing version or adding another Outbox row. Exact identity checks
+prevent an idempotency key from legitimizing different work.
 A partial unique reservation index provides a cross-row identity backstop.
 Only its specific constraint violation maps to a domain conflict; unrelated
 database errors remain uncertainty, rather than fabricated rejection.
