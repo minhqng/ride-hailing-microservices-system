@@ -1,0 +1,280 @@
+{
+  "source": {
+    "commit": "598d89301591c6d38adc159b60e9361f0fd37cba",
+    "tree": "752ab9314b2062ed1a2cb1e72dc36e868728a645"
+  },
+  "project": "team-w12-b-release",
+  "humanParticipation": "NOT PERFORMED",
+  "status": "PASS",
+  "rehearsals": [
+    {
+      "repeat": 1,
+      "demoSeconds": 83.60194929991849,
+      "bSegmentSeconds": 20.29524919996038,
+      "sharedJourneySeconds": 63.2927823998034,
+      "status": "PASS",
+      "auditor": [
+        {
+          "id": "AUD-01",
+          "status": "PASS",
+          "authorities": [
+            "driver_db",
+            "trip_db"
+          ]
+        },
+        {
+          "id": "AUD-02",
+          "status": "PASS",
+          "authorities": [
+            "driver_db"
+          ]
+        },
+        {
+          "id": "AUD-03",
+          "status": "PASS",
+          "authorities": [
+            "trip_db"
+          ]
+        },
+        {
+          "id": "AUD-04",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db",
+            "matching_db"
+          ]
+        },
+        {
+          "id": "AUD-05",
+          "status": "PASS",
+          "authorities": [
+            "payment_db",
+            "provider_effects"
+          ]
+        },
+        {
+          "id": "AUD-06",
+          "status": "PASS",
+          "authorities": [
+            "matching_db"
+          ]
+        },
+        {
+          "id": "AUD-07",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db"
+          ]
+        },
+        {
+          "id": "AUD-08",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db",
+            "matching_db",
+            "payment_db"
+          ]
+        }
+      ],
+      "humanRoleHandoffs": "NOT PERFORMED",
+      "artifacts": [
+        "rehearsal-1/contention-redis.json",
+        "rehearsal-1/response-loss.json",
+        "rehearsal-1/core-authorities.json"
+      ]
+    },
+    {
+      "repeat": 2,
+      "demoSeconds": 72.48937610001303,
+      "bSegmentSeconds": 20.36955159995705,
+      "sharedJourneySeconds": 52.105230499990284,
+      "status": "PASS",
+      "auditor": [
+        {
+          "id": "AUD-01",
+          "status": "PASS",
+          "authorities": [
+            "driver_db",
+            "trip_db"
+          ]
+        },
+        {
+          "id": "AUD-02",
+          "status": "PASS",
+          "authorities": [
+            "driver_db"
+          ]
+        },
+        {
+          "id": "AUD-03",
+          "status": "PASS",
+          "authorities": [
+            "trip_db"
+          ]
+        },
+        {
+          "id": "AUD-04",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db",
+            "matching_db"
+          ]
+        },
+        {
+          "id": "AUD-05",
+          "status": "PASS",
+          "authorities": [
+            "payment_db",
+            "provider_effects"
+          ]
+        },
+        {
+          "id": "AUD-06",
+          "status": "PASS",
+          "authorities": [
+            "matching_db"
+          ]
+        },
+        {
+          "id": "AUD-07",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db"
+          ]
+        },
+        {
+          "id": "AUD-08",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db",
+            "matching_db",
+            "payment_db"
+          ]
+        }
+      ],
+      "humanRoleHandoffs": "NOT PERFORMED",
+      "artifacts": [
+        "rehearsal-2/contention-redis.json",
+        "rehearsal-2/response-loss.json",
+        "rehearsal-2/core-authorities.json"
+      ]
+    },
+    {
+      "repeat": 3,
+      "demoSeconds": 73.76779499999247,
+      "bSegmentSeconds": 20.463323100004345,
+      "sharedJourneySeconds": 53.29074249998666,
+      "status": "PASS",
+      "auditor": [
+        {
+          "id": "AUD-01",
+          "status": "PASS",
+          "authorities": [
+            "driver_db",
+            "trip_db"
+          ]
+        },
+        {
+          "id": "AUD-02",
+          "status": "PASS",
+          "authorities": [
+            "driver_db"
+          ]
+        },
+        {
+          "id": "AUD-03",
+          "status": "PASS",
+          "authorities": [
+            "trip_db"
+          ]
+        },
+        {
+          "id": "AUD-04",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db",
+            "matching_db"
+          ]
+        },
+        {
+          "id": "AUD-05",
+          "status": "PASS",
+          "authorities": [
+            "payment_db",
+            "provider_effects"
+          ]
+        },
+        {
+          "id": "AUD-06",
+          "status": "PASS",
+          "authorities": [
+            "matching_db"
+          ]
+        },
+        {
+          "id": "AUD-07",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db"
+          ]
+        },
+        {
+          "id": "AUD-08",
+          "status": "PASS",
+          "authorities": [
+            "trip_db",
+            "driver_db",
+            "matching_db",
+            "payment_db"
+          ]
+        }
+      ],
+      "humanRoleHandoffs": "NOT PERFORMED",
+      "artifacts": [
+        "rehearsal-3/contention-redis.json",
+        "rehearsal-3/response-loss.json",
+        "rehearsal-3/core-authorities.json"
+      ]
+    }
+  ],
+  "providerRegression": {
+    "elapsedSeconds": 256.3581536000129,
+    "projects": [
+      {
+        "project": "RideHailing.DriverService.UnitTests",
+        "passed": 131,
+        "failed": 0,
+        "total": 131
+      },
+      {
+        "project": "RideHailing.DriverService.IntegrationTests",
+        "passed": 118,
+        "failed": 0,
+        "total": 118
+      },
+      {
+        "project": "RideHailing.MatchingService.UnitTests",
+        "passed": 115,
+        "failed": 0,
+        "total": 115
+      },
+      {
+        "project": "RideHailing.MatchingService.IntegrationTests",
+        "passed": 200,
+        "failed": 0,
+        "total": 200
+      }
+    ]
+  },
+  "testRunnerTeardownExit": 0,
+  "teardownExit": 0,
+  "cacheTeardownExit": 0
+}
