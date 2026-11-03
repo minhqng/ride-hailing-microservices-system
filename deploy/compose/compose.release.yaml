@@ -68,6 +68,7 @@ services:
   payment:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Reconciliation__Enabled: "true"
       ConnectionStrings__Postgres: "Host=postgres;Database=payment_db;Username=payment_app;Password=${PAYMENT_DB_PASSWORD:?PAYMENT_DB_PASSWORD must be set for the release overlay}"
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"

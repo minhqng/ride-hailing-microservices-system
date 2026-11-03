@@ -2,6 +2,7 @@ using RideHailing.Observability;
 // Development simulator endpoints use the durable Payment execution authority.
 
 using Npgsql;
+using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 using RabbitMQ.Client;
 using RideHailing.PaymentService.Domain;
@@ -54,6 +55,11 @@ if (!string.IsNullOrWhiteSpace(rabbitHost))
     await RideTopology.DeclareAsync(connection, bootstrapTimeout.Token);
 }
 
+var reconciliationOptions = new PaymentReconciliationOptions();
+builder.Configuration.GetSection("Reconciliation").Bind(reconciliationOptions);
+reconciliationOptions.Validate();
+builder.Services.AddSingleton(Options.Create(reconciliationOptions));
+
 if (!string.IsNullOrWhiteSpace(connectionString) && connectionFactory is not null)
 {
     builder.Services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
@@ -70,6 +76,10 @@ if (!string.IsNullOrWhiteSpace(connectionString) && connectionFactory is not nul
     builder.Services.AddSingleton<OutboxRelay>();
     builder.Services.AddSingleton<PaymentMessageProcessor>();
     builder.Services.AddHostedService<PaymentMessagingHostedService>();
+    if (reconciliationOptions.Enabled)
+    {
+        builder.Services.AddHostedService<PaymentReconciliationWorker>();
+    }
 }
 
 var app = builder.Build();
@@ -152,7 +162,8 @@ app.MapGet("/info", (IHostEnvironment env) =>
     {
         serviceName = "payment-service",
         instanceId = builder.Configuration["ServiceInstanceId"] ?? Environment.MachineName,
-        environment = env.EnvironmentName
+        environment = env.EnvironmentName,
+        reconciliationEnabled = builder.Configuration.GetValue("Reconciliation:Enabled", false)
     }));
 
 app.Run();

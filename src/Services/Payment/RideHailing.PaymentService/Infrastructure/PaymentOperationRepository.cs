@@ -60,6 +60,9 @@ public sealed class PaymentOperationRepository(NpgsqlDataSource dataSource)
                     AND EXCLUDED.attempt_count = payment_operations.attempt_count)
                 OR (payment_operations.state = 'PENDING' AND EXCLUDED.state = 'PROCESSING'
                     AND EXCLUDED.attempt_count = payment_operations.attempt_count + 1)
+                OR (payment_operations.state = 'PENDING' AND EXCLUDED.state = 'SUCCEEDED'
+                    AND EXCLUDED.provider_effect_occurred
+                    AND EXCLUDED.attempt_count = GREATEST(payment_operations.attempt_count, 1))
                 OR (payment_operations.state IN ('UNKNOWN','PROCESSING') AND EXCLUDED.state IN ('SUCCEEDED','PENDING','REQUIRES_REVIEW')
                     AND EXCLUDED.attempt_count = payment_operations.attempt_count)
                 OR (payment_operations.state = 'PENDING' AND EXCLUDED.state = 'REQUIRES_REVIEW'

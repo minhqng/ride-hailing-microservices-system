@@ -34,7 +34,8 @@ public sealed record PaymentOutcomeFact(
     string MessageType,
     string? OperationKey,
     string? SagaId,
-    string? ResultCode);
+    string? ResultCode,
+    bool Retryable = false);
 
 /// <summary>Receipt-style application result (disposition + stable reason code).</summary>
 public sealed record PaymentIntakeResult(string Disposition, string Reason)
@@ -109,6 +110,7 @@ public static class PaymentOutcomeIntake
             "PaymentAuthorizedV1" => ApplyAuthorized(trip, saga, fact, now, db),
             "PaymentAuthorizationFailedV1" => ApplyAuthorizationFailed(trip, saga, fact, now, db),
             "PaymentAuthorizationVoidedV1" => ApplyVoided(trip, saga, fact, now),
+            "PaymentAuthorizationVoidFailedV1" => ApplyVoidFailed(saga, fact, now),
             "PaymentCapturedV1" => ApplyCaptured(trip, saga, fact, now),
             "PaymentCapturePendingV1" => ApplyCaptureUncertain(saga, fact, now),
             "PaymentRequiresReviewV1" => ApplyRequiresReview(saga, fact, now),
@@ -243,6 +245,36 @@ public static class PaymentOutcomeIntake
         // cancelled-but-authorized race: discharge the reconcile obligation.
         trip.ConfirmCleanup(ReconcileCleanupKey, now);
         return Applied;
+    }
+
+    /// <summary>
+    /// Void-specific failure. It must match the Saga's VOID key, never the
+    /// authorize key: a void failure is a compensation problem, not a
+    /// mismatched authorization outcome. Retryable failures stay compensating
+    /// on the same void key for reconciliation; terminal failures become a
+    /// visible review state without claiming the reservation release is done.
+    /// </summary>
+    private static PaymentIntakeResult ApplyVoidFailed(
+        RideSaga saga, PaymentOutcomeFact fact, DateTimeOffset now)
+    {
+        if (Mismatch(fact.OperationKey, saga.VoidOperationKey))
+        {
+            return Review("PAYMENT_OPERATION_MISMATCH");
+        }
+
+        if (saga.Status == RideSagaStatus.Compensated)
+        {
+            return Replay;
+        }
+
+        if (saga.CurrentStep != RideSagaStep.VoidPending)
+        {
+            return Review("STALE_PAYMENT_OUTCOME");
+        }
+
+        Require(saga.RecordVoidFailed(
+            fact.ResultCode ?? "VOID_FAILED", fact.Retryable, now));
+        return fact.Retryable ? Parked("VOID_OUTCOME_UNRESOLVED") : Applied;
     }
 
     private static PaymentIntakeResult ApplyCaptured(Trip trip, RideSaga saga, PaymentOutcomeFact fact, DateTimeOffset now)
