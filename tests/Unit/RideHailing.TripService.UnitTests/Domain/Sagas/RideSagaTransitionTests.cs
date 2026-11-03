@@ -181,6 +181,62 @@ public sealed class RideSagaTransitionTests
         Assert.Null(saga.VoidOperationKey);
     }
 
+    [Fact]
+    public void CancellationAfterAuthorize_StartsExactVoidFromAuthorized()
+    {
+        var saga = Authorized();
+
+        var outcome = saga.RecordCancellationAfterAuthorize(
+            RideSagaOperationKeys.Void(TripId), Later);
+
+        Assert.True(outcome.IsSuccess);
+        Assert.False(outcome.IsReplay);
+        Assert.Equal(RideSagaStatus.Compensating, saga.Status);
+        Assert.Equal(RideSagaStep.VoidPending, saga.CurrentStep);
+        Assert.Equal(RideSagaOperationKeys.Void(TripId), saga.VoidOperationKey);
+        Assert.False(saga.MayStartRide);
+        Assert.False(saga.MayCompleteRide);
+
+        var replay = saga.RecordCancellationAfterAuthorize(
+            RideSagaOperationKeys.Void(TripId), Later);
+        Assert.True(replay.IsSuccess);
+        Assert.True(replay.IsReplay);
+        Assert.Equal(3, saga.StepVersion);
+    }
+
+    [Fact]
+    public void CancellationAfterAuthorize_RejectsWrongKeyNonAuthorizedAndTerminal()
+    {
+        var authorized = Authorized();
+        var wrongKey = authorized.RecordCancellationAfterAuthorize($"{TripId:D}:void:v2", Later);
+        Assert.Equal(RideSagaErrorCode.OperationKeyMismatch, wrongKey.ErrorCode);
+        Assert.Equal(RideSagaStep.Authorized, authorized.CurrentStep);
+
+        var pending = NewSaga();
+        var illegal = pending.RecordCancellationAfterAuthorize(
+            RideSagaOperationKeys.Void(TripId), Later);
+        Assert.Equal(RideSagaErrorCode.StatusConflict, illegal.ErrorCode);
+
+        var terminal = CapturePending();
+        Assert.True(terminal.RecordCaptureSucceeded(Later).IsSuccess);
+        var rejected = terminal.RecordCancellationAfterAuthorize(
+            RideSagaOperationKeys.Void(TripId), Later);
+        Assert.Equal(RideSagaErrorCode.TerminalState, rejected.ErrorCode);
+    }
+
+    [Fact]
+    public void CancellationAfterAuthorize_CompensatesThroughVoidAndRelease()
+    {
+        var saga = Authorized();
+        Assert.True(saga.RecordCancellationAfterAuthorize(
+            RideSagaOperationKeys.Void(TripId), Later).IsSuccess);
+
+        Assert.True(saga.RecordReservationReleased(Later).IsReplay);
+        Assert.Equal(RideSagaStep.VoidPending, saga.CurrentStep);
+        Assert.True(saga.RecordVoidResolved(Later, reservationReleaseConfirmed: true).IsSuccess);
+        Assert.Equal(RideSagaStatus.Compensated, saga.Status);
+    }
+
     // --------------------------------------------------- void / release pair
 
     [Fact]

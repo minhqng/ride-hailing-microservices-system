@@ -59,6 +59,17 @@ public sealed class CancelRideHandler
             .SingleOrDefaultAsync(s => s.TripId == tripId, cancellationToken)
             .ConfigureAwait(false);
 
+        // A legacy/authority-shaped intake can mark READY_TO_START without a
+        // persisted saga. Cancelling that ride cannot mint the exact void
+        // operation lineage, so refuse it instead of stranding an
+        // authorization; the normal W10 path always has the saga.
+        if (trip.State == TripState.ReadyToStart && saga is null)
+        {
+            return TripLifecycleResult.Fail(trip, TripOutcome.Fail(
+                TripErrorCode.IllegalTransition,
+                "Cancellation from READY_TO_START requires the persisted authorization saga; this ride must be reviewed."));
+        }
+
         // Snapshot before Cancel so only the obligations added by this
         // transition are staged; an upgrade/backfill is never silently
         // republished as a new logical message.
@@ -74,10 +85,34 @@ public sealed class CancelRideHandler
         // authorization flips the saga to COMPENSATING immediately (release
         // and matching cleanup exist now), while the void decision waits for
         // the authority-confirmed outcome — never assume the effect absent.
+        // At READY_TO_START the authorization already succeeded, so the exact
+        // void command is staged in this same transaction (no second effect,
+        // no blind retry) and the saga starts directly at VOID_PENDING.
         var sagaStatusBefore = saga?.Status;
         if (saga is not null)
         {
-            var sagaOutcome = saga.RecordCancellationDuringAuthorize(now);
+            SagaOutcome sagaOutcome;
+            if (saga.CurrentStep == RideSagaStep.AuthorizePending)
+            {
+                sagaOutcome = saga.RecordCancellationDuringAuthorize(now);
+            }
+            else if (saga.CurrentStep == RideSagaStep.Authorized)
+            {
+                sagaOutcome = saga.RecordCancellationAfterAuthorize(
+                    RideSagaOperationKeys.Void(tripId), now);
+                if (sagaOutcome.IsSuccess && !sagaOutcome.IsReplay)
+                {
+                    TripOutboxWriter.Enqueue(_db,
+                        TripSagaIntents.VoidPaymentAuthorization(trip, saga, now));
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Cancellation from {trip.State.ToCanonicalName()} cannot compensate saga step " +
+                    $"{saga.CurrentStep.ToCanonicalName()} for trip {tripId:D}.");
+            }
+
             if (!sagaOutcome.IsSuccess)
             {
                 throw new InvalidOperationException(

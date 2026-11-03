@@ -160,15 +160,21 @@ public sealed class TripW12TelemetryTests : IDisposable
         using var meter = new MeterRecorder();
         var rider = Guid.NewGuid();
 
-        // CREATED cancellation is policy-unresolved: a domain rejection.
-        var fresh = await CreateTripAsync(rider);
-        using (var policy = await _client.SendAsync(Cancel(fresh, rider)))
+        // IN_PROGRESS cancellation is an illegal domain transition: a bounded
+        // invalid_transition rejection (CREATED is now cancellable by policy).
+        var inProgress = await CreateMatchingTripAsync(rider);
+        await ExecuteAsync("""
+            UPDATE trips SET state = 'IN_PROGRESS', current_matching_round = 1,
+                assigned_driver_id = @driver, reservation_id = @reservation, matching_round = 1
+            WHERE trip_id = @p
+            """, inProgress);
+        using (var policy = await _client.SendAsync(Cancel(inProgress, rider)))
         {
             Assert.Equal(HttpStatusCode.Conflict, policy.StatusCode);
-            Assert.Equal("CANCELLATION_POLICY_UNRESOLVED", await ProblemCodeAsync(policy));
+            Assert.Equal("DOMAIN_CONFLICT", await ProblemCodeAsync(policy));
         }
 
-        Assert.Equal(1, Total(meter.Flush(), "trip.transition.rejected", "cancellation_policy_unresolved"));
+        Assert.Equal(1, Total(meter.Flush(), "trip.transition.rejected", "invalid_transition"));
 
         // Terminal states reject with a bounded terminal_state reason (fresh
         // Rider: one active Trip each).
@@ -308,8 +314,7 @@ public sealed class TripW12TelemetryTests : IDisposable
         var allowedReasons = new HashSet<string>(StringComparer.Ordinal)
         {
             "active_trip_conflict", "idempotency_conflict", "invalid_transition", "terminal_state",
-            "cancellation_policy_unresolved", "stale_identity", "status_conflict", "identity_required",
-            "authority_rejected",
+            "stale_identity", "status_conflict", "identity_required", "authority_rejected",
         };
         var steps = new HashSet<string>(StringComparer.Ordinal)
         {
