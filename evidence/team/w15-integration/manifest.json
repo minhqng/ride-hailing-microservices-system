@@ -33,7 +33,7 @@
   "artifacts": [
     {
       "path": "README.md",
-      "sha256": "e94f4b1512d1434cf638634847391e6b5ee4b4814579eb60bcfb2e6c8daeaf2e"
+      "sha256": "2ec10aa18f5f0851b800193dfdc232ce768cc888d2b31d4211ea1b050f3a1fb7"
     },
     {
       "path": "source-mapping.json",
