@@ -287,10 +287,11 @@ def main():
                  lambda state: state and state.get("Health", {}).get("Status") == "healthy")
         migrate(values)
         compose("up", "-d", "--build", *SERVICES)
+        infos = {}
         for service, port in HTTP_PORTS.items():
             wait_http(port)
-            info = wait_http(port, "/info")
-            assert info.get("environment") == "Production", (service, info)
+            infos[service] = wait_http(port, "/info")
+            assert infos[service].get("environment") == "Production", (service, infos[service])
         for service in ["trip", "payment"]:
             configured = compose("exec", "-T", service, "printenv",
                                  "TripMessaging__Enabled" if service == "trip"
@@ -298,8 +299,12 @@ def main():
             assert configured == ("true" if service == "trip" else "Production"), configured
         assert compose("exec", "-T", "trip", "printenv",
                        "TripDatabase__AutoMigrate").stdout.strip() == "false"
+        assert compose("exec", "-T", "payment", "printenv",
+                       "Reconciliation__Enabled").stdout.strip() == "true"
+        assert infos["payment"].get("reconciliationEnabled") is True, infos["payment"]
         check("PRODUCTION-ENVIRONMENT", True)
         check("MESSAGING-ENABLED", True)
+        check("PRODUCTION-RECONCILIATION", True)
         for path in ["/simulator/operations",
                      "/simulator/operations/" + str(uuid.uuid4())]:
             assert http_status("POST" if path == "/simulator/operations" else "GET",
