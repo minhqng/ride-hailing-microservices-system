@@ -220,7 +220,7 @@
     },
     {
       "path": "release-verification.json",
-      "sha256": "e226fc67b68f055cb500c69ee490963ee9861b87e4621e6abe4f0f05b5a816ee"
+      "sha256": "95ff5c8434cd6c6ca8631f3f35c0ab6e728e367a709d6c38d79d5d6701a81a7d"
     },
     {
       "path": "test-output.txt",
