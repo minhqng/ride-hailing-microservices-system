@@ -148,7 +148,7 @@ def live_contention(output, repeat):
     for sequence in (20, 21):
         status, _, _ = contention.http_json(base, "POST", f"/drivers/{driver_id}/location",
                                           body={**old_location, "sequenceNo": sequence}, timeout=20)
-        assert status == 200
+        assert status == 202
     member = driver_id.replace("-", "")
     key = "driver:projection:" + member
     wait("accepted location projection", lambda: redis("HGET", key, "sequenceNo"), lambda v: v == "21")
@@ -213,6 +213,8 @@ def response_loss(output, cache):
     assert len({proof[k] for k in ("reservationId", "postCommitReservationId", "uncertainReservationId",
                                   "finalRoundReservationId", "finalDriverReservationId")}) == 1
     assert proof["otherDriverStatus"] == "Available" and proof["reserveOutboxCount"] == 1
+    assert proof["attemptCount"] == proof["authoritativeReservationCount"] == 1
+    assert proof["finalAttemptState"] == "RESERVED" and proof["finalDriverStatus"] == "Reserved"
     result = {"elapsedSeconds": elapsed, "cases": cases, "authorityProof": proof,
               "proofBoundary": "Production Driver Kestrel endpoint/repository/faultpoint and Matching typed HTTP client/orchestrator; full production worker/process recovery in regression"}
     write(output / "response-loss.json", result)
