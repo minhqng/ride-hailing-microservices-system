@@ -226,24 +226,12 @@ def migrate(values):
     report["migration"] = {"api": "dotnet ef database update", "applied": applied[0]["count"]}
 
 
-def harness(command, trip, driver, reservation):
-    assembly = (ROOT / "scripts/test/w10-g3-harness/bin/Release/net10.0/"
-                "RideHailing.W10Harness.dll")
-    assert assembly.exists(), "build the W10 harness in Release before the release smoke"
-    environment = dict(base_env, TRIP_DB=(
-        "Host=postgres;Database=trip_db;Username=trip_app;Password="
-        + read_env()["TRIP_DB_PASSWORD"]))
-    result = subprocess.run(
-        ["docker", "run", "--rm", "--network", project + "_ride-net",
-         "-v", str(ROOT).replace("\\", "/") + ":/work:ro", "-w", "/work",
-         "-e", "TRIP_DB", "mcr.microsoft.com/dotnet/sdk:10.0", "dotnet",
-         "scripts/test/w10-g3-harness/bin/Release/net10.0/RideHailing.W10Harness.dll",
-         command, trip, driver, reservation],
-        cwd=ROOT, env=environment, capture_output=True, text=True)
-    assert result.returncode == 0, result.stdout + result.stderr
-    value = json.loads(result.stdout.strip().splitlines()[-1])
-    assert value["ok"], value
-    return value
+def driver_action(trip_id, action, driver_id, reservation, driver_token):
+    """Drive the lifecycle exclusively through the public authenticated API."""
+    response = http("POST", f"/trips/{trip_id}/{action}",
+                    {"driverId": driver_id, "reservationId": reservation},
+                    driver_token)
+    return response
 
 
 def redis_projection(driver_id):
@@ -362,13 +350,13 @@ def main():
                                                      "round": round_truth, "attempt": attempt[0]}
 
             token, trip_id, reservation, proof = start_trip("completed")
-            harness("accept", trip_id, driver_id, reservation)
+            driver_action(trip_id, "accept", driver_id, reservation, driver_token)
             wait("authorization", lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + trip_id + "'"),
                  lambda value: value[0]["state"] == "READY_TO_START")
-            harness("start", trip_id, driver_id, reservation)
+            driver_action(trip_id, "start", driver_id, reservation, driver_token)
             wait("driver start", lambda: rows("driver_db", "SELECT * FROM drivers WHERE driver_id='" + driver_id + "'"),
                  lambda value: value[0]["status"] == "ON_TRIP")
-            harness("complete", trip_id, driver_id, reservation)
+            driver_action(trip_id, "complete", driver_id, reservation, driver_token)
             wait("completed trip", lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + trip_id + "'"),
                  lambda value: value[0]["state"] == "COMPLETED")
             wait("completed saga", lambda: rows("trip_db", "SELECT * FROM ride_sagas WHERE trip_id='" + trip_id + "'"),
@@ -382,13 +370,14 @@ def main():
                                 lambda value: value[0]["status"] == "AVAILABLE" and value[0]["reservation_id"] is None)[0]
             journeys["completed"] = {"trip": trip_id, "reservation": reservation,
                                      "state": "COMPLETED", "payment": len(payment), "proof": proof}
+            check("PUBLIC-DRIVER-LIFECYCLE", True)
             check("COMPLETED-JOURNEY", True)
 
             token, trip_id, reservation, proof = start_trip("cancelled")
             # AUD-05 frozen policy: cancel after the authorization succeeded.
             # READY_TO_START cancellation must release the exact reservation,
             # void the hold with the stable void key, and compensate the Saga.
-            harness("accept", trip_id, driver_id, reservation)
+            driver_action(trip_id, "accept", driver_id, reservation, driver_token)
             wait("authorization before cancellation",
                  lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + trip_id + "'"),
                  lambda value: value[0]["state"] == "READY_TO_START")
