@@ -132,7 +132,7 @@
   "artifacts": [
     {
       "path": "README.md",
-      "sha256": "4a12de066f0de2f6fe9948c72ce9752fa828760fd2d0ec88e105133fda3e0c16"
+      "sha256": "b7f4f78ec87b7a1dc87e4b11fcf8d8f8919d289a1f64a0ca74d2a93c0ed9f475"
     },
     {
       "path": "source-mapping.json",
@@ -144,11 +144,11 @@
     },
     {
       "path": "release-evidence.md",
-      "sha256": "7546a0789865217ac9afd600a5f9e40ed24ce9f5b3a60d52f61f182ac2c433c1"
+      "sha256": "52de3f99fd2f65a810b7c3902e1750d7dc856bc1f893096e65426bf6fba87257"
     },
     {
       "path": "test-output.txt",
-      "sha256": "d366e19b00eb82b6983ec12d4e152f741e33a272c09e66dc3eb3d2e4961de080"
+      "sha256": "4c31dabcefc9a0d160086959b73d7a51657698ee7b90f2c4f3a188d63fc10a93"
     },
     {
       "path": "final-state/release-config.json",
