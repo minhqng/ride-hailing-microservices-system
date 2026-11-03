@@ -17,8 +17,10 @@ $output = Join-Path $PSScriptRoot ('outputs/' + $runId)
 New-Item -ItemType Directory -Force $output | Out-Null
 $oldProject = $env:COMPOSE_PROJECT_NAME
 $oldMessaging = $env:TRIP_MESSAGING_ENABLED
+$oldComposeFile = $env:COMPOSE_FILE
 $env:COMPOSE_PROJECT_NAME = $ProjectName
 $env:TRIP_MESSAGING_ENABLED = 'true'
+$env:COMPOSE_FILE = 'compose.yaml'
 function Invoke-NativeLog([string]$Label, [string]$Executable, [string[]]$Arguments) {
     $savedPreference = $ErrorActionPreference
     try {
@@ -71,5 +73,6 @@ try {
     $teardownExit = Invoke-NativeLog 'teardown' 'docker' @('compose','--profile','obs','down','-v')
     $env:COMPOSE_PROJECT_NAME = $oldProject
     $env:TRIP_MESSAGING_ENABLED = $oldMessaging
+    $env:COMPOSE_FILE = $oldComposeFile
     if ($teardownExit -ne 0) { throw 'Disposable project teardown failed.' }
 }
