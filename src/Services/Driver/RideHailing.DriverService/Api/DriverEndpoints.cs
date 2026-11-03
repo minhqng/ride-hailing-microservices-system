@@ -1,5 +1,6 @@
 // B-W03-08: FUN-02 minimal API. Maps DomainException codes to HTTP (chốt ②).
 // Domain never knows HTTP. Invalid* -> 400, conflicts/stale -> 409.
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Application.Messaging;
@@ -301,7 +302,7 @@ public static class DriverEndpoints
             {
                 return MapDomainError(ex);
             }
-        });
+        }).RequireRateLimiting(DriverRateLimitPolicy.Location);
     }
 
     private static IResult MapDomainError(DriverDomainException ex) => ex.Code switch

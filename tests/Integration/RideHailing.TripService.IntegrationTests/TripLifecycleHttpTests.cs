@@ -303,6 +303,22 @@ public sealed class TripLifecycleHttpTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateRide_IsRateLimitedPerAuthenticatedRider()
+    {
+        var rider = Guid.NewGuid().ToString("D");
+        HttpStatusCode last = HttpStatusCode.Created;
+        for (var attempt = 0; attempt <= TripRateLimitPolicy.PermitLimit; attempt++)
+        {
+            using var response = await _client.SendAsync(
+                Request(HttpMethod.Post, TripRoutes.CreateRide, rider, "Rider", RideBody(),
+                    "rate-" + Guid.NewGuid().ToString("N")));
+            last = response.StatusCode;
+        }
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, last);
+    }
+
+    [Fact]
     public async Task CancelRide_WithoutPrincipal_Returns401_WithoutSideEffects()
     {
         var rider = Guid.NewGuid().ToString("D");
