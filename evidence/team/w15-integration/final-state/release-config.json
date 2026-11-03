@@ -1,0 +1,26 @@
+{
+  "overlay": "deploy/compose/compose.release.yaml",
+  "requiredSecrets": [
+    "POSTGRES_PASSWORD",
+    "IDENTITY_DB_PASSWORD",
+    "DRIVER_DB_PASSWORD",
+    "TRIP_DB_PASSWORD",
+    "MATCHING_DB_PASSWORD",
+    "PAYMENT_DB_PASSWORD",
+    "NOTIFICATION_DB_PASSWORD",
+    "RABBITMQ_PASSWORD"
+  ],
+  "servicesForcedToProduction": [
+    "gateway",
+    "identity",
+    "driver",
+    "trip",
+    "matching",
+    "payment",
+    "notification"
+  ],
+  "positiveRenderWithSecrets": true,
+  "negativeRenderWithoutSecretsFailsClosed": true,
+  "negativeDiagnostic": "must be set for the release overlay",
+  "claim": "Configuration validation only; no runtime failover claim."
+}

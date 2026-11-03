@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "week": "W15",
+  "owner": "TEAM integration",
+  "authority": "Docs 00-03 > Doc 04 section 26 > Doc 05A/B/C W15",
+  "baseMain": {
+    "commit": "2b1b047b450074bd1d3af5a29e1f6f0e3ce8f07d",
+    "tree": "10e1480cec802fa50603b254e6f430324825550e"
+  },
+  "sourceCommit": "733f071150687613da1c93e123882161de43e95f",
+  "sourceTree": "774585d627c9a6b51deef1872f9a1a22a4b3f8fc",
+  "status": "PASS_WITH_PROCESS_GAPS",
+  "gates": {
+    "TEAM-W15-01-featureFreeze": "PASS",
+    "TEAM-W15-02-cleanClone": "PARTIAL: independent automated clean-clone/CI; separate human member execution pending",
+    "TEAM-W15-03-evidenceIntegrity": "PASS_WITH_LIMITATIONS: B complete; A/C W15 format gaps adjudicated in task-status.md",
+    "TEAM-W15-04-reportAssembly": "PASS"
+  },
+  "verifiedChecks": {
+    "releaseBuild": "PASS 0 errors, 14 warnings",
+    "secretScan": "PASS 1267 tracked paths",
+    "releaseOverlayPositive": "PASS",
+    "releaseOverlayNegative": "FAIL_CLOSED",
+    "hygieneSelfTest": "24/24 PASS",
+    "hygieneChangedPaths": "23 clean",
+    "sourceAnchorFixtures": "12/12 PASS",
+    "performanceHarnessUnitTests": "35/35 PASS",
+    "bClaimsValidator": "PASS 174 digest checks",
+    "bFreezeManifestHashes": "7/7 PASS"
+  },
+  "sourceMapping": "source-mapping.json",
+  "taskStatus": "task-status.md",
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "713b2dbb0d2d610df00f59da56c6be1b049c0508c0a8eedd2250313e81bfd3da"
+    },
+    {
+      "path": "source-mapping.json",
+      "sha256": "edc5340811daaeb527bce88e976941306c649c7f3aa188e52978e8534993656e"
+    },
+    {
+      "path": "task-status.md",
+      "sha256": "dd33f334236e13a5b031808e74a5b2be1a2b0c93f95f42bf67c2c59eb3e4e3e1"
+    },
+    {
+      "path": "test-output.txt",
+      "sha256": "630250a5562902eaba0c917b963d0fa5734c5783b893d3dd9935b8fdc1344ec5"
+    },
+    {
+      "path": "final-state/integrity.json",
+      "sha256": "651d900e1f8f6b48fff4c0af0a31d66d815b791def49479cb38fe2acb26def3c"
+    },
+    {
+      "path": "final-state/release-config.json",
+      "sha256": "5e14f1d33872af3b9d2d5287f7730a83f0736edd71fe5ff66700d024ab1311b8"
+    }
+  ],
+  "ci": {
+    "note": "Exact-tree CI is recorded by the integration/team-w15-final pull request checks.",
+    "candidateTree": "774585d627c9a6b51deef1872f9a1a22a4b3f8fc"
+  },
+  "limitations": [
+    "No full local Testcontainers regression rerun; exact-tree GitHub CI is authoritative.",
+    "No separate human member clean clone (course/process gate).",
+    "No runtime HA claim from configuration validation; W14 source-bound evidence remains the HA authority.",
+    "Historical member measurements retain their original source and limits."
+  ]
+}
