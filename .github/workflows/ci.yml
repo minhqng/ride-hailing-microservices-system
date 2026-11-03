@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.100
       - run: bash scripts/fault/team-fault-campaign.sh
       - if: always()
         uses: actions/upload-artifact@v4
@@ -48,15 +48,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.100
       - run: dotnet restore RideHailing.Distributed.slnx
       - run: python3 -m unittest discover -s scripts/perf/tests -p 'test_*.py'
       - run: python3 -m compileall -q scripts/perf scripts/evidence scripts/fault
       - run: dotnet build RideHailing.Distributed.slnx -c Release --no-restore
       - run: python3 -m unittest discover -s scripts/test -p 'test_assert_trx.py'
       - run: dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory TestResults
-      # Refuse an SDK/VSTest false green with missing or zero test discovery.
-      - run: python3 scripts/test/assert-trx.py --results-dir TestResults --min-passed 1200 --min-files 12 --max-skipped 1
+      # Refuse an SDK/VSTest false green with missing, zero, or silently skipped discovery.
+      - run: >-
+          python3 scripts/test/assert-trx.py --results-dir TestResults
+          --min-passed 1200 --min-files 12 --max-skipped 1
+          --allowed-skip RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState
+          --required-suites-file scripts/test/required-suites.txt
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -107,7 +111,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 10.0.100
       - run: python3 scripts/security/init-local-auth.py
       - run: docker compose --profile obs up -d --build
       - run: python3 scripts/test/platform-smoke.py
