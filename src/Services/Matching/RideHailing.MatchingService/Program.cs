@@ -239,10 +239,8 @@ if (app.Environment.IsEnvironment("Testing"))
 // Best-effort baseline ensure (idempotent SQL). Service still boots if PG is down.
 try
 {
-    await using var conn = new NpgsqlConnection(postgresConnectionString);
-    await conn.OpenAsync();
-    await using var cmd = new NpgsqlCommand(MatchingSqlBaseline.Load(), conn);
-    await cmd.ExecuteNonQueryAsync();
+    await RideHailing.MatchingService.Infrastructure.Persistence.MatchingSchemaBootstrap
+        .EnsureBaselineAsync(postgresConnectionString);
     app.Logger.LogInformation("Matching PostgreSQL baseline ensured.");
 }
 catch (Exception ex)

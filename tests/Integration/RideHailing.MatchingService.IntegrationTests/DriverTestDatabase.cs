@@ -49,7 +49,7 @@ public sealed class DriverTestDatabase : IAsyncLifetime
             return;
         }
 
-        _container = new PostgreSqlBuilder("postgres:18.6")
+        _container = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
             .WithDatabase("driver_db")
             .WithUsername("driver_app")
             .WithPassword("driver_dev_pw")

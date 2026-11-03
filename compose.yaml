@@ -9,7 +9,7 @@ x-auth: &auth
 
 services:
   postgres:
-    image: postgres:18.6
+    image: postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_dev_pw}
@@ -33,7 +33,7 @@ services:
     networks: [ride-net]
 
   redis:
-    image: redis:8.10.2
+    image: redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901
     command: ["redis-server", "--appendonly", "yes"]
     volumes: [redisdata:/data]
     ports: ["127.0.0.1:6379:6379"]
@@ -45,7 +45,7 @@ services:
     networks: [ride-net]
 
   rabbitmq:
-    image: rabbitmq:4.3.6-management
+    image: rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ride_app}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ride_dev_pw}
@@ -65,7 +65,7 @@ services:
 
   # Optional local observability stack. Start with: docker compose --profile obs up -d
   jaeger:
-    image: jaegertracing/all-in-one:1.76.0
+    image: jaegertracing/all-in-one:1.76.0@sha256:ab6f1a1f0fb49ea08bcd19f6b84f6081d0d44b364b6de148e1798eb5816bacac
     profiles: [obs]
     ports: ["127.0.0.1:16686:16686"]
     environment:
@@ -73,7 +73,7 @@ services:
     networks: [ride-net]
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.120.0
+    image: otel/opentelemetry-collector-contrib:0.120.0@sha256:85ac41c2db88d0df9bd6145e608a3cb023f5d8443868adbfbbf66efb51087917
     profiles: [obs]
     command: ["--config=/etc/otelcol/config.yml"]
     volumes:
@@ -82,7 +82,7 @@ services:
     networks: [ride-net]
 
   prometheus:
-    image: prom/prometheus:v3.10.0
+    image: prom/prometheus:v3.10.0@sha256:4a61322ac1103a0e3aea2a61ef1718422a48fa046441f299d71e660a3bc71ae9
     profiles: [obs]
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
     volumes:
@@ -91,7 +91,7 @@ services:
     networks: [ride-net]
 
   grafana:
-    image: grafana/grafana:12.4.0
+    image: grafana/grafana:12.4.0@sha256:b0ae311af06228bcfd4a620504b653db80f5b91e94dc3dc2a5b7dab202bcde20
     profiles: [obs]
     ports: ["127.0.0.1:3000:3000"]
     volumes:

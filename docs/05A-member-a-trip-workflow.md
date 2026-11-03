@@ -454,8 +454,10 @@ src/
 
 tests/
 ├─ TripService.UnitTests/
-├─ TripService.IntegrationTests/
-└─ SystemTests/
+└─ TripService.IntegrationTests/
+
+The empty SystemTests placeholder was removed (AUD-09); real system gates
+live in `scripts/test/*.py` (core-runtime-gate, release-smoke, ...).
 ```
 
 Domain layer should not depend directly on:

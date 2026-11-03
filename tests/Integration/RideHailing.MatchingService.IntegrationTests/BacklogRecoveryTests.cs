@@ -28,7 +28,7 @@ public sealed class BacklogRecoveryTests(
         portProbe.Start();
         var port = ((System.Net.IPEndPoint)portProbe.LocalEndpoint).Port;
         portProbe.Stop();
-        await using var broker = new RabbitMqBuilder("rabbitmq:4.3.6-management")
+        await using var broker = new RabbitMqBuilder("rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58")
             .WithPortBinding(port, 5672).Build();
         await broker.StartAsync(ct);
         var uri = new Uri(broker.GetConnectionString());

@@ -109,7 +109,7 @@ public sealed class RedisOutageRecoveryTests
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(120));
         var ct = deadline.Token;
         var elapsed = Stopwatch.StartNew();
-        var redis = new RedisBuilder("redis:8.10.2")
+        var redis = new RedisBuilder("redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901")
             .WithAutoRemove(true)
             .Build();
         await redis.StartAsync(ct);

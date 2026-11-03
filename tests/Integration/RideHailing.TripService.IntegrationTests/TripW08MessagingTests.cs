@@ -27,7 +27,7 @@ namespace RideHailing.TripService.IntegrationTests;
 
 public sealed class TripRabbitFixture : IAsyncLifetime
 {
-    public IContainer Broker { get; } = new ContainerBuilder("rabbitmq:4.3.6-management")
+    public IContainer Broker { get; } = new ContainerBuilder("rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58")
         .WithEnvironment("RABBITMQ_DEFAULT_USER", "trip-proof")
         .WithEnvironment("RABBITMQ_DEFAULT_PASS", "disposable-test-only")
         .WithPortBinding(5672, true)

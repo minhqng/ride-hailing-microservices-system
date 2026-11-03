@@ -292,11 +292,11 @@ start_infrastructure() {
     -e TRIP_DB_PASSWORD=trip_dev_pw -e MATCHING_DB_PASSWORD=matching_dev_pw \
     -e PAYMENT_DB_PASSWORD=payment_dev_pw -e NOTIFICATION_DB_PASSWORD=notification_dev_pw \
     -v "$REPO_ROOT/deploy/postgres/init:/docker-entrypoint-initdb.d:ro" \
-    postgres:18.6 >/dev/null
+    postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81 >/dev/null
   docker run -d --name "$RABBIT" --network "$NET" \
     -e RABBITMQ_DEFAULT_USER=ride_app -e RABBITMQ_DEFAULT_PASS=ride_dev_pw \
-    rabbitmq:4.3.6-management >/dev/null
-  docker run -d --name "$REDIS" --network "$NET" redis:8.10.2 >/dev/null
+    rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58 >/dev/null
+  docker run -d --name "$REDIS" --network "$NET" redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901 >/dev/null
 
   wait_for 90 "PostgreSQL databases" pg_has_db driver_db
   wait_for 60 "Matching database" pg_has_db matching_db

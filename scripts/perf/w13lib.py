@@ -36,9 +36,9 @@ COMPOSE_FILES = ["compose.yaml", "scripts/perf/compose.w13.yaml"]
 PROJECT = "ride-hailing-w13"
 K6_IMAGE = os.environ.get("W13_K6_IMAGE", "grafana/k6:0.54.0")
 BASE_IMAGES = {
-    "postgres": "postgres:18.6",
-    "redis": "redis:8.10.2",
-    "rabbitmq": "rabbitmq:4.3.6-management",
+    "postgres": "postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81",
+    "redis": "redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901",
+    "rabbitmq": "rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
 }
 
 EXPERIMENTS = ("E01", "E02", "E03")

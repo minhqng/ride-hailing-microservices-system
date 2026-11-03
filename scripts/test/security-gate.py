@@ -199,7 +199,7 @@ if "--identity-tests" in sys.argv:
         connection = connection.replace("127.0.0.1", "host.docker.internal")
         environment["RIDE_AUTH_FIXTURE"] = "/work/TestResults/security-fixture.json"
         environment["GATE_DATABASE"] = connection
-        command = ["docker", "run", "--rm", "--name", "team-w12-identity-gate", "-v", str(root).replace("\\", "/") + ":/work", "-w", "/work"] + sum((["-e", key] for key in environment if key.startswith("GATE_") or key == "RIDE_AUTH_FIXTURE"), []) + ["mcr.microsoft.com/dotnet/sdk:10.0"] + command
+        command = ["docker", "run", "--rm", "--name", "team-w12-identity-gate", "-v", str(root).replace("\\", "/") + ":/work", "-w", "/work"] + sum((["-e", key] for key in environment if key.startswith("GATE_") or key == "RIDE_AUTH_FIXTURE"), []) + ["mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b"] + command
     else:
         environment["RIDE_AUTH_FIXTURE"] = str(fixture_path)
         environment["GATE_DATABASE"] = connection
