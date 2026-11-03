@@ -1,0 +1,30 @@
+Verified source: 733f071150687613da1c93e123882161de43e95f
+Verified tree:   774585d627c9a6b51deef1872f9a1a22a4b3f8fc
+
+Environment: Windows 11, Docker Desktop 29.8.2 (Linux engine), Git 2.55.0,
+Python 3.15.2, Git Bash. No native dotnet/PowerShell 7; Release build executed
+in mcr.microsoft.com/dotnet/sdk:10.0 as documented by the B freeze procedure.
+
+W15 integration checks:
+- Release build (Release, restore + no-restore build): PASS, 0 errors,
+  14 analyzer warnings. The count matches the B source-bound freeze record.
+- Secret scan: PASS, 1267 tracked paths, no high-confidence secret or
+  release-gate violation.
+- Release overlay positive render with all eight operator secrets: PASS.
+- Release overlay negative render without secrets: FAILS CLOSED with
+  "must be set for the release overlay".
+- Hygiene self-test: 24/24 pattern verdicts PASS.
+- Hygiene changed-path check (origin/main base): 23 paths clean.
+- Source-anchor fixtures: 12/12 PASS (including portable file-mode case).
+- Performance harness unit tests: 35/35 PASS.
+- B claims validator: PASS, accepted sample calculations + 174 digest checks.
+- B freeze manifest artifact hashes: 7/7 PASS using canonical-LF bytes.
+
+Not run locally: the full Testcontainers integration/regression suite. The
+exact-tree GitHub CI build-test/platform-smoke jobs are the authoritative
+full-suite result for this candidate. B's source-bound freeze already records
+1223 passed / 0 failed / 1 opt-in Identity skip on B's source; W15 adds no
+.NET source change outside the Matching README.
+
+Exact-tree CI: recorded by the `integration/team-w15-final` pull request
+checks; the accepted candidate tree is the tree above.
