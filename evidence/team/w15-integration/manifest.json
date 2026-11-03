@@ -33,7 +33,7 @@
   "artifacts": [
     {
       "path": "README.md",
-      "sha256": "713b2dbb0d2d610df00f59da56c6be1b049c0508c0a8eedd2250313e81bfd3da"
+      "sha256": "e94f4b1512d1434cf638634847391e6b5ee4b4814579eb60bcfb2e6c8daeaf2e"
     },
     {
       "path": "source-mapping.json",
@@ -45,7 +45,7 @@
     },
     {
       "path": "test-output.txt",
-      "sha256": "630250a5562902eaba0c917b963d0fa5734c5783b893d3dd9935b8fdc1344ec5"
+      "sha256": "3c1dcb05f2f8e0358475d731fa5fae4a0bf908df19864b61c46d7c139636e2c7"
     },
     {
       "path": "final-state/integrity.json",
@@ -57,8 +57,43 @@
     }
   ],
   "ci": {
-    "note": "Exact-tree CI is recorded by the integration/team-w15-final pull request checks.",
-    "candidateTree": "774585d627c9a6b51deef1872f9a1a22a4b3f8fc"
+    "runId": 41648524236,
+    "url": "https://github.com/minhqng/ride-hailing-microservices-system/actions/runs/41648524236",
+    "runHead": "6177c322f8b4c3a3b067d35870f0d7dcb5e58126",
+    "mergeCheckoutSha": "0dc88992cfd1098656416c7f6e5d82947f991e6d",
+    "mergeCheckoutTree": "72807e2e60d77c2d322acafaa7d1b880d9bcc7f5",
+    "candidateTree": "72807e2e60d77c2d322acafaa7d1b880d9bcc7f5",
+    "exactTreeMatch": true,
+    "conclusion": "success",
+    "jobs": {
+      "hygiene": "success",
+      "compose-config": "success",
+      "build-test": "success",
+      "platform-smoke": "success",
+      "fault-campaign": "skipped (W11-only gate)"
+    },
+    "trx": {
+      "passed": 1223,
+      "failed": 0,
+      "optInIdentityNotExecuted": 1,
+      "systemTestsDiscovered": 0
+    },
+    "identityLane": {
+      "passed": 7,
+      "total": 7
+    },
+    "securityChecks": 55,
+    "coreRuntimeScenarios": [
+      "completed",
+      "cancelled-during-authorization",
+      "terminal-authorization-decline"
+    ],
+    "auditorChecks": "AUD-01..08 PASS",
+    "providers": {
+      "postgres": "18.6",
+      "rabbitmq": "4.3.6",
+      "redis": "8.10.2"
+    }
   },
   "limitations": [
     "No full local Testcontainers regression rerun; exact-tree GitHub CI is authoritative.",
