@@ -118,6 +118,24 @@ W15 integration gates are recorded in
 verification, evidence-integrity checks, release fail-closed render, secret
 scan, anchor portability fixtures, claims validation and exact-tree CI.
 
+Failure-evidence mapping (Member A): REL-04 producer crash →
+`evidence/member-a/w11-fault-proofs/final-state/rel-04-producer-crash.md`;
+REL-07 Saga restart →
+`evidence/member-a/w11-fault-proofs/final-state/rel-07-saga-restart.md`;
+REL-09 compensation →
+`evidence/member-a/w10-saga/final-state/rel-09-compensation.md`;
+REL-10 capture recovery →
+`evidence/member-a/w10-saga/final-state/rel-10-capture-recovery.md`;
+REL-17 late terminal events →
+`evidence/member-a/w11-fault-proofs/final-state/rel-17-late-terminal-events.md`.
+
+Payment idempotency (Member C): `operationKey` is the logical money-effect
+identity; same-key different payload is a conflict, and a timeout after the
+provider effect is reconciled under the same key rather than treated as
+failure. The claim boundary and REL-08/11 diagram are in the Member C report;
+the underlying deterministic suites and fault seams remain in the C-owned
+W10/W11 evidence.
+
 ## Known limitations
 
 - The required "another member performs a clean clone" process step and the
