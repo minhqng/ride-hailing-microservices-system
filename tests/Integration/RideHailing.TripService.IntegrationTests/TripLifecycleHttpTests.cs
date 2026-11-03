@@ -267,7 +267,7 @@ public sealed class TripLifecycleHttpTests : IDisposable
     }
 
     [Fact]
-    public async Task CancelRide_FromCreated_ReturnsPolicyUnresolved_WithoutMutation()
+    public async Task CancelRide_FromCreated_CommitsCancellation()
     {
         var rider = Guid.NewGuid().ToString("D");
         var tripId = await CreateRideAsync(rider, "http-cancel-created-" + Guid.NewGuid().ToString("N"));
@@ -275,12 +275,14 @@ public sealed class TripLifecycleHttpTests : IDisposable
         using var response = await _client.SendAsync(
             Request(HttpMethod.Post, $"/trips/{tripId:D}/cancel", rider, "Rider"));
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Equal("CANCELLATION_POLICY_UNRESOLVED", await ProblemCodeAsync(response));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<CancelRideResponse>();
+        Assert.Equal("CANCELLED", body!.Status);
 
         var persisted = await ReloadAsync(tripId);
-        Assert.Equal(TripState.Created, persisted.State);
-        Assert.Equal(0, persisted.Version);
+        Assert.Equal(TripState.Cancelled, persisted.State);
+        Assert.Equal(1, persisted.Version);
+        Assert.Empty(persisted.CleanupIntents);
     }
 
     [Fact]

@@ -48,14 +48,6 @@ public enum TripErrorCode
     AssignmentAlreadyPresent = 5,
 
     /// <summary>
-    /// Cancellation from this state depends on product policy that is not
-    /// frozen yet, so the operation is left unapplied instead of inventing
-    /// an allow/reject semantic. Applies to CREATED and READY_TO_START
-    /// until that policy is decided.
-    /// </summary>
-    CancellationPolicyUnresolved = 6,
-
-    /// <summary>
     /// The supplied round/reservation generation is not the Trip's current
     /// generation: an older/superseded round, an old reservation from a
     /// previous assignment, or an unknown future generation (DSI-016).

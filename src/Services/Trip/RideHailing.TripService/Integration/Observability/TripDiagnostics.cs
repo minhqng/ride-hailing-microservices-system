@@ -90,7 +90,6 @@ public static class TripDiagnostics
         public const string IdempotencyConflict = "idempotency_conflict";
         public const string InvalidTransition = "invalid_transition";
         public const string TerminalState = "terminal_state";
-        public const string CancellationPolicyUnresolved = "cancellation_policy_unresolved";
         public const string StaleIdentity = "stale_identity";
         public const string StatusConflict = "status_conflict";
         public const string IdentityRequired = "identity_required";

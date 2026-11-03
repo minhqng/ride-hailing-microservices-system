@@ -324,6 +324,47 @@ public sealed class RideSaga
     }
 
     /// <summary>
+    /// Rider cancellation after the authorization already succeeded
+    /// (READY_TO_START): the hold exists at Payment authority, so compensation
+    /// starts directly at the exact void step. The handler commits this
+    /// transition, the Trip CANCELLED state, the release/cancel-round intents
+    /// and the VoidPaymentAuthorization command in one transaction.
+    /// </summary>
+    public SagaOutcome RecordCancellationAfterAuthorize(string voidOperationKey, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(voidOperationKey);
+        if (voidOperationKey != RideSagaOperationKeys.Void(TripId))
+        {
+            return SagaOutcome.Fail(
+                RideSagaErrorCode.OperationKeyMismatch,
+                $"Void operation key must follow the frozen lineage '{RideSagaOperationKeys.Void(TripId)}'.");
+        }
+
+        if (Status == RideSagaStatus.Compensating && CurrentStep == RideSagaStep.VoidPending)
+        {
+            return SagaOutcome.Success(isReplay: true);
+        }
+
+        if (Status.IsTerminal())
+        {
+            return Terminal(nameof(RecordCancellationAfterAuthorize));
+        }
+
+        RequireTime(now);
+
+        if (CurrentStep != RideSagaStep.Authorized)
+        {
+            return SagaOutcome.Fail(
+                RideSagaErrorCode.StatusConflict,
+                $"Post-authorization cancellation requires an AUTHORIZED saga but the saga is {CurrentStep.ToCanonicalName()} ({Status.ToCanonicalName()}).");
+        }
+
+        VoidOperationKey = voidOperationKey;
+        Commit(RideSagaStep.VoidPending, now, RideSagaStatus.Compensating);
+        return SagaOutcome.Success();
+    }
+
+    /// <summary>
     /// Authorization succeeded AFTER the Trip already cancelled (A-W10-04
     /// race): the authorization effect exists at Payment authority, so an
     /// exact Void operation with the stable void key is required. The Trip

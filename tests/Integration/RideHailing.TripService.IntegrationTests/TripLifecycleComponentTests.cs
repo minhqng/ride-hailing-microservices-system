@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using RideHailing.TripService.Application.Trips.CreateRide;
 using RideHailing.TripService.Application.Trips.Lifecycle;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 
@@ -442,7 +443,8 @@ public sealed class TripLifecycleComponentTests
         Assert.Equal(driverId, reloaded.Assignment!.DriverId);
         Assert.Equal(reservationId, reloaded.Assignment.ReservationId);
 
-        // CREATED cancellation stays policy-unresolved with no mutation.
+        // CREATED cancellation is allowed by the frozen pre-start policy:
+        // no matching round, assignment or payment obligation exists yet.
         var createdRider = Guid.NewGuid();
         var createdTrip = await CreateOwnedTripAsync(createdRider, "w5-cancel-created");
 
@@ -453,13 +455,240 @@ public sealed class TripLifecycleComponentTests
                 .HandleAsync(createdTrip, createdRider);
         }
 
-        Assert.False(createdCancel.IsSuccess);
-        Assert.Equal(TripErrorCode.CancellationPolicyUnresolved, createdCancel.ErrorCode);
+        Assert.True(createdCancel.IsSuccess);
+        Assert.False(createdCancel.IsReplay);
+        Assert.Equal(TripCompensation.None, createdCancel.Compensation);
 
         await using var verifyCreated = Db();
-        var stillCreated = await verifyCreated.Trips.AsNoTracking().SingleAsync(t => t.TripId == createdTrip);
-        Assert.Equal(TripState.Created, stillCreated.State);
-        Assert.Equal(0, stillCreated.Version);
+        var cancelledCreated = await verifyCreated.Trips.AsNoTracking().SingleAsync(t => t.TripId == createdTrip);
+        Assert.Equal(TripState.Cancelled, cancelledCreated.State);
+        Assert.Equal(1, cancelledCreated.Version);
+        Assert.Empty(cancelledCreated.CleanupIntents);
+    }
+
+    [Fact]
+    public async Task CancelFromReadyToStart_CommitsVoidIntent_AndExactCleanup()
+    {
+        await MigrateAsync();
+        var rider = Guid.NewGuid();
+        var tripId = await CreateOwnedTripAsync(rider, "w5-cancel-ready");
+        var driverId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+
+        await using (var db = Db())
+        {
+            Assert.True((await new StartMatchingHandler(db, Clock(), NullLogger<StartMatchingHandler>.Instance)
+                .HandleAsync(tripId, rider)).IsSuccess);
+            Assert.True((await new RecordDriverReservationHandler(db, Clock(), NullLogger<RecordDriverReservationHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId, 1)).IsSuccess);
+            Assert.True((await new RecordDriverAcceptedHandler(db, Clock(), NullLogger<RecordDriverAcceptedHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId)).IsSuccess);
+            Assert.True((await new MarkPaymentAuthorizedHandler(db, Clock(), NullLogger<MarkPaymentAuthorizedHandler>.Instance)
+                .HandleAsync(tripId)).IsSuccess);
+        }
+
+        TripLifecycleResult cancelled;
+        await using (var db = Db())
+        {
+            cancelled = await new CancelRideHandler(db, Clock(), NullLogger<CancelRideHandler>.Instance)
+                .HandleAsync(tripId, rider);
+        }
+
+        Assert.True(cancelled.IsSuccess);
+        Assert.False(cancelled.IsReplay);
+        Assert.Equal(
+            TripCompensation.ReleaseReservation | TripCompensation.CancelMatching,
+            cancelled.Compensation);
+
+        await using (var verify = Db())
+        {
+            var trip = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
+            Assert.Equal(TripState.Cancelled, trip.State);
+            Assert.Equal(driverId, trip.Assignment!.DriverId);
+            Assert.Equal(reservationId, trip.Assignment.ReservationId);
+            var saga = await verify.RideSagas.AsNoTracking().SingleAsync(s => s.TripId == tripId);
+            Assert.Equal(RideSagaStatus.Compensating, saga.Status);
+            Assert.Equal(RideSagaStep.VoidPending, saga.CurrentStep);
+            Assert.Equal(RideSagaOperationKeys.Void(tripId), saga.VoidOperationKey);
+            var voidIntents = await verify.OutboxMessages
+                .Where(m => m.AggregateId == tripId.ToString("D") &&
+                            m.MessageType == "VoidPaymentAuthorizationV1")
+                .ToListAsync();
+            Assert.Single(voidIntents);
+            Assert.Contains(RideSagaOperationKeys.Void(tripId), voidIntents[0].PayloadJson);
+        }
+
+        // A repeated cancel is an idempotent success and adds no second intent.
+        TripLifecycleResult replay;
+        await using (var db = Db())
+        {
+            replay = await new CancelRideHandler(db, Clock(), NullLogger<CancelRideHandler>.Instance)
+                .HandleAsync(tripId, rider);
+        }
+
+        Assert.True(replay.IsSuccess);
+        Assert.True(replay.IsReplay);
+        await using (var verify = Db())
+        {
+            Assert.Equal(1, await verify.OutboxMessages.CountAsync(
+                m => m.AggregateId == tripId.ToString("D") &&
+                     m.MessageType == "VoidPaymentAuthorizationV1"));
+        }
+
+        // The cancelled ride can never start afterwards.
+        TripLifecycleResult started;
+        await using (var db = Db())
+        {
+            started = await new StartTripHandler(db, Clock(), NullLogger<StartTripHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId);
+        }
+
+        Assert.False(started.IsSuccess);
+        Assert.Equal(TripErrorCode.TerminalState, started.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CancelVersusStart_ConcurrentRace_HasExactlyOneLegalWinner()
+    {
+        await MigrateAsync();
+        var rider = Guid.NewGuid();
+        var tripId = await CreateOwnedTripAsync(rider, "w10-cancel-start-race");
+        var driverId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+
+        await using (var db = Db())
+        {
+            Assert.True((await new StartMatchingHandler(db, Clock(), NullLogger<StartMatchingHandler>.Instance)
+                .HandleAsync(tripId, rider)).IsSuccess);
+            Assert.True((await new RecordDriverReservationHandler(db, Clock(), NullLogger<RecordDriverReservationHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId, 1)).IsSuccess);
+            Assert.True((await new RecordDriverAcceptedHandler(db, Clock(), NullLogger<RecordDriverAcceptedHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId)).IsSuccess);
+            Assert.True((await new MarkPaymentAuthorizedHandler(db, Clock(), NullLogger<MarkPaymentAuthorizedHandler>.Instance)
+                .HandleAsync(tripId)).IsSuccess);
+        }
+
+        async Task<bool> TryCancelAsync()
+        {
+            try
+            {
+                await using var db = Db();
+                var result = await new CancelRideHandler(db, Clock(), NullLogger<CancelRideHandler>.Instance)
+                    .HandleAsync(tripId, rider);
+                return result.IsSuccess;
+            }
+            catch (TripConcurrencyConflictException)
+            {
+                return false;
+            }
+        }
+
+        async Task<bool> TryStartAsync()
+        {
+            try
+            {
+                await using var db = Db();
+                var result = await new StartTripHandler(db, Clock(), NullLogger<StartTripHandler>.Instance)
+                    .HandleAsync(tripId, driverId, reservationId);
+                return result.IsSuccess;
+            }
+            catch (TripConcurrencyConflictException)
+            {
+                return false;
+            }
+        }
+
+        var outcomes = await Task.WhenAll(TryCancelAsync(), TryStartAsync());
+        Assert.Single(outcomes, success => success);
+
+        await using var verify = Db();
+        var trip = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
+        var saga = await verify.RideSagas.AsNoTracking().SingleAsync(s => s.TripId == tripId);
+        if (trip.State == TripState.Cancelled)
+        {
+            Assert.Equal(RideSagaStatus.Compensating, saga.Status);
+            Assert.Equal(RideSagaStep.VoidPending, saga.CurrentStep);
+            Assert.Equal(1, await verify.OutboxMessages.CountAsync(
+                m => m.AggregateId == tripId.ToString("D") &&
+                     m.MessageType == "VoidPaymentAuthorizationV1"));
+        }
+        else
+        {
+            Assert.Equal(TripState.InProgress, trip.State);
+            Assert.Equal(RideSagaStatus.Active, saga.Status);
+            Assert.Equal(RideSagaStep.Authorized, saga.CurrentStep);
+            Assert.Equal(0, await verify.OutboxMessages.CountAsync(
+                m => m.AggregateId == tripId.ToString("D") &&
+                     m.MessageType == "VoidPaymentAuthorizationV1"));
+        }
+    }
+
+    [Fact]
+    public async Task CancelledCreatedTrip_DoesNotBlockNewBooking()
+    {
+        await MigrateAsync();
+        var rider = Guid.NewGuid();
+        var first = await CreateOwnedTripAsync(rider, "w7-cancel-rebook-first");
+
+        await using (var db = Db())
+        {
+            Assert.True((await new CancelRideHandler(db, Clock(), NullLogger<CancelRideHandler>.Instance)
+                .HandleAsync(first, rider)).IsSuccess);
+        }
+
+        var second = await CreateOwnedTripAsync(rider, "w7-cancel-rebook-second");
+        Assert.NotEqual(first, second);
+
+        await using var verify = Db();
+        var trips = await verify.Trips.AsNoTracking()
+            .Where(t => t.RiderId == rider).ToListAsync();
+        Assert.Equal(2, trips.Count);
+        Assert.Contains(trips, t => t.TripId == first && t.State == TripState.Cancelled);
+        Assert.Contains(trips, t => t.TripId == second && t.State == TripState.Created);
+    }
+
+    [Fact]
+    public async Task CancelFromReadyToStartWithoutSaga_IsRejectedWithoutMutation()
+    {
+        await MigrateAsync();
+        var rider = Guid.NewGuid();
+        var tripId = await CreateOwnedTripAsync(rider, "w7-cancel-ready-no-saga");
+        var driverId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+
+        await using (var db = Db())
+        {
+            Assert.True((await new StartMatchingHandler(db, Clock(), NullLogger<StartMatchingHandler>.Instance)
+                .HandleAsync(tripId, rider)).IsSuccess);
+            Assert.True((await new RecordDriverReservationHandler(db, Clock(), NullLogger<RecordDriverReservationHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId, 1)).IsSuccess);
+            Assert.True((await new RecordDriverAcceptedHandler(db, Clock(), NullLogger<RecordDriverAcceptedHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId)).IsSuccess);
+            // Simulate the legacy authority-shaped path: no saga persisted.
+            db.RideSagas.Remove(await db.RideSagas.SingleAsync(s => s.TripId == tripId));
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = Db())
+        {
+            Assert.True((await new MarkPaymentAuthorizedHandler(db, Clock(), NullLogger<MarkPaymentAuthorizedHandler>.Instance)
+                .HandleAsync(tripId)).IsSuccess);
+        }
+
+        TripLifecycleResult cancelled;
+        await using (var db = Db())
+        {
+            cancelled = await new CancelRideHandler(db, Clock(), NullLogger<CancelRideHandler>.Instance)
+                .HandleAsync(tripId, rider);
+        }
+
+        Assert.False(cancelled.IsSuccess);
+        Assert.Equal(TripErrorCode.IllegalTransition, cancelled.ErrorCode);
+
+        await using var verify = Db();
+        var trip = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
+        Assert.Equal(TripState.ReadyToStart, trip.State);
+        Assert.Equal(0, await verify.RideSagas.CountAsync(s => s.TripId == tripId));
     }
 
     [Fact]

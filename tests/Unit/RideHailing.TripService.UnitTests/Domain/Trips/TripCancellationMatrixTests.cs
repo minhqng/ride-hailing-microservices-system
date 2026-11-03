@@ -52,29 +52,44 @@ public sealed class TripCancellationMatrixTests
         Assert.Equal(TripTestBuilders.ActionMoment, trip.UpdatedAt);
     }
 
-    [Theory]
-    [InlineData(TripState.Created)]
-    [InlineData(TripState.ReadyToStart)]
-    public void Cancel_FromPolicyUnresolvedState_LeavesTripUnapplied(TripState state)
+    [Fact]
+    public void Cancel_FromCreated_CommitsCancelledWithoutCompensation()
     {
-        // Product policy is not frozen for these branches: no allow/reject
-        // semantic is locked in, and nothing mutates.
-        var trip = TripTestBuilders.AtState(state);
+        var trip = TripTestBuilders.AtState(TripState.Created);
         var version = trip.Version;
-        var assignment = trip.Assignment;
-        var round = trip.CurrentMatchingRound;
-        var updatedAt = trip.UpdatedAt;
 
         var outcome = trip.Cancel(TripTestBuilders.ActionMoment);
 
-        Assert.False(outcome.IsSuccess);
-        Assert.Equal(TripErrorCode.CancellationPolicyUnresolved, outcome.ErrorCode);
+        Assert.True(outcome.IsSuccess);
+        Assert.False(outcome.IsReplay);
         Assert.Equal(TripCompensation.None, outcome.Compensation);
-        Assert.Equal(state, trip.State);
+        Assert.Equal(TripState.Cancelled, trip.State);
+        Assert.Null(trip.Assignment);
+        Assert.Equal(0, trip.CurrentMatchingRound);
+        Assert.Empty(trip.CleanupIntents);
+        Assert.Equal(version + 1, trip.Version);
+        Assert.Equal(TripTestBuilders.ActionMoment, trip.UpdatedAt);
+    }
+
+    [Fact]
+    public void Cancel_FromReadyToStart_PreservesAssignment_AndExposesExactCleanup()
+    {
+        var trip = TripTestBuilders.AtState(TripState.ReadyToStart);
+        var version = trip.Version;
+        var assignment = trip.Assignment;
+
+        var outcome = trip.Cancel(TripTestBuilders.ActionMoment);
+
+        Assert.True(outcome.IsSuccess);
+        Assert.False(outcome.IsReplay);
+        Assert.Equal(
+            TripCompensation.ReleaseReservation | TripCompensation.CancelMatching,
+            outcome.Compensation);
+        Assert.Equal(TripState.Cancelled, trip.State);
         Assert.Same(assignment, trip.Assignment);
-        Assert.Equal(round, trip.CurrentMatchingRound);
-        Assert.Equal(updatedAt, trip.UpdatedAt);
-        Assert.Equal(version, trip.Version);
+        Assert.Equal(1, trip.CurrentMatchingRound);
+        Assert.Equal(version + 1, trip.Version);
+        Assert.Equal(TripTestBuilders.ActionMoment, trip.UpdatedAt);
     }
 
     [Fact]

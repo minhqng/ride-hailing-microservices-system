@@ -1,8 +1,8 @@
 // Illegal/terminal suite: proves DSI-010 (terminal monotonicity) against
 // every implemented active operation, plus the assignment, fencing and
-// completion guards. Cancellation from CREATED and READY_TO_START is
-// intentionally untested for allow/reject: that product policy is not frozen,
-// so no test may lock in an allow or reject semantic for those two branches.
+// completion guards. The frozen pre-start cancellation policy (CREATED and
+// READY_TO_START allowed) is covered by TripCancellationMatrixTests; this
+// suite covers the illegal IN_PROGRESS and terminal branches.
 
 using RideHailing.TripService.Domain.Trips;
 
