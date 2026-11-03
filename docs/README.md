@@ -26,6 +26,10 @@ Runtime guides (implementation usage; canonical specs above remain authoritative
 - [Messaging and Payment reliability report](member-c-reliability-report.md):
   Member C confirms, ACK-after-commit, deduplication, Outbox relay, DLQ,
   Payment idempotency, observability and HA claim boundaries.
+- [Driver/Matching demonstration](driver-matching-demo.md): disposable real
+  rehearsals, A/C handoff, fallback and final release authority.
+- [Driver/Matching defense workbook](driver-matching-defense.md): all45
+  canonical questions, exact proof references and timed human practice drill.
 
 - [Messaging runtime](messaging-runtime.md): publisher/consumer lifecycle, confirms, ACK and retry ownership.
 - [Payment simulator](../src/Services/Payment/RideHailing.PaymentService/README.md): durable replay, reconciliation and verification commands.
