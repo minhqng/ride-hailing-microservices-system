@@ -2,7 +2,8 @@
 
 `core` lives in root `compose.yaml`. `deploy/compose/compose.release.yaml` is
 the Production overlay; `deploy/compose/compose.ha.yaml` adds the explicit
-broker-HA profile.
+broker-HA profile. All images are pinned by multi-architecture manifest digest;
+see [IMAGES.md](IMAGES.md) for the table and update procedure.
 
 ## Release overlay
 

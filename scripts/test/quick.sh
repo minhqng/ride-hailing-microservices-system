@@ -21,9 +21,9 @@ SECURITY_OPT=""
 if [ "$(uname -s)" = "Linux" ]; then SECURITY_OPT="--security-opt label=disable"; fi
 if [ -S /var/run/docker.sock ]; then
   # shellcheck disable=SC2086
-  docker run --rm $SECURITY_OPT $GROUP_ADD -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -v /var/run/docker.sock:/var/run/docker.sock -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
+  docker run --rm $SECURITY_OPT $GROUP_ADD -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -v /var/run/docker.sock:/var/run/docker.sock -w /work mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
 else
-  docker run --rm -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -w /work mcr.microsoft.com/dotnet/sdk:10.0 bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
+  docker run --rm -e "TRX_DIR=$TRX_DIR" -v "$REPO_ROOT:/work:z" -w /work mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b bash -c 'dotnet restore RideHailing.Distributed.slnx && dotnet build RideHailing.Distributed.slnx -c Release --no-restore && dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory "$TRX_DIR"'
 fi
 
 python3 scripts/test/assert-trx.py --results-dir "$TRX_DIR" --min-passed 1200 --min-files 12 --max-skipped 1 --allowed-skip "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState" --required-suites-file scripts/test/required-suites.txt

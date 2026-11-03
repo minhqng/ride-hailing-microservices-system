@@ -27,8 +27,19 @@ public sealed partial class DriverRepository
     public async Task EnsureTablesAsync(CancellationToken ct = default)
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
-        await using var cmd = new NpgsqlCommand(DriverSqlBaseline.Load(), conn);
+        await using var transaction = await conn.BeginTransactionAsync(ct);
+        // AUD-10: replicas serialize the baseline on a stable advisory key,
+        // matching Payment's migration coordination. Transactional DDL rolls
+        // back on a crash and releases the lock with the transaction.
+        await using (var gate = new NpgsqlCommand(
+            "SELECT pg_advisory_xact_lock(754302)", conn, transaction))
+        {
+            await gate.ExecuteNonQueryAsync(ct);
+        }
+
+        await using var cmd = new NpgsqlCommand(DriverSqlBaseline.Load(), conn, transaction);
         await cmd.ExecuteNonQueryAsync(ct);
+        await transaction.CommitAsync(ct);
     }
 
     /// <summary>

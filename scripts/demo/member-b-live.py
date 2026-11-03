@@ -23,7 +23,7 @@ import w13_auth as auth
 import w13_e01 as contention
 
 PROJECT = "team-w12-b-release"
-SDK = "mcr.microsoft.com/dotnet/sdk:10.0"
+SDK = "mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b"
 TEST_RUNNER = "rh-b-release-tests"
 RUNNER_OWNER_LABEL = "ride-hailing.demo-owner"
 MATCHING_TESTS = "tests/Integration/RideHailing.MatchingService.IntegrationTests/RideHailing.MatchingService.IntegrationTests.csproj"

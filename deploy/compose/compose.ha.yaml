@@ -11,7 +11,7 @@ services:
       RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE:?Initialize disposable credentials with scripts/security/init-local-auth.py}
 
   rabbitmq-2:
-    image: rabbitmq:4.3.6-management
+    image: rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58
     profiles: [ha]
     hostname: rabbitmq-2
     environment:
@@ -39,7 +39,7 @@ services:
     networks: [ride-net]
 
   rabbitmq-3:
-    image: rabbitmq:4.3.6-management
+    image: rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58
     profiles: [ha]
     hostname: rabbitmq-3
     environment:
