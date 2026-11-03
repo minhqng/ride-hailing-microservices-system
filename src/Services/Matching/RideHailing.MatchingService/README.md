@@ -218,8 +218,19 @@ until authoritative evidence resolves it; do not clear the row or manually
 mark it REJECTED to unblock another Driver. Polls remain bounded per pass and
 the configured worker backoff controls repeated checks across restarts.
 
-## NOT implemented (later weeks)
+## Verification and operator boundaries
 
-- W13 performance experiments (E01/E02/E03) and W14 HA validation are not started.
-- The internal `POST /internal/matching/rounds` seam remains a W5 demo trigger;
-  production rounds are worker-owned and it does not initiate reserve work.
+Integrated [performance evidence](../../../../evidence/team/w13-integration/README.md)
+and [recovery evidence](../../../../evidence/team/w14-integration/README.md)
+supersede the earlier unimplemented-experiments status. Each measurement retains
+its own source revision and workload limits.
+
+The internal `POST /internal/matching/rounds` seam remains a supported demo
+trigger; production rounds are worker-owned and this endpoint does not initiate
+reserve work. Preserve it for the existing harness and regression consumers.
+
+If Redis is unavailable during startup, projection consumer registration can
+fail and requires a Matching restart after Redis returns. Reconnection and
+function reload do not rebuild lost projection data: reconstruction requires
+explicit replay of authoritative Driver events. Driver PostgreSQL remains the
+reservation authority throughout.
