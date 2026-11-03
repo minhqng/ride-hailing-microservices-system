@@ -1,7 +1,7 @@
 // Shared disposable real-PostgreSQL fixture (A-W02-05).
 //
 // Uses Testcontainers.PostgreSql with the repository-pinned PostgreSQL family
-// (postgres:18.6, same as compose.yaml). One container per test run, started
+// (postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81, same as compose.yaml). One container per test run, started
 // once and shared via xUnit collection fixture; xUnit disposes it afterwards.
 // No fixed host port, no persistent database pollution, no sleep-based
 // readiness (Testcontainers waits for actual PostgreSQL readiness).
@@ -33,7 +33,7 @@ public sealed class TripPostgresCollection : ICollectionFixture<TripPostgresFixt
 /// </summary>
 public sealed class TripPostgresFixture : IAsyncLifetime
 {
-    public PostgreSqlContainer Container { get; } = new PostgreSqlBuilder("postgres:18.6")
+    public PostgreSqlContainer Container { get; } = new PostgreSqlBuilder("postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81")
         .WithDatabase("trip_db")
         .WithUsername("trip_app")
         .Build();

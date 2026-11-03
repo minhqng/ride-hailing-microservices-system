@@ -173,5 +173,8 @@ The B-W12 matching-recovery repair replaces the audited B-owned
 process/restart/broker proofs. Measured selected regression on the repair
 source: **1119 passed, 1 env-gated skip, 0 failed** (Matching 109 unit + 171
 integration; Driver 131 + 113; Platform 60; Payment 28 + 28; Trip 299 + 162;
-B12 auditor 18; SystemTests discovers zero tests). Shared G4/SEC-AUTH and A/C
+B12 auditor 18). The empty SystemTests placeholder was removed under AUD-09
+because it discovered zero tests; the real system gates are the Python checks
+under `scripts/test/` (platform-smoke, core-runtime-gate, security-gate,
+payment-smoke, topology-smoke and release-smoke). Shared G4/SEC-AUTH and A/C
 acceptance remain separate gates.

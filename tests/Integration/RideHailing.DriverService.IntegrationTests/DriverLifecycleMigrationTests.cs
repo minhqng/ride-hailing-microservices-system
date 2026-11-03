@@ -1,4 +1,6 @@
 using Npgsql;
+using RideHailing.DriverService.Infrastructure.Persistence;
+using RideHailing.Messaging.Outbox;
 
 namespace RideHailing.DriverService.IntegrationTests;
 
@@ -66,6 +68,60 @@ public sealed class DriverLifecycleMigrationTests(DriverPostgresDatabase db)
                 (await Assert.ThrowsAsync<PostgresException>(() => invalid.ExecuteNonQueryAsync())).SqlState);
         }
         await tx.RollbackAsync();
+        }
+        finally
+        {
+            await using var drop = new NpgsqlCommand($"DROP DATABASE {database}", admin);
+            await drop.ExecuteNonQueryAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ConcurrentStartup_SerializesBaseline_AndPreservesExistingRows()
+    {
+        var database = "lifecycle_concurrent_" + Guid.NewGuid().ToString("N");
+        await using var admin = await db.DataSource.OpenConnectionAsync();
+        await using (var create = new NpgsqlCommand($"CREATE DATABASE {database}", admin))
+            await create.ExecuteNonQueryAsync();
+        try
+        {
+            var connectionString = new NpgsqlConnectionStringBuilder(db.ConnectionString)
+                { Database = database, Pooling = false }.ToString();
+            await using (var dataSource = NpgsqlDataSource.Create(connectionString))
+            {
+                var first = new DriverRepository(dataSource, new NpgsqlOutboxStore(dataSource));
+                var second = new DriverRepository(dataSource, new NpgsqlOutboxStore(dataSource));
+
+                // Two replicas start together on an empty database.
+                await Task.WhenAll(first.EnsureTablesAsync(), second.EnsureTablesAsync());
+
+                var driver = Guid.NewGuid();
+                await using (var seed = dataSource.CreateCommand("""
+                    INSERT INTO drivers(driver_id, user_id, status, version)
+                    VALUES (@driver, @user, 'OFFLINE', 1);
+                    """))
+                {
+                    seed.Parameters.AddWithValue("driver", driver);
+                    seed.Parameters.AddWithValue("user", Guid.NewGuid());
+                    await seed.ExecuteNonQueryAsync();
+                }
+
+                // A retrying start must be idempotent and keep existing rows.
+                await Task.WhenAll(first.EnsureTablesAsync(), second.EnsureTablesAsync());
+                await using var check = dataSource.CreateCommand("""
+                    SELECT status, version,
+                        (SELECT count(*) FROM driver_lifecycle_effects),
+                        (SELECT count(*) FROM driver_command_receipts)
+                    FROM drivers WHERE driver_id = @driver;
+                    """);
+                check.Parameters.AddWithValue("driver", driver);
+                await using var reader = await check.ExecuteReaderAsync();
+                Assert.True(await reader.ReadAsync());
+                Assert.Equal("OFFLINE", reader.GetString(0));
+                Assert.Equal(1, reader.GetInt32(1));
+                Assert.Equal(0, reader.GetInt64(2));
+                Assert.Equal(0, reader.GetInt64(3));
+            }
         }
         finally
         {

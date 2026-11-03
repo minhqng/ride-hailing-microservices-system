@@ -1,7 +1,7 @@
 // Redis fixture: REAL Redis, never a vacuous pass.
 // REDIS_TEST_CONNECTION (or Redis__ConnectionString) explicitly set =>
 // verified now, failure throws loud. Otherwise disposable Testcontainers
-// Redis (redis:8.10.2, pinned like compose); any start failure throws loud
+// Redis (redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901, pinned like compose); any start failure throws loud
 // (Ryuk disabled; cleanup explicit via AutoRemove + DisposeAsync).
 // Shared per collection: one container per test run (not per test).
 using StackExchange.Redis;
@@ -46,7 +46,7 @@ public sealed class RedisDatabase : IAsyncLifetime
             return;
         }
 
-        _container = new RedisBuilder("redis:8.10.2")
+        _container = new RedisBuilder("redis:8.10.2@sha256:97ec88159e6d7cfb5ddef9015386087d58a912de80112f06ebdfa78fa5989901")
             .WithAutoRemove(true)
             .Build();
         await _container.StartAsync();
