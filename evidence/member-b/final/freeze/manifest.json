@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "owner": "B: Driver/Matching",
+  "authority": "Docs 00-03 > Doc 04 > Doc 05B sections 24-25",
+  "baseline": {
+    "commit": "2b1b047b450074bd1d3af5a29e1f6f0e3ce8f07d",
+    "tree": "10e1480cec802fa50603b254e6f430324825550e",
+    "ciRun": 41491804385
+  },
+  "sourceCommit": "19843478187eb556ba276755e01d48d125086d4b",
+  "sourceTree": "69b30a3aac94e7bd3296fb2687809a948c3fa38a",
+  "status": "PASS",
+  "limitations": [
+    "Historical measurements retain original source; no newer performance capacity claim",
+    "W13 original engine streams are local-only and unavailable for rehash; complete portable samples checked",
+    "No human peer rerun or release approval claimed",
+    "Git Bash filemode fixture unsupported; Linux 12-case verifier test passed"
+  ],
+  "tasks": [
+    {
+      "id": "B-W15-01",
+      "canonicalClause": "05B 24.2; 04 TEAM-W15-01",
+      "requiredOutput": "Safe dead experiment classification and cleanup",
+      "owner": "B",
+      "existingSourceEvidence": "Matching README; TEAM W13/W14 evidence",
+      "missingCapability": "None for inspected candidates",
+      "acceptanceProof": "README.md classification; preserved harness references",
+      "sharedDependency": "None",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-02",
+      "canonicalClause": "05B 24.2; 03 section 4; 04 TEAM-W15-02",
+      "requiredOutput": "Isolated clone build, migrations, real providers and teardown",
+      "owner": "B",
+      "existingSourceEvidence": "compose.yaml; scripts/test; fresh full clone",
+      "missingCapability": "No B-owned technical gap; human peer execution pending separately",
+      "acceptanceProof": "final-state/regression.json; final-state/freeze-runtime.json; test-output.txt",
+      "sharedDependency": "Identity/security and Trip runtime owned A/C",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-03",
+      "canonicalClause": "05B 24.2; 01 DSI-001..005; 03 CON-01/02/04",
+      "requiredOutput": "Driver authority/OCC report",
+      "owner": "B",
+      "existingSourceEvidence": "DriverRepository, Driver lifecycle and concurrency tests",
+      "missingCapability": "None",
+      "acceptanceProof": "docs/driver-matching-report.md reservation section",
+      "sharedDependency": "None",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-04",
+      "canonicalClause": "05B 24.2; 01 DSI-006/007; 03 REL-12/13/14",
+      "requiredOutput": "Redis derived-state report",
+      "owner": "B",
+      "existingSourceEvidence": "update_projection.lua; Redis provider tests; W14 evidence",
+      "missingCapability": "None; automatic full reconstruction is not claimed",
+      "acceptanceProof": "docs/driver-matching-report.md Redis section",
+      "sharedDependency": "Authoritative Driver event replay/operator",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-05",
+      "canonicalClause": "05B 24.2; 01 DSI-015..023/031; 03 REL-01/02",
+      "requiredOutput": "Durable Matching/UNKNOWN report",
+      "owner": "B",
+      "existingSourceEvidence": "MatchingWorkDispatcher, orchestrator, safety/process tests",
+      "missingCapability": "None",
+      "acceptanceProof": "docs/driver-matching-report.md Matching section",
+      "sharedDependency": "Trip exact cleanup authority",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-06",
+      "canonicalClause": "05B 24.2; 03 sections 17-24",
+      "requiredOutput": "Accepted E01-E04 methodology and measured tables",
+      "owner": "B",
+      "existingSourceEvidence": "TEAM W13/W14 accepted samples and analysis",
+      "missingCapability": "None within stated portable evidence scope",
+      "acceptanceProof": "claims-validation.json and technical report",
+      "sharedDependency": "Historical accepted G4 and frozen environments",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-07",
+      "canonicalClause": "05B 24.2; 03 CON-01/REL-01",
+      "requiredOutput": "Editable accurate proof diagrams",
+      "owner": "B",
+      "existingSourceEvidence": "Reserve transaction; post-commit faultpoint",
+      "missingCapability": "None",
+      "acceptanceProof": "Two Mermaid sequences in technical report",
+      "sharedDependency": "None",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-08",
+      "canonicalClause": "05B 24.2; 03 sections 24-25",
+      "requiredOutput": "Recalculate claims and validate digests/source",
+      "owner": "B",
+      "existingSourceEvidence": "W13 data-provenance; W14 artifact manifests",
+      "missingCapability": "None within stated portable evidence scope",
+      "acceptanceProof": "claims-validation.json",
+      "sharedDependency": "Historical engine streams remain local-only per hygiene policy",
+      "status": "PASS"
+    },
+    {
+      "id": "B-W15-09",
+      "canonicalClause": "05B 24.2; 03 section 25",
+      "requiredOutput": "Machine-readable source-bound evidence index",
+      "owner": "B",
+      "existingSourceEvidence": "This manifest and linked bundles",
+      "missingCapability": "None within stated portable evidence scope",
+      "acceptanceProof": "Validator command, hashes and source/tree checks",
+      "sharedDependency": "No shared release authority asserted",
+      "status": "PASS"
+    }
+  ],
+  "historicalProofs": [
+    {
+      "scenario": "E01/E02/E03",
+      "sourceCommit": "d291f0430faa389e4351377ce4db361aa681648b",
+      "sourceTree": "87222fee80d5ce35cfc351b7a0f5e8c5cdac667d",
+      "files": [
+        "evidence/team/w13-integration/data-provenance.json",
+        "evidence/team/w13-integration/analysis/campaign-analysis.json"
+      ],
+      "status": "PASS",
+      "limitation": "Historical accepted measurements, not current delivery performance",
+      "owner": "TEAM accepted integration, B measurement responsibility",
+      "validationCommand": "python scripts/evidence/validate-driver-matching-claims.py"
+    },
+    {
+      "scenario": "E04/REL-15/REL-16/G5",
+      "sourceCommit": "724d6c69aa9ee590c3aa4bb4afd1622ae6aa8719",
+      "sourceTree": "3799ca9a2ea5a19d03949c4d0c4644c81c14a168",
+      "files": [
+        "evidence/team/w14-integration/artifact-manifest.json",
+        "evidence/team/w14-integration/g5-summary.json"
+      ],
+      "status": "PASS",
+      "limitation": "Recorded recovery conditions on one Docker host; final release approval separate",
+      "owner": "TEAM accepted integration, B measurement responsibility",
+      "validationCommand": "python scripts/evidence/validate-driver-matching-claims.py"
+    }
+  ],
+  "validationCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File evidence/member-b/final/freeze/reproduce.ps1",
+  "claimsValidationCommand": "python scripts/evidence/validate-driver-matching-claims.py",
+  "freshProofs": [
+    {
+      "scenario": "clean-clone/regression/authenticated-G4",
+      "sourceCommit": "19843478187eb556ba276755e01d48d125086d4b",
+      "sourceTree": "69b30a3aac94e7bd3296fb2687809a948c3fa38a",
+      "owner": "B execution with shared A/C authorities",
+      "status": "PASS",
+      "validationCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File evidence/member-b/final/freeze/reproduce.ps1",
+      "files": [
+        "final-state/regression.json",
+        "final-state/freeze-runtime.json"
+      ],
+      "limitations": "Controlled production lifecycle actor; no public lifecycle HTTP API claim"
+    }
+  ],
+  "artifactDigests": [
+    {
+      "path": "claim-map.json",
+      "sha256": "23a75673325ca90a66199550b1d3df0ae8ed5ebd9e473fc2cbf65f347da45513"
+    },
+    {
+      "path": "claims-validation.json",
+      "sha256": "47b2d6a3e42639130f4280d8f88b1d4e5941c2574666205636bd47c59bb5d66f"
+    },
+    {
+      "path": "final-state/freeze-runtime.json",
+      "sha256": "90871771839aa6e580dfe8de3c4ab8b30475dd2e5bc0198bcdea33cf09f9e56c"
+    },
+    {
+      "path": "final-state/integrated-main-control.json",
+      "sha256": "1d1435e039ab31a4eed5bc4c15c2846633d996bb99cb83c9e89e2fe59116d945"
+    },
+    {
+      "path": "final-state/regression.json",
+      "sha256": "1ba108bdfec25bae3baf6faaf5c625ac8e6bf80cf15faf06ce830af33c0b052f"
+    },
+    {
+      "path": "README.md",
+      "sha256": "e892293ff85cc544438b25f1cf458be71f4abc95fe55c623980fb3e7c5aea4b9"
+    },
+    {
+      "path": "test-output.txt",
+      "sha256": "8e99d08fc0e5641855bd10d32c4dd9e1316ac715f310405296b8119342a05c67"
+    }
+  ]
+}
