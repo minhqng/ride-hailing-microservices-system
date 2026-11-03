@@ -1,0 +1,76 @@
+{
+  "source": {
+    "commit": "17ca928d5fdd9ef64bba16574503045317033b27",
+    "tree": "59a740ec266acf219bfbbd9e75d98080b6926e06"
+  },
+  "project": "team-w12-b-release",
+  "humanParticipation": "NOT PERFORMED",
+  "status": "PASS",
+  "providerRegression": {
+    "passed": 564,
+    "failed": 0,
+    "projects": {
+      "DriverService.UnitTests": 131,
+      "DriverService.IntegrationTests": 118,
+      "MatchingService.UnitTests": 115,
+      "MatchingService.IntegrationTests": 200
+    }
+  },
+  "trials": [
+    {
+      "repeat": 1,
+      "status": "PASS",
+      "demoSeconds": 74.21036690007895,
+      "sharedJourneySeconds": 53.87658830010332,
+      "contenders": 10,
+      "winners": 1,
+      "expectedConflicts": 9,
+      "unexpectedErrors": 0,
+      "aud01": "PASS",
+      "unknownState": "UNKNOWN",
+      "sameReservationReconciled": true,
+      "reserveOutboxCount": 1,
+      "authoritativeReservationCount": 1
+    },
+    {
+      "repeat": 2,
+      "status": "PASS",
+      "demoSeconds": 74.5282991998829,
+      "sharedJourneySeconds": 54.020340900169685,
+      "contenders": 10,
+      "winners": 1,
+      "expectedConflicts": 9,
+      "unexpectedErrors": 0,
+      "aud01": "PASS",
+      "unknownState": "UNKNOWN",
+      "sameReservationReconciled": true,
+      "reserveOutboxCount": 1,
+      "authoritativeReservationCount": 1
+    },
+    {
+      "repeat": 3,
+      "status": "PASS",
+      "demoSeconds": 84.86146609997377,
+      "sharedJourneySeconds": 63.44635710003786,
+      "contenders": 10,
+      "winners": 1,
+      "expectedConflicts": 9,
+      "unexpectedErrors": 0,
+      "aud01": "PASS",
+      "unknownState": "UNKNOWN",
+      "sameReservationReconciled": true,
+      "reserveOutboxCount": 1,
+      "authoritativeReservationCount": 1
+    }
+  ],
+  "auditor": "AUD-01..08 PASS in every trial",
+  "redisReplay": "stale state/location rejected; Driver PostgreSQL authority equal before and after",
+  "teardown": {
+    "composeExit": 0,
+    "testRunnerExit": 0,
+    "cacheVolumeExit": 0
+  },
+  "humanTeamRehearsals": "PENDING",
+  "oralDefense": "PENDING",
+  "peerSignOff": "PENDING"
+}
