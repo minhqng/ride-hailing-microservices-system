@@ -19,6 +19,8 @@ Runtime guides (implementation usage; canonical specs above remain authoritative
 
 - [Team technical report](team-technical-report.md): W15 freeze synthesis,
   architecture, methods, verification and contribution traceability.
+- [Release candidate](release-candidate.md): W16 candidate identity, changelog,
+  build/deploy, evidence, rehearsal status and release checklist.
 - [Trip, Outbox and Saga report](member-a-trip-saga-report.md): Member A
   lifecycle, Outbox crash windows, compensation and evidence scope.
 - [Driver/Matching technical report](driver-matching-report.md): authority,
