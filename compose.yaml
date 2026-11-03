@@ -161,6 +161,7 @@ services:
     environment:
       <<: *auth
       Services__MatchingBaseUrl: http://matching:8080/
+      Services__DriverBaseUrl: http://driver:8080/
       Auth__TokenEndpoint: http://identity:8080/connect/token
       Auth__ClientId: trip
       Auth__ClientSecret: ${AUTH_TRIP_SECRET:-}
