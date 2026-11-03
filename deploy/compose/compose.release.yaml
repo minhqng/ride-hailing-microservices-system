@@ -1,13 +1,17 @@
-# Release-safe overrides. Combine with compose.yaml:
+# Release-safe overrides. Combine with compose.yaml and an isolated project:
 #
+#   export COMPOSE_PROJECT_NAME=ride-release-<unique>
 #   POSTGRES_PASSWORD=... IDENTITY_DB_PASSWORD=... DRIVER_DB_PASSWORD=... \
 #   TRIP_DB_PASSWORD=... MATCHING_DB_PASSWORD=... PAYMENT_DB_PASSWORD=... \
 #   NOTIFICATION_DB_PASSWORD=... RABBITMQ_PASSWORD=... \
+#   AUTH_PUBLIC_KEY_BASE64=... AUTH_PRIVATE_KEY_BASE64=... \
+#   AUTH_MATCHING_SECRET=... AUTH_TRIP_SECRET=... \
 #   docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config
 #
 # Every secret below is mandatory. Compose interpolation fails closed when a
 # variable is absent, so the development fallbacks in compose.yaml can never be
-# rendered into a release/demo claim.
+# rendered into a release/demo claim. This overlay also forces real Trip
+# messaging on and Trip auto-migration off; migrations are an external job.
 services:
   postgres:
     environment:
@@ -25,20 +29,30 @@ services:
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
 
   gateway:
-    environment: { ASPNETCORE_ENVIRONMENT: Production }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Auth__PublicKeyBase64: "${AUTH_PUBLIC_KEY_BASE64:?AUTH_PUBLIC_KEY_BASE64 must be set for the release overlay}"
   identity:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Auth__PublicKeyBase64: "${AUTH_PUBLIC_KEY_BASE64:?AUTH_PUBLIC_KEY_BASE64 must be set for the release overlay}"
+      Auth__PrivateKeyBase64: "${AUTH_PRIVATE_KEY_BASE64:?AUTH_PRIVATE_KEY_BASE64 must be set for the release overlay}"
+      Auth__ServiceClients__matching__Secret: "${AUTH_MATCHING_SECRET:?AUTH_MATCHING_SECRET must be set for the release overlay}"
+      Auth__ServiceClients__trip__Secret: "${AUTH_TRIP_SECRET:?AUTH_TRIP_SECRET must be set for the release overlay}"
       ConnectionStrings__Postgres: "Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD must be set for the release overlay}"
   driver:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Auth__PublicKeyBase64: "${AUTH_PUBLIC_KEY_BASE64:?AUTH_PUBLIC_KEY_BASE64 must be set for the release overlay}"
       ConnectionStrings__Postgres: "Host=postgres;Database=driver_db;Username=driver_app;Password=${DRIVER_DB_PASSWORD:?DRIVER_DB_PASSWORD must be set for the release overlay}"
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
   trip:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Auth__PublicKeyBase64: "${AUTH_PUBLIC_KEY_BASE64:?AUTH_PUBLIC_KEY_BASE64 must be set for the release overlay}"
+      Auth__ClientSecret: "${AUTH_TRIP_SECRET:?AUTH_TRIP_SECRET must be set for the release overlay}"
+      TripMessaging__Enabled: "true"
       TripDatabase__AutoMigrate: "false"
       ConnectionStrings__Postgres: "Host=postgres;Database=trip_db;Username=trip_app;Password=${TRIP_DB_PASSWORD:?TRIP_DB_PASSWORD must be set for the release overlay}"
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
@@ -46,6 +60,8 @@ services:
   matching:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Auth__PublicKeyBase64: "${AUTH_PUBLIC_KEY_BASE64:?AUTH_PUBLIC_KEY_BASE64 must be set for the release overlay}"
+      Auth__ClientSecret: "${AUTH_MATCHING_SECRET:?AUTH_MATCHING_SECRET must be set for the release overlay}"
       ConnectionStrings__Postgres: "Host=postgres;Database=matching_db;Username=matching_app;Password=${MATCHING_DB_PASSWORD:?MATCHING_DB_PASSWORD must be set for the release overlay}"
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
