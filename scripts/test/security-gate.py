@@ -210,7 +210,8 @@ if "--identity-tests" in sys.argv:
     verified = subprocess.run(
         [sys.executable, str(root / "scripts/test/assert-trx.py"),
          "--results-dir", str(root / identity_result_dir),
-         "--min-passed", "7", "--min-files", "1", "--max-skipped", "0"],
+         "--min-passed", "7", "--min-files", "1", "--max-skipped", "0",
+         "--require-suite", "ridehailing.identityservice.integrationtests:7"],
         cwd=root, capture_output=True, text=True,
     )
     with (root / "plans/reports/identity-gate.log").open("a", encoding="utf-8") as log:
