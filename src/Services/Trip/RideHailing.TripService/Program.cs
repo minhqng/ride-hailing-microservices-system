@@ -73,6 +73,16 @@ builder.Services.AddScoped<MarkMatchingFailedHandler>();
 builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+// AUD-02: public Driver lifecycle transport resolves the authenticated
+// Driver's owning profile through the Driver service before the aggregate
+// checks the exact assignment. The caller's own token is forwarded; no
+// client-supplied actor identity is trusted.
+builder.Services.AddHttpClient<RideHailing.TripService.Integration.DriverDirectory.IDriverDirectory,
+    RideHailing.TripService.Integration.DriverDirectory.HttpDriverDirectory>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:DriverBaseUrl"] ?? "http://driver:8080/");
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 builder.Services.AddTripMessaging(builder.Configuration, builder.Environment);
 if (builder.Configuration.GetValue<bool>("TripMessaging:Enabled"))
 {
@@ -135,6 +145,7 @@ app.MapGet("/info", (IHostEnvironment env) =>
 app.MapTripEndpoints();
 app.MapGetTripEndpoint();
 app.MapCancelRideEndpoint();
+app.MapDriverLifecycleEndpoints();
 
 app.Run();
 
