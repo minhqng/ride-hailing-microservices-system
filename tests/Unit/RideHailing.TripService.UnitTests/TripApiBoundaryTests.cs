@@ -13,7 +13,7 @@ public sealed class TripApiBoundaryTests
 {
     private static readonly HashSet<string> AllowedPropertyTypes = new(StringComparer.Ordinal)
     {
-        "Guid", "Guid?", "Int32", "String", "Double",
+        "Guid", "Guid?", "Int32", "String", "Double", "Boolean", "Boolean?",
         nameof(TripLocationDto),
     };
 
