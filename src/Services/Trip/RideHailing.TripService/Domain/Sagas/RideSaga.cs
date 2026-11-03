@@ -411,7 +411,8 @@ public sealed class RideSaga
             return SagaOutcome.Success(isReplay: true);
         }
 
-        if (Status != RideSagaStatus.Compensating || CurrentStep != RideSagaStep.VoidPending)
+        if (Status is not (RideSagaStatus.Compensating or RideSagaStatus.RequiresReview)
+            || CurrentStep != RideSagaStep.VoidPending)
         {
             return Illegal(nameof(RecordVoidResolved), RideSagaStep.VoidPending);
         }
@@ -424,9 +425,61 @@ public sealed class RideSaga
         }
         else
         {
-            Commit(RideSagaStep.ReleasePending, now);
+            // A resolving void after a visible review failure still owns the
+            // release leg; return to COMPENSATING so the release resolver can
+            // complete it.
+            Commit(RideSagaStep.ReleasePending, now, RideSagaStatus.Compensating);
         }
 
+        return SagaOutcome.Success();
+    }
+
+    /// <summary>
+    /// Void-specific failure outcome. The void obligation stays on the same
+    /// operation key: retryable failures remain COMPENSATING for the
+    /// reconciliation worker, while a terminal failure becomes a visible
+    /// REQUIRES_REVIEW state. A later authoritative void success is still
+    /// accepted by <see cref="RecordVoidResolved"/>.
+    /// </summary>
+    public SagaOutcome RecordVoidFailed(string errorCode, bool retryable, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(errorCode);
+
+        if (Status == RideSagaStatus.Compensated)
+        {
+            return SagaOutcome.Success(isReplay: true);
+        }
+
+        if (Status == RideSagaStatus.RequiresReview && CurrentStep == RideSagaStep.VoidPending &&
+            LastErrorCode == errorCode)
+        {
+            return SagaOutcome.Success(isReplay: true);
+        }
+
+        if (Status == RideSagaStatus.Compensating && CurrentStep == RideSagaStep.VoidPending &&
+            retryable && LastErrorCode == errorCode)
+        {
+            return SagaOutcome.Success(isReplay: true);
+        }
+
+        if (Status.IsTerminal())
+        {
+            return Terminal(nameof(RecordVoidFailed));
+        }
+
+        RequireTime(now);
+
+        if (Status is not (RideSagaStatus.Compensating or RideSagaStatus.RequiresReview)
+            || CurrentStep != RideSagaStep.VoidPending)
+        {
+            return SagaOutcome.Fail(
+                RideSagaErrorCode.StatusConflict,
+                $"A void failure requires a VOID_PENDING saga but the saga is {CurrentStep.ToCanonicalName()} ({Status.ToCanonicalName()}).");
+        }
+
+        LastErrorCode = errorCode;
+        Commit(CurrentStep, now,
+            retryable ? RideSagaStatus.Compensating : RideSagaStatus.RequiresReview);
         return SagaOutcome.Success();
     }
 

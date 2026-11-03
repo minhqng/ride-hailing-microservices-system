@@ -58,6 +58,19 @@ public sealed record PaymentAuthorizationVoidedV1
     [JsonPropertyName("providerEffectId")] public required string ProviderEffectId { get; init; }
 }
 
+/// <summary>
+/// Void-specific failure outcome. It carries the VOID operation lineage, so a
+/// cancelled-but-authorized Saga never mistakes it for an authorization
+/// failure and never parks a false key mismatch.
+/// </summary>
+public sealed record PaymentAuthorizationVoidFailedV1
+{
+    [JsonPropertyName("tripId")] public required Guid TripId { get; init; }
+    [JsonPropertyName("operationKey")] public required string OperationKey { get; init; }
+    [JsonPropertyName("reasonCode")] public required string ReasonCode { get; init; }
+    [JsonPropertyName("retryable")] public required bool Retryable { get; init; }
+}
+
 public sealed record PaymentCapturedV1
 {
     [JsonPropertyName("tripId")] public required Guid TripId { get; init; }

@@ -52,7 +52,7 @@ public sealed class PaymentMessageProcessor(
                 async (connection, transaction, operation, ct) =>
                 {
                     var outcome = command.ToOutcome(operation);
-                    var descriptor = Describe(outcome);
+                    var descriptor = PaymentOutcomeContract.Describe(outcome);
                     var resultEnvelope = MessageEnvelope<object>.Create(
                         descriptor.MessageType,
                         envelope.CorrelationId,
@@ -162,17 +162,6 @@ public sealed class PaymentMessageProcessor(
             && !string.Equals(envelope.AggregateId, tripId.ToString("D"), StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Envelope and payload trip identity must match.");
     }
-
-    private static (string MessageType, string RoutingKey) Describe(object outcome) => outcome switch
-    {
-        PaymentAuthorizedV1 => ("PaymentAuthorizedV1", "payment.authorized.v1"),
-        PaymentAuthorizationFailedV1 => ("PaymentAuthorizationFailedV1", "payment.authorization-failed.v1"),
-        PaymentAuthorizationVoidedV1 => ("PaymentAuthorizationVoidedV1", "payment.authorization-voided.v1"),
-        PaymentCapturedV1 => ("PaymentCapturedV1", "payment.captured.v1"),
-        PaymentCapturePendingV1 => ("PaymentCapturePendingV1", "payment.capture-pending.v1"),
-        PaymentRequiresReviewV1 => ("PaymentRequiresReviewV1", "payment.requires-review.v1"),
-        _ => throw new InvalidOperationException($"Unsupported Payment result {outcome.GetType().Name}."),
-    };
 
     private sealed record PaymentCommand(
         Guid TripId,

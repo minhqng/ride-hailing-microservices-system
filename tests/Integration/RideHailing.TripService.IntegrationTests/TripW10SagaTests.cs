@@ -133,12 +133,16 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
 
     private static MessageEnvelope<JsonElement> PaymentEnvelope(
         string messageType, Guid tripId, string? operationKey, string? sagaId, string? reasonCode = null,
-        string? messageId = null)
+        string? messageId = null, bool? retryable = null)
     {
         var payload = new Dictionary<string, object> { ["tripId"] = tripId };
         if (reasonCode is not null)
         {
             payload["reasonCode"] = reasonCode;
+        }
+        if (retryable.HasValue)
+        {
+            payload["retryable"] = retryable.Value;
         }
 
         return MessageEnvelope<JsonElement>.Create(
@@ -495,6 +499,123 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         var finalTrip = await TripAsync(cs, tripId);
         Assert.All(finalTrip.CleanupIntents.Where(i => i.Kind != TripCleanupKind.CancelMatching),
             i => Assert.NotNull(i.CompletedAt));
+    }
+
+    [Fact]
+    public async Task VoidFailureUsesVoidLineage_AndLateSuccessCompletesAfterRelease()
+    {
+        var cs = await NewProbeAsync("trip_w10_void_failure_retryable");
+        var tripId = await SeedMatchingAsync(cs);
+        var saga = await DriveAcceptedAsync(cs, tripId);
+        await using (var db = Context(cs))
+        {
+            var trip = await db.Trips.SingleAsync(t => t.TripId == tripId);
+            Assert.True((await Handler<CancelRideHandler>(db).HandleAsync(tripId, trip.RiderId)).IsSuccess);
+        }
+
+        await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizedV1", tripId, saga.AuthorizeOperationKey, saga.SagaId.ToString("D")));
+        var voidKey = RideSagaOperationKeys.Void(tripId);
+
+        // A retryable void failure stays on the SAME void key, remains
+        // compensating, and is never reported as an authorization mismatch.
+        var retryable = await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationVoidFailedV1", tripId, voidKey,
+                saga.SagaId.ToString("D"), reasonCode: "TIMEOUT_AFTER_EFFECT", retryable: true));
+        Assert.Equal("PendingWorkflow", retryable.Disposition);
+        var pending = await SagaAsync(cs, tripId);
+        Assert.Equal(RideSagaStatus.Compensating, pending.Status);
+        Assert.Equal(RideSagaStep.VoidPending, pending.CurrentStep);
+        Assert.Equal("TIMEOUT_AFTER_EFFECT", pending.LastErrorCode);
+
+        // Duplicate retryable failure is a replay without a step advance.
+        var stepVersion = pending.StepVersion;
+        await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationVoidFailedV1", tripId, voidKey,
+                saga.SagaId.ToString("D"), reasonCode: "TIMEOUT_AFTER_EFFECT", retryable: true));
+        Assert.Equal(stepVersion, (await SagaAsync(cs, tripId)).StepVersion);
+
+        // A late authoritative void success still resolves compensation.
+        var voided = await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationVoidedV1", tripId, voidKey, saga.SagaId.ToString("D")));
+        Assert.Equal("Applied", voided.Disposition);
+        Assert.Equal(RideSagaStatus.Compensating, (await SagaAsync(cs, tripId)).Status);
+        Assert.Equal(RideSagaStep.ReleasePending, (await SagaAsync(cs, tripId)).CurrentStep);
+
+        // Release confirmation completes the compensation.
+        await DeliverAsync(cs, "trip.driver-state.q",
+            MessageEnvelope<JsonElement>.Create("DriverReservationReleasedV1", tripId.ToString("D"),
+                JsonSerializer.SerializeToElement(new { tripId, driverId = DriverId, reservationId = ReservationId })));
+        Assert.Equal(RideSagaStatus.Compensated, (await SagaAsync(cs, tripId)).Status);
+    }
+
+    [Fact]
+    public async Task TerminalVoidFailureBecomesVisibleReview_AndLateSuccessRecovers()
+    {
+        var cs = await NewProbeAsync("trip_w10_void_failure_terminal");
+        var tripId = await SeedMatchingAsync(cs);
+        var saga = await DriveAcceptedAsync(cs, tripId);
+        await using (var db = Context(cs))
+        {
+            var trip = await db.Trips.SingleAsync(t => t.TripId == tripId);
+            Assert.True((await Handler<CancelRideHandler>(db).HandleAsync(tripId, trip.RiderId)).IsSuccess);
+        }
+
+        await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizedV1", tripId, saga.AuthorizeOperationKey, saga.SagaId.ToString("D")));
+        var voidKey = RideSagaOperationKeys.Void(tripId);
+
+        var failed = await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationVoidFailedV1", tripId, voidKey,
+                saga.SagaId.ToString("D"), reasonCode: "VOID_DECLINED", retryable: false));
+        Assert.Equal("Applied", failed.Disposition);
+        var review = await SagaAsync(cs, tripId);
+        Assert.Equal(RideSagaStatus.RequiresReview, review.Status);
+        Assert.Equal(RideSagaStep.VoidPending, review.CurrentStep);
+        Assert.Equal("VOID_DECLINED", review.LastErrorCode);
+
+        // The duplicate terminal failure is a replay, not a new state.
+        var stepVersion = review.StepVersion;
+        await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationVoidFailedV1", tripId, voidKey,
+                saga.SagaId.ToString("D"), reasonCode: "VOID_DECLINED", retryable: false));
+        Assert.Equal(stepVersion, (await SagaAsync(cs, tripId)).StepVersion);
+
+        // A later authoritative void success can still complete compensation
+        // (review is not a dead end), then the release confirmation finishes it.
+        var voided = await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationVoidedV1", tripId, voidKey, saga.SagaId.ToString("D")));
+        Assert.Equal("Applied", voided.Disposition);
+        await DeliverAsync(cs, "trip.driver-state.q",
+            MessageEnvelope<JsonElement>.Create("DriverReservationReleasedV1", tripId.ToString("D"),
+                JsonSerializer.SerializeToElement(new { tripId, driverId = DriverId, reservationId = ReservationId })));
+        Assert.Equal(RideSagaStatus.Compensated, (await SagaAsync(cs, tripId)).Status);
+    }
+
+    [Fact]
+    public async Task AuthorizeFailureWithVoidKeyStillFailsClosedAsMismatch()
+    {
+        var cs = await NewProbeAsync("trip_w10_void_wrong_contract");
+        var tripId = await SeedMatchingAsync(cs);
+        var saga = await DriveAcceptedAsync(cs, tripId);
+        await using (var db = Context(cs))
+        {
+            var trip = await db.Trips.SingleAsync(t => t.TripId == tripId);
+            Assert.True((await Handler<CancelRideHandler>(db).HandleAsync(tripId, trip.RiderId)).IsSuccess);
+        }
+
+        await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizedV1", tripId, saga.AuthorizeOperationKey, saga.SagaId.ToString("D")));
+        var voidKey = RideSagaOperationKeys.Void(tripId);
+
+        // The old overload (authorization-failure event carrying the void key)
+        // must never resolve the void leg; it stays a visible lineage mismatch.
+        var mismatch = await DeliverAsync(cs, "trip.payment-outcome.q",
+            PaymentEnvelope("PaymentAuthorizationFailedV1", tripId, voidKey,
+                saga.SagaId.ToString("D"), reasonCode: "VOID_DECLINED"));
+        Assert.Equal("NeedsReview", mismatch.Disposition);
+        Assert.Equal("PAYMENT_OPERATION_MISMATCH", mismatch.Reason);
+        Assert.Equal(RideSagaStep.VoidPending, (await SagaAsync(cs, tripId)).CurrentStep);
     }
 
     // -------------------------------------------- A-W10-05/06/07 commands
