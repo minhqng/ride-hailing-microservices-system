@@ -7,6 +7,7 @@
 //   write-ahead IN_FLIGHT -> real POST reserve -> Driver commit + Outbox
 //   -> B-owned post-commit barrier -> Matching timeout -> UNKNOWN (no advance)
 //   -> release -> reconcile the SAME reservationId -> RESERVED.
+using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -183,6 +184,27 @@ public sealed class LostReserveResponseHttpTests
 
         var allReservations = await ReadReservationCountAsync(first.DriverId, ct);
         Assert.Equal(1L, allReservations);
+
+        _output.WriteLine("AUTHORITY_PROOF " + JsonSerializer.Serialize(new
+        {
+            scenario = "REL-01",
+            tripId,
+            driverId = first.DriverId,
+            otherDriverId = second.DriverId,
+            reservationId,
+            postCommitReservationId = committed.ReservationId,
+            uncertainState = unknown.State,
+            uncertainReservationId = unknown.ReservationId,
+            attemptCount = finalAttempts.Count,
+            finalAttemptState = finalAttempt.State,
+            finalRoundStatus = finalRound.Status,
+            finalRoundReservationId = finalRound.SelectedReservationId,
+            finalDriverStatus = finalFirst.Status.ToString(),
+            finalDriverReservationId = finalFirst.ReservationId,
+            otherDriverStatus = finalSecond.Status.ToString(),
+            reserveOutboxCount = finalOutbox.Count,
+            authoritativeReservationCount = allReservations,
+        }));
 
         await driverHost.StopAsync(ct);
     }

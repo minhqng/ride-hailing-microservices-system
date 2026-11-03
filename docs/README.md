@@ -19,6 +19,10 @@ Runtime guides (implementation usage; canonical specs above remain authoritative
 
 - [Driver/Matching technical report](driver-matching-report.md): authority,
   OCC, Redis, durable UNKNOWN recovery, proof diagrams and measured-claim limits.
+- [Driver/Matching demonstration](driver-matching-demo.md): disposable real
+  rehearsals, A/C handoff, fallback and final release authority.
+- [Driver/Matching defense workbook](driver-matching-defense.md): all45
+  canonical questions, exact proof references and timed human practice drill.
 
 - [Messaging runtime](messaging-runtime.md): publisher/consumer lifecycle, confirms, ACK and retry ownership.
 - [Payment simulator](../src/Services/Payment/RideHailing.PaymentService/README.md): durable replay, reconciliation and verification commands.
