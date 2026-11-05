@@ -10,7 +10,7 @@ From a clean checkout of this evidence commit (or its verified source commit):
 
 ```bash
 git status --short
-scripts/test/verify-source-anchor.sh f2ff224f397c76d66af20358fe7615d6aba186ad caac264b93c1d5b441ac1b1d0be87253162ccbc0
+scripts/test/verify-source-anchor.sh af1e1df7f728153f4d9d2e15b2041586115e23c5 51391f185e577f5f9befcbe4d30de5376be546b3
 ```
 
 Everything outside `evidence/` must be identical to the verified source
@@ -56,7 +56,7 @@ EF migrations externally, starts the Production Compose topology, runs:
 
 Expected: `PASS: Production release overlay runtime smoke`, report at
 `plans/reports/release-smoke.json` with source
-`f2ff224f397c76d66af20358fe7615d6aba186ad` and 19 checks. The script tears down
+`af1e1df7f728153f4d9d2e15b2041586115e23c5` and 19 checks. The script tears down
 its Compose project and preserves unrelated containers.
 
 ## 4. Hygiene and security boundaries

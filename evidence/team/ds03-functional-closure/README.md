@@ -6,8 +6,8 @@ reviewed and verified on top of the W16-integrated `main`.
 
 - Base main: `b03b30d1aec40053242381c27cecf36112866e03`
   (tree `9ec89714a75fa419bf8b14b03f91fd38e8dac201`)
-- Verified source commit: `f2ff224f397c76d66af20358fe7615d6aba186ad`
-  (tree `caac264b93c1d5b441ac1b1d0be87253162ccbc0`)
+- Verified source commit: `af1e1df7f728153f4d9d2e15b2041586115e23c5`
+  (tree `51391f185e577f5f9befcbe4d30de5376be546b3`)
 - This directory is an evidence-only commit. Everything outside `evidence/`
   is unchanged from the verified source commit.
 - Release tag: **NOT CREATED** (no v1.0.0).

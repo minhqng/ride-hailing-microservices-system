@@ -7,13 +7,13 @@
     "commit": "b03b30d1aec40053242381c27cecf36112866e03",
     "tree": "9ec89714a75fa419bf8b14b03f91fd38e8dac201"
   },
-  "sourceCommit": "f2ff224f397c76d66af20358fe7615d6aba186ad",
-  "sourceTree": "caac264b93c1d5b441ac1b1d0be87253162ccbc0",
+  "sourceCommit": "af1e1df7f728153f4d9d2e15b2041586115e23c5",
+  "sourceTree": "51391f185e577f5f9befcbe4d30de5376be546b3",
   "status": "PASS",
   "branches": {
     "policy": "docs/ds03-functional-policy@ebd54ae",
     "driverReject": "feature/ds03-driver-reject@3f3237a",
-    "notifications": "feature/ds03-recipient-notifications@f2ff224"
+    "notifications": "feature/ds03-recipient-notifications@af1e1df"
   },
   "gates": {
     "driverReject": "PASS: authenticated exact-assignment reject, terminal MATCH_FAILED/DRIVER_REJECTED, no rematch, no payment",
@@ -51,12 +51,13 @@
       "MatchingService.IntegrationTests": 202,
       "TripService.IntegrationTests": 246
     },
-    "trxVerifier": "PASS: TRX files=13 (executed suites=13), notexecuted=1, passed=1341, suite files=13"
+    "trxVerifier": "PASS: TRX files=13 (executed suites=13), notexecuted=1, passed=1341, suite files=13",
+    "trxGateSelfTest": "12/12 PASS after adding the NotificationService.IntegrationTests suite to the gate fixture"
   },
   "releaseSmoke": {
     "status": "PASS",
-    "sourceCommit": "f2ff224f397c76d66af20358fe7615d6aba186ad",
-    "sourceTree": "caac264b93c1d5b441ac1b1d0be87253162ccbc0",
+    "sourceCommit": "af1e1df7f728153f4d9d2e15b2041586115e23c5",
+    "sourceTree": "51391f185e577f5f9befcbe4d30de5376be546b3",
     "checks": 19,
     "migrationsApplied": 11,
     "scenarios": {
