@@ -2798,3 +2798,72 @@ Before closing issue:
 > **Whenever C is unsure whether Payment/messaging/platform work is complete, ask: if the connection drops, the message is published twice, the consumer commits then dies before ACK, the Payment effect happens before the response is lost, and the broker later reconnects on another node, does durable state still make every logical effect occur at most once and every unresolved operation visible and recoverable without consulting a trace?**
 
 If not, C's subsystem is not complete.
+
+---
+
+# 48. DS03 recipient-addressed notification inbox amendment (2026-11-05)
+
+> **Scope:** Notification delivery details for Doc 01 §40.2 and Doc 02 §43.
+> Notification remains non-authoritative and independent of Trip/Driver/
+> Matching/Payment databases.
+
+## 48.1 Component shape
+
+The existing `RideHailing.NotificationWorker` becomes a web-enabled worker:
+
+```text
+RabbitMQ consumer         (unchanged reliability behavior)
+  ├─ existing business-event projection → notification_deliveries
+  └─ NotificationRequestedV1            → notifications (inbox)
+
+HTTP (JWT, owner-isolated) → notification_db (read/read-mark only)
+```
+
+No new business service, no Firebase/SMTP/SMS/WebSocket, no notification
+preference center. The worker still ACKs only after durable local processing
+or confirmed retry/error transfer.
+
+## 48.2 Durable schema (additive)
+
+```text
+notification_deliveries:  existing columns + content_fingerprint (nullable)
+notifications:            notification_id (PK, deterministic UUID),
+                          recipient_user_id, recipient_role, notification_type,
+                          trip_id, source_message_id, source_event_type,
+                          correlation_id, content, created_at, available_at,
+                          read_at, delivery_status
+                          UNIQUE(source_message_id, recipient_user_id, notification_type)
+```
+
+`EnsureSchemaAsync` is idempotent (`CREATE TABLE IF NOT EXISTS`,
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`). Existing rows survive upgrade;
+historical delivery rows are never rewritten or reclassified as inbox entries.
+A fresh database and an upgrade database both pass the migration tests.
+
+## 48.3 Processing rules
+
+1. Validate the envelope and `NotificationRequestedV1` fields (recipient uuid,
+   role/type consistency, trip id, bounded reason code).
+2. Derive deterministic `notification_id` and the semantic fingerprint.
+3. In one local transaction: insert the receipt (`notification_deliveries`)
+   and, only if the receipt is new, insert the `notifications` row.
+4. A duplicate message id with identical fingerprint is a replay; with a
+   different fingerprint it is a poison event (visible error handling).
+5. Unsupported/invalid types are never silently ACKed.
+6. No Trip/Driver/Payment read or write occurs in this transaction.
+
+## 48.4 HTTP read API
+
+`GET /notifications/me`, `GET /notifications/{id}` and
+`POST /notifications/{id}/read` authenticate with the shared JWT key and use
+the `sub` claim as `recipient_user_id`. A foreign/unknown id is a not-found;
+unauthenticated access is 401. Notification content is generated from a
+bounded type/reason vocabulary and contains no tokens, credentials or payment
+secrets.
+
+## 48.5 Verification
+
+N1–N22 (Doc 03 §42.2) plus release-smoke Scenarios B/C. Critical dedup,
+replay and migration cases use real PostgreSQL; real JWT/Gateway routing is
+used for inbox access. An inserted `notification_deliveries` row is never
+counted as proof that a user notification is accessible.
