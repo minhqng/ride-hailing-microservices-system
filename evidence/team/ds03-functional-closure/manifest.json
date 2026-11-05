@@ -86,23 +86,23 @@
   "artifacts": [
     {
       "path": "README.md",
-      "sha256": "d44f932bdf02ec4a0ca8974524e497e2c090579fc37b4d198ddc8fecd5f77e16"
+      "sha256": "af05e6d1ef746baab449c6a9ce9a795b32671b8885983cf06ccde7c232684fc4"
     },
     {
       "path": "reproduce.md",
-      "sha256": "96bd92850db65b098d934edc0e6ec874558597f0cbe6c73c1eaa132c40dc4566"
+      "sha256": "e6b769c8c70ee12dd9a373e7d3ea1e4cbb6b7f8ec49078c06a9be08f049f5930"
     },
     {
       "path": "test-output.txt",
-      "sha256": "09dde770371abf36a494b612a6155e16024e35520d5b7291fce4dabf95e8e07e"
+      "sha256": "033c4e5bcdefa289e6d4bf1e3314518d10f6474ab3a8203a7664f889b1d0ea97"
     },
     {
       "path": "final-state/release-smoke-summary.json",
-      "sha256": "3ddbdbef3fccade478f2373f161a5735782a4f7ed90561725f832eda54b8c014"
+      "sha256": "d0007303cc5b1e3431e6176ed4702b7fee63c1be3d2e2bdbd40dbbb218470218"
     },
     {
       "path": "final-state/ds03-requirement-matrix.md",
-      "sha256": "e5e723d99c3f8fd9436c7f12da40c642a34cecad359ac9cd5fd97c69f5d223a4"
+      "sha256": "db9b256692ff832cab4b76d4b95f69b4aca11b3c8e2cfcc7d0b521c70896576f"
     }
   ],
   "limitations": [
