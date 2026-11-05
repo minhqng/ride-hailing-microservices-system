@@ -98,7 +98,13 @@ if (builder.Configuration.GetValue<bool>("TripMessaging:Enabled"))
         client.BaseAddress = new Uri(builder.Configuration["Services:MatchingBaseUrl"] ?? "http://localhost:8104/");
         client.Timeout = TimeSpan.FromSeconds(5);
     }).AddHttpMessageHandler<RideHailing.Security.ServiceTokenHandler>();
+    builder.Services.AddHttpClient("driver-cleanup", client =>
+    {
+        client.BaseAddress = new Uri(builder.Configuration["Services:DriverBaseUrl"] ?? "http://localhost:8102/");
+        client.Timeout = TimeSpan.FromSeconds(5);
+    }).AddHttpMessageHandler<RideHailing.Security.ServiceTokenHandler>();
     builder.Services.AddHostedService<MatchingCleanupReconciler>();
+    builder.Services.AddHostedService<DriverCleanupReconciler>();
 }
 // A-W12-02: durable saga-backlog observation (saga.active{step}) runs in every
 // host: it only reads the Trip-owned database and never touches the broker.

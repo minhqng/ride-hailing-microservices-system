@@ -213,7 +213,7 @@ public sealed class TripLifecycleComponentTests
     }
 
     [Fact]
-    public async Task AcceptRejectIntake_FencesIdentity_AndExposesCleanupRequirement()
+    public async Task RejectIntake_TerminalizesTrip_StagesExactCleanup_AndCannotAcceptAfterwards()
     {
         await MigrateAsync();
         var rider = Guid.NewGuid();
@@ -242,15 +242,30 @@ public sealed class TripLifecycleComponentTests
         TripLifecycleResult rejected;
         await using (var db = Db())
         {
-            rejected = await new RecordDriverRejectedHandler(db, NullLogger<RecordDriverRejectedHandler>.Instance)
+            rejected = await new RecordDriverRejectedHandler(db, Clock(), NullLogger<RecordDriverRejectedHandler>.Instance)
                 .HandleAsync(tripId, driverId, reservationId);
         }
 
         Assert.True(rejected.IsSuccess);
+        Assert.False(rejected.IsReplay);
         Assert.Equal(
             TripCompensation.ReleaseReservation | TripCompensation.CancelMatching,
             rejected.Compensation);
-        Assert.Equal(TripState.DriverReserved, rejected.State);
+        Assert.Equal(TripState.MatchFailed, rejected.State);
+        Assert.Equal(TripFailureReason.DriverRejected, rejected.FailureReason);
+        Assert.Null(rejected.AssignedDriverId);
+        Assert.Equal(2, rejected.PendingCleanupCount);
+
+        TripLifecycleResult rejectReplay;
+        await using (var db = Db())
+        {
+            rejectReplay = await new RecordDriverRejectedHandler(db, Clock(), NullLogger<RecordDriverRejectedHandler>.Instance)
+                .HandleAsync(tripId, driverId, reservationId);
+        }
+
+        Assert.True(rejectReplay.IsSuccess);
+        Assert.True(rejectReplay.IsReplay);
+        Assert.Equal(TripState.MatchFailed, rejectReplay.State);
 
         TripLifecycleResult accepted;
         await using (var db = Db())
@@ -259,25 +274,24 @@ public sealed class TripLifecycleComponentTests
                 .HandleAsync(tripId, driverId, reservationId);
         }
 
-        Assert.True(accepted.IsSuccess);
-        Assert.False(accepted.IsReplay);
-        Assert.Equal(TripState.DriverAccepted, accepted.State);
-
-        TripLifecycleResult acceptReplay;
-        await using (var db = Db())
-        {
-            acceptReplay = await new RecordDriverAcceptedHandler(db, Clock(), NullLogger<RecordDriverAcceptedHandler>.Instance)
-                .HandleAsync(tripId, driverId, reservationId);
-        }
-
-        Assert.True(acceptReplay.IsSuccess);
-        Assert.True(acceptReplay.IsReplay);
+        Assert.False(accepted.IsSuccess);
+        Assert.Equal(TripErrorCode.TerminalState, accepted.ErrorCode);
 
         await using var verify = Db();
         var trip = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == tripId);
-        Assert.Equal(TripState.DriverAccepted, trip.State);
-        Assert.Equal(driverId, trip.Assignment!.DriverId);
+        Assert.Equal(TripState.MatchFailed, trip.State);
+        Assert.Equal(TripFailureReason.DriverRejected, trip.FailureReason);
+        Assert.Null(trip.Assignment);
+        Assert.Equal(1, trip.CurrentMatchingRound);
+        // StartMatching + reservation + reject = 3; reject replay and the
+        // rejected accept never advance the aggregate.
         Assert.Equal(3, trip.Version);
+        Assert.Equal(2, trip.CleanupIntents.Count);
+        Assert.Contains(trip.CleanupIntents, i =>
+            i.Kind == TripCleanupKind.ReleaseReservation &&
+            i.DriverId == driverId && i.ReservationId == reservationId && i.CompletedAt is null);
+        Assert.Contains(trip.CleanupIntents, i =>
+            i.Kind == TripCleanupKind.CancelMatching && i.MatchingRound == 1 && i.CompletedAt is null);
     }
 
     [Fact]
