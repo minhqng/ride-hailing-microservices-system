@@ -1,0 +1,89 @@
+Verified source: f2ff224f397c76d66af20358fe7615d6aba186ad
+Verified tree:   caac264b93c1d5b441ac1b1d0be87253162ccbc0
+Base main:       b03b30d1aec40053242381c27cecf36112866e03
+Base tree:       9ec89714a75fa419bf8b14b03f91fd38e8dac201
+
+Environment: Windows 11 10.0.26200, Docker Desktop 29.8.2 (Linux engine),
+.NET SDK 10.0.403 (host), Python 3.15.2, Git Bash. Testcontainers PostgreSQL
+pinned to postgres:18.6@sha256:3a4264...; release overlay providers:
+PostgreSQL 18.6, RabbitMQ 4.3.6, Redis 8.10.2.
+
+Full regression (dotnet test RideHailing.Distributed.slnx -c Release,
+real PostgreSQL/RabbitMQ where the suite requires them):
+
+  RideHailing.NotificationWorker.UnitTests             13 passed
+  RideHailing.IdentityService.IntegrationTests          0 passed, 1 known opt-in skip
+  RideHailing.MatchingService.UnitTests                115 passed
+  RideHailing.DriverService.UnitTests                  132 passed
+  RideHailing.PaymentService.UnitTests                  38 passed
+  RideHailing.TripService.UnitTests                    326 passed
+  RideHailing.NotificationService.IntegrationTests      16 passed
+  RideHailing.PaymentService.IntegrationTests           37 passed
+  RideHailing.B12Audit.Tests                            20 passed
+  RideHailing.Platform.IntegrationTests                 76 passed
+  RideHailing.DriverService.IntegrationTests           120 passed
+  RideHailing.MatchingService.IntegrationTests         202 passed
+  RideHailing.TripService.IntegrationTests             246 passed
+  ----------------------------------------------------------------
+  Total                                              1,341 passed
+                                                         0 failed
+                                                         1 skipped (known Identity opt-in)
+
+TRX verifier:
+  python scripts/test/assert-trx.py --results-dir TestResults/full2
+    --min-passed 1200 --min-files 13 --max-skipped 1
+    --allowed-skip RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState
+    --required-suites-file scripts/test/required-suites.txt
+  PASS: TRX files=13 (executed suites=13), notexecuted=1,
+        passed=1341, suite files=13
+
+New coverage added by this closure (+81 tests over the 1,260 baseline):
+- Trip Driver Reject domain/HTTP/race/crash/reconciler tests.
+- Trip recipient-notification intent and Outbox atomicity tests.
+- Notification inbox unit tests and a real-PostgreSQL/real-JWT integration
+  suite (recipient isolation, dedup, replay, conflict, migration, read mark).
+- Driver reserve/release recipient-addressed notification assertions.
+
+Repository hygiene:
+  scripts/test/hygiene-check.sh --self-test  -> 24 pattern verdicts OK
+  scripts/test/hygiene-check.sh origin/main -> 76 changed path(s) clean
+
+Production release overlay smoke
+(RELEASE_SMOKE_REPLACE_DEV_ENV=1 python scripts/test/release-smoke.py):
+  Status: PASS
+  Source reported by the run: f2ff224f397c76d66af20358fe7615d6aba186ad
+                              tree caac264b93c1d5b441ac1b1d0be87253162ccbc0
+  External Trip EF migration: dotnet ef database update, 11 applied
+  Checks (19): release-secrets fail-closed, release render, Production
+  environment, messaging enabled, reconciliation enabled, no Production
+  simulator, services ready, Gateway auth, unauthenticated rejection,
+  public Driver lifecycle, completed journey, recipient inboxes, cancelled
+  void journey, Driver reject journey, notification outage isolation,
+  reject crash replay, authority audit, isolated teardown.
+  Scenario A Driver Reject: PASS (MATCH_FAILED / DRIVER_REJECTED, release
+    completed, replacement ride allowed, 1 rejection notification)
+  Scenario B completed journey: PASS (Trip COMPLETED, 2 payment operations,
+    4 unique recipient notifications; Rider and Driver read their own inbox)
+  Scenario C notification outage: PASS (Notification stopped before
+    completion; Trip/Driver/Payment completed; restart delivered 4 unique
+    notifications, no duplicates)
+  Scenario D reject crash/replay: PASS (Trip restarted after reject commit;
+    cleanup reconciled; exact replay, 1 release intent, 1 notification)
+  Final authority audit: 6 trips (COMPLETED/CANCELLED/MATCH_FAILED),
+    1 AVAILABLE Driver with no reservation, 6 historical matching rounds,
+    6 unique payment operation keys with matching provider effects,
+    25 unique recipient notifications, all cleanup intents completed.
+  Teardown: unrelated sentinel container preserved; 0 project containers.
+
+Security boundary checks:
+- Gateway and direct Notification inbox without a token: 401.
+- Cross-user and foreign notification ids: 404 (owner isolation).
+- Client-supplied userId with no JWT: 401; forged headers are not trusted.
+- Notification content contains no Bearer token, password, JWT-like value or
+  payment secret (unit, integration and release-smoke assertions).
+
+CI / PR status:
+- GitHub CLI is not authenticated in this environment, so no PR URL,
+  exact-tree CI run or post-merge main CI exists for this closure yet.
+  This is recorded as an external limitation, not a PASS claim.
+- No v1.0.0 tag or GitHub Release was created.

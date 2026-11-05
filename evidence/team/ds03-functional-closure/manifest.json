@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "week": "DS03 functional closure",
+  "owner": "TEAM integration",
+  "authority": "Docs 00-03 > Doc 04 section 50 > Docs 05A section 37 / 05B section 38 / 05C section 48",
+  "baseMain": {
+    "commit": "b03b30d1aec40053242381c27cecf36112866e03",
+    "tree": "9ec89714a75fa419bf8b14b03f91fd38e8dac201"
+  },
+  "sourceCommit": "f2ff224f397c76d66af20358fe7615d6aba186ad",
+  "sourceTree": "caac264b93c1d5b441ac1b1d0be87253162ccbc0",
+  "status": "PASS",
+  "branches": {
+    "policy": "docs/ds03-functional-policy@ebd54ae",
+    "driverReject": "feature/ds03-driver-reject@3f3237a",
+    "notifications": "feature/ds03-recipient-notifications@f2ff224"
+  },
+  "gates": {
+    "driverReject": "PASS: authenticated exact-assignment reject, terminal MATCH_FAILED/DRIVER_REJECTED, no rematch, no payment",
+    "rejectCleanup": "PASS: exact release + matching cancellation reconciled from Driver/Matching authority; no false release claim",
+    "riderInbox": "PASS: real JWT reads own recipient-addressed inbox",
+    "driverInbox": "PASS: real JWT reads own assignment/release inbox",
+    "notificationDedup": "PASS: deterministic identity, per-recipient receipt, global source-message fingerprint poison check",
+    "notificationFailureIsolation": "PASS: worker outage does not block Trip/Driver/Payment; queued notifications delivered once after restart",
+    "endToEnd": "PASS: release-smoke Scenarios A-D and final authority audit",
+    "regression": "PASS: 1341 passed, 0 failed, 1 known Identity opt-in skip, 13 suites, TRX verifier PASS",
+    "security": "PASS: owner isolation, 401/404 boundaries, no secrets in content, hygiene clean",
+    "releaseTag": "NOT_CREATED: no v1.0.0 tag or GitHub Release",
+    "ci": "NOT_RUN: GitHub CLI is unauthenticated in this environment; no PR/CI URL exists"
+  },
+  "regression": {
+    "suites": 13,
+    "passed": 1341,
+    "failed": 0,
+    "skipped": 1,
+    "knownSkip": "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState",
+    "baselinePassed": 1260,
+    "newTests": 81,
+    "projects": {
+      "NotificationWorker.UnitTests": 13,
+      "IdentityService.IntegrationTests": 0,
+      "MatchingService.UnitTests": 115,
+      "DriverService.UnitTests": 132,
+      "PaymentService.UnitTests": 38,
+      "TripService.UnitTests": 326,
+      "NotificationService.IntegrationTests": 16,
+      "PaymentService.IntegrationTests": 37,
+      "B12Audit.Tests": 20,
+      "Platform.IntegrationTests": 76,
+      "DriverService.IntegrationTests": 120,
+      "MatchingService.IntegrationTests": 202,
+      "TripService.IntegrationTests": 246
+    },
+    "trxVerifier": "PASS: TRX files=13 (executed suites=13), notexecuted=1, passed=1341, suite files=13"
+  },
+  "releaseSmoke": {
+    "status": "PASS",
+    "sourceCommit": "f2ff224f397c76d66af20358fe7615d6aba186ad",
+    "sourceTree": "caac264b93c1d5b441ac1b1d0be87253162ccbc0",
+    "checks": 19,
+    "migrationsApplied": 11,
+    "scenarios": {
+      "A-driver-reject": "PASS",
+      "B-completed-and-inboxes": "PASS",
+      "C-notification-outage": "PASS",
+      "D-reject-crash-replay": "PASS"
+    },
+    "authorityAudit": {
+      "trips": 6,
+      "drivers": 1,
+      "rounds": 6,
+      "payments": 6,
+      "providerEffects": 6,
+      "notifications": 25
+    },
+    "teardown": "PASS: sentinel preserved, 0 project containers"
+  },
+  "security": {
+    "hygieneSelfTest": "24 pattern verdicts OK",
+    "hygieneChangedPaths": "76 clean against origin/main",
+    "unauthenticatedInbox": "401",
+    "crossUserInbox": "owner-isolated; foreign notification ids 404",
+    "forgedClientUserId": "not trusted; 401 without JWT",
+    "contentSafety": "no Bearer/password/JWT-like/payment secret in notification content"
+  },
+  "artifacts": [
+    {
+      "path": "README.md",
+      "sha256": "d44f932bdf02ec4a0ca8974524e497e2c090579fc37b4d198ddc8fecd5f77e16"
+    },
+    {
+      "path": "reproduce.md",
+      "sha256": "96bd92850db65b098d934edc0e6ec874558597f0cbe6c73c1eaa132c40dc4566"
+    },
+    {
+      "path": "test-output.txt",
+      "sha256": "09dde770371abf36a494b612a6155e16024e35520d5b7291fce4dabf95e8e07e"
+    },
+    {
+      "path": "final-state/release-smoke-summary.json",
+      "sha256": "3ddbdbef3fccade478f2373f161a5735782a4f7ed90561725f832eda54b8c014"
+    },
+    {
+      "path": "final-state/ds03-requirement-matrix.md",
+      "sha256": "e5e723d99c3f8fd9436c7f12da40c642a34cecad359ac9cd5fd97c69f5d223a4"
+    }
+  ],
+  "limitations": [
+    "No PR merge, exact-tree CI, or post-merge main CI: gh is unauthenticated in this environment.",
+    "No automatic rematch, SMS/email/mobile push, Firebase, or real notification provider.",
+    "Historical MATCH_FAILED rows may have a NULL failure_reason; never backfilled by guesswork.",
+    "No new performance measurement; earlier W13 figures are not reused as new-source results.",
+    "Human release/demo rehearsal and oral defense are outside this closure."
+  ],
+  "rebase": "Replayed from old main 2facf746... onto rewritten main b03b30d (tree 9ec8971...); old main preserved by remote tag archive/main-pre-attribution-correction-2026-11-05."
+}
