@@ -70,6 +70,13 @@ public sealed class Trip
     /// <summary>Zero or one coherent current assignment (DSI-008).</summary>
     public TripAssignment? Assignment { get; private set; }
 
+    /// <summary>
+    /// Durable reason for a MATCH_FAILED result (Doc 01 §40.1.2). Null for
+    /// every non-terminal state and for historical rows created before the
+    /// DS03 amendment.
+    /// </summary>
+    public TripFailureReason? FailureReason { get; private set; }
+
     /// <summary>When the Trip was created.</summary>
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -107,6 +114,7 @@ public sealed class Trip
         TripState state,
         int currentMatchingRound,
         TripAssignment? assignment,
+        TripFailureReason? failureReason,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
         int version)
@@ -119,6 +127,7 @@ public sealed class Trip
         State = state;
         CurrentMatchingRound = currentMatchingRound;
         Assignment = assignment;
+        FailureReason = failureReason;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
         Version = version;
@@ -159,7 +168,7 @@ public sealed class Trip
             throw new ArgumentException("Trip requires a concrete creation timestamp.", nameof(createdAt));
         }
 
-        return new Trip(tripId, riderId, pickup, dropoff, fare, TripState.Created, 0, null, createdAt, createdAt, 0);
+        return new Trip(tripId, riderId, pickup, dropoff, fare, TripState.Created, 0, null, null, createdAt, createdAt, 0);
     }
 
     /// <summary>
@@ -189,7 +198,8 @@ public sealed class Trip
         TripAssignment? assignment,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        int version)
+        int version,
+        TripFailureReason? failureReason = null)
     {
         if (tripId == Guid.Empty)
         {
@@ -260,7 +270,15 @@ public sealed class Trip
                 nameof(assignment));
         }
 
-        return new Trip(tripId, riderId, pickup, dropoff, fare, state, currentMatchingRound, assignment, createdAt, updatedAt, version);
+        if (failureReason is not null && state != TripState.MatchFailed)
+        {
+            throw new ArgumentException(
+                "A Trip failure reason is valid only for MATCH_FAILED.",
+                nameof(failureReason));
+        }
+
+        return new Trip(tripId, riderId, pickup, dropoff, fare, state, currentMatchingRound, assignment,
+            failureReason, createdAt, updatedAt, version);
     }
 
     /// <summary>
@@ -448,25 +466,35 @@ public sealed class Trip
     }
 
     /// <summary>
-    /// Validates a Driver rejection against the current assignment without
-    /// changing Trip state (A-W05-03 accept/reject proof). A rejection for
-    /// the exact current reservation is accepted and exposes the guarded
-    /// cleanup requirement (exact release + matching cancellation for future
-    /// workflow); the assignment is deliberately NOT cleared and the round is
-    /// NOT incremented here, because only Driver authority can confirm the
-    /// guarded release that a future rematch operation will fence on. A
-    /// rejection for any other identity is stale/conflicting and changes
-    /// nothing.
-    /// This operation validates the current cleanup requirement; it does not
-    /// record that compensation has been dispatched. Trip persists no
-    /// rejection memory, so every identical validation succeeds alike without
-    /// advancing Version: repeated Success means "the requirement still
-    /// holds", never "a new compensation was emitted".
+    /// Records a Driver rejection as the Trip's terminal matching result
+    /// (Doc 01 §40.1): DRIVER_RESERVED → MATCH_FAILED with
+    /// failure_reason=DRIVER_REJECTED, one exact ReleaseReservation intent and
+    /// one CancelMatching intent. The current assignment is cleared because
+    /// the canonical MATCH_FAILED shape is unassigned (DSI-008); the exact
+    /// reservation identity survives in the cleanup intents and Matching's
+    /// historical round. No rematch, no payment command and no Driver release
+    /// is executed here: the caller stages the durable Outbox intents and the
+    /// authority services confirm their own effects.
+    /// A duplicate reject for the exact reservation already recorded as
+    /// DRIVER_REJECTED is an idempotent replay; any other terminal outcome is
+    /// rejected without mutation.
     /// </summary>
-    public TripOutcome RecordDriverRejected(Guid driverId, Guid reservationId)
+    public TripOutcome RecordDriverRejected(Guid driverId, Guid reservationId, DateTimeOffset now)
     {
         if (State.IsTerminal())
         {
+            if (State == TripState.MatchFailed
+                && FailureReason == TripFailureReason.DriverRejected
+                && driverId != Guid.Empty
+                && reservationId != Guid.Empty
+                && _cleanupIntents.Any(i => i.Kind == TripCleanupKind.ReleaseReservation
+                    && i.DriverId == driverId && i.ReservationId == reservationId))
+            {
+                return TripOutcome.Success(
+                    isReplay: true,
+                    compensation: TripCompensation.ReleaseReservation | TripCompensation.CancelMatching);
+            }
+
             return Terminal(nameof(RecordDriverRejected));
         }
 
@@ -475,6 +503,11 @@ public sealed class Trip
             return TripOutcome.Fail(
                 TripErrorCode.AssignmentRequired,
                 "Driver rejection requires non-empty driver and reservation identities.");
+        }
+
+        if (now == default)
+        {
+            throw new ArgumentException("RecordDriverRejected requires a concrete timestamp.", nameof(now));
         }
 
         if (State != TripState.DriverReserved)
@@ -495,6 +528,14 @@ public sealed class Trip
                 "Supplied driver/reservation identity does not match the current assignment.");
         }
 
+        AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.CancelMatching,
+            CurrentMatchingRound, now));
+        AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReleaseReservation,
+            Assignment.MatchingRound, now, driverId, reservationId));
+
+        FailureReason = TripFailureReason.DriverRejected;
+        Assignment = null;
+        Commit(TripState.MatchFailed, now);
         return TripOutcome.Success(
             compensation: TripCompensation.ReleaseReservation | TripCompensation.CancelMatching);
     }
@@ -616,6 +657,7 @@ public sealed class Trip
             return StaleRound(nameof(MarkMatchingFailed), matchingRound);
         }
 
+        FailureReason = TripFailureReason.NoDriverAvailable;
         Commit(TripState.MatchFailed, now);
         return TripOutcome.Success();
     }

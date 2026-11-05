@@ -54,7 +54,7 @@ public sealed class TripNoMutationProofs
         {
             "RecordDriverRejectedMismatch",
             t => t.RecordDriverRejected(
-                TripTestBuilders.OtherDriverId, TripTestBuilders.ReservationId)
+                TripTestBuilders.OtherDriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment)
         },
         {
             "MarkPaymentAuthorizedTooEarly",

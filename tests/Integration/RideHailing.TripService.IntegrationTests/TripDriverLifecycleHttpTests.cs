@@ -71,7 +71,7 @@ public sealed class TripDriverLifecycleHttpTests : IDisposable
                 : new DriverLookup(DriverLookupStatus.NotFound));
     }
 
-    private sealed record ReservedTrip(Guid TripId, Guid DriverId, Guid UserId, Guid ReservationId);
+    private sealed record ReservedTrip(Guid TripId, Guid RiderId, Guid DriverId, Guid UserId, Guid ReservationId);
 
     private static readonly DateTimeOffset ActionAt = new(2026, 10, 5, 12, 0, 0, TimeSpan.Zero);
 
@@ -120,7 +120,7 @@ public sealed class TripDriverLifecycleHttpTests : IDisposable
                 .HandleAsync(tripId, driverId, reservationId, 1)).IsSuccess);
         }
 
-        return new ReservedTrip(tripId, driverId, userId, reservationId);
+        return new ReservedTrip(tripId, rider, driverId, userId, reservationId);
     }
 
     private async Task AuthorizeAsync(Guid tripId)
@@ -384,5 +384,196 @@ public sealed class TripDriverLifecycleHttpTests : IDisposable
         using var response = await _client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Reject_ByAssignedDriver_TerminalizesWithExactCleanupAndNoPayment()
+    {
+        var trip = await ReservedTripAsync();
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, trip.ReservationId));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<DriverRejectResponse>();
+        Assert.NotNull(body);
+        Assert.Equal("MATCH_FAILED", body.State);
+        Assert.Equal("DRIVER_REJECTED", body.FailureReason);
+        Assert.False(body.Replayed);
+        Assert.True(body.CleanupPending);
+
+        var persisted = await ReloadAsync(trip.TripId);
+        Assert.Equal(TripState.MatchFailed, persisted.State);
+        Assert.Equal(TripFailureReason.DriverRejected, persisted.FailureReason);
+        Assert.Null(persisted.Assignment);
+        Assert.Equal(1, persisted.CurrentMatchingRound);
+        var release = Assert.Single(persisted.CleanupIntents, i => i.Kind == TripCleanupKind.ReleaseReservation);
+        Assert.Equal(trip.DriverId, release.DriverId);
+        Assert.Equal(trip.ReservationId, release.ReservationId);
+        Assert.Null(release.CompletedAt);
+        Assert.Single(persisted.CleanupIntents, i => i.Kind == TripCleanupKind.CancelMatching);
+        Assert.Equal(1, await IntentCountAsync(trip.TripId, "ReleaseDriverReservationV1"));
+        Assert.Equal(1, await IntentCountAsync(trip.TripId, "CancelMatchingRoundV1"));
+        Assert.Equal(0, await IntentCountAsync(trip.TripId, "AuthorizePaymentV1"));
+        Assert.Equal(0, await IntentCountAsync(trip.TripId, "CapturePaymentV1"));
+        Assert.Equal(0, await IntentCountAsync(trip.TripId, "VoidPaymentAuthorizationV1"));
+
+        // Duplicate reject is a replay: no second obligation, no version change.
+        using var replay = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, trip.ReservationId));
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        var replayBody = await replay.Content.ReadFromJsonAsync<DriverRejectResponse>();
+        Assert.True(replayBody!.Replayed);
+        Assert.Equal("DRIVER_REJECTED", replayBody.FailureReason);
+        var afterReplay = await ReloadAsync(trip.TripId);
+        Assert.Equal(persisted.Version, afterReplay.Version);
+        Assert.Equal(2, afterReplay.CleanupIntents.Count);
+        Assert.Equal(1, await IntentCountAsync(trip.TripId, "ReleaseDriverReservationV1"));
+
+        // A rejection never starts the payment saga.
+        await using (var db = new TripDbContext(PlainOptions()))
+        {
+            Assert.False(await db.RideSagas.AnyAsync(s => s.TripId == trip.TripId));
+        }
+
+        // Authority confirmation clears the visible cleanup flag only when
+        // every exact obligation is discharged.
+        await using (var db = new TripDbContext(PlainOptions()))
+        {
+            var cleanup = new ConfirmTripCleanupHandler(db, new FixedTimeProvider(ActionAt));
+            Assert.True((await cleanup.HandleAsync(trip.TripId, release.Key,
+                CleanupAuthorityResult.Released)).IsSuccess);
+            var matching = Assert.Single(afterReplay.CleanupIntents, i => i.Kind == TripCleanupKind.CancelMatching);
+            Assert.True((await cleanup.HandleAsync(trip.TripId, matching.Key,
+                CleanupAuthorityResult.MatchingStopped)).IsSuccess);
+        }
+
+        using var confirmedReplay = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, trip.ReservationId));
+        var confirmedBody = await confirmedReplay.Content.ReadFromJsonAsync<DriverRejectResponse>();
+        Assert.True(confirmedBody!.Replayed);
+        Assert.False(confirmedBody.CleanupPending);
+
+        // The Rider's one-active-Trip slot is free: a new ride is legal.
+        var newTrip = await CreateRideAsync(trip.RiderId, "after-reject-" + Guid.NewGuid().ToString("N"));
+        Assert.NotEqual(trip.TripId, newTrip);
+    }
+
+    [Fact]
+    public async Task Reject_ByForeignDriver_Returns403()
+    {
+        var trip = await ReservedTripAsync();
+        var foreignDriver = Guid.NewGuid();
+        _directory.Register(foreignDriver, Guid.NewGuid());
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, foreignDriver, trip.ReservationId));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("FORBIDDEN", await ProblemCodeAsync(response));
+        Assert.Equal(TripState.DriverReserved, (await ReloadAsync(trip.TripId)).State);
+    }
+
+    [Fact]
+    public async Task Reject_ByRider_Returns403()
+    {
+        var trip = await ReservedTripAsync();
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, trip.ReservationId, "Rider"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("FORBIDDEN", await ProblemCodeAsync(response));
+        Assert.Equal(TripState.DriverReserved, (await ReloadAsync(trip.TripId)).State);
+    }
+
+    [Fact]
+    public async Task Reject_WithoutPrincipal_Returns401()
+    {
+        var trip = await ReservedTripAsync();
+
+        using var response = await _client.PostAsJsonAsync(
+            $"/trips/{trip.TripId:D}/reject",
+            new { driverId = trip.DriverId, reservationId = trip.ReservationId });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("UNAUTHORIZED", await ProblemCodeAsync(response));
+        Assert.Equal(TripState.DriverReserved, (await ReloadAsync(trip.TripId)).State);
+    }
+
+    [Fact]
+    public async Task Reject_WithWrongReservation_Returns409WithoutCleanup()
+    {
+        var trip = await ReservedTripAsync();
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, Guid.NewGuid()));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("ASSIGNMENT_MISMATCH", await ProblemCodeAsync(response));
+        var persisted = await ReloadAsync(trip.TripId);
+        Assert.Equal(TripState.DriverReserved, persisted.State);
+        Assert.Empty(persisted.CleanupIntents);
+        Assert.Equal(0, await IntentCountAsync(trip.TripId, "ReleaseDriverReservationV1"));
+    }
+
+    [Fact]
+    public async Task Reject_ByAnotherAssignedDriver_Returns409WithoutCleanup()
+    {
+        var trip = await ReservedTripAsync();
+        var otherDriver = Guid.NewGuid();
+        var otherUser = Guid.NewGuid();
+        _directory.Register(otherDriver, otherUser);
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", otherUser, otherDriver, trip.ReservationId));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("ASSIGNMENT_MISMATCH", await ProblemCodeAsync(response));
+        Assert.Equal(TripState.DriverReserved, (await ReloadAsync(trip.TripId)).State);
+    }
+
+    [Fact]
+    public async Task Reject_AfterAccept_Returns409AndStagesNoRelease()
+    {
+        var trip = await ReservedTripAsync();
+        using (var accepted = await _client.SendAsync(
+            DriverRequest(trip.TripId, "accept", trip.UserId, trip.DriverId, trip.ReservationId)))
+        {
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        }
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, trip.ReservationId));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("DOMAIN_CONFLICT", await ProblemCodeAsync(response));
+        var persisted = await ReloadAsync(trip.TripId);
+        Assert.Equal(TripState.DriverAccepted, persisted.State);
+        Assert.Empty(persisted.CleanupIntents);
+        Assert.Equal(0, await IntentCountAsync(trip.TripId, "ReleaseDriverReservationV1"));
+    }
+
+    [Fact]
+    public async Task Reject_AfterRiderCancel_Returns409WithoutSecondObligation()
+    {
+        var trip = await ReservedTripAsync();
+
+        await using (var db = new TripDbContext(PlainOptions()))
+        {
+            Assert.True((await new CancelRideHandler(db, new FixedTimeProvider(ActionAt),
+                NullLogger<CancelRideHandler>.Instance)
+                .HandleAsync(trip.TripId, trip.RiderId)).IsSuccess);
+        }
+
+        using var response = await _client.SendAsync(
+            DriverRequest(trip.TripId, "reject", trip.UserId, trip.DriverId, trip.ReservationId));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("TERMINAL_STATE", await ProblemCodeAsync(response));
+        var persisted = await ReloadAsync(trip.TripId);
+        Assert.Equal(TripState.Cancelled, persisted.State);
+        Assert.Single(persisted.CleanupIntents, i => i.Kind == TripCleanupKind.ReleaseReservation);
+        Assert.Equal(1, await IntentCountAsync(trip.TripId, "ReleaseDriverReservationV1"));
     }
 }

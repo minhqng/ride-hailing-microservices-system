@@ -11,8 +11,9 @@ namespace RideHailing.TripService.Api;
 /// production Trip handlers: no business rules live here. The authenticated
 /// Driver principal is bound to the Driver-owned profile, and the aggregate
 /// still checks the exact current assignment and reservation identity.
-/// Reject is not exposed: its rematch workflow is not implemented upstream,
-/// and inventing a transition here would violate the canonical contract.
+/// Reject is exposed with the DS03 terminal-rejection policy (Doc 01 §40.1);
+/// it records a durable MATCH_FAILED/DRIVER_REJECTED result and exact cleanup
+/// intents, never a claim that the remote release already happened.
 /// </summary>
 public static class DriverLifecycleEndpoint
 {
@@ -28,6 +29,27 @@ public static class DriverLifecycleEndpoint
             HandleAsync("DriverAccept", tripId, request, context, directory,
                 (driverId, reservationId, token) =>
                     handler.HandleAsync(tripId, driverId, reservationId, token),
+                LifecycleResponse,
+                cancellationToken));
+
+        app.MapPost(TripRoutes.RejectDriver, (
+                Guid tripId,
+                DriverLifecycleRequest request,
+                HttpContext context,
+                RecordDriverRejectedHandler handler,
+                IDriverDirectory directory,
+                CancellationToken cancellationToken) =>
+            HandleAsync("DriverReject", tripId, request, context, directory,
+                (driverId, reservationId, token) =>
+                    handler.HandleAsync(tripId, driverId, reservationId, token),
+                result => Results.Ok(new DriverRejectResponse
+                {
+                    TripId = result.TripId,
+                    State = result.State.ToCanonicalName(),
+                    FailureReason = result.FailureReason?.ToCanonicalName(),
+                    Replayed = result.IsReplay,
+                    CleanupPending = result.PendingCleanupCount > 0,
+                }),
                 cancellationToken));
 
         app.MapPost(TripRoutes.StartTrip, (
@@ -40,6 +62,7 @@ public static class DriverLifecycleEndpoint
             HandleAsync("DriverStart", tripId, request, context, directory,
                 (driverId, reservationId, token) =>
                     handler.HandleAsync(tripId, driverId, reservationId, token),
+                LifecycleResponse,
                 cancellationToken));
 
         app.MapPost(TripRoutes.CompleteTrip, (
@@ -52,8 +75,17 @@ public static class DriverLifecycleEndpoint
             HandleAsync("DriverComplete", tripId, request, context, directory,
                 (driverId, reservationId, token) =>
                     handler.HandleAsync(tripId, driverId, reservationId, token),
+                LifecycleResponse,
                 cancellationToken));
     }
+
+    private static IResult LifecycleResponse(TripLifecycleResult result) =>
+        Results.Ok(new DriverLifecycleResponse
+        {
+            TripId = result.TripId,
+            State = result.State.ToCanonicalName(),
+            Replayed = result.IsReplay,
+        });
 
     private static async Task<IResult> HandleAsync(
         string operation,
@@ -62,6 +94,7 @@ public static class DriverLifecycleEndpoint
         HttpContext context,
         IDriverDirectory directory,
         Func<Guid, Guid, CancellationToken, Task<TripLifecycleResult>> invoke,
+        Func<TripLifecycleResult, IResult> mapSuccess,
         CancellationToken cancellationToken)
     {
         using var span = TripDiagnostics.Activities.StartActivity("RideHailing.Trip/" + operation);
@@ -149,12 +182,7 @@ public static class DriverLifecycleEndpoint
         {
             span?.SetTag("ride.outcome", result.IsReplay ? "replay" : "applied");
             span?.SetTag("trip.state", result.State.ToCanonicalName());
-            return Results.Ok(new DriverLifecycleResponse
-            {
-                TripId = result.TripId,
-                State = result.State.ToCanonicalName(),
-                Replayed = result.IsReplay,
-            });
+            return mapSuccess(result);
         }
 
         span?.SetTag("ride.outcome", "rejected");

@@ -26,3 +26,24 @@ public sealed record DriverLifecycleResponse
     /// <summary>True when the same legal transition was already current.</summary>
     public bool Replayed { get; init; }
 }
+
+/// <summary>
+/// Truthful rejection result: the terminal Trip result and cleanup intent are
+/// committed; the Driver reservation release may still be pending authority
+/// confirmation.
+/// </summary>
+public sealed record DriverRejectResponse
+{
+    public Guid TripId { get; init; }
+
+    public string State { get; init; } = string.Empty;
+
+    /// <summary>Durable MATCH_FAILED reason (DRIVER_REJECTED on success).</summary>
+    public string? FailureReason { get; init; }
+
+    /// <summary>True when the same exact rejection was already recorded.</summary>
+    public bool Replayed { get; init; }
+
+    /// <summary>True while a Trip-owned cleanup obligation is unconfirmed.</summary>
+    public bool CleanupPending { get; init; }
+}

@@ -28,6 +28,12 @@ public sealed class TripRouteFreezeTests
     }
 
     [Fact]
+    public void RejectDriver_IsPost_RejectSubResource()
+    {
+        Assert.Equal("/trips/{tripId:guid}/reject", TripRoutes.RejectDriver);
+    }
+
+    [Fact]
     public void IdempotencyKey_TravelsInStandardHeader_NotBody()
     {
         Assert.Equal("Idempotency-Key", TripIdentityHeaders.IdempotencyKey);
