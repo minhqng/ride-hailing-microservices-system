@@ -292,6 +292,9 @@ public sealed partial class DriverRepository
                 // so there is no committed reservation without its event.
                 await _outbox.EnqueueReservedAsync(
                     conn, tx, current, tripId, reservationId, ct);
+                await _outbox.EnqueueNotificationAsync(
+                    conn, tx, current, tripId, reservationId,
+                    RideHailing.Messaging.Contracts.NotificationMessage.Types.DriverTripAssigned, ct);
             }
 
             await tx.CommitAsync(ct);
@@ -438,6 +441,8 @@ public sealed partial class DriverRepository
         {
             await StoreAsync(conn, tx, current, ct);
             await _outbox.EnqueueReleasedAsync(conn, tx, current, tripId, reservationId, ct, command);
+            await _outbox.EnqueueNotificationAsync(conn, tx, current, tripId, reservationId,
+                RideHailing.Messaging.Contracts.NotificationMessage.Types.DriverReservationReleased, ct);
         }
 
         return effected

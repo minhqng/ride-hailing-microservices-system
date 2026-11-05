@@ -145,7 +145,12 @@ public sealed class MarkPaymentFailedHandler
                 return TripLifecycleResult.Fail(trip, outcome);
             }
 
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            if (!outcome.IsReplay)
+            {
+                TripOutboxWriter.Enqueue(_db,
+                    TripNotificationIntents.PaymentFailed(trip, "DECLINED", trip.UpdatedAt));
+                await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
             _log.LogInformation(
                 "PaymentFailed {TripId} state {State} compensation {Compensation} (no saga lineage).",
                 trip.TripId, trip.State.ToCanonicalName(), outcome.Compensation);
@@ -153,6 +158,7 @@ public sealed class MarkPaymentFailedHandler
         }
 
         var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
+        var wasAccepted = trip.State == TripState.DriverAccepted;
         var applied = PaymentOutcomeIntake.Apply(
             trip, saga,
             new PaymentOutcomeFact("PaymentAuthorizationFailedV1", saga.AuthorizeOperationKey,
@@ -166,7 +172,15 @@ public sealed class MarkPaymentFailedHandler
 
         // The cancellation created by the intake adds the exact release and
         // cancel-round wire obligations; stage them in this same unit of work.
+        // Only a failure that actually cancelled an accepted ride produces the
+        // Rider-facing payment-failure notification; a late failure on a ride
+        // the Rider already cancelled does not relabel that cancellation.
         TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
+        if (wasAccepted && trip.State == TripState.Cancelled)
+        {
+            TripOutboxWriter.Enqueue(_db,
+                TripNotificationIntents.PaymentFailed(trip, "DECLINED", trip.UpdatedAt));
+        }
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         _log.LogInformation(
             "PaymentFailed {TripId} state {State} saga {SagaStatus}/{SagaStep}.",
@@ -221,6 +235,7 @@ public sealed class MarkMatchingFailedHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
+        TripOutboxWriter.Enqueue(_db, TripNotificationIntents.NoDriver(trip, trip.UpdatedAt));
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _log.LogInformation(
