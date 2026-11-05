@@ -1,0 +1,146 @@
+{
+  "status": "PASS",
+  "project": "ride-release-smoke-11732",
+  "source": {
+    "commit": "f2ff224f397c76d66af20358fe7615d6aba186ad",
+    "tree": "caac264b93c1d5b441ac1b1d0be87253162ccbc0"
+  },
+  "migration": {
+    "api": "dotnet ef database update",
+    "applied": 11
+  },
+  "checks": [
+    {
+      "id": "RELEASE-SECRETS-must be set for the release overlay",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-SECRETS-AUTH_",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-RENDER",
+      "status": "PASS"
+    },
+    {
+      "id": "PRODUCTION-ENVIRONMENT",
+      "status": "PASS"
+    },
+    {
+      "id": "MESSAGING-ENABLED",
+      "status": "PASS"
+    },
+    {
+      "id": "PRODUCTION-RECONCILIATION",
+      "status": "PASS"
+    },
+    {
+      "id": "NO-PRODUCTION-SIMULATOR",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-SERVICES-READY",
+      "status": "PASS"
+    },
+    {
+      "id": "GATEWAY-AUTH",
+      "status": "PASS"
+    },
+    {
+      "id": "UNAUTHENTICATED-REJECTED",
+      "status": "PASS"
+    },
+    {
+      "id": "PUBLIC-DRIVER-LIFECYCLE",
+      "status": "PASS"
+    },
+    {
+      "id": "COMPLETED-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "RECIPIENT-INBOXES",
+      "status": "PASS"
+    },
+    {
+      "id": "CANCELLED-VOID-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "DRIVER-REJECT-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "NOTIFICATION-OUTAGE-ISOLATION",
+      "status": "PASS"
+    },
+    {
+      "id": "REJECT-CRASH-REPLAY",
+      "status": "PASS"
+    },
+    {
+      "id": "AUTHORITY-AUDIT",
+      "status": "PASS"
+    },
+    {
+      "id": "TEARDOWN-ISOLATED",
+      "status": "PASS"
+    }
+  ],
+  "journeys": {
+    "completed": {
+      "trip": "ec6fe9d3-216c-4457-ab31-66766042fcd1",
+      "reservation": "f43812fc-330b-42a6-b783-320da68186a7",
+      "state": "COMPLETED",
+      "payment": 2,
+      "notifications": 4
+    },
+    "cancelled": {
+      "trip": "c43d2fd1-d29b-4661-b72b-5fd5bdade3f5",
+      "reservation": "4e184d0f-d0d7-457b-a5dd-31b9a7acfd15",
+      "state": "CANCELLED",
+      "compensation": "VOID",
+      "payment": 2
+    },
+    "rejected": {
+      "trip": "cb61502a-24c2-4cd0-b2bf-94c700c9f73a",
+      "reservation": "d3c56106-41f9-43f8-80e0-9f3a8187a387",
+      "state": "MATCH_FAILED",
+      "reason": "DRIVER_REJECTED",
+      "replacementTrip": "f9288708-5e9c-44f7-9e22-4d9d90910131",
+      "notifications": 5
+    }
+  },
+  "scenarios": {
+    "A-driver-reject": {
+      "trip": "cb61502a-24c2-4cd0-b2bf-94c700c9f73a",
+      "state": "MATCH_FAILED",
+      "releaseCompleted": true
+    },
+    "C-notification-outage": {
+      "trip": "1c8a0c51-1ab5-43f8-b2c3-83d7e4f3e03d",
+      "tripState": "COMPLETED",
+      "notifications": 4
+    },
+    "D-reject-crash-replay": {
+      "trip": "752f8c51-1083-49fb-bff3-f95500fbeb9d",
+      "replayed": true,
+      "releaseIntents": 1
+    }
+  },
+  "authority": {
+    "trips": 6,
+    "drivers": 1,
+    "rounds": 6,
+    "payments": 6,
+    "effects": 6,
+    "notifications": 25
+  },
+  "teardown": {
+    "sentinelPreserved": true,
+    "projectContainers": 0
+  },
+  "limitations": [
+    "Payment decline is exercised by the real Payment integration suite in the release-smoke CI job; the Production overlay intentionally exposes no simulator control route to force a remote decline."
+  ]
+}
