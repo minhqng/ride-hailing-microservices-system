@@ -77,4 +77,11 @@ public sealed record GetTripResponse
     /// </summary>
     [JsonPropertyName("reservationId")]
     public Guid? ReservationId { get; init; }
+
+    /// <summary>
+    /// Durable MATCH_FAILED reason (NO_DRIVER_AVAILABLE or DRIVER_REJECTED),
+    /// or null for every other state and for historical rows (Doc 01 §40.1.2).
+    /// </summary>
+    [JsonPropertyName("failureReason")]
+    public string? FailureReason { get; init; }
 }

@@ -30,6 +30,8 @@ public sealed class DriverCleanupReconciler(
         "NOT_FOUND",
     };
 
+    private int _offset;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -54,7 +56,11 @@ public sealed class DriverCleanupReconciler(
             .Where(trip => trip.State == TripState.Cancelled || trip.State == TripState.MatchFailed)
             .Where(trip => trip.CleanupIntents.Any(intent =>
                 intent.Kind == TripCleanupKind.ReleaseReservation && intent.CompletedAt == null))
-            .OrderBy(trip => trip.UpdatedAt).Take(16).ToListAsync(token);
+            .OrderBy(trip => trip.UpdatedAt).ThenBy(trip => trip.TripId)
+            .Skip(_offset).Take(16).ToListAsync(token);
+        // Round-robin the bounded batch so a set of permanently unconfirmable
+        // obligations cannot starve newer pending releases forever.
+        _offset = trips.Count < 16 ? 0 : _offset + trips.Count;
         using var client = clients.CreateClient("driver-cleanup");
         foreach (var trip in trips)
         {
