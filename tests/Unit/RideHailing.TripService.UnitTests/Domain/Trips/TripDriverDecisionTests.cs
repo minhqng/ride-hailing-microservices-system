@@ -1,11 +1,11 @@
-// Driver accept/reject + cancellation-path domain proof (A-W05-03).
+// Driver accept/reject + cancellation-path domain proof (A-W05-03, DS03).
 //
 // Mandatory W5 properties: repeated DriverAccepted for the same legal current
 // assignment is replay-safe; DriverAccepted for an old reservation is
-// stale/rejected with no mutation. Rejection is validated against the
-// current assignment and exposes the guarded cleanup requirement while
-// leaving Trip state, assignment, round and Version untouched: guarded
-// release and rematch belong to future workflow work.
+// stale/rejected with no mutation. DS03 rejection records a real terminal
+// MATCH_FAILED/DRIVER_REJECTED result with exact cleanup intents; a duplicate
+// exact rejection is an idempotent replay and every other rejection leaves
+// the aggregate untouched.
 
 using RideHailing.TripService.Domain.Trips;
 
@@ -95,15 +95,13 @@ public sealed class TripDriverDecisionTests
     }
 
     [Fact]
-    public void RecordDriverRejected_CurrentAssignment_ExposesCleanupWithoutMutation()
+    public void RecordDriverRejected_CurrentAssignment_ReachesTerminalWithExactCleanup()
     {
         var trip = TripTestBuilders.AtState(TripState.DriverReserved);
         var version = trip.Version;
-        var assignment = trip.Assignment;
-        var updatedAt = trip.UpdatedAt;
 
         var outcome = trip.RecordDriverRejected(
-            TripTestBuilders.DriverId, TripTestBuilders.ReservationId);
+            TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment);
 
         Assert.True(outcome.IsSuccess);
         Assert.False(outcome.IsReplay);
@@ -111,46 +109,44 @@ public sealed class TripDriverDecisionTests
             TripCompensation.ReleaseReservation | TripCompensation.CancelMatching,
             outcome.Compensation);
 
-        // Guarded release + rematch are future workflow: nothing mutates.
-        Assert.Equal(TripState.DriverReserved, trip.State);
-        Assert.Same(assignment, trip.Assignment);
+        Assert.Equal(TripState.MatchFailed, trip.State);
+        Assert.Equal(TripFailureReason.DriverRejected, trip.FailureReason);
+        Assert.Null(trip.Assignment);
         Assert.Equal(1, trip.CurrentMatchingRound);
-        Assert.Equal(updatedAt, trip.UpdatedAt);
-        Assert.Equal(version, trip.Version);
+        Assert.Equal(version + 1, trip.Version);
+        Assert.Equal(TripTestBuilders.ActionMoment, trip.UpdatedAt);
+
+        var release = Assert.Single(trip.CleanupIntents, i => i.Kind == TripCleanupKind.ReleaseReservation);
+        Assert.Equal(TripTestBuilders.DriverId, release.DriverId);
+        Assert.Equal(TripTestBuilders.ReservationId, release.ReservationId);
+        Assert.Equal(1, release.MatchingRound);
+        Assert.Null(release.CompletedAt);
+        Assert.Single(trip.CleanupIntents, i => i.Kind == TripCleanupKind.CancelMatching);
     }
 
     [Fact]
-    public void RecordDriverRejected_RepeatedValidation_ReaffirmsSameRequirementWithoutMutation()
+    public void RecordDriverRejected_RepeatedExactRejection_IsIdempotentReplay()
     {
-        // Rejection is a stateless validation of the current cleanup
-        // requirement, not a stateful transition: Trip persists no rejection
-        // memory, so an identical second validation succeeds alike. Success
-        // means "the requirement still holds", never "a new compensation
-        // was emitted"; nothing mutates and Version never advances.
         var trip = TripTestBuilders.AtState(TripState.DriverReserved);
 
         var first = trip.RecordDriverRejected(
-            TripTestBuilders.DriverId, TripTestBuilders.ReservationId);
+            TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment);
         var version = trip.Version;
         var updatedAt = trip.UpdatedAt;
 
         var second = trip.RecordDriverRejected(
-            TripTestBuilders.DriverId, TripTestBuilders.ReservationId);
+            TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment);
 
         Assert.True(first.IsSuccess);
-        Assert.True(second.IsSuccess);
         Assert.False(first.IsReplay);
-        Assert.False(second.IsReplay);
-        Assert.Equal(
-            TripCompensation.ReleaseReservation | TripCompensation.CancelMatching,
-            first.Compensation);
+        Assert.True(second.IsSuccess);
+        Assert.True(second.IsReplay);
         Assert.Equal(first.Compensation, second.Compensation);
-        Assert.Equal(TripState.DriverReserved, trip.State);
-        Assert.Equal(TripTestBuilders.DriverId, trip.Assignment!.DriverId);
-        Assert.Equal(TripTestBuilders.ReservationId, trip.Assignment.ReservationId);
-        Assert.Equal(1, trip.CurrentMatchingRound);
-        Assert.Equal(updatedAt, trip.UpdatedAt);
+        Assert.Equal(TripState.MatchFailed, trip.State);
+        Assert.Equal(TripFailureReason.DriverRejected, trip.FailureReason);
+        Assert.Equal(2, trip.CleanupIntents.Count);
         Assert.Equal(version, trip.Version);
+        Assert.Equal(updatedAt, trip.UpdatedAt);
     }
 
     [Fact]
@@ -161,12 +157,13 @@ public sealed class TripDriverDecisionTests
         var assignment = trip.Assignment;
 
         var outcome = trip.RecordDriverRejected(
-            TripTestBuilders.DriverId, TripTestBuilders.OtherReservationId);
+            TripTestBuilders.DriverId, TripTestBuilders.OtherReservationId, TripTestBuilders.ActionMoment);
 
         Assert.False(outcome.IsSuccess);
         Assert.Equal(TripErrorCode.AssignmentIdentityMismatch, outcome.ErrorCode);
         Assert.Equal(TripState.DriverReserved, trip.State);
         Assert.Same(assignment, trip.Assignment);
+        Assert.Empty(trip.CleanupIntents);
         Assert.Equal(TripCompensation.None, outcome.Compensation);
         Assert.Equal(version, trip.Version);
     }
@@ -183,12 +180,25 @@ public sealed class TripDriverDecisionTests
         var version = trip.Version;
 
         var outcome = trip.RecordDriverRejected(
-            TripTestBuilders.DriverId, TripTestBuilders.ReservationId);
+            TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment);
 
         Assert.False(outcome.IsSuccess);
         Assert.Equal(TripErrorCode.IllegalTransition, outcome.ErrorCode);
         Assert.Equal(state, trip.State);
         Assert.Equal(TripCompensation.None, outcome.Compensation);
         Assert.Equal(version, trip.Version);
+    }
+
+    [Fact]
+    public void RecordDriverRejected_OnNoDriverMatchFailed_DoesNotReplayAnotherReason()
+    {
+        var trip = TripTestBuilders.AtState(TripState.MatchFailed, withAssignment: false);
+
+        var outcome = trip.RecordDriverRejected(
+            TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment);
+
+        Assert.False(outcome.IsSuccess);
+        Assert.Equal(TripErrorCode.TerminalState, outcome.ErrorCode);
+        Assert.Equal(TripState.MatchFailed, trip.State);
     }
 }

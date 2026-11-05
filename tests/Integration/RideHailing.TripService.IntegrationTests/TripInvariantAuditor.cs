@@ -258,21 +258,30 @@ public static class TripInvariantAuditor
 
     /// <summary>
     /// AUD-07: after scenario quiescence, a terminal pre-start Trip must not
-    /// still hold a Driver reservation: every assigned terminal trip must
-    /// carry a ReleaseReservation obligation, and when the scenario is
-    /// quiesced that obligation must be completed.
+    /// still hold a Driver reservation. Assigned terminal trips must carry a
+    /// ReleaseReservation obligation; a terminal trip with a release
+    /// obligation (including a DS03 rejection, which clears the Trip-side
+    /// assignment but preserves the exact obligation) must have it completed
+    /// when the scenario is quiesced.
     /// </summary>
     private static async Task<AuditorCheck> AuditLeakedReservationAsync(
         NpgsqlConnection connection, AuditorPolicy policy, CancellationToken token)
     {
         var sql = """
-            SELECT t.trip_id, t.reservation_id,
+            SELECT t.trip_id,
+                   COALESCE(t.reservation_id, (
+                       SELECT c.reservation_id FROM trip_cleanup_intents c
+                       WHERE c.trip_id = t.trip_id AND c.kind = 'ReleaseReservation'
+                       ORDER BY c.created_at LIMIT 1)) AS reservation_id,
                    (SELECT COUNT(*)::int FROM trip_cleanup_intents c
                     WHERE c.trip_id = t.trip_id AND c.kind = 'ReleaseReservation') AS release_intents,
                    (SELECT COUNT(*)::int FROM trip_cleanup_intents c
                     WHERE c.trip_id = t.trip_id AND c.kind = 'ReleaseReservation' AND c.completed_at IS NULL) AS open_intents
             FROM trips t
-            WHERE t.state IN ('CANCELLED', 'MATCH_FAILED') AND t.assigned_driver_id IS NOT NULL
+            WHERE t.state IN ('CANCELLED', 'MATCH_FAILED')
+              AND (t.assigned_driver_id IS NOT NULL OR EXISTS (
+                  SELECT 1 FROM trip_cleanup_intents c
+                  WHERE c.trip_id = t.trip_id AND c.kind = 'ReleaseReservation'))
             """;
         var findings = new List<AuditorFinding>();
         var pending = 0;

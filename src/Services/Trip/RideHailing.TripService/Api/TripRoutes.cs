@@ -4,8 +4,9 @@
 // first behavior-backed slice (CreateRide since W4; GetTrip + CancelRide
 // since W5). The Driver-actor accept/start/complete transport is registered
 // since AUD-02: its identity is the authenticated Driver principal, bound to
-// the Driver-owned profile and the exact Trip assignment. Reject remains
-// unimplemented upstream (no rematch workflow), so no route is invented.
+// the Driver-owned profile and the exact Trip assignment. DS03 adds the
+// public Driver Reject route backed by the durable MATCH_FAILED/DRIVER_REJECTED
+// policy and exact cleanup intents.
 //
 // W2 MECHANICAL FREEZE — reasons:
 //   - Resource noun "/trips" (not "/rides"): aligns with the canonical
@@ -47,6 +48,9 @@ public static class TripRoutes
 
     /// <summary>POST /trips/{tripId:guid}/accept — Driver accepts the current assignment.</summary>
     public const string AcceptDriver = "/trips/{tripId:guid}/accept";
+
+    /// <summary>POST /trips/{tripId:guid}/reject — Driver rejects the current assignment.</summary>
+    public const string RejectDriver = "/trips/{tripId:guid}/reject";
 
     /// <summary>POST /trips/{tripId:guid}/start — Driver starts the authorized ride.</summary>
     public const string StartTrip = "/trips/{tripId:guid}/start";

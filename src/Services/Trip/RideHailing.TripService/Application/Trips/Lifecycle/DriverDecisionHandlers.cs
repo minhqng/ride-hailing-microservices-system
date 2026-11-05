@@ -119,26 +119,31 @@ public sealed class RecordDriverAcceptedHandler
 }
 
 /// <summary>
-/// System-side DriverRejected intake. Validates the rejection against the
-/// current assignment and exposes the guarded cleanup requirement; Trip
-/// state is intentionally unchanged (guarded release + rematch belong to
-/// future workflow work).
+/// System-side DriverRejected intake. Records the terminal rejection result
+/// and stages the exact cleanup obligations through the Trip Outbox in the
+/// same local transaction (Doc 01 §40.1). No assignment is cleared until the
+/// aggregate has captured the exact reservation identity in its cleanup
+/// intents; the response never claims the remote release already happened.
 /// </summary>
 public sealed class RecordDriverRejectedHandler
 {
     private readonly TripDbContext _db;
+    private readonly TimeProvider _time;
     private readonly ILogger<RecordDriverRejectedHandler> _log;
 
-    public RecordDriverRejectedHandler(TripDbContext db, ILogger<RecordDriverRejectedHandler> log)
+    public RecordDriverRejectedHandler(TripDbContext db, TimeProvider time, ILogger<RecordDriverRejectedHandler> log)
     {
         ArgumentNullException.ThrowIfNull(db);
+        ArgumentNullException.ThrowIfNull(time);
         ArgumentNullException.ThrowIfNull(log);
         _db = db;
+        _time = time;
         _log = log;
     }
 
     /// <summary>
-    /// Validates a Driver rejection for the exact current assignment.
+    /// Applies a Driver rejection for the exact current assignment and stages
+    /// its durable cleanup intents.
     /// </summary>
     public async Task<TripLifecycleResult> HandleAsync(
         Guid tripId,
@@ -155,17 +160,31 @@ public sealed class RecordDriverRejectedHandler
             return TripLifecycleResult.NotFound();
         }
 
-        var outcome = trip.RecordDriverRejected(driverId, reservationId);
+        // Snapshot before the transition: only obligations added by this
+        // rejection may be published; pre-existing cleanup is never replayed
+        // as a new logical message.
+        var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
+        var outcome = trip.RecordDriverRejected(driverId, reservationId, _time.GetUtcNow());
         if (!outcome.IsSuccess)
         {
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
+        // Exact replay is already terminal with the same cleanup witness:
+        // no mutation, no write, no second intent.
+        if (!outcome.IsReplay)
+        {
+            TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         _log.LogInformation(
-            "DriverRejected {TripId} state {State} compensation {Compensation}.",
+            "DriverRejected {TripId} state {State} reason {FailureReason} compensation {Compensation} replay {IsReplay}.",
             trip.TripId,
             trip.State.ToCanonicalName(),
-            outcome.Compensation);
+            trip.FailureReason?.ToCanonicalName() ?? "NONE",
+            outcome.Compensation,
+            outcome.IsReplay);
 
         return TripLifecycleResult.Success(trip, outcome.IsReplay, outcome.Compensation);
     }

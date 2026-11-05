@@ -126,6 +126,11 @@ namespace RideHailing.TripService.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("current_matching_round");
 
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("failure_reason");
+
                     b.Property<Guid>("RiderId")
                         .HasColumnType("uuid")
                         .HasColumnName("rider_id");
@@ -227,6 +232,10 @@ namespace RideHailing.TripService.Migrations
                             t.HasCheckConstraint("CK_trips_created_without_round", "(state <> 'CREATED' OR current_matching_round = 0)");
 
                             t.HasCheckConstraint("CK_trips_current_round_non_negative", "current_matching_round >= 0");
+
+                            t.HasCheckConstraint("CK_trips_failure_reason_only_match_failed", "(failure_reason IS NULL OR state = 'MATCH_FAILED')");
+
+                            t.HasCheckConstraint("CK_trips_failure_reason_valid", "(failure_reason IS NULL OR failure_reason IN ('NO_DRIVER_AVAILABLE', 'DRIVER_REJECTED'))");
 
                             t.HasCheckConstraint("CK_trips_fare_amount_non_negative", "fare_amount >= 0");
 

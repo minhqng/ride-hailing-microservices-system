@@ -99,6 +99,16 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             .ValueGeneratedNever()
             .IsConcurrencyToken();
 
+        // DS03 Driver Reject (Doc 01 §40.1.2): a bounded durable reason for
+        // MATCH_FAILED. Null is valid for every non-terminal state and for
+        // historical MATCH_FAILED rows created before this amendment.
+        builder.Property(e => e.FailureReason)
+            .HasColumnName("failure_reason")
+            .HasMaxLength(32)
+            .HasConversion(
+                value => value == null ? null : value.Value.ToCanonicalName(),
+                value => value == null ? (TripFailureReason?)null : TripFailureReasonRules.FromCanonicalName(value));
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
@@ -217,6 +227,12 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             t.HasCheckConstraint(
                 "CK_trips_assignment_round_agreement",
                 "(assigned_driver_id IS NULL OR matching_round = current_matching_round)");
+            t.HasCheckConstraint(
+                "CK_trips_failure_reason_valid",
+                "(failure_reason IS NULL OR failure_reason IN ('NO_DRIVER_AVAILABLE', 'DRIVER_REJECTED'))");
+            t.HasCheckConstraint(
+                "CK_trips_failure_reason_only_match_failed",
+                "(failure_reason IS NULL OR state = 'MATCH_FAILED')");
         });
     }
 
