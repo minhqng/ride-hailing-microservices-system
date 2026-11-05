@@ -175,6 +175,8 @@ public sealed class RecordDriverRejectedHandler
         if (!outcome.IsReplay)
         {
             TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
+            TripOutboxWriter.Enqueue(_db,
+                TripNotificationIntents.DriverRejected(trip, reservationId, trip.UpdatedAt));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 

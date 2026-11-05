@@ -1,6 +1,6 @@
 # Test assemblies that must execute in the solution-wide dotnet test run.
 # Format: assembly-name-substring[:minimum passing tests]
-# The empty SystemTests placeholder was removed (AUD-09); the twelve
+# The empty SystemTests placeholder was removed (AUD-09); the thirteen
 # assemblies below are the complete executable test set. Identity's exclusive
 # negative cases run in the platform-smoke Identity gate, so the solution run
 # requires presence only.
@@ -10,6 +10,7 @@ ridehailing.driverservice.integrationtests
 ridehailing.identityservice.integrationtests:0
 ridehailing.matchingservice.unittests
 ridehailing.matchingservice.integrationtests
+ridehailing.notificationservice.integrationtests
 ridehailing.notificationworker.unittests
 ridehailing.paymentservice.unittests
 ridehailing.paymentservice.integrationtests

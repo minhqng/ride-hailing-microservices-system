@@ -25,7 +25,7 @@ def wait_json(url, predicate=lambda data: True):
     raise AssertionError(f"Timed out: {url}")
 
 
-for port in [8080, 8101, 8102, 8103, 8104, 8105]:
+for port in [8080, 8101, 8102, 8103, 8104, 8105, 8106]:
     wait_json(f"http://localhost:{port}/health/live")
     wait_json(f"http://localhost:{port}/health/ready")
 

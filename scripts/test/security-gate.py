@@ -73,7 +73,7 @@ def account(role):
     return account["userId"], grant["access_token"]
 
 
-for port in [8080, 8101, 8102, 8103, 8104, 8105]:
+for port in [8080, 8101, 8102, 8103, 8104, 8105, 8106]:
     for attempt in range(90):
         try:
             if request(port, "GET", "/health/ready")[0] == 200:
@@ -91,6 +91,14 @@ _, other_rider = account("Rider")
 driver = expect("own-driver-create", 201, 8080, "POST", "/drivers", {"userId": owner_id}, owner)
 driver_id = driver["driverId"]
 expect("own-driver-read", 200, 8080, "GET", "/drivers/" + driver_id, token=owner)
+
+# DS03 inbox boundary: no client-supplied identity is accepted, and both the
+# direct service and the Gateway enforce the authenticated principal.
+expect("notification-gateway-missing-token", 401, 8080, "GET", "/notifications/me")
+expect("notification-direct-missing-token", 401, 8106, "GET", "/notifications/me")
+expect("notification-own-inbox", 200, 8080, "GET", "/notifications/me", token=rider)
+expect("notification-other-inbox", 200, 8080, "GET", "/notifications/me", token=other_rider)
+expect("notification-forged-user-id", 401, 8106, "GET", "/notifications/me?userId=" + rider_id)
 
 
 def snapshot():

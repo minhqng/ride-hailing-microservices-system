@@ -58,7 +58,7 @@ jobs:
       # Refuse an SDK/VSTest false green with missing, zero, or silently skipped discovery.
       - run: >-
           python3 scripts/test/assert-trx.py --results-dir TestResults
-          --min-passed 1200 --min-files 12 --max-skipped 1
+          --min-passed 1200 --min-files 13 --max-skipped 1
           --allowed-skip RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState
           --required-suites-file scripts/test/required-suites.txt
       - if: always()
