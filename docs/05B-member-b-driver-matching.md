@@ -2574,3 +2574,51 @@ Before close:
 > **Whenever B is unsure whether Driver/Matching work is complete, ask: if Redis is stale, 100 Trips race, the winning response disappears, Matching crashes, and an old release arrives after a newer reservation, can the system still prove from durable state that exactly one current Driver assignment is legal and that no unresolved remote effect was skipped?**
 
 If not, the Driver/Matching subsystem is not complete.
+
+---
+
+# 38. DS03 Driver Reject cleanup interface amendment (2026-11-05)
+
+> **Scope:** Driver and Matching obligations for Doc 01 §40.1. Existing
+> Driver/Matching semantics and W08–W12 proofs are unchanged.
+
+## 38.1 Driver authority
+
+Driver PostgreSQL remains the reservation authority. Reject does not add a
+new release mechanism: the Trip commits the existing
+`ReleaseDriverReservationV1` command with the exact
+`(tripId, driverId, reservationId, matchingRound)` tuple, and the existing
+guarded consumer performs the exact-token release.
+
+- Exact token on `RESERVED` → `AVAILABLE` and one `DriverReservationReleasedV1`
+  effect (no duplicate effect on redelivery).
+- Token mismatch → no mutation, stale release blocked.
+- Already `AVAILABLE` with no refs → idempotent cleanup no-op; no new event.
+- `ON_TRIP` → release rejected; reject cannot happen after acceptance/start.
+- An old release can never free a newer reservation (DSI-004, DSR-005).
+
+The Trip-side reject response never claims the release already happened; the
+`ReleaseReservation` cleanup intent stays pending until the authoritative
+`DriverReservationReleasedV1` intake confirms the exact identity.
+
+## 38.2 Matching authority
+
+Matching keeps the historical `RESERVED` round record. The existing
+`CancelMatchingRoundV1` consumer records a durable stop intent; the existing
+Trip reconciliation endpoint proves `STOPPED` before the Trip cleanup intent
+is completed.
+
+- No new matching round is opened on rejection (no automatic rematch).
+- No other Driver is selected for the rejected generation.
+- Redis is never used as release proof.
+- A late reservation/accept fact for the rejected round is parked for review
+  and cannot reopen the Trip (Doc 01 §40.1.3).
+
+## 38.3 Driver notifications
+
+Driver notification intents are committed with the Driver-owned effect:
+`DRIVER_TRIP_ASSIGNED` with the winning `Reserve` transaction and
+`DRIVER_RESERVATION_RELEASED` with the applied release transaction. They use
+the Driver Outbox and `driver.notification-requested.v1`, carry
+`Driver.UserId` (never `driverId` as a user identity), and remain
+non-authoritative (Doc 02 §43).

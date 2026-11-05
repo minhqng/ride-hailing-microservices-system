@@ -3172,3 +3172,162 @@ Before promoting Doc 01 to **ACCEPTED/FROZEN**:
 # 39. North star
 
 > **A distributed ride-hailing workflow is correct not because every message arrives once or every service sees the same state instantly, but because each business fact has a clear authority, every state change is guarded by stable identity and legal transition rules, uncertainty is modeled explicitly, stale work is fenced, duplicates are harmless, and durable recovery eventually converges the system to one legal explainable outcome.**
+
+---
+
+# 40. DS03 functional closure amendment — Driver Reject and recipient notification (2026-11-05)
+
+> **Status:** normative amendment approved for the DS03 functional-closure work
+> (PR `docs/ds03-functional-policy`). It adds the two missing DS03 statements
+> to the frozen W01–W16 contract without rewriting historical requirements.
+> **Why:** the W16 contract defined `DRIVER_RESERVED + DriverRejected` only as
+> a validation that exposed a future cleanup requirement, and it defined
+> Notification only as a non-authoritative delivery *projection*. Both were
+> insufficient for the DS03 statements “Drivers accept or reject trips” and
+> “Send notifications to passengers and drivers”.
+> **What changes:** (a) a Driver rejection now has a real terminal Trip result
+> and a durable cleanup workflow; (b) a recipient-addressed in-app inbox is
+> added as an asynchronous, non-authoritative delivery channel. No other
+> frozen semantic is weakened.
+
+## 40.1 Driver Reject policy
+
+### 40.1.1 Legal transition
+
+```text
+DRIVER_RESERVED
+    │ authenticated current Driver presents the exact current reservation
+    ▼
+DriverRejected
+    │
+    ├─ Trip: MATCH_FAILED with failure_reason = DRIVER_REJECTED
+    ├─ cleanup intent: exact ReleaseReservation(driverId, reservationId, round)
+    ├─ cleanup intent: CancelMatchingRound(round)
+    ├─ Outbox: ReleaseDriverReservationV1 + CancelMatchingRoundV1 (same transaction)
+    └─ no payment command, no rematch, no second assignment
+```
+
+`DriverRejected` is legal only from `DRIVER_RESERVED`. It is rejected from
+`DRIVER_ACCEPTED`, `READY_TO_START`, `IN_PROGRESS`, every terminal state, and
+every state without the exact current assignment.
+
+### 40.1.2 Terminal-result semantics
+
+The canonical terminal set remains `{COMPLETED, CANCELLED, MATCH_FAILED}`
+(DSI-010). The amendment does **not** add a tenth P0 state.
+
+`MATCH_FAILED` is clarified to mean: *this matching attempt ended without a
+Driver accepting the ride*. It carries a durable `failure_reason`:
+
+| `failure_reason` | Meaning |
+| --- | --- |
+| `NO_DRIVER_AVAILABLE` | Matching exhausted its bounded candidates without a reservation. |
+| `DRIVER_REJECTED` | A Driver was reserved and then rejected the exact assignment. |
+| `NULL` | Historical W01–W16 `MATCH_FAILED` row created before this amendment (reason not recorded; never guessed). |
+
+No other state may carry a non-null `failure_reason`. The reason is part of the
+Rider-visible result and is returned by the Trip read surface; a Driver
+rejection is therefore never silently relabeled as a Rider cancellation, and a
+Rider can distinguish “no Driver available” from “the assigned Driver rejected
+the ride”.
+
+Because `MATCH_FAILED` is terminal and not in `TripStatePolicy.ActiveForRiderBooking`,
+the Rider's one-active-Trip slot (DSI-013) is released as soon as the rejection
+transaction commits. A new `POST /trips` is legal immediately; it creates a new
+Trip and a new matching round. No automatic rematch is performed for the
+rejected Trip.
+
+### 40.1.3 Durable rejection and cleanup
+
+A successful public `POST /trips/{tripId}/reject` means **the rejection
+decision and its exact cleanup intents were committed**, not that the remote
+Driver reservation was already released.
+
+The Trip transaction atomically commits:
+
+1. `state = MATCH_FAILED`, `failure_reason = DRIVER_REJECTED`, `version + 1`;
+2. `ReleaseReservation` cleanup intent preserving the exact
+   `(tripId, driverId, reservationId, matchingRound)` identity;
+3. `CancelMatchingRound` cleanup intent for the current matching generation;
+4. `ReleaseDriverReservationV1` and `CancelMatchingRoundV1` Outbox rows with
+   deterministic message identities (same transaction, no ACK before commit);
+5. the current Trip assignment is cleared, because the canonical
+   `MATCH_FAILED` shape is unassigned (DSI-008). The exact reservation identity
+   survives in the cleanup intents and in Matching's historical round record;
+   it is never lost and never rewritten.
+
+The existing Driver release consumer performs the guarded exact-token release.
+The existing Matching cancellation consumer records the stop intent; the
+existing Trip reconciler confirms matching cancellation from authority proof.
+The existing `DriverReservationReleasedV1` intake completes the release intent.
+Cleanup stays pending (`completed_at IS NULL`) until that authority evidence is
+durable; no handler, test, log line or notification may claim the release
+before then.
+
+The Matching `RESERVED` round record remains historical evidence: rejection
+never deletes it, never creates a new round, never selects another Driver and
+never treats Redis as release proof. A late `DriverReservedV1` or
+`DriverAcceptedV1` for the rejected generation is parked or recorded as exact
+cleanup evidence and can never reopen the Trip (DSI-010, DSI-016).
+
+### 40.1.4 Idempotency and race rules
+
+- A duplicate reject for the same exact `(driverId, reservationId)` on a
+  `MATCH_FAILED + DRIVER_REJECTED` Trip returns canonical replay success with
+  no mutation and no second cleanup intent. The persisted cleanup intent is
+  the replay witness.
+- Reject racing Accept or Rider Cancel is decided by the existing aggregate
+  Version OCC fence: exactly one writer commits; the loser receives a
+  concurrency conflict and never answers from losing state.
+- A stale reservation or a reservation from another round is rejected by
+  exact assignment identity; no cleanup intent is created for it.
+- A rejection never initiates payment authorization or capture. The Saga is
+  not started (it starts only on Driver acceptance), so no void is required.
+
+## 40.2 Recipient-addressed notification semantics
+
+Notification remains non-authoritative (DSI-029, DSL-007). A notification
+failure, delay, duplicate delivery or worker outage must not mutate or block
+Trip, Driver, Matching or Payment truth.
+
+### 40.2.1 Availability definition
+
+A notification is **available to its recipient** only after a
+recipient-addressed row is durably committed to `notification_db` and an
+authenticated request for that recipient can read it from the inbox API.
+Inserting an arbitrary business-event delivery row is *not* proof that a user
+received anything.
+
+### 40.2.2 State vocabulary
+
+| State | Exact meaning |
+| --- | --- |
+| `EVENT_CONSUMED` | The RabbitMQ event was durably processed and its message receipt was committed (existing `notification_deliveries` row). |
+| `INBOX_AVAILABLE` | A recipient-addressed notification row was committed with `read_at IS NULL`; the recipient can retrieve it. |
+| `READ` | The authenticated recipient marked the notification read; `read_at` is set. The notification remains retrievable. |
+| `FAILED_VISIBLE` | The event could not be converted into a notification and was routed to visible error handling (dead-letter `DeliveryErrorV1` / `FAILED_VISIBLE` disposition); it requires inspection, never a silent ACK. |
+
+### 40.2.3 Recipient authority and non-blocking delivery
+
+- The authoritative source service publishes a minimum
+  `NotificationRequestedV1` intent through its existing Transactional Outbox
+  in the same transaction as the business effect. The event contract,
+  routing, uniqueness and consumer rules are normative in Doc 02 §43.
+- `Trip.RiderId` is the Rider's Identity user identity; `Driver.UserId` is the
+  Driver's Identity user identity. `driverId` is never treated as `userId`,
+  and no service guesses a recipient from an arbitrary trip id.
+- The Notification worker reads only `notification_db`; it never queries
+  Trip, Driver, Matching or Payment databases.
+- A missing recipient mapping, invalid event or unavailable notification DB
+  leaves the business flow unaffected. A permanently invalid event reaches
+  visible error handling; a transient failure remains retryable. The worker
+  ACKs only after the durable local effect or a confirmed retry/error
+  transfer.
+- The exact inbox uniqueness rule is
+  `(source_event_id, recipient_user_id, notification_type)`, so one source
+  event may legitimately produce one Rider notification and one Driver
+  notification without collapsing them, while an event redelivery never
+  creates a duplicate inbox entry for the same recipient.
+- Notification content is generated from a bounded notification type (and an
+  optional bounded reason code). It contains no JWTs, credentials, payment
+  secrets or unnecessary PII.
