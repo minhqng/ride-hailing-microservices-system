@@ -86,6 +86,7 @@ public static class GetTripEndpoint
             MatchingRound = trip.CurrentMatchingRound,
             AssignedDriverId = trip.Assignment?.DriverId,
             ReservationId = trip.Assignment?.ReservationId,
+            FailureReason = trip.FailureReason is { } reason ? reason.ToCanonicalName() : null,
         });
     }
 }

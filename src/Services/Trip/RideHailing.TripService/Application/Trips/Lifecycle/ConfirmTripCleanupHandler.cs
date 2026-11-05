@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 
@@ -35,7 +36,28 @@ public sealed class ConfirmTripCleanupHandler(TripDbContext db, TimeProvider clo
                 "Cleanup remains pending until the matching authority confirms this exact obligation."));
         var outcome = trip.ConfirmCleanup(intentKey, clock.GetUtcNow());
         if (!outcome.IsSuccess) return TripLifecycleResult.Fail(trip, outcome);
-        if (!outcome.IsReplay) await db.SaveChangesAsync(cancellationToken);
+
+        // A confirmed exact release is the same compensation leg the
+        // DriverReservationReleasedV1 intake completes. The reconciliation
+        // path must advance the Saga too; otherwise a lost event would leave
+        // the Trip with no pending intent while the Saga stays
+        // RELEASE_PENDING forever (DSI-033/DSL-002).
+        var sagaAdvanced = false;
+        if (!outcome.IsReplay && intent.Kind == TripCleanupKind.ReleaseReservation)
+        {
+            var saga = await db.RideSagas
+                .SingleOrDefaultAsync(s => s.TripId == tripId, cancellationToken).ConfigureAwait(false);
+            if (saga is { Status: RideSagaStatus.Compensating })
+            {
+                var released = saga.RecordReservationReleased(clock.GetUtcNow());
+                if (!released.IsSuccess)
+                    throw new InvalidOperationException(
+                        $"Saga rejected reservation-release completion: {released.ErrorCode} {released.Message}");
+                sagaAdvanced = !released.IsReplay;
+            }
+        }
+
+        if (!outcome.IsReplay || sagaAdvanced) await db.SaveChangesAsync(cancellationToken);
         return TripLifecycleResult.Success(trip, outcome.IsReplay, outcome.Compensation);
     }
 }
