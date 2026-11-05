@@ -1,6 +1,6 @@
 # DS03 requirement matrix — functional closure
 
-Source: `af1e1df7f728153f4d9d2e15b2041586115e23c5`
+Source: `8df1ca084aa0a596e009e5d16f8de2b3d1b3041a`
 (tree `51391f185e577f5f9befcbe4d30de5376be546b3`).
 A status is `VERIFIED` only because the cited execution proof exists on this
 source.
