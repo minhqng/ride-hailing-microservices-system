@@ -50,6 +50,12 @@ public sealed record TripLifecycleResult
     /// <summary>Future-work requirement exposed by the transition.</summary>
     public TripCompensation Compensation { get; private init; }
 
+    /// <summary>Durable MATCH_FAILED reason, when the Trip carries one.</summary>
+    public TripFailureReason? FailureReason { get; private init; }
+
+    /// <summary>Number of Trip-owned cleanup obligations still unconfirmed.</summary>
+    public int PendingCleanupCount { get; private init; }
+
     /// <summary>Domain rejection code (<see cref="TripErrorCode.None"/> on success).</summary>
     public TripErrorCode ErrorCode { get; private init; }
 
@@ -67,6 +73,8 @@ public sealed record TripLifecycleResult
         AssignedDriverId = trip.Assignment?.DriverId,
         ReservationId = trip.Assignment?.ReservationId,
         Compensation = compensation,
+        FailureReason = trip.FailureReason,
+        PendingCleanupCount = trip.CleanupIntents.Count(i => i.CompletedAt is null),
     };
 
     /// <summary>Builds the not-owned/missing outcome.</summary>
@@ -86,6 +94,8 @@ public sealed record TripLifecycleResult
         AssignedDriverId = trip.Assignment?.DriverId,
         ReservationId = trip.Assignment?.ReservationId,
         Compensation = TripCompensation.None,
+        FailureReason = trip.FailureReason,
+        PendingCleanupCount = trip.CleanupIntents.Count(i => i.CompletedAt is null),
         ErrorCode = outcome.ErrorCode,
         Message = outcome.Message,
     };

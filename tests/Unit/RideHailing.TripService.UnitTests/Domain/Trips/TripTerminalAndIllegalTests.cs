@@ -21,7 +21,7 @@ public sealed class TripTerminalAndIllegalTests
         ("RecordDriverAccepted", t => t.RecordDriverAccepted(
             TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment)),
         ("RecordDriverRejected", t => t.RecordDriverRejected(
-            TripTestBuilders.DriverId, TripTestBuilders.ReservationId)),
+            TripTestBuilders.DriverId, TripTestBuilders.ReservationId, TripTestBuilders.ActionMoment)),
         ("MarkPaymentAuthorized", t => t.MarkPaymentAuthorized(TripTestBuilders.ActionMoment)),
         ("MarkPaymentFailed", t => t.MarkPaymentFailed(TripTestBuilders.ActionMoment)),
         ("MarkMatchingFailed", t => t.MarkMatchingFailed(1, TripTestBuilders.ActionMoment)),
