@@ -1,4 +1,4 @@
-Verified source: af1e1df7f728153f4d9d2e15b2041586115e23c5
+Verified source: 8df1ca084aa0a596e009e5d16f8de2b3d1b3041a
 Verified tree:   51391f185e577f5f9befcbe4d30de5376be546b3
 Base main:       b03b30d1aec40053242381c27cecf36112866e03
 Base tree:       9ec89714a75fa419bf8b14b03f91fd38e8dac201
@@ -53,7 +53,7 @@ Repository hygiene:
 Production release overlay smoke
 (RELEASE_SMOKE_REPLACE_DEV_ENV=1 python scripts/test/release-smoke.py):
   Status: PASS
-  Source reported by the run: af1e1df7f728153f4d9d2e15b2041586115e23c5
+  Source reported by the run: 8df1ca084aa0a596e009e5d16f8de2b3d1b3041a
                               tree 51391f185e577f5f9befcbe4d30de5376be546b3
   External Trip EF migration: dotnet ef database update, 11 applied
   Checks (19): release-secrets fail-closed, release render, Production

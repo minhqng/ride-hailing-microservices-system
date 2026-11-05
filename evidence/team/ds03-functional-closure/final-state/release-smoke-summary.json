@@ -1,8 +1,8 @@
 {
   "status": "PASS",
-  "project": "ride-release-smoke-22460",
+  "project": "ride-release-smoke-20980",
   "source": {
-    "commit": "af1e1df7f728153f4d9d2e15b2041586115e23c5",
+    "commit": "8df1ca084aa0a596e009e5d16f8de2b3d1b3041a",
     "tree": "51391f185e577f5f9befcbe4d30de5376be546b3"
   },
   "migration": {
@@ -89,41 +89,41 @@
   ],
   "journeys": {
     "completed": {
-      "trip": "0effd12b-9fb2-49b6-8e4e-9f6d4306943d",
-      "reservation": "09dae29b-d0d6-41c2-a1cc-55728c817a6d",
+      "trip": "83718eb1-e600-4576-8123-1f864e026e4c",
+      "reservation": "dfecef0b-ad42-4826-9d88-d8d87a3c049d",
       "state": "COMPLETED",
       "payment": 2,
       "notifications": 4
     },
     "cancelled": {
-      "trip": "12955b39-8083-4bd4-a16a-9c5c8dd303eb",
-      "reservation": "9fa779e5-915a-4e96-be06-427ad8de1d9c",
+      "trip": "1759ff4d-1383-4233-8207-5630fb250485",
+      "reservation": "19acfecf-a768-406a-847e-91a5fb38c6ce",
       "state": "CANCELLED",
       "compensation": "VOID",
       "payment": 2
     },
     "rejected": {
-      "trip": "cf37f4e9-aa1b-4fac-a6bb-6f93319e854d",
-      "reservation": "7b34c974-26e5-4194-896d-298d0a942670",
+      "trip": "55f4c114-0c91-4cec-8220-ee05b48417e3",
+      "reservation": "2ddc05ec-2537-472d-92b5-ffd1b6357a3f",
       "state": "MATCH_FAILED",
       "reason": "DRIVER_REJECTED",
-      "replacementTrip": "c8376c22-4ba9-4c59-970c-e0627dafd4b7",
+      "replacementTrip": "8c040f84-a14f-4c6f-ace9-9b38c72ecf0b",
       "notifications": 5
     }
   },
   "scenarios": {
     "A-driver-reject": {
-      "trip": "cf37f4e9-aa1b-4fac-a6bb-6f93319e854d",
+      "trip": "55f4c114-0c91-4cec-8220-ee05b48417e3",
       "state": "MATCH_FAILED",
       "releaseCompleted": true
     },
     "C-notification-outage": {
-      "trip": "e3e997b2-d79a-405a-95a3-961e1441b6f9",
+      "trip": "840eab65-cd6b-4bbf-8b3e-bc7a5e2c6631",
       "tripState": "COMPLETED",
       "notifications": 4
     },
     "D-reject-crash-replay": {
-      "trip": "b5f01dda-c3ad-4e26-83bd-7f8358f93c6c",
+      "trip": "7dbc9330-aefb-48d0-a0fc-563c56ab4386",
       "replayed": true,
       "releaseIntents": 1
     }
