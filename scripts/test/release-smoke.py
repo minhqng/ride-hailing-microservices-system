@@ -32,7 +32,7 @@ AUTH_SECRETS = ["AUTH_PUBLIC_KEY_BASE64", "AUTH_PRIVATE_KEY_BASE64",
 REQUIRED = DB_SECRETS + AUTH_SECRETS
 SERVICES = ["gateway", "identity", "driver", "trip", "matching", "payment", "notification"]
 HTTP_PORTS = {"gateway": 8080, "identity": 8101, "driver": 8102, "trip": 8103,
-              "matching": 8104, "payment": 8105}
+              "matching": 8104, "payment": 8105, "notification": 8106}
 project = os.environ.get("COMPOSE_PROJECT_NAME") or f"ride-release-smoke-{os.getpid()}"
 if not re.fullmatch(r"ride-release-[a-z0-9-]+", project):
     raise SystemExit("COMPOSE_PROJECT_NAME must start with 'ride-release-'.")
@@ -239,6 +239,25 @@ def driver_action(trip_id, action, driver_id, reservation, driver_token):
     return response
 
 
+def inbox(token):
+    return http("GET", "/notifications/me", token=token)
+
+
+def inbox_has(token, trip_id, notification_type):
+    try:
+        items = inbox(token)
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+    return any(item.get("tripId") == trip_id and item.get("notificationType") == notification_type
+               for item in items)
+
+
+def notification_rows(where):
+    return rows("notification_db", "SELECT notification_id, recipient_user_id, recipient_role, "
+                "notification_type, trip_id, source_message_id, correlation_id, "
+                "read_at, delivery_status, content FROM notifications WHERE " + where)
+
+
 def redis_projection(driver_id):
     result = compose("exec", "-T", "redis", "redis-cli", "HGETALL",
                      "driver:projection:" + driver_id.replace("-", ""))
@@ -333,7 +352,7 @@ def main():
             journeys = {}
 
             def start_trip(label):
-                _, token = account("Rider")
+                rider_id, token = account("Rider")
                 created = http("POST", "/trips", {
                     "pickup": {"latitude": 10.7769, "longitude": 106.7009},
                     "dropoff": {"latitude": 10.78, "longitude": 106.71}},
@@ -357,7 +376,8 @@ def main():
                 intent = rows("trip_db", "SELECT message_type,status FROM outbox_messages WHERE aggregate_id='" + trip_id + "' AND message_type='RideRequestedV1'")
                 assert len(intent) == 1 and intent[0]["status"] == "PUBLISHED"
                 return token, trip_id, reservation, {"trip": assigned, "driver": driver_truth,
-                                                     "round": round_truth, "attempt": attempt[0]}
+                                                     "round": round_truth, "attempt": attempt[0],
+                                                     "riderId": rider_id}
 
             token, trip_id, reservation, proof = start_trip("completed")
             driver_action(trip_id, "accept", driver_id, reservation, driver_token)
@@ -378,10 +398,30 @@ def main():
             driver_after = wait("completed driver release",
                                 lambda: rows("driver_db", "SELECT * FROM drivers WHERE driver_id='" + driver_id + "'"),
                                 lambda value: value[0]["status"] == "AVAILABLE" and value[0]["reservation_id"] is None)[0]
+            wait("rider completion inbox",
+                 lambda: inbox(token),
+                 lambda items: any(item["tripId"] == trip_id and
+                                   item["notificationType"] == "RIDER_TRIP_COMPLETED" for item in items))
+            wait("rider assignment inbox",
+                 lambda: inbox(token),
+                 lambda items: any(item["tripId"] == trip_id and
+                                   item["notificationType"] == "RIDER_DRIVER_ASSIGNED" for item in items))
+            wait("driver assignment inbox",
+                 lambda: inbox(driver_token),
+                 lambda items: any(item["tripId"] == trip_id and
+                                   item["notificationType"] == "DRIVER_TRIP_ASSIGNED" for item in items))
+            completed_notifications = notification_rows("trip_id='" + trip_id + "'")
+            assert {item["notification_type"] for item in completed_notifications} >= {
+                "RIDER_RIDE_REQUESTED", "RIDER_DRIVER_ASSIGNED", "RIDER_TRIP_COMPLETED",
+                "DRIVER_TRIP_ASSIGNED"}
+            assert len({(item["source_message_id"], item["recipient_user_id"], item["notification_type"])
+                        for item in completed_notifications}) == len(completed_notifications)
             journeys["completed"] = {"trip": trip_id, "reservation": reservation,
-                                     "state": "COMPLETED", "payment": len(payment), "proof": proof}
+                                     "state": "COMPLETED", "payment": len(payment), "proof": proof,
+                                     "notifications": len(completed_notifications)}
             check("PUBLIC-DRIVER-LIFECYCLE", True)
             check("COMPLETED-JOURNEY", True)
+            check("RECIPIENT-INBOXES", True)
 
             token, trip_id, reservation, proof = start_trip("cancelled")
             # AUD-05 frozen policy: cancel after the authorization succeeded.
@@ -415,6 +455,136 @@ def main():
                                      "payment": len(compensation)}
             check("CANCELLED-VOID-JOURNEY", True)
 
+            # Scenario A: the authenticated current Driver rejects the exact
+            # assignment. The Trip terminalizes with a durable reason, the
+            # exact reservation is released, no payment starts, and the Rider
+            # can create another ride.
+            reject_token, reject_trip, reject_reservation, reject_proof = start_trip("rejected")
+            reject_body = driver_action(reject_trip, "reject", driver_id, reject_reservation, driver_token)
+            assert reject_body["state"] == "MATCH_FAILED", reject_body
+            assert reject_body["failureReason"] == "DRIVER_REJECTED", reject_body
+            assert reject_body["cleanupPending"] is True, reject_body
+            rejected = wait("rejected trip",
+                            lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + reject_trip + "'"),
+                            lambda value: value[0]["state"] == "MATCH_FAILED" and
+                            value[0]["failure_reason"] == "DRIVER_REJECTED")[0]
+            assert rejected["assigned_driver_id"] is None and rejected["reservation_id"] is None
+            wait("rejected driver release",
+                 lambda: rows("driver_db", "SELECT * FROM drivers WHERE driver_id='" + driver_id + "'"),
+                 lambda value: value[0]["status"] == "AVAILABLE" and
+                 value[0]["reservation_id"] is None and value[0]["reserved_trip_id"] is None)
+            wait("rejected cleanup",
+                 lambda: rows("trip_db", "SELECT key FROM trip_cleanup_intents WHERE trip_id='" +
+                              reject_trip + "' AND completed_at IS NULL"),
+                 lambda value: not value)
+            assert not rows("payment_db", "SELECT * FROM payment_operations WHERE trip_id='" + reject_trip + "'")
+            reject_round = rows("matching_db",
+                                "SELECT * FROM matching_rounds WHERE trip_id='" + reject_trip + "'")[0]
+            assert reject_round["selected_reservation_id"] == reject_reservation
+            assert reject_round["status"] in ("RESERVED", "CANCELLED")
+            wait("rider rejection inbox",
+                 lambda: inbox(reject_token),
+                 lambda items: any(item["tripId"] == reject_trip and
+                                   item["notificationType"] == "RIDER_DRIVER_REJECTED" for item in items))
+            rejected_notifications = notification_rows("trip_id='" + reject_trip + "'")
+            assert len([item for item in rejected_notifications
+                        if item["notification_type"] == "RIDER_DRIVER_REJECTED"]) == 1
+            assert any(item["notification_type"] == "RIDER_DRIVER_REJECTED" and
+                       item["recipient_user_id"] == reject_proof["riderId"]
+                       for item in rejected_notifications)
+            # Step 11: the Rider is not blocked by the failed attempt.
+            replacement = http("POST", "/trips", {
+                "pickup": {"latitude": 10.7769, "longitude": 106.7009},
+                "dropoff": {"latitude": 10.78, "longitude": 106.71}},
+                reject_token, {"Idempotency-Key": uuid.uuid4().hex})
+            replacement_trip = replacement["tripId"]
+            http("POST", "/trips/" + replacement_trip + "/cancel", {}, reject_token)
+            wait("replacement ride cancelled",
+                 lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + replacement_trip + "'"),
+                 lambda value: value[0]["state"] == "CANCELLED")
+            journeys["rejected"] = {"trip": reject_trip, "reservation": reject_reservation,
+                                    "state": "MATCH_FAILED", "reason": "DRIVER_REJECTED",
+                                    "replacementTrip": replacement_trip,
+                                    "notifications": len(rejected_notifications)}
+            report["scenarios"] = report.get("scenarios", {})
+            report["scenarios"]["A-driver-reject"] = {"trip": reject_trip,
+                                                      "state": "MATCH_FAILED",
+                                                      "releaseCompleted": True}
+            check("DRIVER-REJECT-JOURNEY", True)
+
+            # Scenario C: notification failure isolation. Stop the real worker
+            # before completion; Trip/Driver/Payment must finish, and the
+            # queued intents must materialize exactly once after restart.
+            outage_token, outage_trip, outage_reservation, outage_proof = start_trip("notification-outage")
+            driver_action(outage_trip, "accept", driver_id, outage_reservation, driver_token)
+            wait("outage authorization",
+                 lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + outage_trip + "'"),
+                 lambda value: value[0]["state"] == "READY_TO_START")
+            driver_action(outage_trip, "start", driver_id, outage_reservation, driver_token)
+            compose("stop", "notification")
+            driver_action(outage_trip, "complete", driver_id, outage_reservation, driver_token)
+            wait("outage completed trip",
+                 lambda: rows("trip_db", "SELECT * FROM trips WHERE trip_id='" + outage_trip + "'"),
+                 lambda value: value[0]["state"] == "COMPLETED")
+            wait("outage capture",
+                 lambda: rows("payment_db", "SELECT * FROM payment_operations WHERE trip_id='" + outage_trip + "'"),
+                 lambda value: len(value) == 2 and all(item["state"] == "SUCCEEDED" for item in value))
+            wait("outage driver release",
+                 lambda: rows("driver_db", "SELECT * FROM drivers WHERE driver_id='" + driver_id + "'"),
+                 lambda value: value[0]["status"] == "AVAILABLE" and value[0]["reservation_id"] is None)
+            compose("start", "notification")
+            wait_http(8106)
+            wait("outage rider completion inbox",
+                 lambda: inbox(outage_token),
+                 lambda items: any(item["tripId"] == outage_trip and
+                                   item["notificationType"] == "RIDER_TRIP_COMPLETED" for item in items))
+            wait("outage driver assignment inbox",
+                 lambda: inbox(driver_token),
+                 lambda items: any(item["tripId"] == outage_trip and
+                                   item["notificationType"] == "DRIVER_TRIP_ASSIGNED" for item in items))
+            outage_rows = notification_rows("trip_id='" + outage_trip + "'")
+            expected_outage = {"RIDER_RIDE_REQUESTED", "RIDER_DRIVER_ASSIGNED",
+                               "RIDER_TRIP_COMPLETED", "DRIVER_TRIP_ASSIGNED"}
+            assert expected_outage <= {item["notification_type"] for item in outage_rows}, outage_rows
+            assert all(len([item for item in outage_rows if item["notification_type"] == type_name]) == 1
+                       for type_name in expected_outage), outage_rows
+            report["scenarios"]["C-notification-outage"] = {"trip": outage_trip,
+                                                            "tripState": "COMPLETED",
+                                                            "notifications": len(outage_rows)}
+            check("NOTIFICATION-OUTAGE-ISOLATION", True)
+
+            # Scenario D: crash/replay after reject commit. Stop the Trip
+            # process after the durable response; restart relays/reconciliation,
+            # then replay the exact command and prove one logical effect.
+            crash_token, crash_trip, crash_reservation, crash_proof = start_trip("reject-crash")
+            first_reject = driver_action(crash_trip, "reject", driver_id, crash_reservation, driver_token)
+            assert first_reject["state"] == "MATCH_FAILED", first_reject
+            compose("stop", "trip")
+            compose("start", "trip")
+            wait_http(8103)
+            wait("crash rejection cleanup",
+                 lambda: rows("trip_db", "SELECT key FROM trip_cleanup_intents WHERE trip_id='" +
+                              crash_trip + "' AND completed_at IS NULL"),
+                 lambda value: not value)
+            replay_reject = driver_action(crash_trip, "reject", driver_id, crash_reservation, driver_token)
+            assert replay_reject["state"] == "MATCH_FAILED", replay_reject
+            assert replay_reject["replayed"] is True, replay_reject
+            release_intents = rows("trip_db",
+                                   "SELECT count(*)::int AS count FROM outbox_messages WHERE aggregate_id='" +
+                                   crash_trip + "' AND message_type='ReleaseDriverReservationV1'")
+            assert release_intents[0]["count"] == 1, release_intents
+            wait("crash rejection inbox",
+                 lambda: inbox(crash_token),
+                 lambda items: any(item["tripId"] == crash_trip and
+                                   item["notificationType"] == "RIDER_DRIVER_REJECTED" for item in items))
+            crash_notifications = [item for item in notification_rows("trip_id='" + crash_trip + "'")
+                                   if item["notification_type"] == "RIDER_DRIVER_REJECTED"]
+            assert len(crash_notifications) == 1, crash_notifications
+            report["scenarios"]["D-reject-crash-replay"] = {"trip": crash_trip,
+                                                            "replayed": True,
+                                                            "releaseIntents": 1}
+            check("REJECT-CRASH-REPLAY", True)
+
             for database in ["trip_db", "driver_db", "matching_db", "payment_db"]:
                 wait("outbox drain " + database,
                      lambda database=database: rows(database, "SELECT message_id FROM outbox_messages WHERE status <> 'PUBLISHED'"),
@@ -431,8 +601,13 @@ def main():
                 "payments": rows("payment_db", "SELECT * FROM payment_operations"),
                 "effects": rows("payment_db", "SELECT * FROM provider_effects"),
                 "sagas": rows("trip_db", "SELECT * FROM ride_sagas"),
+                "notifications": rows("notification_db", "SELECT * FROM notifications"),
             }
-            assert {item["state"] for item in authorities["trips"]} == {"COMPLETED", "CANCELLED"}
+            assert {item["state"] for item in authorities["trips"]} == {
+                "COMPLETED", "CANCELLED", "MATCH_FAILED"}
+            assert all(item["state"] != "MATCH_FAILED" or
+                       item["failure_reason"] in ("DRIVER_REJECTED", "NO_DRIVER_AVAILABLE")
+                       for item in authorities["trips"])
             assert all(item["status"] == "AVAILABLE" and item["reservation_id"] is None and
                        item["reserved_trip_id"] is None and item["active_trip_id"] is None
                        for item in authorities["drivers"])
@@ -443,12 +618,21 @@ def main():
                        int(operation["provider_effect_occurred"])
                        for operation in authorities["payments"])
             assert {item["status"] for item in authorities["sagas"]} == {"COMPLETED", "COMPENSATED"}
+            assert all(item["recipient_user_id"] and
+                       item["delivery_status"] in ("INBOX_AVAILABLE", "READ")
+                       for item in authorities["notifications"])
+            assert len({(item["source_message_id"], item["recipient_user_id"], item["notification_type"])
+                        for item in authorities["notifications"]}) == len(authorities["notifications"])
+            assert all(not any(secret in item["content"] for secret in
+                               ("Bearer", "password", "eyJ", "token"))
+                       for item in authorities["notifications"])
             report["journeys"] = journeys
             report["authority"] = {"trips": len(authorities["trips"]),
                                    "drivers": len(authorities["drivers"]),
                                    "rounds": len(authorities["rounds"]),
                                    "payments": len(authorities["payments"]),
-                                   "effects": len(authorities["effects"])}
+                                   "effects": len(authorities["effects"]),
+                                   "notifications": len(authorities["notifications"])}
             check("AUTHORITY-AUDIT", True)
         finally:
             pass

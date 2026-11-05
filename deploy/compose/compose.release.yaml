@@ -74,7 +74,9 @@ services:
       RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"
   notification:
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
       DOTNET_ENVIRONMENT: Production
+      Auth__PublicKeyBase64: "${AUTH_PUBLIC_KEY_BASE64:?AUTH_PUBLIC_KEY_BASE64 must be set for the release overlay}"
       ConnectionStrings__Postgres: "Host=postgres;Database=notification_db;Username=notification_app;Password=${NOTIFICATION_DB_PASSWORD:?NOTIFICATION_DB_PASSWORD must be set for the release overlay}"
       RabbitMq__Username: ${RABBITMQ_USER:-ride_app}
       RabbitMq__Password: "${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set for the release overlay}"

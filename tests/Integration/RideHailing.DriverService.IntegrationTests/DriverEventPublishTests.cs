@@ -92,6 +92,20 @@ public class DriverEventPublishTests
         return driver.DriverId;
     }
 
+    private async Task RemoveNotificationIntentsAsync(Guid driverId)
+    {
+        // The DS03 recipient notification is a second, independently proven
+        // intent. Keep these Driver-event relay proofs focused on the Driver
+        // event row instead of making relay ordering depend on two kinds.
+        await using var conn = await _db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            DELETE FROM outbox_messages
+            WHERE aggregate_id = @id AND message_type = 'NotificationRequestedV1';
+            """, conn);
+        cmd.Parameters.AddWithValue("id", driverId.ToString("N"));
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     private async Task<IReadOnlyList<OutboxMessage>> LoadDriverOutboxAsync(Guid driverId)
     {
         var ids = new List<string>();
@@ -214,6 +228,7 @@ public class DriverEventPublishTests
 
         var won = await repo.TryReserveAsync(driverId, trip, reservation, start.Version, 3);
         Assert.Equal(ReserveOutcome.Won, won.Outcome);
+        await RemoveNotificationIntentsAsync(driverId);
 
         // The intent exists BEFORE any broker interaction. The repository has
         // no broker dependency; the relay is the only publisher.
@@ -301,6 +316,7 @@ public class DriverEventPublishTests
             (await repo.TryGoOnlineAsync(driverId, online.Version)).Outcome);
 
         // Exactly four effects: reserve, release, offline, online.
+        await RemoveNotificationIntentsAsync(driverId);
         var rows = await LoadDriverOutboxAsync(driverId);
         Assert.Equal(4, rows.Count);
         Assert.All(rows, row => Assert.Equal(OutboxStatus.Pending, row.Status));
@@ -358,6 +374,7 @@ public class DriverEventPublishTests
         var reservation = Guid.NewGuid();
         Assert.Equal(ReserveOutcome.Won,
             (await repo.TryReserveAsync(releaseDriverId, trip, reservation, releaseStart.Version)).Outcome);
+        await RemoveNotificationIntentsAsync(releaseDriverId);
 
         var offlineDriverId = await SeedAvailableAsync(repo);
         var offlineStart = (await repo.LoadAsync(offlineDriverId))!;
@@ -475,6 +492,7 @@ public class DriverEventPublishTests
         var start = (await repo.LoadAsync(driverId))!;
         Assert.Equal(ReserveOutcome.Won, (await repo.TryReserveAsync(
             driverId, Guid.NewGuid(), Guid.NewGuid(), start.Version)).Outcome);
+        await RemoveNotificationIntentsAsync(driverId);
         var row = Assert.Single(await LoadDriverOutboxAsync(driverId));
 
         var queue = "w9-test-marklost-" + Guid.NewGuid().ToString("N");
@@ -517,6 +535,7 @@ public class DriverEventPublishTests
         var start = (await repo.LoadAsync(driverId))!;
         Assert.Equal(ReserveOutcome.Won, (await repo.TryReserveAsync(
             driverId, Guid.NewGuid(), Guid.NewGuid(), start.Version)).Outcome);
+        await RemoveNotificationIntentsAsync(driverId);
         var row = Assert.Single(await LoadDriverOutboxAsync(driverId));
 
         await using var publisher = new ConfirmedPublisher(Factory("w9-test-claimlost"));
@@ -551,6 +570,7 @@ public class DriverEventPublishTests
         var start = (await repo.LoadAsync(driverId))!;
         Assert.Equal(ReserveOutcome.Won, (await repo.TryReserveAsync(
             driverId, Guid.NewGuid(), Guid.NewGuid(), start.Version)).Outcome);
+        await RemoveNotificationIntentsAsync(driverId);
         var row = Assert.Single(await LoadDriverOutboxAsync(driverId));
 
         // Port 1 is a real refused connection, not a mocked publisher failure.

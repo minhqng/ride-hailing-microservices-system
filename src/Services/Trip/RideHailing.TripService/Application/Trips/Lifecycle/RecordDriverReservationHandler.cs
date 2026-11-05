@@ -71,6 +71,11 @@ public sealed class RecordDriverReservationHandler
             // A late authority fact can add exact cleanup while the Trip stays
             // terminal; any new release/cancel intent commits with it.
             TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
+            // Only a newly applied current assignment is an assignment event;
+            // a late reservation on a terminal Trip is cleanup evidence, not a
+            // new Rider-facing assignment.
+            if (trip.State == TripState.DriverReserved)
+                TripOutboxWriter.Enqueue(_db, TripNotificationIntents.DriverAssigned(trip, trip.UpdatedAt));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 

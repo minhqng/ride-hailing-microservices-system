@@ -75,7 +75,7 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
         Assert.Equal(7, newer.Version);
         await db.CreateRepository().TryMarkTripCompletedAsync(driver, nextTrip, nextReservation);
         Assert.Equal(4, await CountAsync("driver_lifecycle_effects", driver));
-        Assert.Equal(6, await CountAsync("outbox_messages", driver));
+        Assert.Equal(8, await CountAsync("outbox_messages", driver));
         foreach (var (result, expectedTrip, expectedReservation, status) in new[]
         { (start, trip, reservation, "ON_TRIP"), (complete, trip, reservation, "AVAILABLE") })
         {
@@ -124,7 +124,7 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
         await repo.TryReserveAsync(driver, nextTrip, nextReservation, 4);
         Assert.Equal("Rejected", (await repo.TryMarkTripStartedAsync(driver, trip, reservation)).Disposition);
         Assert.Equal(nextReservation, (await repo.LoadAsync(driver))!.ReservationId);
-        Assert.Equal(3, await CountAsync("outbox_messages", driver));
+        Assert.Equal(6, await CountAsync("outbox_messages", driver));
     }
 
     [Theory]
@@ -182,7 +182,7 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
         var results = await Task.WhenAll(calls).WaitAsync(TimeSpan.FromSeconds(20));
         Assert.All(results, r => Assert.Equal(results[0], r));
         Assert.Equal(completed ? 5 : 4, (await db.CreateRepository().LoadAsync(driver))!.Version);
-        Assert.Equal(completed ? 3 : 2, await CountAsync("outbox_messages", driver));
+        Assert.Equal(completed ? 4 : 3, await CountAsync("outbox_messages", driver));
         Assert.Equal("Replayed", (await db.CreateRepository().HandleCommandAsync(command with
             { MessageId = Guid.NewGuid().ToString("N") })).Disposition);
     }
@@ -207,7 +207,7 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
         Assert.Equal(4, current.Version);
         Assert.Contains(current.Status, new[] { DriverStatus.Available, DriverStatus.OnTrip });
         Assert.Null(current.ReservationId);
-        Assert.Equal(2, await CountAsync("outbox_messages", driver));
+        Assert.Contains(await CountAsync("outbox_messages", driver), new long[] { 3, 4 });
     }
 
     [Theory]
@@ -249,7 +249,7 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
             await Assert.ThrowsAsync<PostgresException>(() => repo.HandleCommandAsync(command));
             Assert.Equal(completed ? 4 : 3, (await repo.LoadAsync(driver))!.Version);
             Assert.Equal(completed ? 1 : 0, await CountAsync("driver_lifecycle_effects", driver));
-            Assert.Equal(completed ? 2 : 1, await CountAsync("outbox_messages", driver));
+            Assert.Equal(completed ? 3 : 2, await CountAsync("outbox_messages", driver));
             await using var conn = await db.DataSource.OpenConnectionAsync();
             await using var receipt = new NpgsqlCommand("SELECT count(*) FROM driver_command_receipts WHERE message_id = @id", conn);
             receipt.Parameters.AddWithValue("id", command.MessageId);
@@ -272,6 +272,53 @@ public sealed class DriverLifecycleTests(DriverPostgresDatabase db)
         Assert.Equal(command.SagaId, message.SagaId);
         Assert.Equal(command.OperationKey, message.OperationKey);
         Assert.Contains(activity.TraceId.ToString(), message.HeadersJson);
+    }
+
+    [Fact]
+    public async Task ReserveAndRelease_StageRecipientAddressedNotificationsWithOwnerUserId()
+    {
+        var driver = Driver.Create(Guid.NewGuid(), Guid.NewGuid());
+        driver.GoOnline(driver.Version);
+        var repo = db.CreateRepository();
+        Assert.True(await repo.TryInsertAsync(driver));
+        var trip = Guid.NewGuid();
+        var reservation = Guid.NewGuid();
+
+        Assert.Equal(ReserveOutcome.Won,
+            (await repo.TryReserveAsync(driver.DriverId, trip, reservation, driver.Version, matchingRound: 1)).Outcome);
+        var assigned = await LoadNotification(driver.DriverId,
+            RideHailing.Messaging.Contracts.NotificationMessage.Types.DriverTripAssigned);
+        Assert.Equal(driver.UserId, assigned.RecipientUserId);
+        Assert.Equal(RideHailing.Messaging.Contracts.NotificationMessage.Roles.Driver, assigned.RecipientRole);
+        Assert.Equal(trip, assigned.TripId);
+
+        Assert.Equal(DriverMutationOutcome.Applied,
+            (await repo.TryReleaseAsync(driver.DriverId, trip, reservation)).Outcome);
+        var released = await LoadNotification(driver.DriverId,
+            RideHailing.Messaging.Contracts.NotificationMessage.Types.DriverReservationReleased);
+        Assert.Equal(driver.UserId, released.RecipientUserId);
+        Assert.Equal(trip, released.TripId);
+        Assert.NotEqual(assigned.RecipientUserId, Guid.Empty);
+    }
+
+    private async Task<RideHailing.Messaging.Contracts.NotificationRequestedV1> LoadNotification(
+        Guid driver, string notificationType)
+    {
+        await using var conn = await db.DataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand("""
+            SELECT message_id FROM outbox_messages
+            WHERE aggregate_id = @id AND message_type = 'NotificationRequestedV1'
+              AND payload_json->>'notificationType' = @type
+            ORDER BY occurred_at DESC LIMIT 1;
+            """, conn);
+        cmd.Parameters.AddWithValue("id", driver.ToString("N"));
+        cmd.Parameters.AddWithValue("type", notificationType);
+        var messageId = (string?)await cmd.ExecuteScalarAsync();
+        Assert.NotNull(messageId);
+        var message = await db.OutboxStore.LoadAsync(messageId!);
+        Assert.NotNull(message);
+        return JsonSerializer.Deserialize<RideHailing.Messaging.Contracts.NotificationRequestedV1>(
+            message!.PayloadJson)!;
     }
 
     private async Task SqlAsync(string sql)

@@ -174,6 +174,7 @@ public sealed class CompleteTripHandler
             }
 
             TripOutboxWriter.Enqueue(_db, TripSagaIntents.MarkDriverTripCompleted(trip, now));
+            TripOutboxWriter.Enqueue(_db, TripNotificationIntents.Completed(trip, now));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 

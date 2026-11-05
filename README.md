@@ -32,7 +32,7 @@ API Gateway (YARP, no DB)
 | Trip/Booking | A | `trip_db` | 8103 | Trip FSM, cancellation cleanup, W8 messaging; persisted Saga planned |
 | Matching | B | `matching_db` + Redis | 8104 | MatchingRound, deterministic ranking, Redis is derived only |
 | Payment Simulator | C | `payment_db` | 8105 | durable `operationKey` idempotency, UNKNOWN reconcile, finite retry |
-| Notification Worker | C | `notification_db` | — | async side-effect only, never business truth |
+| Notification Worker | C | `notification_db` | 8106 | async side-effect only; recipient-addressed in-app inbox with JWT read API |
 
 Infra: PostgreSQL 5432, Redis 6379, RabbitMQ AMQP 5672 / UI 15672.
 Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs stack Jaeger/OTel/Prometheus/Grafana via `--profile obs`.
@@ -42,7 +42,7 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 - .NET 10 (`net10.0`, SDK `10.0.100` via `global.json`), ASP.NET Core minimal APIs
 - PostgreSQL 18 (per-service logical DB + isolated role), Redis 8 GEO, RabbitMQ 4 quorum queues
 - BuildingBlocks: `RideHailing.Contracts` (shared contract foundation), `RideHailing.Messaging` (`MessageEnvelope<T>`, W3C trace, `ConfirmedPublisher`, `ManualAckConsumer`, shared Outbox and `processed_messages` dedup primitives), `RideHailing.Observability` (OTel)
-- Docker Compose (DNS discovery: `postgres`, `redis`, `rabbitmq`, `identity`, `driver`, `trip`, `matching`, `payment`), xUnit Unit/Integration/System tests
+- Docker Compose (DNS discovery: `postgres`, `redis`, `rabbitmq`, `identity`, `driver`, `trip`, `matching`, `payment`, `notification`), xUnit Unit/Integration/System tests
 
 ## 3. Distributed guarantees (what makes this distributed)
 
@@ -59,6 +59,29 @@ Pinned images: `postgres:18.6`, `rabbitmq:4.3.6-management`, `redis:8.10.2`, obs
 **Workflows:** Trip→Matching `RideRequested` (async), Matching→Driver `ReserveDriver` (sync + UNKNOWN handling), Trip→Payment (async Saga), events→Notification (async). Outbox for dual-write gap, persisted Saga/MatchingRound for crash-resume.
 
 **Autonomous Matching (B-REC-01/DSI-021):** `RideRequestedV1` commits the round, pickup center and auto-execute obligation before ACK. A hosted Matching worker leases durable PROCESSING rounds from PostgreSQL, reconciles UNKNOWN with the same `reservationId`, executes READY attempts, advances S0→S1→S2 only after conclusive exhaustion, and commits `NO_DRIVER` only at the final evaluated stage. `CancelMatchingRoundV1` is durable across cross-queue reordering. See `src/Services/Matching/RideHailing.MatchingService/README.md` and `evidence/member-b/b-rec01-dsi021/README.md`.
+
+**DS03 functional closure (2026-11-05):** the two remaining course
+statements are implemented end-to-end.
+
+```text
+Driver rejects:
+POST /trips/{tripId}/reject        (Driver JWT; exact driverId + reservationId)
+  → Trip MATCH_FAILED, failure_reason=DRIVER_REJECTED
+  → durable CancelMatchingRoundV1 + ReleaseDriverReservationV1 (Trip Outbox)
+  → exact-token Driver release + Matching cancellation reconciled from authority
+  → no rematch, no payment, no false release claim; Rider may create a new ride
+
+Notifications:
+GET  /notifications/me             (Rider or Driver JWT)
+GET  /notifications/{id}
+POST /notifications/{id}/read
+  → NotificationRequestedV1 intents emitted by the authoritative Trip/Driver Outbox
+  → notification_db inbox row per recipient, deterministic dedup
+  → owner isolation from the JWT sub claim; worker failure cannot block ride truth
+```
+
+Canonical semantics are in Doc 01 §40, transport in Doc 02 §43, verification
+in Doc 03 §42 and implementation notes in Doc 05A §37 / 05B §38 / 05C §48.
 
 Implemented on main through W08: PG-guarded Driver reservation foundation, Trip lifecycle and single-assignment fencing, durable cancellation cleanup, opt-in Trip publication/consumption with atomic receipt dedup, Payment durable simulator, and the RabbitMQ runtime (publisher confirms, manual ACK, dedup). Planned: Trip persisted Saga, Outbox relay and automatic cleanup dispatch.
 
@@ -82,6 +105,7 @@ curl http://localhost:8102/health/live
 curl http://localhost:8103/health/live
 curl http://localhost:8104/health/live
 curl http://localhost:8105/health/live
+curl http://localhost:8106/health/live
 # RabbitMQ UI: http://localhost:15672 (ride_app / ride_dev_pw)
 docker compose ps
 docker compose --profile obs up -d  # optional: Jaeger 16686, Prometheus 9090, Grafana 3000, OTel 4317/4318
@@ -178,3 +202,12 @@ because it discovered zero tests; the real system gates are the Python checks
 under `scripts/test/` (platform-smoke, core-runtime-gate, security-gate,
 payment-smoke, topology-smoke and release-smoke). Shared G4/SEC-AUTH and A/C
 acceptance remain separate gates.
+
+DS03 functional closure (W17, 2026-11-05): full .NET regression is
+**1,341 passed, 0 failed, 1 known Identity opt-in skip across 13 executable
+suites**. The earlier 851/1119 figures remain historical measurements, not
+new-source results. New suites: Trip Driver Reject/cleanup, recipient
+notification intent, notification inbox integration (real PostgreSQL + real
+JWTs). Release-smoke Scenarios A–D are defined in
+`scripts/test/release-smoke.py` and their result on the tested SHA is recorded
+in the DS03 evidence bundle. No v1.0.0 tag is created.

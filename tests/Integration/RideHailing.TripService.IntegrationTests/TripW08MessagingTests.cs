@@ -356,20 +356,26 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
         {
             await using var probe = Db();
             return await probe.OutboxMessages.AnyAsync(m =>
-                m.AggregateId == tripId.ToString("D") && m.Status == "PUBLISHED");
+                m.AggregateId == tripId.ToString("D") &&
+                m.MessageType == "RideRequestedV1" && m.Status == "PUBLISHED");
         });
-        await Eventually(() => Task.FromResult(matching.AcknowledgedCount == 1));
+        await Eventually(() =>
+        {
+            lock (observed)
+                return Task.FromResult(observed.Any(item => item.Correlation == tripId.ToString("D")));
+        });
         (string Id, string Json, string Correlation, ActivityTraceId Trace) delivered;
         lock (observed)
         {
-            delivered = Assert.Single(observed);
+            delivered = Assert.Single(observed, item => item.Correlation == tripId.ToString("D"));
         }
         Assert.Equal(tripId.ToString("D"), delivered.Correlation);
         Assert.Equal(root.TraceId, delivered.Trace);
         await using var verify = Db();
         var saved = await verify.Trips.SingleAsync(t => t.TripId == tripId);
         Assert.Equal(TripState.Matching, saved.State);
-        var intent = await verify.OutboxMessages.SingleAsync(m => m.AggregateId == tripId.ToString("D"));
+        var intent = await verify.OutboxMessages.SingleAsync(m =>
+            m.AggregateId == tripId.ToString("D") && m.MessageType == "RideRequestedV1");
         Assert.Equal("RideRequestedV1", intent.MessageType);
         Assert.Equal("PUBLISHED", intent.Status);
         Assert.Equal(TripOutboxIntents.RideRequestedMessageId(saved), intent.MessageId);
@@ -442,7 +448,8 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             var committed = await verify.Trips.SingleAsync(t => t.TripId == tripId);
             Assert.Equal(TripState.Matching, committed.State);
             expectedMessageId = TripOutboxIntents.RideRequestedMessageId(committed);
-            var pending = await verify.OutboxMessages.SingleAsync(m => m.AggregateId == tripId.ToString("D"));
+            var pending = await verify.OutboxMessages.SingleAsync(m =>
+                m.AggregateId == tripId.ToString("D") && m.MessageType == "RideRequestedV1");
             Assert.Equal(expectedMessageId, pending.MessageId);
             Assert.Equal("RideRequestedV1", pending.MessageType);
             Assert.Equal(RideTopology.EventsExchange, pending.Exchange);
@@ -453,6 +460,10 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
             Assert.Equal(0, pending.AttemptCount);
             Assert.Null(pending.PublishedAt);
             Assert.Null(pending.LastErrorCode);
+            var notification = await verify.OutboxMessages.SingleAsync(m =>
+                m.AggregateId == tripId.ToString("D") && m.MessageType == "NotificationRequestedV1");
+            Assert.Equal("PENDING", notification.Status);
+            Assert.Equal(0, notification.AttemptCount);
         }
         finally { Assert.Equal(0, (await rabbit.Broker.ExecAsync(["rabbitmqctl", "start_app"])).ExitCode); }
 
@@ -482,7 +493,13 @@ public sealed class TripW08MessagingTests(TripPostgresFixture postgres, TripRabb
         {
             Assert.Equal(1, await final.Trips.CountAsync(t => t.RiderId == rider));
             Assert.Equal(TripState.Matching, (await final.Trips.SingleAsync(t => t.TripId == tripId)).State);
-            Assert.Equal(1, await final.OutboxMessages.CountAsync(m => m.AggregateId == tripId.ToString("D")));
+            // DS03: the same create transaction also stages the Rider's
+            // recipient-addressed "ride requested" notification intent.
+            Assert.Equal(2, await final.OutboxMessages.CountAsync(m => m.AggregateId == tripId.ToString("D")));
+            Assert.Equal(1, await final.OutboxMessages.CountAsync(m =>
+                m.AggregateId == tripId.ToString("D") && m.MessageType == "RideRequestedV1"));
+            Assert.Equal(1, await final.OutboxMessages.CountAsync(m =>
+                m.AggregateId == tripId.ToString("D") && m.MessageType == "NotificationRequestedV1"));
         }
 
         // Exactly one publication of THIS ride's stable identity reached the

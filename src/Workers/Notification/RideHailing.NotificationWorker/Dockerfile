@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee AS base
 WORKDIR /app
-# No EXPOSE: worker serves no HTTP at bootstrap (compose publishes no host port).
+EXPOSE 8080
 # Bootstrap runs as non-root 'app' user provided by official .NET images.
 USER app
 

@@ -41,6 +41,7 @@
     <Project Path="tests/Integration/RideHailing.DriverService.IntegrationTests/RideHailing.DriverService.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.IdentityService.IntegrationTests/RideHailing.IdentityService.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.MatchingService.IntegrationTests/RideHailing.MatchingService.IntegrationTests.csproj" />
+    <Project Path="tests/Integration/RideHailing.NotificationService.IntegrationTests/RideHailing.NotificationService.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.PaymentService.IntegrationTests/RideHailing.PaymentService.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.Platform.IntegrationTests/RideHailing.Platform.IntegrationTests.csproj" />
     <Project Path="tests/Integration/RideHailing.TripService.IntegrationTests/RideHailing.TripService.IntegrationTests.csproj" />

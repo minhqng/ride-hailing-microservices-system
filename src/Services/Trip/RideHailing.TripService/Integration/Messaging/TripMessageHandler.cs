@@ -112,7 +112,9 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 var saga = await db.RideSagas.SingleOrDefaultAsync(s => s.TripId == tripId, token);
                 var preexistingCleanup = TripOutboxWriter.CleanupKeys(trip);
                 var sagaStatusBefore = saga?.Status;
+                var stateBefore = trip.State;
                 Apply(trip, saga, envelope, receipt, now);
+                EnqueueAppliedNotification(trip, envelope, receipt, stateBefore, now);
                 TripOutboxWriter.EnqueueNewCleanup(db, trip, preexistingCleanup);
                 await db.SaveChangesAsync(token);
                 await transaction.CommitAsync(token);
@@ -328,6 +330,35 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         // Retain rejected facts durably for reconciliation, without mutating Trip.
         receipt.Disposition = outcome.IsSuccess ? (outcome.IsReplay ? "BusinessReplay" : "Applied") : "NeedsReview";
         receipt.Reason = outcome.IsSuccess ? string.Empty : outcome.ErrorCode.ToString();
+    }
+
+    /// <summary>
+    /// DS03: stages the Rider-visible notification only for a FIRST applied
+    /// business fact. Late/duplicate/terminal facts that are parked or replayed
+    /// never produce a second notification; a late reservation that merely
+    /// creates cleanup evidence is not an assignment event.
+    /// </summary>
+    private void EnqueueAppliedNotification(Trip trip, MessageEnvelope<JsonElement> envelope,
+        TripMessageReceipt receipt, TripState stateBefore, DateTimeOffset now)
+    {
+        if (receipt.Disposition != "Applied") return;
+        switch (envelope.MessageType)
+        {
+            case "DriverReservedV1" when trip.State == TripState.DriverReserved:
+                TripOutboxWriter.Enqueue(db, TripNotificationIntents.DriverAssigned(trip, now));
+                break;
+            case "MatchingFailedV1" when trip.State == TripState.MatchFailed:
+                TripOutboxWriter.Enqueue(db, TripNotificationIntents.NoDriver(trip, now));
+                break;
+            case "DriverTripCompletedV1" when trip.State == TripState.Completed:
+                TripOutboxWriter.Enqueue(db, TripNotificationIntents.Completed(trip, now));
+                break;
+            case "PaymentAuthorizationFailedV1"
+                when stateBefore == TripState.DriverAccepted && trip.State == TripState.Cancelled:
+                TripOutboxWriter.Enqueue(db,
+                    TripNotificationIntents.PaymentFailed(trip, "DECLINED", now));
+                break;
+        }
     }
 
     private static PaymentOutcomeFact PaymentFact(MessageEnvelope<JsonElement> envelope)

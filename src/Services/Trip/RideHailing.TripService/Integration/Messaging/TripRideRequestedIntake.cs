@@ -59,6 +59,7 @@ public sealed class TripRideRequestedIntake(
             if (!outcome.IsReplay)
             {
                 TripOutboxWriter.Enqueue(db, TripOutboxIntents.RideRequested(trip, trip.UpdatedAt));
+                TripOutboxWriter.Enqueue(db, TripNotificationIntents.RideRequested(trip, trip.UpdatedAt));
                 try
                 {
                     await db.SaveChangesAsync(token);

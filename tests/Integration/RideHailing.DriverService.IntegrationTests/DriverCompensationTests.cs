@@ -143,7 +143,7 @@ public sealed class DriverCompensationTests
         Assert.Equal(DriverStatus.Available, available.Status);
         Assert.Null(available.ReservationId); Assert.Null(available.ReservedTripId);
         Assert.Null(available.ReservationRound); Assert.Null(available.ActiveTripId);
-        Assert.Equal(2, await Events(driver));
+        Assert.Equal(4, await Events(driver));
         var stored = (await db.OutboxStore.LoadAsync(result.EventMessageId!))!;
         Assert.Equal("DriverReservationReleasedV1", stored.MessageType);
         Assert.Equal(trip, stored.ToEnvelope().Payload.GetProperty("tripId").GetGuid());
@@ -157,7 +157,7 @@ public sealed class DriverCompensationTests
         var changed = command with { Payload = JsonSerializer.SerializeToElement(changedPayload) };
         var poison = await Assert.ThrowsAsync<DeliveryFailureException>(() => db.CreateRepository().HandleCommandAsync(changed));
         Assert.Equal("DRIVER_COMMAND_CONTENT_CONFLICT", poison.Code);
-        Assert.Equal(2, await Events(driver));
+        Assert.Equal(4, await Events(driver));
         Assert.Equal(4, (await db.CreateRepository().LoadAsync(driver))!.Version);
     }
 
@@ -243,7 +243,7 @@ public sealed class DriverCompensationTests
             legacy with { MessageId = Guid.NewGuid().ToString("N") }));
         var unchanged = (await db.CreateRepository().LoadAsync(driver))!;
         Assert.Equal(next, unchanged.ReservationId); Assert.Equal(5, unchanged.Version);
-        Assert.Equal(3, await Events(driver));
+        Assert.Equal(6, await Events(driver));
     }
 
     [Fact]
@@ -263,7 +263,7 @@ public sealed class DriverCompensationTests
         var current = (await db.CreateRepository().LoadAsync(driver))!;
         Assert.Equal(newer, current.ReservationId); Assert.Equal(nextTrip, current.ReservedTripId);
         Assert.Equal(2, current.ReservationRound); Assert.Equal(5, current.Version);
-        Assert.Equal(3, await Events(driver));
+        Assert.Equal(6, await Events(driver));
     }
 
     [Fact]
@@ -361,7 +361,7 @@ public sealed class DriverCompensationTests
             var current = (await db.CreateRepository().LoadAsync(driver))!;
             Assert.Equal(DriverStatus.Reserved, current.Status); Assert.Equal(3, current.Version);
             Assert.Equal(reservation, current.ReservationId); Assert.Equal(1, current.ReservationRound);
-            Assert.Equal(1, await Events(driver));
+            Assert.Equal(2, await Events(driver));
             Assert.Equal(0, await ScalarAsync("SELECT count(*) FROM driver_command_receipts WHERE message_id = @id", command.MessageId));
         }
         finally { await Sql($"DROP TRIGGER fail_compensation_insert ON {table}; DROP FUNCTION fail_compensation_insert();"); }
@@ -405,7 +405,7 @@ public sealed class DriverCompensationTests
         await AssertReceipt(command, result);
         var available = (await db.CreateRepository().LoadAsync(driver))!;
         Assert.Equal(DriverStatus.Available, available.Status); Assert.Equal(4, available.Version);
-        Assert.Null(available.ReservationId); Assert.Equal(2, await Events(driver));
+        Assert.Null(available.ReservationId); Assert.Equal(4, await Events(driver));
         Assert.Equal(OutboxStatus.Pending, (await db.OutboxStore.LoadAsync(result.EventMessageId!))!.Status);
         await new OutboxRelay(db.OutboxStore, new RabbitOutboxPublisher(publisher), new OutboxRelayOptions
             { RelayId = "after-database-restart", BatchSize = 1000 }).RunOnceAsync();
@@ -438,7 +438,7 @@ public sealed class DriverCompensationTests
         var available = (await db.CreateRepository().LoadAsync(driver))!;
         Assert.Equal(4, available.Version); Assert.Equal(DriverStatus.Available, available.Status);
         Assert.Null(available.ReservationId);
-        Assert.Equal(2, await Events(driver));
+        Assert.Equal(4, await Events(driver));
     }
 
     [Fact]

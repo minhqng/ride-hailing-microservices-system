@@ -44,6 +44,43 @@ public sealed class DriverOutboxWriter(NpgsqlOutboxStore store)
         EnqueueAsync(connection, transaction, DriverEventMapper.ForAvailableEffect(driver),
             driver.UpdatedAt, ct);
 
+    /// <summary>
+    /// DS03: stages the Driver-addressed notification intent in the same
+    /// transaction as the reservation/release effect. The recipient is the
+    /// Driver aggregate's authoritative UserId, never the driverId.
+    /// </summary>
+    public async Task EnqueueNotificationAsync(
+        NpgsqlConnection connection, NpgsqlTransaction transaction,
+        Driver driver, Guid tripId, Guid reservationId, string notificationType,
+        CancellationToken ct = default)
+    {
+        if (tripId == Guid.Empty || reservationId == Guid.Empty)
+            throw new ArgumentException("Notification requires exact trip/reservation identities.");
+        var messageId = $"driver:{driver.DriverId:N}:notify:{notificationType.ToLowerInvariant()}:{tripId:N}:{reservationId:N}";
+        var envelope = MessageEnvelope<NotificationRequestedV1>.Create(
+            NotificationMessage.MessageType,
+            correlationId: tripId.ToString("D"),
+            payload: new NotificationRequestedV1
+            {
+                RecipientUserId = driver.UserId,
+                RecipientRole = NotificationMessage.Roles.Driver,
+                NotificationType = notificationType,
+                TripId = tripId,
+            },
+            messageId: messageId,
+            occurredAt: driver.UpdatedAt,
+            aggregateType: "driver",
+            aggregateId: driver.DriverId.ToString("N"),
+            aggregateVersion: driver.Version,
+            operationKey: messageId);
+        var message = OutboxMessage.Create(
+            envelope, DriverEventRoutes.EventsExchange, NotificationMessage.DriverRoutingKey);
+        var inserted = await _store.EnqueueAsync(connection, transaction, message, ct);
+        if (!inserted)
+            throw new InvalidOperationException(
+                $"Outbox notification intent '{messageId}' already exists for a new Driver effect.");
+    }
+
     public Task EnqueueOfflineAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction,
         Driver driver, CancellationToken ct = default) =>
