@@ -102,6 +102,14 @@ public sealed class TripDbContext : DbContext
         {
             throw TranslateSagaIdentityConflict(ex.Entries);
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "PK_trip_cleanup_intents",
+        })
+        {
+            throw TranslateCleanupIdentityConflict(ex.Entries);
+        }
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -141,6 +149,14 @@ public sealed class TripDbContext : DbContext
         {
             throw TranslateSagaIdentityConflict(ex.Entries);
         }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "PK_trip_cleanup_intents",
+        })
+        {
+            throw TranslateCleanupIdentityConflict(ex.Entries);
+        }
     }
 
     /// <summary>
@@ -165,6 +181,29 @@ public sealed class TripDbContext : DbContext
 
         return new TripConcurrencyConflictException(tripId, expectedVersion: null,
             new InvalidOperationException("RideSaga identity already committed by another writer."));
+    }
+
+    /// <summary>
+    /// Two racing writers (for example Reject vs Rider Cancel) can derive the
+    /// same exact cleanup obligation. The primary-key collision means another
+    /// writer committed that Trip's obligation first; report it like a Version
+    /// conflict so the handler retries/reloads instead of surfacing a fault.
+    /// </summary>
+    private static TripConcurrencyConflictException TranslateCleanupIdentityConflict(
+        IEnumerable<EntityEntry> entries)
+    {
+        var tripId = Guid.Empty;
+        foreach (var entry in entries)
+        {
+            if (entry.Entity is TripCleanupIntent intent)
+            {
+                tripId = intent.TripId;
+                break;
+            }
+        }
+
+        return new TripConcurrencyConflictException(tripId, expectedVersion: null,
+            new InvalidOperationException("Trip cleanup obligation already committed by another writer."));
     }
 
     /// <summary>

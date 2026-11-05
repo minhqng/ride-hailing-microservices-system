@@ -249,25 +249,36 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
     public async Task UpgradeFromW08_PreservesBusinessRows_AndAddsEmptyOutbox()
     {
         var cs = await NewProbeAsync("trip_w09_upgrade", migrate: false);
+        var tripId = Guid.NewGuid();
         await using (var db = Context(cs))
         {
             var target = db.Database.GetMigrations()
                 .Single(m => m.EndsWith("W08_TripMessageReceipts", StringComparison.Ordinal));
             await db.GetService<IMigrator>().MigrateAsync(target);
 
-            // The W09 migration must not touch existing business rows; write a
-            // real Trip through the current (unchanged trips) mapping.
-            db.Trips.Add(NewTrip());
-            await db.SaveChangesAsync();
+            // The W09/DS03 migrations must not touch existing business rows.
+            // Insert through the W08 schema itself: the current EF mapping now
+            // includes the later failure_reason column, which does not exist at
+            // this historical boundary.
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO trips (
+                    trip_id, rider_id, state, version, created_at,
+                    pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude,
+                    fare_currency, fare_amount, fare_policy_version, fare_created_at,
+                    current_matching_round, updated_at)
+                VALUES (
+                    {tripId}, {Guid.NewGuid()}, 'CREATED', 0, {Now},
+                    10.7, 106.6, 10.8, 106.7,
+                    'VND', 50000, 'w9', {Now}, 0, {Now})
+                """);
         }
 
-        Guid tripId;
         await using (var upgrade = Context(cs))
         {
             await upgrade.Database.MigrateAsync();
             Assert.Empty(await upgrade.Database.GetPendingMigrationsAsync());
             Assert.False(upgrade.Database.HasPendingModelChanges());
-            tripId = (await upgrade.Trips.AsNoTracking().SingleAsync()).TripId;
+            Assert.Equal(tripId, (await upgrade.Trips.AsNoTracking().SingleAsync()).TripId);
             Assert.Equal(0, await upgrade.OutboxMessages.CountAsync());
         }
 

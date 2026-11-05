@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using RideHailing.TripService.Application.Trips.Lifecycle;
+using RideHailing.TripService.Domain.Sagas;
 using RideHailing.TripService.Domain.Trips;
 using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
@@ -246,6 +247,30 @@ public sealed class TripW17RejectCleanupTests(TripPostgresFixture fixture)
     }
 
     [Fact]
+    public async Task DriverCleanupReconciler_IgnoresProofForForeignDriver()
+    {
+        var driver = Guid.NewGuid();
+        var reservation = Guid.NewGuid();
+        var trip = await SeedReserved(driver, reservation);
+        Assert.True((await Reject(trip, driver, reservation)).IsSuccess);
+
+        await using var services = BuildServices();
+        var foreign = Guid.NewGuid();
+        var handler = new StubHandler(_ => Json(HttpStatusCode.OK,
+            $"{{\"driverId\":\"{foreign:D}\",\"outcome\":\"NOT_COMMITTED_OR_AVAILABLE\",\"version\":3}}"));
+        var reconciler = new DriverCleanupReconciler(
+            services.GetRequiredService<IServiceScopeFactory>(),
+            new StubHttpClientFactory(handler),
+            NullLogger<DriverCleanupReconciler>.Instance);
+
+        await reconciler.ReconcileAsync(default);
+
+        var final = await Reload(trip.TripId);
+        Assert.Null(Assert.Single(final.CleanupIntents,
+            i => i.Kind == TripCleanupKind.ReleaseReservation).CompletedAt);
+    }
+
+    [Fact]
     public async Task DriverCleanupReconciler_TransportFailureKeepsObligationPending()
     {
         var driver = Guid.NewGuid();
@@ -264,6 +289,43 @@ public sealed class TripW17RejectCleanupTests(TripPostgresFixture fixture)
 
         var final = await Reload(trip.TripId);
         Assert.Null(Assert.Single(final.CleanupIntents,
+            i => i.Kind == TripCleanupKind.ReleaseReservation).CompletedAt);
+    }
+
+    [Fact]
+    public async Task ConfirmedRelease_AdvancesCompensatingSaga_WhenEventWasLost()
+    {
+        var driver = Guid.NewGuid();
+        var reservation = Guid.NewGuid();
+        var trip = await SeedReserved(driver, reservation);
+        Guid sagaId;
+        await using (var db = Db())
+        {
+            var tracked = await db.Trips.SingleAsync(t => t.TripId == trip.TripId);
+            Assert.True(tracked.RecordDriverAccepted(driver, reservation, Now).IsSuccess);
+            Assert.True(tracked.MarkPaymentFailed(Now).IsSuccess);
+            var saga = RideSaga.Start(Guid.NewGuid(), tracked.TripId, reservation,
+                RideSagaOperationKeys.Authorize(tracked.TripId), Now);
+            Assert.True(saga.RecordAuthorizeDeclined("DECLINED", Now).IsSuccess);
+            Assert.Equal(RideSagaStep.ReleasePending, saga.CurrentStep);
+            db.RideSagas.Add(saga);
+            await db.SaveChangesAsync();
+            sagaId = saga.SagaId;
+        }
+
+        var intent = Assert.Single((await Reload(trip.TripId)).CleanupIntents,
+            i => i.Kind == TripCleanupKind.ReleaseReservation);
+        await using (var db = Db())
+        {
+            var confirm = new ConfirmTripCleanupHandler(db, new Clock());
+            Assert.True((await confirm.HandleAsync(trip.TripId, intent.Key,
+                CleanupAuthorityResult.Released)).IsSuccess);
+        }
+
+        await using var verify = Db();
+        var finalSaga = await verify.RideSagas.AsNoTracking().SingleAsync(s => s.SagaId == sagaId);
+        Assert.Equal(RideSagaStatus.Compensated, finalSaga.Status);
+        Assert.NotNull(Assert.Single((await Reload(trip.TripId)).CleanupIntents,
             i => i.Kind == TripCleanupKind.ReleaseReservation).CompletedAt);
     }
 
@@ -312,7 +374,8 @@ public sealed class TripW17RejectCleanupTests(TripPostgresFixture fixture)
 
     private sealed class StubHttpClientFactory(HttpMessageHandler handler) : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+        public HttpClient CreateClient(string name) =>
+            new(handler, disposeHandler: false) { BaseAddress = new Uri("http://driver-test/") };
     }
 
     private sealed class LostCommitResponse : SaveChangesInterceptor
