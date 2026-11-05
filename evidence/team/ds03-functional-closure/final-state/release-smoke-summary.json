@@ -1,9 +1,9 @@
 {
   "status": "PASS",
-  "project": "ride-release-smoke-11732",
+  "project": "ride-release-smoke-22460",
   "source": {
-    "commit": "f2ff224f397c76d66af20358fe7615d6aba186ad",
-    "tree": "caac264b93c1d5b441ac1b1d0be87253162ccbc0"
+    "commit": "af1e1df7f728153f4d9d2e15b2041586115e23c5",
+    "tree": "51391f185e577f5f9befcbe4d30de5376be546b3"
   },
   "migration": {
     "api": "dotnet ef database update",
@@ -89,41 +89,41 @@
   ],
   "journeys": {
     "completed": {
-      "trip": "ec6fe9d3-216c-4457-ab31-66766042fcd1",
-      "reservation": "f43812fc-330b-42a6-b783-320da68186a7",
+      "trip": "0effd12b-9fb2-49b6-8e4e-9f6d4306943d",
+      "reservation": "09dae29b-d0d6-41c2-a1cc-55728c817a6d",
       "state": "COMPLETED",
       "payment": 2,
       "notifications": 4
     },
     "cancelled": {
-      "trip": "c43d2fd1-d29b-4661-b72b-5fd5bdade3f5",
-      "reservation": "4e184d0f-d0d7-457b-a5dd-31b9a7acfd15",
+      "trip": "12955b39-8083-4bd4-a16a-9c5c8dd303eb",
+      "reservation": "9fa779e5-915a-4e96-be06-427ad8de1d9c",
       "state": "CANCELLED",
       "compensation": "VOID",
       "payment": 2
     },
     "rejected": {
-      "trip": "cb61502a-24c2-4cd0-b2bf-94c700c9f73a",
-      "reservation": "d3c56106-41f9-43f8-80e0-9f3a8187a387",
+      "trip": "cf37f4e9-aa1b-4fac-a6bb-6f93319e854d",
+      "reservation": "7b34c974-26e5-4194-896d-298d0a942670",
       "state": "MATCH_FAILED",
       "reason": "DRIVER_REJECTED",
-      "replacementTrip": "f9288708-5e9c-44f7-9e22-4d9d90910131",
+      "replacementTrip": "c8376c22-4ba9-4c59-970c-e0627dafd4b7",
       "notifications": 5
     }
   },
   "scenarios": {
     "A-driver-reject": {
-      "trip": "cb61502a-24c2-4cd0-b2bf-94c700c9f73a",
+      "trip": "cf37f4e9-aa1b-4fac-a6bb-6f93319e854d",
       "state": "MATCH_FAILED",
       "releaseCompleted": true
     },
     "C-notification-outage": {
-      "trip": "1c8a0c51-1ab5-43f8-b2c3-83d7e4f3e03d",
+      "trip": "e3e997b2-d79a-405a-95a3-961e1441b6f9",
       "tripState": "COMPLETED",
       "notifications": 4
     },
     "D-reject-crash-replay": {
-      "trip": "752f8c51-1083-49fb-bff3-f95500fbeb9d",
+      "trip": "b5f01dda-c3ad-4e26-83bd-7f8358f93c6c",
       "replayed": true,
       "releaseIntents": 1
     }
