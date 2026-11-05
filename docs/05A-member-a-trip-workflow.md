@@ -2468,3 +2468,61 @@ Before issue close:
 > **Whenever A is unsure whether a Trip/Saga implementation is complete, ask: if the process dies immediately after this local commit, if the outgoing message is published twice, if the result arrives late after cancellation, and if the compensation itself is delayed, does durable state still tell the system exactly what the ride is, what work remains, which reservation/payment operation is current, and which legal state it must eventually reach?**
 
 If not, the Trip workflow is not complete.
+
+---
+
+# 37. DS03 Driver Reject implementation amendment (2026-11-05)
+
+> **Scope:** Trip-side implementation details for Doc 01 §40.1. The W01–W16
+> material above remains historical. This section defines the narrow Delta
+> needed for the DS03 “Driver rejects” statement.
+
+## 37.1 Aggregate delta
+
+```text
+Trip.FailureReason : TripFailureReason?   (persisted, nullable for historical rows)
+TripFailureReason   = NO_DRIVER_AVAILABLE | DRIVER_REJECTED
+
+RecordDriverRejected(driverId, reservationId, now):
+  terminal MATCH_FAILED + DRIVER_REJECTED with exact release intent
+      → Success(replay)
+  other terminal                         → TerminalState
+  empty identity                         → AssignmentRequired
+  not DRIVER_RESERVED                    → IllegalTransition
+  wrong driver/reservation               → AssignmentIdentityMismatch
+  otherwise:
+      add CancelMatching(round)
+      add ReleaseReservation(driver, reservation, round)
+      capture assignment identity
+      clear Assignment
+      FailureReason = DRIVER_REJECTED
+      MATCH_FAILED (version + 1)
+      Success(compensation = ReleaseReservation | CancelMatching)
+```
+
+`MarkMatchingFailed` sets `NO_DRIVER_AVAILABLE` for newly applied
+no-Driver outcomes. `Reconstitute` accepts an optional reason and keeps the
+canonical unassigned shape for `MATCH_FAILED`.
+
+## 37.2 Application handler and API
+
+`RecordDriverRejectedHandler` loads the Trip, snapshots existing cleanup keys,
+calls the aggregate once, stages every new wire cleanup intent through the
+existing `TripOutboxWriter` (`CancelMatchingRoundV1` +
+`ReleaseDriverReservationV1`) and commits the Trip state, cleanup intents,
+notification intent and Outbox rows in one `SaveChangesAsync`. A replay writes
+nothing.
+
+`POST /trips/{tripId}/reject` reuses the existing authenticated Driver
+transport: JWT `sub` → Driver-owned profile lookup → ownership check → exact
+`driverId`/`reservationId` body → aggregate. It returns the persisted state,
+`failure_reason`, `replayed` and `cleanupPending`; it never reports the
+reservation as already released.
+
+## 37.3 Required proof families
+
+R1–R20 (domain, HTTP, races, Outbox crash windows, release uncertainty, stale
+events, terminal monotonicity) plus the release-smoke Scenario A/D. Critical
+integration proofs use real PostgreSQL and RabbitMQ; no mock-only proof is
+accepted for release recovery. Reject must stage no payment command and must
+start no Saga.

@@ -3612,3 +3612,28 @@ Before promoting this file to **ACCEPTED/FROZEN**:
 > **The architecture is successful when a reviewer can intentionally create a race, stale read, duplicate delivery, lost response, process crash or broker interruption—and the team can point to one explicit authority, one stable logical identity, one durable recovery mechanism and one final-state assertion that explains why the system remains legal.**
 
 > **The goal is not the largest architecture. The goal is the smallest architecture deep enough to make distributed-systems correctness visible, breakable, recoverable and provable.**
+
+---
+
+# 26. DS03 functional-closure traceability (2026-11-05 amendment)
+
+> **Status:** post-W16 closure amendment. The business story in §3.1 is
+> unchanged; this section records how the two remaining DS03 statements are
+> now implemented and verified without expanding the architecture.
+
+| DS03 statement / claim | Canonical contract | Implementation | Verification |
+| --- | --- | --- | --- |
+| Drivers accept trips | Doc 01 §6.5, Doc 05A §18 | `POST /trips/{id}/accept` (existing) | FUN-06 + release-smoke Scenario B |
+| Drivers reject trips | Doc 01 §40, Doc 05A §37 | `POST /trips/{id}/reject`; `MATCH_FAILED/failure_reason=DRIVER_REJECTED`; exact release + matching cancellation | FUN-06B, R1–R20, release-smoke Scenario A/D |
+| One Driver cannot hold two active reservations | DSI-001, DSI-004, DSI-033 | Driver PostgreSQL reservation authority + exact-token release | existing CON/REL suites + reject release tests |
+| Rider receives notifications | Doc 01 §40.2, Doc 02 §43, Doc 05C §48 | `NotificationRequestedV1` → `notifications` inbox → `GET /notifications/me` | FUN-13, N1–N3/N5–N7, release-smoke Scenario B |
+| Driver receives notifications | Doc 01 §40.2, Doc 02 §43, Doc 05C §48 | `NotificationRequestedV1` from Driver Outbox → inbox API | FUN-14, N4/N7/N9–N10, release-smoke Scenario B |
+| Notification dedup | DSI-029, DSL-007 | `(source_message_id, recipient_user_id, notification_type)` + deterministic notification id | N12–N15, release-smoke Scenario C |
+| Notification failure is non-blocking | DSI-029, DSL-007 | asynchronous worker, independent `notification_db`, ACK-after-commit, bounded retry/DLQ | FUN-15, N16–N18, release-smoke Scenario C |
+| REST flow | Doc 00 §3.1 | Gateway + JWT-authenticated Trip/Notification HTTP | release-smoke Scenarios A/B |
+| RabbitMQ flow | Doc 02 §6/§43 | Outbox → `ride.events`/`ride.commands` → consumers | topology-smoke + release-smoke message identities |
+| Saga / compensation | Doc 01 §6, Doc 05A §18 | unchanged W10 Saga; reject occurs before authorization and starts no Saga | R20, release-smoke Scenario A |
+
+The original W01–W16 statements remain historical and are not rewritten. A
+`VERIFIED` status in this table requires the evidence bundle described in
+Doc 03 §42.3. No release tag is created by this amendment.

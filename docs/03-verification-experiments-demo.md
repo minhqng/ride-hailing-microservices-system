@@ -3307,3 +3307,82 @@ Before promoting Doc 03 to **ACCEPTED/FROZEN**:
 > **Every important distributed-systems claim must survive one adversarial question: “Can you make that failure or race happen on demand, and can you prove from authoritative final state—not from hope, timing, or screenshots—that the invariant still holds?”**
 
 > **If the answer is no, the claim is research/design intent, not yet verified engineering evidence.**
+
+---
+
+# 42. DS03 functional closure verification amendment (2026-11-05)
+
+> **Status:** normative verification amendment for the DS03 functional-closure
+> work. It adds explicit Driver Reject and recipient-notification acceptance
+> to the existing functional/fault/security taxonomy; existing FUN/CON/REL/
+> SEC cases are unchanged.
+
+## 42.1 Functional cases
+
+### FUN-06B — Driver rejects ride
+
+```text
+DRIVER_RESERVED
+→ authenticated current Driver POST /trips/{tripId}/reject
+  with exact driverId + reservationId
+→ Trip MATCH_FAILED (failure_reason=DRIVER_REJECTED)
+→ durable CancelMatchingRound + ReleaseDriverReservation intents
+→ outbox ReleaseDriverReservationV1 + CancelMatchingRoundV1
+→ Driver AVAILABLE with no reservation
+→ Matching round stays historical (RESERVED/CANCELLED); no new round
+→ Rider can create a new trip
+```
+
+Mandatory negatives: foreign Driver, Rider role, missing/invalid JWT, wrong
+reservation, stale generation, reject after accept, duplicate reject, reject
+vs accept/cancel race, release uncertainty, late events, no payment effect.
+
+### FUN-13 — Rider receives notifications
+
+A real Rider JWT can read `GET /notifications/me` and observes:
+ride requested, Driver assigned, Driver rejected/no Driver available, trip
+completed, and payment/cancellation outcomes where the canonical flow applies.
+
+### FUN-14 — Driver receives notifications
+
+A real Driver JWT can read `GET /notifications/me` and observes a Trip
+assignment and an exact reservation release/cancellation.
+
+### FUN-15 — Notification isolation and non-blocking delivery
+
+Cross-user reads return not-found; duplicate events produce one inbox row per
+recipient; the Notification worker can be stopped while the Trip completes;
+restart delivers the queued notifications without duplicates.
+
+## 42.2 Mandatory regression families
+
+```text
+R1–R20   Driver Reject domain, HTTP, race, crash/outbox, release and
+         terminal-monotonicity cases (Doc 05A §37).
+N1–N22   Recipient resolution, inbox isolation, dedup, replay, outage,
+         migration and content-safety cases (Doc 05C §48).
+```
+
+Critical integration cases use real PostgreSQL and RabbitMQ; release-smoke
+extends the real Production overlay with Scenarios A–D:
+
+```text
+A  Driver rejects a Trip (public API, exact release, terminal result,
+   new ride possible, Rider notification)
+B  Driver accepts, payment authorizes, ride starts/completes/captures,
+   both roles read their inboxes
+C  Notification worker stopped during a ride; Trip/Driver/Payment finish;
+   worker restart delivers queued notifications without duplicates
+D  Reject crash/replay at a durable boundary; Outbox/reconciliation
+   resumes; no duplicate effect and no illegal transition
+```
+
+## 42.3 Evidence rules for this amendment
+
+A claim is `VERIFIED` only when the evidence bundle records the exact source
+SHA/tree, environment and provider versions, HTTP request/result, JWT role
+(no secret or token), RabbitMQ message identities, authoritative Trip/Driver/
+Matching/Payment DB rows, notification DB rows, Outbox/processed-message
+records, TRX/test output and the final invariant-auditor result. Logs alone,
+event-row insertion alone, or an old W13 performance figure are never proof
+for this amendment.

@@ -2969,3 +2969,48 @@ Before promoting 04 to **ACCEPTED/FROZEN**:
 > **Do not optimize for the number of features completed. Optimize for the number of distributed-system claims that are implemented, intentionally broken, recovered, independently verified and explainable by more than one team member.**
 
 > **A feature without a correctness oracle is unfinished. A reliability mechanism without a deterministic failure proof is unverified. A benchmark without final-state invariants is incomplete. A subsystem understood by only one member is a release risk.**
+
+---
+
+# 50. DS03 functional-closure addendum (2026-11-05)
+
+> **Status:** bounded post-W16 closure work authorized by the project lead.
+> It closes exactly two DS03 statements — “Drivers accept or reject trips”
+> and “Send notifications to passengers and drivers” — and does not reopen
+> W01–W16, G4/G5, or the accepted release-candidate code.
+
+## 50.1 Phases and ownership
+
+| Phase | Deliverable | Owner | Review gate |
+| --- | --- | --- | --- |
+| 1 | Canonical Reject and notification policy (`docs/ds03-functional-policy`) | A + C | Reviewer confirms no frozen semantic is weakened. |
+| 2 | Trip Reject state/cleanup/API; Driver exact release; Matching consistency (`feature/ds03-driver-reject`) | A + B | Independent P0/P1 review; real PostgreSQL tests; no rematch, no payment. |
+| 3 | Recipient-addressed notification intent, in-app inbox and JWT read API (`feature/ds03-recipient-notifications`) | C | Independent review of recipient mapping, cross-user isolation, dedup and non-blocking behavior. |
+| 4 | Integration, release-smoke Scenarios A–D, full regression, DS03 matrix (`integration/ds03-final-acceptance`) | Shared integrator | Exact-tree CI; authority audit; evidence anchored to the tested SHA. |
+
+Authorization and authorship follow `AGENTS.md`: implementation credit follows
+actual execution, review does not become co-authorship, and history is not
+rewritten. The integrator may merge normal gated PRs but may not bypass branch
+protection, required reviews or exact-tree CI.
+
+## 50.2 Gate
+
+The DS03 closure gate is:
+
+```text
+Driver Reject end-to-end:                 PASS
+Exact reservation release/recovery:       PASS
+Rider notification availability:          PASS
+Driver notification availability:         PASS
+Notification dedup/isolation/outage:      PASS
+Full regression (new tests included):     0 failures
+Release-smoke Scenarios A–D:              PASS on the tested SHA
+Final main CI:                            SUCCESS
+Release tag v1.0.0:                       NOT CREATED
+```
+
+Any unresolved cleanup obligation, cross-user inbox exposure, false release
+claim, skipped failure-window test, or missing authority proof blocks the
+gate. If a policy ambiguity requires a formal owner decision, independent
+preparation may finish but the affected merge stops and the exact choice is
+reported.
