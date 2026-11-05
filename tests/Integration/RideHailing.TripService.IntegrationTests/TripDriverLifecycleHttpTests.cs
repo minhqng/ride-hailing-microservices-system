@@ -414,9 +414,38 @@ public sealed class TripDriverLifecycleHttpTests : IDisposable
         Assert.Single(persisted.CleanupIntents, i => i.Kind == TripCleanupKind.CancelMatching);
         Assert.Equal(1, await IntentCountAsync(trip.TripId, "ReleaseDriverReservationV1"));
         Assert.Equal(1, await IntentCountAsync(trip.TripId, "CancelMatchingRoundV1"));
+
+        // The exact release fence is in the staged command, not only in the
+        // cleanup intent: a wrong/missing tuple would dead-end at Driver.
+        await using (var db = new TripDbContext(PlainOptions()))
+        {
+            var releaseRow = await db.OutboxMessages.AsNoTracking().SingleAsync(m =>
+                m.AggregateId == trip.TripId.ToString("D") &&
+                m.MessageType == "ReleaseDriverReservationV1");
+            Assert.Equal($"trip:{trip.TripId:N}:release:{trip.ReservationId:N}", releaseRow.MessageId);
+            Assert.Equal(releaseRow.MessageId, releaseRow.OperationKey);
+            using var payload = JsonDocument.Parse(releaseRow.PayloadJson);
+            Assert.Equal(trip.TripId, payload.RootElement.GetProperty("tripId").GetGuid());
+            Assert.Equal(trip.DriverId, payload.RootElement.GetProperty("driverId").GetGuid());
+            Assert.Equal(trip.ReservationId, payload.RootElement.GetProperty("reservationId").GetGuid());
+            Assert.Equal(1, payload.RootElement.GetProperty("matchingRound").GetInt32());
+        }
         Assert.Equal(0, await IntentCountAsync(trip.TripId, "AuthorizePaymentV1"));
         Assert.Equal(0, await IntentCountAsync(trip.TripId, "CapturePaymentV1"));
         Assert.Equal(0, await IntentCountAsync(trip.TripId, "VoidPaymentAuthorizationV1"));
+
+        // The Rider-visible authoritative read surface distinguishes a Driver
+        // rejection from a no-Driver matching failure.
+        var get = new HttpRequestMessage(HttpMethod.Get, $"/trips/{trip.TripId:D}");
+        get.Headers.Add(TestPrincipalStartupFilter.NameIdentifierHeader, trip.RiderId.ToString("D"));
+        get.Headers.Add(TestPrincipalStartupFilter.RoleHeader, "Rider");
+        using (var read = await _client.SendAsync(get))
+        {
+            Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+            var view = await read.Content.ReadFromJsonAsync<GetTripResponse>();
+            Assert.Equal("MATCH_FAILED", view!.Status);
+            Assert.Equal("DRIVER_REJECTED", view.FailureReason);
+        }
 
         // Duplicate reject is a replay: no second obligation, no version change.
         using var replay = await _client.SendAsync(

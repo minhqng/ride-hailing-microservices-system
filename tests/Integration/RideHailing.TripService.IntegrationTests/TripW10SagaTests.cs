@@ -250,10 +250,24 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         await using (var db2 = Context(upgradeCs))
         {
             await db2.Database.MigrateAsync("20261025031423_W09_TripOutbox");
+            // Write through the historical W09 schema: the current EF mapping
+            // includes the later failure_reason column, which does not exist
+            // at this boundary. The transient aggregate only supplies the
+            // producer intent identity; it is not inserted through EF.
             var trip = Trip.Create(Guid.NewGuid(), Guid.NewGuid(), new(10.7, 106.6), new(10.8, 106.7),
                 new("VND", 50000m, "w10", Now), Now);
             trip.StartMatching(Now);
-            db2.Trips.Add(trip);
+            await db2.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO trips (
+                    trip_id, rider_id, state, version, created_at,
+                    pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude,
+                    fare_currency, fare_amount, fare_policy_version, fare_created_at,
+                    current_matching_round, updated_at)
+                VALUES (
+                    {trip.TripId}, {trip.RiderId}, 'MATCHING', {trip.Version}, {trip.CreatedAt},
+                    10.7, 106.6, 10.8, 106.7,
+                    'VND', 50000, 'w10', {Now}, 1, {trip.UpdatedAt})
+                """);
             db2.OutboxMessages.Add(TripOutboxMessage.From(TripOutboxIntents.RideRequested(trip, Now)));
             await db2.SaveChangesAsync();
             tripId = trip.TripId;

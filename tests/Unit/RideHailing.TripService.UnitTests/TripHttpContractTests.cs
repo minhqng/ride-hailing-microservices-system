@@ -125,7 +125,7 @@ public sealed class TripHttpContractTests
         };
 
         using var doc = JsonDocument.Parse(JsonSerializer.Serialize(response, Json));
-        foreach (var name in new[] { "tripId", "status", "pickup", "dropoff", "matchingRound", "assignedDriverId", "reservationId" })
+        foreach (var name in new[] { "tripId", "status", "pickup", "dropoff", "matchingRound", "assignedDriverId", "reservationId", "failureReason" })
         {
             Assert.True(doc.RootElement.TryGetProperty(name, out _), $"missing wire property '{name}'");
         }
