@@ -385,7 +385,10 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
         await using (var verify = Context(cs))
         {
             Assert.Equal(TripState.Matching, (await verify.Trips.AsNoTracking().SingleAsync()).State);
-            Assert.Single(await IntentsAsync(cs, trip.TripId));
+            var intents = await IntentsAsync(cs, trip.TripId);
+            Assert.Equal(2, intents.Count);
+            Assert.Single(intents, i => i.MessageType == "RideRequestedV1");
+            Assert.Single(intents, i => i.MessageType == "NotificationRequestedV1");
         }
     }
 
@@ -496,8 +499,11 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
             var saved = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == trip.TripId);
             Assert.Equal(TripState.Matching, saved.State);
             Assert.Equal(trip.Version + 1, saved.Version);
-            var intent = Assert.Single(await IntentsAsync(cs, trip.TripId));
-            Assert.Equal(TripOutboxIntents.RideRequestedMessageId(saved), intent.MessageId);
+            var intents = await IntentsAsync(cs, trip.TripId);
+            Assert.Equal(2, intents.Count);
+            Assert.Equal(TripOutboxIntents.RideRequestedMessageId(saved),
+                Assert.Single(intents, i => i.MessageType == "RideRequestedV1").MessageId);
+            Assert.Single(intents, i => i.MessageType == "NotificationRequestedV1");
         }
 
         // Replay of the committed transition must not append anything.
@@ -509,7 +515,7 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
             Assert.True(result.IsReplay);
         }
 
-        Assert.Single(await IntentsAsync(cs, trip.TripId));
+        Assert.Equal(2, (await IntentsAsync(cs, trip.TripId)).Count);
     }
 
     [Fact]
@@ -559,10 +565,11 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
             // The loser's mutation did not commit: exactly one terminal
             // reservation record past the seeded Created row.
             Assert.Equal(trip.Version + 3, saved.Version);
-            // Winner's outgoing obligation is durable exactly once: the
-            // original RideRequested + CancelMatchingRound + one Release.
+            // Winner's outgoing obligations are durable exactly once: the
+            // original RideRequested + its recipient notification + the
+            // CancelMatchingRound + the cancelled notification + one Release.
             var intents = await IntentsAsync(cs, trip.TripId);
-            Assert.Equal(3, intents.Count);
+            Assert.Equal(5, intents.Count);
             var release = Assert.Single(intents, i => i.MessageType == "ReleaseDriverReservationV1");
             Assert.Equal($"trip:{trip.TripId:N}:release:{reservationId:N}", release.MessageId);
             Assert.Equal("PENDING", release.Status);
@@ -585,7 +592,7 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
             var saved = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == trip.TripId);
             Assert.Equal(TripState.Cancelled, saved.State);
             Assert.Equal(trip.Version + 3, saved.Version);
-            Assert.Equal(3, (await IntentsAsync(cs, trip.TripId)).Count);
+            Assert.Equal(5, (await IntentsAsync(cs, trip.TripId)).Count);
             var loserReceipt = await verify.MessageReceipts.AsNoTracking()
                 .SingleAsync(r => r.MessageId == loser.MessageId);
             Assert.Equal("BusinessReplay", loserReceipt.Disposition);
@@ -617,9 +624,10 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
         await using (var verify = Context(cs))
         {
             var intents = await IntentsAsync(cs, trip.TripId);
-            Assert.Equal(2, intents.Count);
+            Assert.Equal(4, intents.Count);
             Assert.Single(intents, i => i.MessageType == "RideRequestedV1");
             Assert.Single(intents, i => i.MessageType == "CancelMatchingRoundV1");
+            Assert.Equal(2, intents.Count(i => i.MessageType == "NotificationRequestedV1"));
         }
 
         // Broker-free create-path intake is idempotent as well.
@@ -636,8 +644,11 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
         {
             var saved = await verify.Trips.AsNoTracking().SingleAsync(t => t.TripId == intakeTrip.TripId);
             Assert.Equal(TripState.Matching, saved.State);
-            var intent = Assert.Single(await IntentsAsync(cs, intakeTrip.TripId));
-            Assert.Equal(TripOutboxIntents.RideRequestedMessageId(saved), intent.MessageId);
+            var intents = await IntentsAsync(cs, intakeTrip.TripId);
+            Assert.Equal(2, intents.Count);
+            Assert.Equal(TripOutboxIntents.RideRequestedMessageId(saved),
+                Assert.Single(intents, i => i.MessageType == "RideRequestedV1").MessageId);
+            Assert.Single(intents, i => i.MessageType == "NotificationRequestedV1");
         }
     }
 
@@ -656,7 +667,7 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
                 NullLogger<CancelRideHandler>.Instance).HandleAsync(trip.TripId, trip.RiderId)).IsSuccess);
 
         var before = await IntentsAsync(cs, trip.TripId);
-        Assert.Equal(2, before.Count);
+        Assert.Equal(4, before.Count);
 
         // Terminal state rejects a re-open attempt without any new intent.
         await using (var db = Context(cs))
@@ -713,8 +724,10 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
                 NullLogger<CancelRideHandler>.Instance).HandleAsync(trip.TripId, trip.RiderId)).IsSuccess);
 
         var intents = await IntentsAsync(cs, trip.TripId);
-        Assert.Equal(3, intents.Count);
+        Assert.Equal(6, intents.Count);
         Assert.Single(intents, i => i.MessageType == "RideRequestedV1");
+        // Requested + assigned + cancelled: one per logical Rider-visible fact.
+        Assert.Equal(3, intents.Count(i => i.MessageType == "NotificationRequestedV1"));
 
         var cancel = Assert.Single(intents, i => i.MessageType == "CancelMatchingRoundV1");
         Assert.Equal(RideTopology.CommandsExchange, cancel.Exchange);
@@ -764,7 +777,7 @@ public sealed class TripW09OutboxTests(TripPostgresFixture fixture)
                 .HandleAsync("trip.driver-state.q", envelope, default);
 
         var intents = await IntentsAsync(cs, trip.TripId);
-        Assert.Equal(3, intents.Count);
+        Assert.Equal(5, intents.Count);
         var release = Assert.Single(intents, i => i.MessageType == "ReleaseDriverReservationV1");
         Assert.Equal($"trip:{trip.TripId:N}:release:{reservationId:N}", release.MessageId);
         Assert.Equal(reservationId, Payload(release).GetProperty("reservationId").GetGuid());

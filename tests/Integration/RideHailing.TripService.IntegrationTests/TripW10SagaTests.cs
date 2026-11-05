@@ -954,7 +954,7 @@ public sealed class TripW10SagaTests(TripPostgresFixture fixture)
         // each logical message, all PENDING for the relay.
         var intents = await IntentsAsync(cs, tripId);
         Assert.Equal(
-            new HashSet<string> { "RideRequestedV1", "AuthorizePaymentV1", "MarkDriverTripStartedV1", "CapturePaymentV1", "MarkDriverTripCompletedV1" },
+            new HashSet<string> { "RideRequestedV1", "AuthorizePaymentV1", "MarkDriverTripStartedV1", "CapturePaymentV1", "MarkDriverTripCompletedV1", "NotificationRequestedV1" },
             intents.Select(m => m.MessageType).ToHashSet());
         Assert.All(intents, m => Assert.Equal("PENDING", m.Status));
         var authorize = intents.Single(m => m.MessageType == "AuthorizePaymentV1");

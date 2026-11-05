@@ -13,6 +13,7 @@ SUITES = [
     "RideHailing.IdentityService.IntegrationTests",
     "RideHailing.MatchingService.UnitTests",
     "RideHailing.MatchingService.IntegrationTests",
+    "RideHailing.NotificationService.IntegrationTests",
     "RideHailing.NotificationWorker.UnitTests",
     "RideHailing.PaymentService.UnitTests",
     "RideHailing.PaymentService.IntegrationTests",
@@ -138,7 +139,7 @@ class TrxExecutionGateTests(unittest.TestCase):
             write_suites(d)
             (Path(d) / "suite0.trx").unlink()
             trx(Path(d) / "system.trx", "RideHailing.SystemTests")
-            result = check(d, minimum="1000", files="11",
+            result = check(d, minimum="1000", files="12",
                            extra=["--require-suite",
                                   "ridehailing.b12audit.tests:1"])
             self.assertNotEqual(0, result.returncode)
@@ -147,7 +148,7 @@ class TrxExecutionGateTests(unittest.TestCase):
     def test_required_suite_minimum_enforced(self):
         with tempfile.TemporaryDirectory() as d:
             write_suites(d)
-            result = check(d, minimum="1000", files="12",
+            result = check(d, minimum="1000", files="13",
                            extra=["--require-suite",
                                   "ridehailing.identityservice.integrationtests:101"])
             self.assertNotEqual(0, result.returncode)
@@ -156,7 +157,7 @@ class TrxExecutionGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             write_suites(d, skip_identity=True)
             trx(Path(d) / "system.trx", "RideHailing.SystemTests")
-            result = check(d, minimum="1199", files="12", skipped="1",
+            result = check(d, minimum="1199", files="13", skipped="1",
                            extra=["--allowed-skip", KNOWN_SKIP,
                                   "--required-suites-file",
                                   str(SCRIPT.with_name("required-suites.txt"))])

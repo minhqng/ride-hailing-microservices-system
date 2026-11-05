@@ -61,6 +61,9 @@ public sealed class StartMatchingHandler
             // one local transaction. A crash or broker outage after this
             // commit leaves a pending row for the relay, never a lost message.
             TripOutboxWriter.Enqueue(_db, TripOutboxIntents.RideRequested(trip, trip.UpdatedAt));
+            // DS03: the Rider-visible "request created" notification is a
+            // non-authoritative intent committed with the same transition.
+            TripOutboxWriter.Enqueue(_db, TripNotificationIntents.RideRequested(trip, trip.UpdatedAt));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 

@@ -132,9 +132,10 @@ public sealed class TripW11FaultProcessTests(TripPostgresFixture postgres, TripR
             Assert.Equal(seed.SagaStepVersion, saga.StepVersion);
             Assert.Equal("PUBLISHED", intent!.Status);
             Assert.Equal(0, intent.AttemptCount); // the crash burned no publication attempt.
-            // Exactly the two staged-by-transition intents exist (RideRequested
-            // + AuthorizePayment): the restart added nothing.
-            Assert.Equal(2, await TripW11Harness.OutboxCountAsync(connectionString, seed.TripId));
+            // Exactly the staged-by-transition intents exist (RideRequested +
+            // its Rider notification + the assignment notification +
+            // AuthorizePayment): the restart added nothing.
+            Assert.Equal(4, await TripW11Harness.OutboxCountAsync(connectionString, seed.TripId));
         }
     }
 

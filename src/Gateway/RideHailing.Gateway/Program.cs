@@ -40,8 +40,10 @@ builder.Services.AddReverseProxy().LoadFromMemory(
      Route("driver-read", "Driver", "/drivers/{id:guid}", ["GET"]),
      Route("driver-online", "Driver", "/drivers/{id:guid}/online", ["POST"]),
      Route("driver-offline", "Driver", "/drivers/{id:guid}/offline", ["POST"]),
-     Route("driver-location", "Driver", "/drivers/{id:guid}/location", ["POST"])],
-    [Cluster("Identity", "http://identity:8080/"), Cluster("Trip", "http://trip:8080/"), Cluster("Driver", "http://driver:8080/")]);
+     Route("driver-location", "Driver", "/drivers/{id:guid}/location", ["POST"]),
+     Route("notifications", "Notification", "/notifications/{**remainder}", ["GET", "POST"])],
+    [Cluster("Identity", "http://identity:8080/"), Cluster("Trip", "http://trip:8080/"),
+     Cluster("Driver", "http://driver:8080/"), Cluster("Notification", "http://notification:8080/")]);
 
 var app = builder.Build();
 app.UseAuthentication();

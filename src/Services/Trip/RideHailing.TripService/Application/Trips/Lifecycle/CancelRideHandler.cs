@@ -124,6 +124,7 @@ public sealed class CancelRideHandler
         // intents commit atomically. The ReconcilePayment intent resolves via
         // the W10 payment outcome/void lineage, not a published command here.
         TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
+        TripOutboxWriter.Enqueue(_db, TripNotificationIntents.Cancelled(trip, trip.UpdatedAt));
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // A-W12-02: post-commit observation only — the committed saga status
