@@ -6,8 +6,8 @@
 // ordering is enforced by lifecycle state (DSI-026: READY_TO_START is the
 // local proof that authorization was recorded) and, when a saga exists, by
 // the saga's authorized-ride phase as a second guard (Doc 05A §18.3
-// A-W10-05). Driver transport authentication belongs to the future
-// edge/middleware owner.
+// A-W10-05). Driver transport authentication and profile binding are
+// enforced by the public lifecycle endpoint; this handler stays HTTP-independent.
 //
 // W10 obligations committed atomically with each FIRST transition:
 //   Start:    Trip IN_PROGRESS + Outbox MarkDriverTripStartedV1 (B owns the

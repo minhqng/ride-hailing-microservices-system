@@ -5,7 +5,8 @@
 // assignment. The supplied driver/reservation identity is fenced against the
 // authoritative current assignment by the aggregate: a wrong driver, a stale
 // reservation, or a wrong lifecycle state changes nothing. Driver transport
-// authentication belongs to the future edge/middleware owner.
+// authentication and profile binding are enforced by the public lifecycle
+// endpoint; this handler stays HTTP-independent.
 //
 // W10: the FIRST applied acceptance starts the persisted ride saga and
 // stages the AuthorizePayment(K) outbox intent in the SAME transaction

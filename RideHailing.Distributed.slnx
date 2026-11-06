@@ -5,7 +5,6 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/">
-    <Project Path="src/BuildingBlocks/RideHailing.Contracts/RideHailing.Contracts.csproj" />
     <Project Path="src/BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
     <Project Path="src/BuildingBlocks/RideHailing.Observability/RideHailing.Observability.csproj" />
     <Project Path="src/BuildingBlocks/RideHailing.Security/RideHailing.Security.csproj" />
