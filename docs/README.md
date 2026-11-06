@@ -41,10 +41,10 @@ part of the design contract.
 | [demo.md](demo.md) | 7–10 minute team demonstration and failure drill |
 | [driver-matching-demo.md](driver-matching-demo.md) | Extended Driver/Matching rehearsal runbook |
 | [driver-matching-defense.md](driver-matching-defense.md) | Driver/Matching defense workbook |
-| [team-technical-report.md](team-technical-report.md) | Technical report source (report.pdf is generated from the consolidated report) |
-| [member-a-trip-saga-report.md](member-a-trip-saga-report.md) | Member A technical report |
-| [driver-matching-report.md](driver-matching-report.md) | Member B technical report |
-| [member-c-reliability-report.md](member-c-reliability-report.md) | Member C technical report |
+| [team-technical-report.md](team-technical-report.md) | W15 technical report source (historical; the final report is [report.pdf](report.pdf)) |
+| [member-a-trip-saga-report.md](member-a-trip-saga-report.md) | Member A technical report source |
+| [driver-matching-report.md](driver-matching-report.md) | Member B technical report source |
+| [member-c-reliability-report.md](member-c-reliability-report.md) | Member C technical report source |
 
 ## 4. Release and provenance records
 
