@@ -1,79 +1,115 @@
-# Release candidate — distributed ride-hailing platform
+# Release v1.0.0
 
-Status: **source release candidate assembled; not tagged or published.**
+Status: **final release.** The annotated tag `v1.0.0` points at the commit
+that contains this document. The exact commit SHA, tree object and evidence
+anchors are recorded in
+[evidence/release/v1.0.0/manifest.json](../evidence/release/v1.0.0/manifest.json)
+and on the GitHub Release page.
 
-This document prepares the final release. It does not create a Git tag or a
-GitHub Release. Creating either requires separate project-lead authorization
-after the course's human rehearsal and oral-defense gates are complete.
+This document is the deployment and release record. It does not replace the
+canonical contracts in Docs 00–03.
 
-## Candidate identity
+## Release identity
 
-- Suggested version/tag: `v1.0.0` (Doc 04 §27 example; **not created**).
-- Base: W15-verified main.
-- Candidate source: the commit containing this document. The exact commit,
-  tree, CI checkout and evidence hashes are recorded in
-  `evidence/team/w16-integration/manifest.json`.
-- Source scope: W09–W16 product and evidence on W14 accepted main. W15/W16 add
-  reports, evidence, release configuration, CI gates, demo tooling and one
-  Matching integration test; they do not add a service, broker, database
-  technology, orchestration framework or new product feature.
+| Item | Value |
+|---|---|
+| Version | `v1.0.0` |
+| Tag type | Annotated |
+| Release date | 2026-11-06 |
+| Base | `main` after the DS03 functional closure and aud remediation |
+| Report | [report.pdf](report.pdf) |
+| Slides | [slides.pdf](slides.pdf) |
+| Verification record | [verification.md](verification.md) |
 
-## Changelog (W11–W16)
+## What ships
 
-- W11: deterministic faultpoint and real process crash/restart proofs.
-- W12: driver/matching recovery repair, observability, authorization negatives,
-  invariant auditor and G4 acceptance.
-- W13: frozen-environment performance campaigns E01–E04 with correctness
-  checks and measured populations.
-- W14: quorum broker HA, backlog recovery and G5 real-provider evidence.
-- W15: feature freeze, member technical reports, team report, fail-closed
-  release overlay, secret scanner and integration evidence.
-- W16: release/demo tooling, defense workbook, deterministic release gate,
-  exact-tree CI, automated technical rehearsals and this release candidate.
+- Five business services: Identity, Driver, Trip, Matching, Payment.
+- Notification worker and YARP API Gateway.
+- Service-owned PostgreSQL databases and roles, RabbitMQ quorum queues and a
+  derived Redis GEO index.
+- Transactional Outbox, deduplication, persisted Trip Saga, bounded retry,
+  dead-lettering, UNKNOWN reconciliation and invariant auditing.
+- DS03 functionality: registration/login/roles, driver status and location,
+  ride creation, matching, accept/reject, single assignment, lifecycle,
+  fare/payment simulation and recipient-addressed notifications.
+- Verification suites, evidence bundles, deployment configuration, the final
+  report and presentation slides.
 
-## Member contributions
+## Verified results
 
-- A: Trip aggregate/Saga/Outbox, compensation and capture recovery, Trip
-  observability/auditor, W15/W16 reports and demo/gate scripts.
-- B: Driver reservation authority, durable Matching/UNKNOWN recovery, Redis
-  derived projection, E01–E04 measurements, clean-clone freeze evidence and
-  W16 live rehearsal/defense material.
-- C: Payment idempotency, messaging reliability, deduplication/Outbox relay,
-  DLQ/retry ownership, observability, broker HA harness, release overlay,
-  secret scanner and release gate.
+The release verification record is [verification.md](verification.md). In
+summary:
 
-## Build and deploy (development)
+- Full .NET regression: **1,341 passed, 0 failed, 1 documented opt-in skip**
+  across 13 executable suites; TRX gate PASS.
+- Production overlay smoke: **19/19 checks PASS**, including external
+  migrations, a completed ride, cancellation/void, driver rejection,
+  notification-outage isolation and reject-commit crash replay.
+- Static gates: secret scan PASS (1,340 tracked paths), hygiene self-test
+  24/24, source-anchor fixtures 12/12.
+- Performance and HA evidence: W13 E01–E04 and W14 quorum/broker recovery,
+  with raw samples and analysis retained under `evidence/`.
+- GitHub Actions exact-tree runs for the integrated candidates are recorded in
+  `evidence/team/w15-integration/` and `evidence/team/w16-integration/`.
+
+## Prerequisites
+
+- Docker Engine or Docker Desktop with Compose v2.
+- Python 3.10+ and OpenSSL for disposable credential initialization.
+- For the Production overlay migration step: .NET 10 SDK on the host, or the
+  documented SDK container command. The development stack does not require a
+  host SDK.
+
+## Clean-clone deployment (development)
 
 ```bash
-python scripts/security/init-local-auth.py
-docker compose --profile obs up -d --build
-python scripts/test/platform-smoke.py
-python scripts/test/security-gate.py --identity-tests
-python scripts/test/core-runtime-gate.py
-python scripts/test/payment-smoke.py
-python scripts/test/topology-smoke.py
+git clone https://github.com/minhqng/ride-hailing-microservices-system.git
+cd ride-hailing-microservices-system
+git checkout v1.0.0
+cp .env.example .env
+python3 scripts/security/init-local-auth.py
+docker compose up -d --build
 ```
 
-## Production release procedure (runtime-tested)
+Verify readiness:
 
-The release overlay must be started and exercised, not only rendered. The
-automated form of this procedure is `scripts/test/release-smoke.py` and the
-`release-smoke` CI job; the manual form is:
+```bash
+for port in 8080 8101 8102 8103 8104 8105 8106; do
+  curl -fsS "http://localhost:${port}/health/ready" && echo
+done
+```
 
-1. Use a clean clone or clean worktree at the candidate SHA. Choose an
-   isolated project so no development volume or container is touched:
-   `export COMPOSE_PROJECT_NAME=ride-release-<unique>`.
+The development stack uses `TRIP_AUTO_MIGRATE=true` so a fresh volume can
+start without a separate migration job. `.env` and generated keys are
+gitignored; never commit them.
+
+## Production release overlay
+
+The overlay must be started and exercised, not only rendered. The automated
+form is `python3 scripts/test/release-smoke.py`; the manual form is:
+
+1. Use a clean clone or clean worktree at the release commit. Choose an
+   isolated Compose project so no development volume or container is touched:
+
+   ```bash
+   export COMPOSE_PROJECT_NAME=ride-release-<unique>
+   ```
+
 2. Supply every mandatory secret explicitly. The overlay fails closed when any
    of the eight database/broker passwords or the four authentication values is
    absent: `POSTGRES_PASSWORD`, `IDENTITY_DB_PASSWORD`, `DRIVER_DB_PASSWORD`,
    `TRIP_DB_PASSWORD`, `MATCHING_DB_PASSWORD`, `PAYMENT_DB_PASSWORD`,
-   `NOTIFICATION_DB_PASSWORD`, `RABBITMQ_PASSWORD`, `AUTH_PUBLIC_KEY_BASE64`,
-   `AUTH_PRIVATE_KEY_BASE64`, `AUTH_MATCHING_SECRET`, `AUTH_TRIP_SECRET`.
+   `NOTIFICATION_DB_PASSWORD`, `RABBITMQ_PASSWORD`,
+   `AUTH_PUBLIC_KEY_BASE64`, `AUTH_PRIVATE_KEY_BASE64`,
+   `AUTH_MATCHING_SECRET`, `AUTH_TRIP_SECRET`.
+
    `python3 scripts/security/init-local-auth.py` creates a disposable local
    key pair and client secrets in ignored `.env`; release operators replace
    every value with environment-specific secrets. Never commit or print them.
-3. Start PostgreSQL/Redis/RabbitMQ, then apply Trip migrations externally from
-   the empty database (the overlay disables Trip auto-migration):
+
+3. Start PostgreSQL, Redis and RabbitMQ, then apply Trip migrations externally
+   from the empty database (the overlay disables Trip auto-migration):
+
    ```bash
    dotnet tool restore
    ConnectionStrings__Postgres="Host=127.0.0.1;Port=5432;Database=trip_db;Username=trip_app;Password=$TRIP_DB_PASSWORD" \
@@ -83,88 +119,70 @@ automated form of this procedure is `scripts/test/release-smoke.py` and the
      --startup-project src/Services/Trip/RideHailing.TripService \
      -c TripDbContext --configuration Release
    ```
+
 4. Start the overlay:
+
    ```bash
    docker compose -f compose.yaml -f deploy/compose/compose.release.yaml up -d --build
    ```
+
    The overlay forces `TripMessaging__Enabled=true`,
-   `TripDatabase__AutoMigrate=false` and `ASPNETCORE_ENVIRONMENT=Production`.
-   Services declare the RabbitMQ topology on startup. Payment's simulator
-   routes exist only in Development, so a Production payment plan has no
-   remote decline control; the decline path is verified by the Payment
-   integration suite against the real PostgreSQL provider simulator.
-5. Wait for `/health/ready` on gateway `:8080`, identity `:8101`, driver
-   `:8102`, trip `:8103`, matching `:8104` and payment `:8105`, then run real
-   authenticated journeys. `scripts/test/release-smoke.py` performs the full
-   automated check: fail-closed renders, external migrations, Production
-   environment assertions, topology, a completed ride and a cancellation/void
-   compensation, independent authority reads, and teardown that preserves
-   unrelated Docker resources.
+   `TripDatabase__AutoMigrate=false` and `ASPNETCORE_ENVIRONMENT=Production`,
+   and enables the Payment reconciliation worker. Payment's simulator routes
+   exist only in Development, so a Production deployment has no remote decline
+   control; the decline path is verified by the Payment integration suite
+   against the real PostgreSQL provider simulator.
+
+5. Wait for `/health/ready` on the gateway (`:8080`), identity (`:8101`),
+   driver (`:8102`), trip (`:8103`), matching (`:8104`), payment (`:8105`) and
+   notification (`:8106`), then run real authenticated journeys.
+
 6. Tear down only the isolated project:
-   `docker compose -f compose.yaml -f deploy/compose/compose.release.yaml down -v`.
 
-The `release-smoke` CI job runs this procedure on a fresh runner with
-disposable secrets and uploads `plans/reports/release-smoke.json`; it is the
-runtime proof that the Production overlay actually starts and processes real
-business work.
+   ```bash
+   docker compose -f compose.yaml -f deploy/compose/compose.release.yaml down -v
+   ```
 
-## Clean-clone guide
+## Upgrade and rollback
 
-Use a fresh clone or a clean worktree at the candidate commit. Run
-`python scripts/security/init-local-auth.py`, then the Compose command above.
-The exact-tree GitHub CI performs a fresh checkout, restore, Release build,
-full test suite, Compose startup, security gate, core-runtime gate, payment
-smoke and topology smoke.
+There is no earlier published release. To roll back a deployment, check out a
+previous verified `main` commit and redeploy with a separate Compose project;
+do not move or delete the `v1.0.0` tag. Database migrations are forward-only
+for this course release; restore the disposable volume or apply the documented
+migration procedure when rebuilding an environment.
 
-## Evidence
+## Security
 
-- W14 G4/G5 accepted evidence: `evidence/team/w14-integration/`.
-- W15 freeze/report evidence: `evidence/team/w15-integration/`.
-- W16 release evidence: `evidence/team/w16-integration/`.
-- Member reports: `docs/member-a-trip-saga-report.md`,
-  `docs/driver-matching-report.md`, `docs/member-c-reliability-report.md`.
-- Team report: `docs/team-technical-report.md`.
-
-## Rehearsal status
-
-- Automated technical rehearsals: B's real-provider harness executes three
-  independent empty-volume trials plus shared complete/cancel/decline journeys;
-  the integrated core-runtime gate executes completed, cancellation/void and
-  terminal-decline scenarios with AUD-01..08. A and C provide labelled demo
-  aids, not substitutes for authority proof.
-- Human team rehearsals: **PENDING**. Automation reports
-  `humanParticipation: NOT PERFORMED`.
-- Oral defense drills and A/C peer sign-off: **PENDING**.
-
-## Security and release controls
-
-- Secret scan: PASS on the exact candidate; 55 real HTTP security checks and
-  seven dedicated Identity negative cases pass in CI.
-- Release overlay: renders with all eight explicit secrets; a secretless
-  render fails closed with `must be set for the release overlay`.
-- No credentials are written to evidence; `.env` and `secrets/` are ignored.
-- No branch protection bypass, force-push or contributor-branch deletion is
-  part of this release.
+- No credentials are committed. `.env`, `secrets/` and generated keys are
+  ignored.
+- The release overlay fails closed without every mandatory secret.
+- JWT validation enforces signature, issuer, audience, lifetime and algorithm.
+- Driver routes bind the authenticated actor to the Driver-owned profile.
+- Notification reads are owner-isolated from the JWT subject.
+- Request bodies and message sizes are bounded.
+- The secret scanner runs in CI and reports no high-confidence secret.
 
 ## Known limitations
 
-- Human rehearsals, oral defense and peer sign-off cannot be produced by
-  automation and remain final submission gates.
-- The HA evidence covers the recorded quorum/broker scenario, not whole-system
-  or multi-region HA.
-- Performance results are measurements of the recorded single-host workloads,
+- Payment is a simulated provider with durable idempotency and reconciliation;
+  it is not connected to a real card network or bank.
+- Notifications are an in-app inbox; there is no SMS, email or mobile push.
+- HA evidence covers a single-host RabbitMQ quorum scenario, not whole-system
+  or multi-region high availability.
+- Performance results describe the recorded single-host workloads; they are
   not production capacity claims.
-- A's mock dashboard workflow and C's mock traffic generator are presentation
-  aids; they are not end-to-end business correctness proof.
-- The final tag/GitHub Release is not created by this document.
+- Human team rehearsal, oral defense and peer sign-off are course-process
+  activities performed by the team. The repository provides the executable
+  demo and verified technical evidence.
 
 ## Release checklist
 
-- [x] Source freeze and member/team reports
+- [x] Source freeze, service documentation and member/team reports
 - [x] Fail-closed release configuration and secret scan
-- [x] Exact-tree CI on the final candidate
-- [x] Automated technical rehearsals and integrated authority journeys
+- [x] Exact-tree CI on integrated candidates and local release gates
+- [x] Automated technical rehearsals and authority journeys
 - [x] Evidence manifests and source anchors
-- [ ] Three actual human team rehearsals
-- [ ] Human oral defense and peer sign-off
-- [ ] Project-lead authorization for `v1.0.0` tag/GitHub Release
+- [x] Full regression and Production overlay smoke on the release source
+- [x] Clean-clone deployment check
+- [x] `v1.0.0` annotated tag and GitHub Release
+- [ ] Human team rehearsal, oral defense and peer sign-off (team activity)
