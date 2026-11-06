@@ -1,0 +1,97 @@
+{
+  "sourceCommit": "5eba1e4c7aceb7ea51e4a5a82dc583bec5f22011",
+  "sourceTree": "06d9e06de97752c18739cfa6051aa9e3fce75900",
+  "environment": "Windows 11, .NET SDK 10.0.403, Docker Desktop 29.8.2 (Linux engine), PostgreSQL 18.6, RabbitMQ 4.3.6, Redis 8.10.2",
+  "suites": {
+    "IdentityService.IntegrationTests": {
+      "passed": 0,
+      "failed": 0,
+      "skipped": 1,
+      "total": 1
+    },
+    "MatchingService.UnitTests": {
+      "passed": 115,
+      "failed": 0,
+      "skipped": 0,
+      "total": 115
+    },
+    "NotificationWorker.UnitTests": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "total": 13
+    },
+    "DriverService.UnitTests": {
+      "passed": 132,
+      "failed": 0,
+      "skipped": 0,
+      "total": 132
+    },
+    "PaymentService.UnitTests": {
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0,
+      "total": 38
+    },
+    "TripService.UnitTests": {
+      "passed": 326,
+      "failed": 0,
+      "skipped": 0,
+      "total": 326
+    },
+    "NotificationService.IntegrationTests": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "total": 16
+    },
+    "PaymentService.IntegrationTests": {
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0,
+      "total": 37
+    },
+    "B12Audit.Tests": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "total": 20
+    },
+    "Platform.IntegrationTests": {
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "total": 76
+    },
+    "DriverService.IntegrationTests": {
+      "passed": 120,
+      "failed": 0,
+      "skipped": 0,
+      "total": 120
+    },
+    "MatchingService.IntegrationTests": {
+      "passed": 202,
+      "failed": 0,
+      "skipped": 0,
+      "total": 202
+    },
+    "TripService.IntegrationTests": {
+      "passed": 246,
+      "failed": 0,
+      "skipped": 0,
+      "total": 246
+    }
+  },
+  "totals": {
+    "passed": 1341,
+    "failed": 0,
+    "skipped": 1,
+    "executedSuites": 13
+  },
+  "knownSkip": "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState",
+  "trxGate": "PASS: TRX files=13 (executed suites=13), notexecuted=1, passed=1341, suite files=13",
+  "build": {
+    "errors": 0,
+    "warnings": 18
+  }
+}

@@ -8,3 +8,5 @@ Commit manifests/summaries and auditor outputs. Do not commit large raw dumps or
   runtime failover evidence.
 - W15 integration gates and source mapping: `evidence/team/w15-integration/`.
 - W16 release, contract and rehearsal evidence: `evidence/team/w16-integration/`.
+- Final `v1.0.0` release verification: `evidence/release/v1.0.0/` (manifest,
+  regression summary, Production smoke summary and artifact hashes).
