@@ -11,6 +11,8 @@ Canonical specs (do not rewrite; code wins only for exact patch/config after app
 - `05B-member-b-driver-matching.md` → Member B playbook
 - `05C-member-c-payment-messaging-platform.md` → Member C playbook
 - `06-history-attribution-correction.md` → W09/W10 authorship correction and credit-allocation record
+- `07-contribution-mapping.md` → W15/W16 contribution and attribution mapping
+- `08-credit-balance-correction-2026-11-06.md` → 2026-11-06 credit-balance correction and provenance record
 
 Reading order: 00 → 01 → 02 → 03 → 04 → 05A/B/C. Priority: 00–03 over 04 over 05.
 
