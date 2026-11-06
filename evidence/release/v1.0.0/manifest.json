@@ -12,7 +12,7 @@
   "source": {
     "commit": "5eba1e4c7aceb7ea51e4a5a82dc583bec5f22011",
     "tree": "06d9e06de97752c18739cfa6051aa9e3fce75900",
-    "note": "Runtime source and documentation verified by this bundle. The evidence directory itself is an additive-only commit."
+    "note": "Commit used for the full regression and Production release smoke. Later commits in the release pull request are documentation/evidence only; they do not change runtime source. The demo drill correction after this commit edits docs/demo.md only."
   },
   "status": "PASS",
   "verification": {
