@@ -108,36 +108,39 @@ curl -fsS "$API/notifications/me" -H "Authorization: Bearer $DRIVER_TOKEN"
 Expected: rider inbox has `RIDER_RIDE_REQUESTED`, `RIDER_DRIVER_ASSIGNED` and
 `RIDER_TRIP_COMPLETED`; driver inbox has `DRIVER_TRIP_ASSIGNED`.
 
-## 6. Stop a service during a workflow (recovery drill)
+## 6. Stop the messaging service during a workflow (retry/recovery drill)
 
-Create a fresh ride while the Driver is `AVAILABLE`, then stop Trip immediately
-after the ride is created and before the Driver acts:
+Create a fresh ride while the Driver is `AVAILABLE`, then stop RabbitMQ so the
+committed `RideRequestedV1` intent cannot be published:
 
 ```bash
 TRIP_ID=$(curl -fsS -X POST "$API/trips" -H "Authorization: Bearer $RIDER_TOKEN" \
   -H 'Content-Type: application/json' -H "Idempotency-Key: $(python3 -c 'import uuid;print(uuid.uuid4())')" \
   -d '{"pickup":{"latitude":10.7769,"longitude":106.7009},"dropoff":{"latitude":10.78,"longitude":106.71}}' \
   | python3 -c 'import json,sys;print(json.load(sys.stdin)["tripId"])')
-docker compose stop trip
+docker compose stop rabbitmq
+sleep 5
 docker compose exec -T postgres psql -U postgres -d trip_db -c \
-  "select message_type, status from outbox_messages order by created_at desc limit 3;"
+  "select message_type, status, attempts from outbox_messages order by created_at desc limit 3;"
 ```
 
 Expected: the ride row exists and its `RideRequestedV1` Outbox intent is
 `PENDING` — the business commit and the message intent are atomic. No message
-was invented by the broker.
+was invented by the broker, and the Trip service did not fail the request
+because the broker was down.
 
 ```bash
-docker compose start trip
+docker compose start rabbitmq
 sleep 20
 curl -fsS "$API/trips/$TRIP_ID" -H "Authorization: Bearer $RIDER_TOKEN"
 docker compose exec -T postgres psql -U postgres -d trip_db -c \
   "select message_type, status, attempts from outbox_messages order by created_at desc limit 3;"
 ```
 
-Expected: the intent is `PUBLISHED` and the ride reaches `DRIVER_RESERVED`
-after the relay reconnects. This is durable-intent recovery after a process
-restart, not a replayed mock.
+Expected: the intent becomes `PUBLISHED` after the relay reconnects and the
+ride reaches `DRIVER_RESERVED`. This is durable-intent recovery after a
+transport outage. The separate Trip process crash/restart is demonstrated by
+release-smoke Scenario D below.
 
 Release that reservation before the next step:
 
