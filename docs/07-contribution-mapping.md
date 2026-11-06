@@ -1,8 +1,11 @@
 # W01–W16 contribution and attribution mapping
 
-Status: **factual mapping complete for W15/W16; identity ambiguities remain for
-human confirmation.** This document was produced by the 2026-11-03/04
-remediation campaign (AUD-11). It does **not** rewrite any published commit.
+Status: **factual mapping complete for W15/W16.** The identity ambiguities
+recorded below were resolved on 2026-11-06 by the metadata-only correction
+recorded in [08-credit-balance-correction-2026-11-06.md](08-credit-balance-correction-2026-11-06.md):
+four Member A commits are verified authorship corrections from the frozen
+W15/W16 source-PR map, and 45 further commits are project-lead-directed credit
+allocations. This document does **not** rewrite any published commit.
 
 ## Sources
 
@@ -63,17 +66,16 @@ The source PR/branch mapping and the Git Author fields disagree in W15/W16:
 - Every W15/W16 integrated commit was committed by `minhqng`; a rebase/merge
   can legitimately assign a different Committer than Author.
 
-These are recorded as **facts**, not resolved claims. The source PR mapping is
-the team's attribution; the Git field is what the object actually says. The
-campaign did not rewrite either field. Human confirmation is required to
-decide whether these are misconfigured local identities or owner-directed
-credit allocations. If a credit allocation is intended, record it per
-`AGENTS.md` (deciding authority, old/new identity, unchanged Committer, archive
-ref and old→new map); never describe it as verified authorship.
-
-`patchEquivalent=false` entries are preserved from the frozen maps; they are
-integration repairs/rebases, not evidence that a different person wrote the
-change.
+These are recorded as **facts**, not resolved claims in this map. The source
+PR mapping is the team's attribution; the Git field is what the object actually
+says. The 2026-11-06 correction record is the decision that resolves the
+W15/W16 cases: Member A's four commits are corrected as verified authorship,
+and the remaining reassignments are recorded as credit allocations. The
+correction never describes a credit allocation as verified authorship, and it
+keeps the original Author/Committer recoverable through the archive tag and the
+old-to-new map. `patchEquivalent=false` entries are preserved from the frozen
+maps; they are integration repairs/rebases, not evidence that a different
+person wrote the change.
 
 ## Remediation provenance (AUD-01..AUD-11)
 
@@ -88,9 +90,9 @@ the final release report.
 - Independent human clean clone of W15 evidence (`TEAM-W15-02`,
   A/C clean-clone execution): **PROCESS_PENDING**.
 - Three human team rehearsals, oral defense and peer sign-off:
-  **PROCESS_PENDING**.
-- Final `v1.0.0` tag/GitHub Release: **NOT CREATED**; requires separate
-  project-lead authorization.
+  **PROCESS_PENDING** (team activity; automation cannot substitute).
+- Final `v1.0.0` tag/GitHub Release: **CREATED** at the verified final commit;
+  see [release.md](release.md) and the GitHub Release page.
 
 The automated clean clones, exact-tree CI, release smoke and B trials are real
 technical evidence; they are not substitutes for the human acts above.

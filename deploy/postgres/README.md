@@ -6,7 +6,7 @@ roles on a fresh volume. It does not run on an existing volume.
 ## Production
 
 Trip owns EF migrations and applies them through the external
-`dotnet ef database update` step documented in `docs/release-candidate.md`;
+`dotnet ef database update` step documented in `docs/release.md`;
 the release overlay sets `TripDatabase__AutoMigrate=false`.
 
 Payment, Driver and Matching apply idempotent startup DDL inside a transaction

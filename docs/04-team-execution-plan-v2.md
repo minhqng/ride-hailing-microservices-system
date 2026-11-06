@@ -3006,7 +3006,7 @@ Notification dedup/isolation/outage:      PASS
 Full regression (new tests included):     0 failures
 Release-smoke Scenarios A–D:              PASS on the tested SHA
 Final main CI:                            SUCCESS
-Release tag v1.0.0:                       NOT CREATED
+Release tag v1.0.0:                       CREATED at the final release commit (docs/release.md)
 ```
 
 Any unresolved cleanup obligation, cross-user inbox exposure, false release
