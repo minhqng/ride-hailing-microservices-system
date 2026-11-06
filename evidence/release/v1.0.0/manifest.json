@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "kind": "final-release",
+  "version": "1.0.0",
+  "releaseDate": "2026-11-06",
+  "owner": "TEAM integration",
+  "authority": "Docs 00-03; docs/release.md; AGENTS.md release and evidence rules",
+  "base": {
+    "commit": "da85ca3aaa7ef61820bd9bef585aac1abdd96e33",
+    "tree": "ca4be8e1da77aa7e90593265a35531d89ea1fe77"
+  },
+  "source": {
+    "commit": "5eba1e4c7aceb7ea51e4a5a82dc583bec5f22011",
+    "tree": "06d9e06de97752c18739cfa6051aa9e3fce75900",
+    "note": "Runtime source and documentation verified by this bundle. The evidence directory itself is an additive-only commit."
+  },
+  "status": "PASS",
+  "verification": {
+    "fullRegression": {
+      "executedSuites": 13,
+      "passed": 1341,
+      "failed": 0,
+      "skipped": 1,
+      "knownSkip": "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState",
+      "trxGate": "PASS: TRX files=13 (executed suites=13), notexecuted=1, passed=1341, suite files=13"
+    },
+    "build": {
+      "errors": 0,
+      "warnings": 18
+    },
+    "releaseSmoke": {
+      "status": "PASS",
+      "checks": 19,
+      "migrationsApplied": 11,
+      "topology": {
+        "exchanges": 12,
+        "queues": 19
+      },
+      "authority": {
+        "trips": 6,
+        "drivers": 1,
+        "rounds": 6,
+        "payments": 6,
+        "effects": 6,
+        "notifications": 25
+      },
+      "runType": "supporting local run on the release working tree",
+      "authoritativeRun": "GitHub Actions ci workflow, release-smoke job, exact-tree checkout of the release pull request; run id recorded in the GitHub Release notes"
+    },
+    "security": {
+      "secretScan": "PASS 1340 tracked paths",
+      "hygieneSelfTest": "24 pattern verdicts OK",
+      "sourceAnchorFixtures": "12/12 PASS"
+    },
+    "cleanClone": "GitHub Actions checkout of the release pull request plus the local clean-clone quick start; see docs/release.md and docs/verification.md"
+  },
+  "artifacts": {
+    "docs/report.pdf": {
+      "sha256": "d9e91919ad46a6bba1e383f653a167bc36af3b69e81512598ed10b7f88d45454",
+      "bytes": 434323
+    },
+    "docs/slides.pdf": {
+      "sha256": "615577114c45ecb6c0971f23c7d26a4faaaee2f61460568b32e4cbe91cc2a6ac",
+      "bytes": 66042
+    },
+    "docs/report.md": {
+      "sha256": "37b23287229553f004800eaedece7d57087c1bbc436803dae31962cebef06a5e",
+      "bytes": 47083
+    }
+  },
+  "evidenceFiles": {
+    "evidence/release/v1.0.0/final-state/full-regression-summary.json": {
+      "sha256": "408ec72099e5c7a0779ad599f533d04647e8ff770304a6d71426797574d26b65",
+      "bytes": 2336
+    },
+    "evidence/release/v1.0.0/final-state/release-smoke-summary.json": {
+      "sha256": "9680943eaa2f238c0488ede424deeafeef771cf999490daf7802076afc662b18",
+      "bytes": 3845
+    },
+    "evidence/release/v1.0.0/README.md": {
+      "sha256": "4a5a6b818bcdeca17bf5d23965a650a14cc53f608b20c01ec838c996f07cd4b6",
+      "bytes": 2595
+    },
+    "evidence/release/v1.0.0/test-output.txt": {
+      "sha256": "d270dbc54b5d254b92a6714e0c6dd582357d54bd13b2eb9101c50ccd5040a542",
+      "bytes": 3151
+    }
+  },
+  "releaseAnchor": {
+    "tagName": "v1.0.0",
+    "tagType": "annotated",
+    "target": "final main commit after the release pull request; the exact SHA is resolved by the tag object and recorded in the GitHub Release notes",
+    "treeRule": "The tag tree contains this evidence bundle and preserves the verified source tree for all runtime source and documentation paths."
+  },
+  "reproduction": [
+    "git checkout v1.0.0",
+    "python3 scripts/security/init-local-auth.py",
+    "bash scripts/test/quick.sh",
+    "python3 scripts/test/release-smoke.py",
+    "python3 scripts/security/scan-secrets.py"
+  ],
+  "limitations": [
+    "No human rehearsal, oral defense or peer sign-off.",
+    "Payment provider is simulated; notifications are in-app only.",
+    "HA evidence is a single-host quorum scenario; performance is single-host measurement."
+  ]
+}

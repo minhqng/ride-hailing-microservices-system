@@ -1,0 +1,69 @@
+Final release verification — v1.0.0
+
+Released artifact source:
+  base main:      da85ca3aaa7ef61820bd9bef585aac1abdd96e33
+  base tree:      ca4be8e1da77aa7e90593265a35531d89ea1fe77
+  source commit:  5eba1e4c7aceb7ea51e4a5a82dc583bec5f22011
+  source tree:    06d9e06de97752c18739cfa6051aa9e3fce75900
+
+Environment:
+  Windows 11, .NET SDK 10.0.403, Docker Desktop 29.8.2 (Linux engine),
+  Python 3.15.2, Git for Windows; PostgreSQL 18.6, RabbitMQ 4.3.6,
+  Redis 8.10.2 (pinned images).
+
+FULL REGRESSION (Release build, real PostgreSQL/RabbitMQ/Redis boundaries):
+  NotificationWorker.UnitTests              13 passed
+  NotificationService.IntegrationTests      16 passed
+  B12Audit.Tests                            20 passed
+  PaymentService.UnitTests                  38 passed
+  PaymentService.IntegrationTests           37 passed
+  Platform.IntegrationTests                 76 passed
+  MatchingService.UnitTests                115 passed
+  DriverService.IntegrationTests           120 passed
+  DriverService.UnitTests                  132 passed
+  MatchingService.IntegrationTests         202 passed
+  TripService.IntegrationTests             246 passed
+  TripService.UnitTests                    326 passed
+  IdentityService.IntegrationTests           0 passed, 1 documented opt-in skip
+  ----------------------------------------------------------------
+  Total                                  1,341 passed
+                                              0 failed
+                                              1 skipped
+
+TRX gate:
+  PASS: TRX files=13 (executed suites=13), notexecuted=1,
+        passed=1341, suite files=13.
+
+Build:
+  0 errors, 18 analyzer warnings (pre-existing style warnings; one fewer
+  than before the unused Contracts assembly was removed).
+
+PRODUCTION RELEASE OVERLAY SMOKE (supporting local run, 2026-11-06):
+  Status: PASS
+  Project: ride-release-final
+  External migration: dotnet ef database update, 11 applied
+  Topology: 12 exchanges, 19 queues
+  Checks: 19/19 PASS
+  Journeys: completed (2 payment ops, 4 notifications);
+            cancelled (VOID, 2 payment ops);
+            rejected (MATCH_FAILED/DRIVER_REJECTED, 5 notifications)
+  Scenarios: A driver reject PASS; C notification outage PASS;
+             D reject crash replay PASS (replayed=true, 1 release intent)
+  Authority audit: 6 trips, 1 driver, 6 rounds, 6 payments, 6 provider
+                   effects, 25 notifications
+  Teardown: sentinel preserved, 0 project containers
+  Limitation: the Production overlay exposes no simulator decline route;
+              decline is covered by the Payment integration suite.
+
+  The exact-tree GitHub Actions release-smoke run on the release pull request
+  is the authoritative run for the tagged tree; see the GitHub Release notes.
+
+STATIC GATES:
+  Secret scan: PASS, 1,340 tracked paths, no high-confidence secret.
+  Hygiene self-test: 24 pattern verdicts OK.
+  Source-anchor fixtures: 12/12 PASS.
+  Release overlay with secrets: renders; without secrets: fails closed.
+
+NOT CLAIMED:
+  No human rehearsal/oral defense/peer sign-off; no real payment network;
+  no multi-region HA; no production capacity claim.

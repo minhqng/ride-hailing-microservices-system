@@ -1,0 +1,153 @@
+{
+  "kind": "supporting-local-release-smoke",
+  "runDate": "2026-11-06",
+  "project": "ride-release-final",
+  "status": "PASS",
+  "reportedSource": {
+    "commit": "da85ca3aaa7ef61820bd9bef585aac1abdd96e33",
+    "tree": "ca4be8e1da77aa7e90593265a35531d89ea1fe77"
+  },
+  "note": "The smoke executed on the release working tree before the documentation-only commits; the exact-tree GitHub Actions release-smoke job on the release pull request is the authoritative run for the tagged tree.",
+  "migration": {
+    "api": "dotnet ef database update",
+    "applied": 11
+  },
+  "topology": {
+    "exchanges": 12,
+    "queues": 19
+  },
+  "checks": [
+    {
+      "id": "RELEASE-SECRETS-must be set for the release overlay",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-SECRETS-AUTH_",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-RENDER",
+      "status": "PASS"
+    },
+    {
+      "id": "PRODUCTION-ENVIRONMENT",
+      "status": "PASS"
+    },
+    {
+      "id": "MESSAGING-ENABLED",
+      "status": "PASS"
+    },
+    {
+      "id": "PRODUCTION-RECONCILIATION",
+      "status": "PASS"
+    },
+    {
+      "id": "NO-PRODUCTION-SIMULATOR",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-SERVICES-READY",
+      "status": "PASS"
+    },
+    {
+      "id": "GATEWAY-AUTH",
+      "status": "PASS"
+    },
+    {
+      "id": "UNAUTHENTICATED-REJECTED",
+      "status": "PASS"
+    },
+    {
+      "id": "PUBLIC-DRIVER-LIFECYCLE",
+      "status": "PASS"
+    },
+    {
+      "id": "COMPLETED-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "RECIPIENT-INBOXES",
+      "status": "PASS"
+    },
+    {
+      "id": "CANCELLED-VOID-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "DRIVER-REJECT-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "NOTIFICATION-OUTAGE-ISOLATION",
+      "status": "PASS"
+    },
+    {
+      "id": "REJECT-CRASH-REPLAY",
+      "status": "PASS"
+    },
+    {
+      "id": "AUTHORITY-AUDIT",
+      "status": "PASS"
+    },
+    {
+      "id": "TEARDOWN-ISOLATED",
+      "status": "PASS"
+    }
+  ],
+  "journeys": {
+    "completed": {
+      "trip": "77e29dee-ee32-4be1-a21c-967064a2f628",
+      "reservation": "1a17feb1-29f8-48e8-8be6-9061cb615764",
+      "state": "COMPLETED",
+      "payment": 2,
+      "notifications": 4
+    },
+    "cancelled": {
+      "trip": "6150317d-5a0d-47a4-aaf1-2b4d5cc0453f",
+      "reservation": "f48d8ef6-46b8-4ea2-845f-d44a52b09891",
+      "state": "CANCELLED",
+      "compensation": "VOID",
+      "payment": 2
+    },
+    "rejected": {
+      "trip": "47ff704d-ceab-4e65-ad85-bacd50684534",
+      "reservation": "f93a4e4e-19cc-4d33-84df-64bc3c59e563",
+      "state": "MATCH_FAILED",
+      "reason": "DRIVER_REJECTED",
+      "replacementTrip": "d48b88ff-d17b-4d82-84e7-aedbd9103768",
+      "notifications": 5
+    }
+  },
+  "scenarios": {
+    "A-driver-reject": {
+      "trip": "47ff704d-ceab-4e65-ad85-bacd50684534",
+      "state": "MATCH_FAILED",
+      "releaseCompleted": true
+    },
+    "C-notification-outage": {
+      "trip": "52fb556a-77d8-4253-9163-f99dfd6ae0bf",
+      "tripState": "COMPLETED",
+      "notifications": 4
+    },
+    "D-reject-crash-replay": {
+      "trip": "551e502f-0b49-4bc0-888a-1452b43e001b",
+      "replayed": true,
+      "releaseIntents": 1
+    }
+  },
+  "authority": {
+    "trips": 6,
+    "drivers": 1,
+    "rounds": 6,
+    "payments": 6,
+    "effects": 6,
+    "notifications": 25
+  },
+  "teardown": {
+    "sentinelPreserved": true,
+    "projectContainers": 0
+  },
+  "limitations": [
+    "Payment decline is exercised by the real Payment integration suite in the release-smoke CI job; the Production overlay intentionally exposes no simulator control route to force a remote decline."
+  ]
+}
