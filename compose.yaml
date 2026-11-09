@@ -87,7 +87,10 @@ services:
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
     volumes:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports: ["9090:9090"]
+    # Loopback-only like every other published port: the observability stack
+    # is a local operator tool and must not be reachable from the network.
+    # Override the host port with OBS_PROMETHEUS_PORT when 9090 is taken.
+    ports: ["127.0.0.1:${OBS_PROMETHEUS_PORT:-9090}:9090"]
     networks: [ride-net]
 
   grafana:
