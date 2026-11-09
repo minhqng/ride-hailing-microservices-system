@@ -30,7 +30,6 @@ if (!string.IsNullOrWhiteSpace(connectionString))
     builder.Services.AddSingleton(new ProviderLedger(connectionString));
     builder.Services.AddSingleton<PaymentSimulator>();
     builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-    builder.Services.AddTransient<PaymentCommandHandlers>();
     builder.Services.AddSingleton<ProcessedMessageStore>();
     builder.Services.AddSingleton<NpgsqlOutboxStore>();
     builder.Services.AddSingleton<IOutboxStore>(services => services.GetRequiredService<NpgsqlOutboxStore>());

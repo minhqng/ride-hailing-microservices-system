@@ -74,8 +74,8 @@ public sealed class TripW18NotificationOutboxTests(TripPostgresFixture fixture)
                 .HandleAsync(tripId, driver, reservation, 1)).IsSuccess);
         }
 
-        var assigned = Assert.Single((await Notifications(tripId))
-            .Where(n => n.NotificationType == NotificationMessage.Types.RiderDriverAssigned));
+        var assigned = Assert.Single(await Notifications(tripId), n =>
+            n.NotificationType == NotificationMessage.Types.RiderDriverAssigned);
         Assert.Equal(riderId, assigned.RecipientUserId);
         Assert.Equal(tripId, assigned.TripId);
 
@@ -86,8 +86,8 @@ public sealed class TripW18NotificationOutboxTests(TripPostgresFixture fixture)
                 .HandleAsync(tripId, driver, reservation)).IsSuccess);
         }
 
-        var rejected = Assert.Single((await Notifications(tripId))
-            .Where(n => n.NotificationType == NotificationMessage.Types.RiderDriverRejected));
+        var rejected = Assert.Single(await Notifications(tripId), n =>
+            n.NotificationType == NotificationMessage.Types.RiderDriverRejected);
         Assert.Equal(riderId, rejected.RecipientUserId);
         Assert.Equal("DRIVER_REJECTED", rejected.ReasonCode);
 
@@ -112,8 +112,8 @@ public sealed class TripW18NotificationOutboxTests(TripPostgresFixture fixture)
                 .HandleAsync(tripId, riderId)).IsSuccess);
         }
 
-        var cancelled = Assert.Single((await Notifications(tripId))
-            .Where(n => n.NotificationType == NotificationMessage.Types.RiderRideCancelled));
+        var cancelled = Assert.Single(await Notifications(tripId), n =>
+            n.NotificationType == NotificationMessage.Types.RiderRideCancelled);
         Assert.Equal(riderId, cancelled.RecipientUserId);
     }
 
@@ -128,8 +128,8 @@ public sealed class TripW18NotificationOutboxTests(TripPostgresFixture fixture)
                 .HandleAsync(tripId, 1)).IsSuccess);
         }
 
-        var noDriver = Assert.Single((await Notifications(tripId))
-            .Where(n => n.NotificationType == NotificationMessage.Types.RiderNoDriver));
+        var noDriver = Assert.Single(await Notifications(tripId), n =>
+            n.NotificationType == NotificationMessage.Types.RiderNoDriver);
         Assert.Equal(riderId, noDriver.RecipientUserId);
         Assert.Equal("NO_DRIVER_AVAILABLE", noDriver.ReasonCode);
     }

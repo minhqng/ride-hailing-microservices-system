@@ -1,25 +1,18 @@
-using Microsoft.Extensions.Logging;
 using RideHailing.PaymentService.Domain;
-using RideHailing.PaymentService.Infrastructure;
 using RideHailing.PaymentService.Integration.Payment;
 
 namespace RideHailing.PaymentService.Application.Payment;
 
-public sealed class PaymentCommandHandlers(
-    PaymentExecution execution,
-    ProviderLedger provider,
-    TimeProvider time,
-    ILogger<PaymentCommandHandlers>? logger = null)
+/// <summary>
+/// Canonical mapping from a persisted <see cref="PaymentOperation"/> to its
+/// published outcome contract. The Payment message processor and the
+/// reconciliation worker both publish through these mappers, so a replayed or
+/// reconciled operation always emits the same wire shape as the original
+/// execution. There is no second command path here: execution is owned by
+/// <c>PaymentExecution</c> under the envelope's operationKey.
+/// </summary>
+public static class PaymentCommandHandlers
 {
-    public async Task<object> HandleAuthorizeAsync(AuthorizePaymentV1 command, PaymentSimulatorMode mode = PaymentSimulatorMode.Success, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        var request = PaymentOperation.Create(command.OperationKey, command.TripId, command.PaymentType, command.AmountMinor, command.Currency, time.GetUtcNow());
-        var result = await execution.ExecuteAsync(request, mode, cancellationToken);
-        logger?.LogInformation("Authorize {TripId} key {OperationKey} state {State}.", command.TripId, command.OperationKey, result.State);
-        return ToAuthorizeResult(result);
-    }
-
     public static object ToAuthorizeResult(PaymentOperation result) => result.State switch
         {
             PaymentOperationState.Succeeded => new PaymentAuthorizedV1
@@ -59,18 +52,6 @@ public sealed class PaymentCommandHandlers(
             }
         };
 
-    public async Task<object> HandleVoidAsync(VoidPaymentAuthorizationV1 command, PaymentSimulatorMode mode = PaymentSimulatorMode.Success, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        var amount = command.AmountMinor <= 0 ? 1 : command.AmountMinor;
-        var currency = string.IsNullOrWhiteSpace(command.Currency) ? "VND" : command.Currency;
-        var request = PaymentOperation.Create(command.OperationKey, command.TripId, PaymentOperationType.Void, amount, currency, time.GetUtcNow());
-        // Amount/currency for void are not money-moving; keep a stable placeholder. Caller should pass authoritative values in future revision.
-        var result = await execution.ExecuteAsync(request, mode, cancellationToken);
-        logger?.LogInformation("Void {TripId} key {OperationKey} state {State}.", command.TripId, command.OperationKey, result.State);
-        return ToVoidResult(result);
-    }
-
     public static object ToVoidResult(PaymentOperation result) => result.State switch
         {
             PaymentOperationState.Succeeded => new PaymentAuthorizationVoidedV1
@@ -87,15 +68,6 @@ public sealed class PaymentCommandHandlers(
                 Retryable = result.State is PaymentOperationState.Pending or PaymentOperationState.Unknown
             }
         };
-
-    public async Task<object> HandleCaptureAsync(CapturePaymentV1 command, PaymentSimulatorMode mode = PaymentSimulatorMode.Success, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        var request = PaymentOperation.Create(command.OperationKey, command.TripId, PaymentOperationType.Capture, command.AmountMinor, command.Currency, time.GetUtcNow());
-        var result = await execution.ExecuteAsync(request, mode, cancellationToken);
-        logger?.LogInformation("Capture {TripId} key {OperationKey} state {State}.", command.TripId, command.OperationKey, result.State);
-        return ToCaptureResult(result);
-    }
 
     public static object ToCaptureResult(PaymentOperation result) => result.State switch
         {
@@ -132,7 +104,4 @@ public sealed class PaymentCommandHandlers(
                 ReasonCode = result.ResultCode ?? result.State.ToString().ToUpperInvariant()
             }
         };
-
-    public async Task<PaymentOperation> ReconcileAsync(string operationKey, CancellationToken cancellationToken = default)
-        => await execution.ReconcileAsync(operationKey, provider, cancellationToken);
 }
