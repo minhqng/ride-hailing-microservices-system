@@ -23,7 +23,12 @@ public sealed class ConfirmTripCleanupHandler(TripDbContext db, TimeProvider clo
         var trip = await db.Trips.SingleOrDefaultAsync(t => t.TripId == tripId, cancellationToken);
         if (trip is null) return TripLifecycleResult.NotFound();
         var intent = trip.CleanupIntents.SingleOrDefault(i => i.Key == intentKey);
-        var conclusive = intent?.Kind switch
+        // An unknown intent key is never conclusive: the obligation must exist
+        // on this Trip before any authority result can confirm it.
+        if (intent is null)
+            return TripLifecycleResult.Fail(trip, TripOutcome.Fail(TripErrorCode.StaleIdentity,
+                "Cleanup remains pending until the matching authority confirms this exact obligation."));
+        var conclusive = intent.Kind switch
         {
             TripCleanupKind.ReleaseReservation => authorityResult is CleanupAuthorityResult.Released
                 or CleanupAuthorityResult.ExactReservationNoLongerOwned,

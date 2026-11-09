@@ -88,15 +88,15 @@ public sealed class ReserveTraceContinuityTests
         Assert.Equal(workflow.SpanId, round.ParentSpanId);
         var attempt = SingleSpan(capture, traceId, "matching.attempt.reserve");
         var transaction = SingleSpan(capture, traceId, "driver.reserve");
-        var httpSpan = Assert.Single(capture.Spans.Where(span =>
+        var httpSpan = Assert.Single(capture.Spans, span =>
             span.TraceId == traceId
             && span.Source == "System.Net.Http"
             && span.ParentSpanId == attempt.SpanId
-            && span.Name == "POST"));
-        var server = Assert.Single(capture.Spans.Where(span =>
+            && span.Name == "POST");
+        var server = Assert.Single(capture.Spans, span =>
             span.TraceId == traceId
             && span.Source.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal)
-            && span.ParentSpanId == httpSpan.SpanId));
+            && span.ParentSpanId == httpSpan.SpanId);
 
         Assert.Equal(round.SpanId, attempt.ParentSpanId);
         Assert.Equal(attempt.SpanId, httpSpan.ParentSpanId);
@@ -152,11 +152,11 @@ public sealed class ReserveTraceContinuityTests
         var round = SingleSpan(capture, traceId, "matching.round.execute");
         var attempt = SingleSpan(capture, traceId, "matching.attempt.reserve");
         var transaction = SingleSpan(capture, traceId, "driver.reserve");
-        var httpSpan = Assert.Single(capture.Spans.Where(span =>
+        var httpSpan = Assert.Single(capture.Spans, span =>
             span.TraceId == traceId
             && span.Source == "System.Net.Http"
             && span.ParentSpanId == attempt.SpanId
-            && span.Name == "POST"));
+            && span.Name == "POST");
 
         Assert.Equal("BlockedOnUnknown", round.Tags["matching.round.outcome"]);
         Assert.Equal("Unknown", attempt.Tags["matching.attempt.outcome"]);
@@ -196,10 +196,10 @@ public sealed class ReserveTraceContinuityTests
             span.TraceId == traceId
             && span.Source == "System.Net.Http"
             && span.ParentSpanId == reconcileSpan.SpanId);
-        var reconcileServer = Assert.Single(capture.Spans.Where(span =>
+        var reconcileServer = Assert.Single(capture.Spans, span =>
             span.TraceId == traceId
             && span.Source.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal)
-            && span.ParentSpanId == reconcileHttpSpan.SpanId));
+            && span.ParentSpanId == reconcileHttpSpan.SpanId);
         Assert.NotEqual(reconcileSpan.SpanId, reconcileServer.SpanId);
 
         AssertNoSensitiveTelemetry(capture, traceId);
@@ -259,8 +259,8 @@ public sealed class ReserveTraceContinuityTests
             .ToList();
         Assert.Equal(2, txnSpans.Count);
         Assert.Equal(new[] { "won", "conflict" }, txnSpans.Select(s => s.Tags["driver.reserve.outcome"]));
-        var releaseSpan = Assert.Single(capture.Spans.Where(span =>
-            span.TraceId == root.TraceId && span.Name == "driver.release"));
+        var releaseSpan = Assert.Single(capture.Spans, span =>
+            span.TraceId == root.TraceId && span.Name == "driver.release");
         Assert.Equal("conflict", releaseSpan.Tags["driver.release.outcome"]);
         AssertNoSensitiveTelemetry(capture, root.TraceId);
         _output.WriteLine(
