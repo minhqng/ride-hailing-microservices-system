@@ -122,8 +122,10 @@ RabbitMQ management UI: <http://localhost:15672> (development defaults in
 Optional observability stack:
 
 ```bash
+export OBS_PROMETHEUS_PORT=19090   # only if 9090 is already taken on the host
 docker compose --profile obs up -d
-# Jaeger :16686, Prometheus :9090, Grafana :3000, OTLP :4317/:4318
+# Jaeger :16686, Prometheus :9090 (or $OBS_PROMETHEUS_PORT), Grafana :3000,
+# OTLP :4317/:4318. Every published port binds 127.0.0.1 only.
 ```
 
 Shut down with `docker compose down`; add `-v` only when you intend to delete
@@ -160,9 +162,18 @@ The latest verified results, test counts and evidence bundles are recorded in
 
 ## Demonstration
 
-A 7–10 minute operator script that starts the services, runs a complete ride,
-races two passengers for one driver, stops a service during a workflow and
-shows retry/recovery/restart is in [docs/demo.md](docs/demo.md).
+The authoritative presentation runbook is [docs/demo.md](docs/demo.md), written
+in Vietnamese for the DS03 defense. It covers preparation and readiness checks,
+the architecture and its authority boundaries, a 13-step live ride, ten
+extended distributed-systems scenarios (concurrency, idempotency, transactional
+outbox, payment `UNKNOWN` reconciliation, Saga compensation, notification
+outage, crash recovery, observability, performance and HA scope), speaker
+handover for the three members, and examiner Q&A.
+
+Every command in it was executed against a clean deployment of this source
+tree, and each scenario's outcome was read back from the owning service's
+PostgreSQL, the Redis projection or RabbitMQ. Scenarios the repository does not
+actually support are stated as limitations rather than simulated.
 
 ## Documentation
 
@@ -184,9 +195,9 @@ shows retry/recovery/restart is in [docs/demo.md](docs/demo.md).
 
 | Member | Student ID | Responsibility |
 |---|---|---|
-| Nguyen Quang Minh | B23DCVT280 | Trip/Booking, lifecycle, Saga orchestration, compensation, Trip Outbox |
-| Nguyen Hoang Khanh | B23DCVT228 | Driver/Location, Matching, reservations, concurrency and Driver lifecycle |
-| Le Anh Viet | B23DCVT453 | Payment, messaging/platform, shared Outbox relay, reliability infrastructure |
+| Nguyen Quang Minh | B23DCVT280 | A — Trip/Booking, lifecycle and Saga |
+| Nguyen Hoang Khanh | B23DCVT228 | B — Driver, location and Matching |
+| Le Anh Viet | B23DCVT453 | C — Payment, messaging and platform |
 
 GitHub: [minhqng](https://github.com/minhqng) (Nguyen Quang Minh),
 [Fried-toofuu](https://github.com/Fried-toofuu) (Nguyen Hoang Khanh),
