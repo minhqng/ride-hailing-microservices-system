@@ -55,10 +55,11 @@ passed=1341, suite files=13`. The single skip is
 deliberately opt-in theory; the dedicated Identity negative lane runs it
 separately and reports 7/7 passing.
 
-Build: `0 errors`. The regression build ran before the unused Contracts
-assembly was removed and reported 19 analyzer warnings; the release-tree build
-reports 18. All are pre-existing xUnit/analyzer style warnings; no correctness
-warning category is suppressed.
+Build: `0 errors`, `0 warnings`. The final tree builds clean: the previously
+reported analyzer warnings (three nullable-argument, one nullable-dereference,
+five duplicate-type and nine xUnit style diagnostics) were resolved rather than
+suppressed, and the unreachable Payment command handlers that produced them were
+removed. No warning category is suppressed anywhere in the solution.
 
 ## 2. Static and repository gates — PASS
 

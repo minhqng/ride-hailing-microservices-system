@@ -38,13 +38,18 @@ part of the design contract.
 | [authentication-runtime.md](authentication-runtime.md) | JWT issuance, service grants and local key setup |
 | [messaging-runtime.md](messaging-runtime.md) | Publisher/consumer lifecycle, confirms, acknowledgement and retry ownership |
 | [verification.md](verification.md) | Final verified results, suite counts and evidence index |
-| [demo.md](demo.md) | 7–10 minute team demonstration and failure drill |
-| [driver-matching-demo.md](driver-matching-demo.md) | Extended Driver/Matching rehearsal runbook |
-| [driver-matching-defense.md](driver-matching-defense.md) | Driver/Matching defense workbook |
+| [demo.md](demo.md) | **The** demonstration and defense runbook (Vietnamese): preparation, architecture, 13-step live sequence, ten extended scenarios, speaker handover and examiner Q&A |
+| [driver-matching-demo.md](driver-matching-demo.md) | Supporting Driver/Matching rehearsal harness (superseded by `demo.md` for presentation) |
+| [driver-matching-defense.md](driver-matching-defense.md) | Supporting Driver/Matching defense workbook |
 | [team-technical-report.md](team-technical-report.md) | W15 technical report source (historical; the final report is [report.pdf](report.pdf)) |
 | [member-a-trip-saga-report.md](member-a-trip-saga-report.md) | Member A technical report source |
 | [driver-matching-report.md](driver-matching-report.md) | Member B technical report source |
 | [member-c-reliability-report.md](member-c-reliability-report.md) | Member C technical report source |
+
+`demo.md` is the single authoritative presentation runbook. Every command in it
+was executed against a clean deployment of the current source tree. The
+Driver/Matching documents above remain as supporting technical material, not as
+alternative presentations.
 
 ## 4. Release and provenance records
 
