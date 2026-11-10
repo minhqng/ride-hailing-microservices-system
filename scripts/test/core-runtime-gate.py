@@ -250,7 +250,7 @@ for metric in ["trip_created_trips_total", "saga_compensation_sagas_total", "dri
                "matching_round_total", "outbox_publish_messages_total", "payment_operation_operations_total",
                "rabbitmq_detailed_queue_messages_ready"]:
     def samples():
-        with urllib.request.urlopen("http://127.0.0.1:9090/api/v1/query?" + urllib.parse.urlencode({"query": metric}), timeout=5) as response:
+        with urllib.request.urlopen("http://127.0.0.1:" + os.getenv("OBS_PROMETHEUS_PORT", "9090") + "/api/v1/query?" + urllib.parse.urlencode({"query": metric}), timeout=5) as response:
             payload = json.load(response)
         assert payload["status"] == "success"
         values = payload.get("data", {}).get("result", [])
