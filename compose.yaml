@@ -116,7 +116,8 @@ services:
       Services__MatchingBaseUrl: http://matching:8080
       Services__PaymentBaseUrl: http://payment:8080
       Services__NotificationBaseUrl: http://notification:8080
-    ports: ["8080:8080"]
+    # Loopback-only like every other published port in this stack.
+    ports: ["127.0.0.1:8080:8080"]
     # No depends_on: gateway has no DB/broker readiness requirement at bootstrap.
     networks: [ride-net]
 
