@@ -12,6 +12,11 @@ def compose(*args, check=True):
     return subprocess.run(["docker", "compose", *args], check=check, text=True, capture_output=True)
 
 
+# Prometheus is published on OBS_PROMETHEUS_PORT (default 9090) so the obs
+# profile can start on a host where 9090 is already taken.
+PROMETHEUS = "http://127.0.0.1:" + os.getenv("OBS_PROMETHEUS_PORT", "9090")
+
+
 def wait_json(url, predicate=lambda data: True):
     for attempt in range(60):
         try:
@@ -74,7 +79,7 @@ assert before == exchange_snapshot()
 # OTel metric export is periodic; wait up to three minutes for a real HTTP metric.
 query = urllib.parse.urlencode({"query": '{__name__=~"http_server_request_duration.*"}'})
 for attempt in range(180):
-    metrics = wait_json("http://localhost:9090/api/v1/query?" + query)
+    metrics = wait_json(PROMETHEUS + "/api/v1/query?" + query)
     if metrics.get("data", {}).get("result"):
         break
     time.sleep(1)
