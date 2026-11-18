@@ -1,4 +1,4 @@
-// B-W09-02 schema wiring: apply C's canonical embedded Outbox DDL to the
+// Applies the shared embedded Outbox DDL to the
 // Driver-owned database. There is deliberately no Driver copy of the table
 // definition: NpgsqlOutboxStore.EnsureSchemaAsync is the single schema source,
 // so the Driver Outbox cannot drift from the shared relay contract.

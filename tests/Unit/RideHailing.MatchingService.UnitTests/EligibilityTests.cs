@@ -1,5 +1,5 @@
-// B-W05-02: eligibility decision proofs — one row per reason (DSI-020:
-// ineligible can never outrank into candidacy; the ranker type enforces it).
+// Eligibility decision proofs — one row per reason (an ineligible candidate
+// can never outrank into candidacy; the ranker type enforces it).
 using RideHailing.MatchingService.Domain.Matching;
 
 namespace RideHailing.MatchingService.UnitTests;

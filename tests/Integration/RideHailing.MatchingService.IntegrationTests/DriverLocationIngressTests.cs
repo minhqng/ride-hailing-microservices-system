@@ -1,8 +1,8 @@
-// B-W12-06 / SEC-05/07: the REAL Driver location ingress (Kestrel + minimal
-// API binding + LocationValidator + in-memory monotonic acceptor) and the REAL
-// broker publication path. Invalid input must not change the accepted sample,
-// must not publish DriverLocationAcceptedV1, and must not corrupt the derived
-// Redis projection that was built from the last accepted event.
+// The REAL Driver location ingress (Kestrel + minimal API binding +
+// LocationValidator + in-memory monotonic acceptor) and the REAL broker
+// publication path. Invalid input must not change the accepted sample, must not
+// publish DriverLocationAcceptedV1, and must not corrupt the derived Redis
+// projection that was built from the last accepted event.
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -33,10 +33,10 @@ using Xunit.Abstractions;
 
 namespace RideHailing.MatchingService.IntegrationTests;
 
-[Collection(W12IngressCollection.Name)]
+[Collection(DriverIngressCollection.Name)]
 public sealed class DriverLocationIngressTests
 {
-    private const string Session = "w12-location-session";
+    private const string Session = "location-session";
     private const string Route = "driver.location-accepted.v1";
 
     private readonly DriverTestDatabase _drivers;
@@ -88,7 +88,7 @@ public sealed class DriverLocationIngressTests
         var ct = deadline.Token;
         var driverId = Guid.NewGuid();
         var t0 = DateTimeOffset.UtcNow.AddMinutes(-2);
-        var queue = "w12-location-" + Guid.NewGuid().ToString("N");
+        var queue = "location-" + Guid.NewGuid().ToString("N");
         var db = _redis.Multiplexer().GetDatabase();
         var updater = new RedisProjectionUpdater(_redis.Multiplexer());
         await updater.EnsureFunctionAsync();
@@ -129,7 +129,7 @@ public sealed class DriverLocationIngressTests
             // the published location event: seq 10 is authoritative and the
             // driver is GEO-indexable.
             var stateEnvelope = MessageEnvelope<JsonElement>.Create(
-                "DriverAvailableV1", "w12-location",
+                "DriverAvailableV1", "location",
                 JsonSerializer.SerializeToElement(new
                 {
                     driverId,
@@ -160,7 +160,7 @@ public sealed class DriverLocationIngressTests
             // overflow literal (1e400) is rejected by binding or validation.
             using (var overflow = await http.PostAsync(
                 $"drivers/{driverId:N}/location",
-                Json("""{"deviceSessionId":"w12-location-session","sequenceNo":11,"capturedAt":"2026-10-26T12:00:00Z","latitude":1e400,"longitude":106.6}"""),
+                Json("""{"deviceSessionId":"location-session","sequenceNo":11,"capturedAt":"2026-10-26T12:00:00Z","latitude":1e400,"longitude":106.6}"""),
                 ct))
             {
                 Assert.Equal(HttpStatusCode.BadRequest, overflow.StatusCode);
@@ -168,7 +168,7 @@ public sealed class DriverLocationIngressTests
 
             using (var nan = await http.PostAsync(
                 $"drivers/{driverId:N}/location",
-                Json("""{"deviceSessionId":"w12-location-session","sequenceNo":11,"capturedAt":"2026-10-26T12:00:00Z","latitude":"NaN","longitude":106.6}"""),
+                Json("""{"deviceSessionId":"location-session","sequenceNo":11,"capturedAt":"2026-10-26T12:00:00Z","latitude":"NaN","longitude":106.6}"""),
                 ct))
             {
                 Assert.Equal(HttpStatusCode.BadRequest, nan.StatusCode);
@@ -249,7 +249,7 @@ public sealed class DriverLocationIngressTests
             Assert.Equal(geoBefore!.Value.Longitude, geoAfter!.Value.Longitude, 6);
             Assert.Equal(geoBefore.Value.Latitude, geoAfter.Value.Latitude, 6);
 
-            // W3/W4 preservation: latitude 86 is a VALID domain coordinate but
+            // Preservation: latitude 86 is a VALID domain coordinate but
             // outside Redis GEO indexability; it must be accepted, stored in
             // the hash, and removed from GEO, not rejected as invalid data.
             using var polar = await http.PostAsJsonAsync($"drivers/{driverId:N}/location", new
@@ -398,7 +398,7 @@ public sealed class DriverLocationIngressTests
 
     private async Task DeclareQueueAsync(string queue, CancellationToken ct)
     {
-        await using var connection = await Factory("w12-location-declare").CreateConnectionAsync(ct);
+        await using var connection = await Factory("location-declare").CreateConnectionAsync(ct);
         await RideTopology.DeclareAsync(connection, ct);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
         await channel.QueueDeclareAsync(queue, durable: true, exclusive: false,
@@ -410,13 +410,13 @@ public sealed class DriverLocationIngressTests
     {
         try
         {
-            await using var connection = await Factory("w12-location-delete").CreateConnectionAsync();
+            await using var connection = await Factory("location-delete").CreateConnectionAsync();
             await using var channel = await connection.CreateChannelAsync();
             await channel.QueueDeleteAsync(queue);
         }
         catch
         {
-            // container disposal below is authoritative
+            // Container disposal below is authoritative
         }
     }
 
@@ -427,7 +427,7 @@ public sealed class DriverLocationIngressTests
     private async Task<(string Route, byte[] Body)?> TryConsumeAsync(
         string queue, TimeSpan timeout, CancellationToken ct)
     {
-        await using var connection = await Factory("w12-location-consume").CreateConnectionAsync(ct);
+        await using var connection = await Factory("location-consume").CreateConnectionAsync(ct);
         await RideTopology.DeclareAsync(connection, ct);
         await using var channel = await connection.CreateChannelAsync(cancellationToken: ct);
         using var wait = CancellationTokenSource.CreateLinkedTokenSource(ct);

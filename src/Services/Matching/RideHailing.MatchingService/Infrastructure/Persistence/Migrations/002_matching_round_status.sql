@@ -1,4 +1,4 @@
--- B-W02-04 fix (P0 review): canonical MatchingRound status vocabulary per Doc 01 §8.2.
+-- Canonical MatchingRound status vocabulary.
 -- 001 froze a wrong set (OPEN/SEARCHING invented; PROCESSING/FAILED missing).
 -- Migrations are append-only: this file corrects 001 instead of editing it.
 -- Idempotent: safe to re-apply.
@@ -31,7 +31,7 @@ END $$;
 --    no longer exist when the new vocabulary is enforced.
 UPDATE matching_rounds SET status = 'PROCESSING' WHERE status IN ('OPEN', 'SEARCHING');
 
--- 3. Canonical CHECK + default (Doc 01 §8.2: PROCESSING/RESERVED/NO_DRIVER/CANCELLED/FAILED).
+-- 3. Canonical CHECK + default (PROCESSING/RESERVED/NO_DRIVER/CANCELLED/FAILED).
 DO $$
 BEGIN
   IF NOT EXISTS (

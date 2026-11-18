@@ -60,7 +60,7 @@ app.MapPost("/connect/token", (ServiceGrantRequest request, PrincipalIssuer issu
 }).RequireRateLimiting("identity");
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "identity-service" }));
-app.MapRideReadiness();
+app.MapRideReadiness(requiresOwnedDatabase: true);
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "identity-service", environment = env.EnvironmentName }));
 

@@ -3,8 +3,8 @@ using RideHailing.PaymentService.Domain;
 
 namespace RideHailing.PaymentService.Integration.Payment;
 
-/// <summary>Payment command/event payloads for the Payment-to-Saga integration (W10).</summary>
-// The stable operationKey is ENVELOPE metadata (Doc 05A §5.1 / Doc 05C §6):
+/// <summary>Payment command/event payloads for the Payment-to-Saga integration.</summary>
+// The stable operationKey is ENVELOPE metadata:
 // Trip producers must not duplicate it inside the payload. The optional
 // payload property is accepted only when it exactly echoes the envelope, so a
 // mixed producer cannot smuggle a second logical identity into one command.

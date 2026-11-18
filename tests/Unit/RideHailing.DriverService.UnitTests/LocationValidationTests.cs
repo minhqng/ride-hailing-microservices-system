@@ -1,4 +1,4 @@
-// B-W03-05: ingress validation (Doc 01 §5.3). Chốt ①: lat ±90 accepted here.
+// Ingress validation: lat ±90 is accepted here.
 using RideHailing.DriverService.Application.Location;
 using RideHailing.DriverService.Domain.Drivers;
 
@@ -43,7 +43,8 @@ public class LocationValidationTests
     [Fact]
     public void Polar_Latitude_Accepted_At_Ingress()
     {
-        // Chốt ①: 86° accepted by authority; W4 projection marks non-indexable.
+        // 86° is accepted by the authority; the projection marks it
+        // non-indexable.
         var s = Base() with { Latitude = 86.0 };
         LocationValidator.Validate(s, Now);
         Assert.False(LocationValidator.IsGeoIndexable(s.Latitude, s.Longitude));

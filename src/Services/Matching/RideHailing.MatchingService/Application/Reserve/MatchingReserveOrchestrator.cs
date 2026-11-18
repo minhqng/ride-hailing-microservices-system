@@ -1,15 +1,15 @@
-// B-W07-05/06/08/10: serial Matching reserve orchestration
-// (Doc 02 §2.3 serial algorithm + §12.5 reserve sequence, DSI-015/017/018/022/031).
+// Serial Matching reserve orchestration
+// (serial algorithm + reserve sequence).
 //
 // One round, one candidate at a time, always decided on durable state:
-//   persist IN_FLIGHT (write-ahead identity, Doc 02 §12.4) → read Driver
+//  persist IN_FLIGHT (write-ahead identity) → read Driver
 //   version → persist max-dispatched fence BEFORE remote call → reserve with
 //   same R (retry same R on STALE_VERSION, bounded) → Reserved (round follows)
 //   / Rejected (next driver) / Unknown (STOP, no advance) → reconcile same R
 //   with version fencing (bounded; exhaustion is a visible terminal, never
 //   silent) → advance only on conclusive outcomes.
 //
-// Fencing rule (DSI-031, Doc 01 §19 clarified): current AVAILABLE alone never
+// Fencing rule: current AVAILABLE alone never
 // proves an earlier R cannot commit later (pre-lock and pre-commit races:
 // query sees last-committed AVAILABLE while R holds the row lock uncommitted
 // or has not yet acquired it, then R commits). AVAILABLE is conclusive only
@@ -29,7 +29,7 @@
 // UNKNOWN on AVAILABLE/incompatible. NotFound carries no version and needs no
 // fence: no dispatch is possible without a version read.
 //
-// W9 terminal rule: when this bounded candidate list is all REJECTED, the
+// Terminal rule: when this bounded candidate list is all REJECTED, the
 // orchestrator asks MatchingTerminalizer for the atomic NO_DRIVER +
 // Outbox(MatchingFailedV1) commit. The terminalizer refuses if any attempt is
 // still READY/IN_FLIGHT/UNKNOWN/RESERVED, cancellation was requested, the
@@ -38,7 +38,7 @@
 // result_message_id and never starts a new attempt sequence.
 //
 // What this never does: generic identity-changing retry (same R always,
-// Doc 02 §19.3), candidate advance on UNKNOWN (R-11), broker calls from the
+// candidate advance on UNKNOWN, broker calls from the
 // request path (the shared relay publishes committed Outbox intents), or a
 // second terminal result for the same round. Cancellation by the caller
 // propagates; only transport uncertainty becomes UNKNOWN. Programming/
@@ -116,10 +116,10 @@ public sealed class MatchingReserveOrchestrator
     }
 
     /// <summary>
-    /// Serial round executor (B-W07-10 guard lives here): at most one
+    /// Serial round executor (guard lives here): at most one
     /// in-flight/unknown attempt per round, conclusive outcomes only advance.
     /// The legacy entry accepts a driver list whose indexes are ordinals
-    /// (single-stage W5/W11 callers); production stages use
+    /// (single-stage / callers); production stages use
     /// <see cref="ExecuteRoundTargetsAsync"/> so ledger ordinals survive.
     /// </summary>
     public Task<RoundReserveResult> ExecuteRoundAsync(
@@ -139,7 +139,7 @@ public sealed class MatchingReserveOrchestrator
     /// <summary>
     /// Drives an ordered list of durable attempt identities. terminalStage
     /// limits the legal NO_DRIVER decision to the final configured stage
-    /// (DSI-021); null preserves the legacy single-stage behavior.
+    /// ; null preserves the legacy single-stage behavior.
     /// </summary>
     public async Task<RoundReserveResult> ExecuteRoundTargetsAsync(
         Guid tripId,
@@ -233,7 +233,7 @@ public sealed class MatchingReserveOrchestrator
 
         if (roundRow.CancelRequested)
         {
-            // Doc 02 §12.9: start no new candidate attempt on a cancelled
+            // Start no new candidate attempt on a cancelled
             // round; only an already durable unresolved effect may reconcile.
             return new RoundReserveResult(
                 RoundOutcome.Refused, null, null, MatchingTerminalReasons.CancelRequested);
@@ -374,7 +374,7 @@ public sealed class MatchingReserveOrchestrator
     {
         // Public entry: the round row must exist first (FK). Fresh message
         // ids converge on PK conflict, so duplicate workers share the round.
-        // Legacy/internal seam (not the W8 broker path): no envelope identity
+        // Legacy/internal seam (not the broker path): no envelope identity
         // is available here, so a locally generated placeholder is used. It
         // is stored verbatim as TEXT, never overwrites an existing round's
         // saved broker identity, and is distinct from envelope.MessageId.
@@ -418,7 +418,7 @@ public sealed class MatchingReserveOrchestrator
 
         if (row.State == MatchingAttemptStates.Ready)
         {
-            // Doc 02 §12.4: the exact reservation intent must be durable as
+            // The exact reservation intent must be durable as
             // IN_FLIGHT BEFORE the remote call. Stage snapshots create READY
             // rows with their reservation identity; a duplicate worker may
             // have already moved the row, so re-read durable truth and fail
@@ -461,7 +461,7 @@ public sealed class MatchingReserveOrchestrator
 
     /// <summary>
     /// Reconciles an UNKNOWN (or never-called IN_FLIGHT/READY) attempt with
-    /// the same reservation identity (B-W07-08, DSI-018/DSL-001). Conclusive
+    /// the same reservation identity. Conclusive
     /// truth resolves durably; transport uncertainty stays UNKNOWN; bounded
     /// exhaustion is a visible terminal, never silent drift.
     /// </summary>
@@ -477,7 +477,7 @@ public sealed class MatchingReserveOrchestrator
     /// <summary>
     /// Query-only reconciliation for a cancelled round: an unresolved
     /// write-ahead attempt may have reached Driver, but starting a new
-    /// reservation call is forbidden after cancellation (Doc 02 §12.9).
+    /// reservation call is forbidden after cancellation.
     /// IN_FLIGHT becomes UNKNOWN durably, then polls the same reservation id.
     /// </summary>
     public async Task<AttemptResult> ReconcileObservedAsync(
@@ -555,7 +555,7 @@ public sealed class MatchingReserveOrchestrator
                     // READY was never offered to the transport; an IN_FLIGHT
                     // row without a fence cannot have been sent either (the
                     // fence commits before the remote call). Same-R replay is
-                    // the canonical idempotent resume here (DSI-005/018).
+                    // the canonical idempotent resume here.
                     return await CallReserveAsync(tripId, round, ordinal, row, ct);
                 }
 
@@ -749,14 +749,14 @@ public sealed class MatchingReserveOrchestrator
         }
 
         // Bounded exhaustion: the row stays UNKNOWN (durable truth), but the
-        // review signal is persisted so it survives restart (DSL-001
-        // visibility). A durable REVIEW terminal state itself belongs to W9.
+        // review signal is persisted so it survives restart and stays visible.
+        // A durable REVIEW terminal state is not modelled here.
         await _attempts.SetErrorCodeAsync(tripId, round, ordinal, "RECONCILE_EXHAUSTED", ct);
         return new AttemptResult(AttemptOutcome.NeedsReview, row.ReservationId, "RECONCILE_EXHAUSTED");
     }
 
     /// <summary>
-    /// Canonical wire vocabulary for reconcile outcomes (Doc 02 §12.6),
+    /// Canonical wire vocabulary for reconcile outcomes,
     /// persisted as last_error_code and returned to callers.
     /// </summary>
     public static string ToOutcomeCode(ReservationReconcileOutcome truth) => truth switch
@@ -815,7 +815,7 @@ public sealed class MatchingReserveOrchestrator
                 }
 
                 // Conclusive: an unknown driver cannot hold an effect
-                // (W6 reserve returns NotFound without writing).
+                // (reserve returns NotFound without writing).
                 var missing = await TryConcludeAsync(
                     tripId, round, ordinal,
                     [MatchingAttemptStates.InFlight, MatchingAttemptStates.Unknown, MatchingAttemptStates.Ready],
@@ -935,7 +935,7 @@ public sealed class MatchingReserveOrchestrator
             }
 
             // STALE_VERSION with budget left: same logical attempt, fresh
-            // fence value (DSI-018: retry reuses identity, never mints).
+            // fence value (retry reuses identity, never mints).
             if (i + 1 < _maxReserveAttempts)
             {
                 continue;

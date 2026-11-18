@@ -1,11 +1,13 @@
-# Member C evidence helpers
+# Evidence helper scripts
 
-- `performance-snapshot.py` records the fixed W13 Prometheus query set; run it
-  3–5 times per experiment condition and preserve every raw JSON file.
-- `release-check.ps1` runs the deterministic W16 release/secret gate. Add
-  `-WithDocker` when Docker is available directly in the current shell.
-- `../demo/member-c-mock-traffic.ps1` publishes unique Payment commands plus
-  exact transport replays so dashboards expose throughput and dedup behavior.
+These helpers support the release gates. They are not a substitute for the
+executable gates in `scripts/test/`.
 
-Live REL-05/06/08/11/15/16 outputs belong under `evidence/member-c/`. Never
-replace missing live output with a hand-written PASS file.
+- `runtime-observations.py` records the bounded Prometheus observations that CI
+  publishes alongside the platform-smoke artifacts.
+- `release-check.ps1` runs the deterministic release/secret gate. Add
+  `-WithDocker` for the Compose render and HA-overlay checks; without it the
+  script reports a unit/build gate, not release acceptance.
+
+Live outputs belong under `evidence/`. Never replace missing live output with a
+hand-written PASS file.

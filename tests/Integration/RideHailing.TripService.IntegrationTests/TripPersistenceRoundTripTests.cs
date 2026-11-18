@@ -1,10 +1,11 @@
-// Trip persistence round-trip proofs (A-W03-07) against real PostgreSQL.
+// Trip persistence round-trip proofs against real PostgreSQL.
 //
-// Proves the EF ComplexProperty mapping round-trips the actual W3 domain:
+// Proves the EF ComplexProperty mapping round-trips the actual domain:
 // null-assignment CREATED state, populated-assignment DRIVER_RESERVED state,
 // FareSnapshot/locations/version coherence, and the assignment-coherence and
-// state/assignment-coherence database defenses. Uses direct TripDbContext with the production model;
-// no test-only model. Service boot itself is proven separately.
+// state/assignment-coherence database defenses. Uses a direct TripDbContext
+// with the production model, never a test-only model. Service boot itself is
+// proven separately.
 
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -30,7 +31,7 @@ public sealed class TripPersistenceRoundTripTests
     [Fact]
     public async Task Duplicate_ReservationId_Across_Trips_Is_Rejected()
     {
-        // DSI-001 Trip-side defense (ux_trips_reservation_id): one logical
+        // Trip-side defense (ux_trips_reservation_id): one logical
         // Driver reservation effect is current for at most one Trip. A second
         // trips row claiming the same reservation must fail unique violation
         // (23505), never commit a double claim.

@@ -1,7 +1,15 @@
-// B-W05: internal matching trigger (test/demo seam, not the W8 broker path).
-// W8 will invoke the same application entry with RideRequestedV1 content.
-// Idempotent: same (tripId, matchingRound) replays the same ordered result
-// without minting new attempt identities (DSI-018).
+// Internal Matching control surface.
+//
+// - GET /internal/matching/rounds/{tripId}/{round}/cancellation is the
+//   production read used by Trip's cleanup reconciler. The Program.cs
+//   middleware requires a service principal with the matching:manage grant.
+// - POST /internal/matching/rounds is a test/demo seam only. Production work
+//   arrives as RideRequestedV1 and is executed by MatchingWorkDispatcher, so
+//   the manual route is not mapped in Production (it remains available in
+//   Development/Testing for the demo and evidence harnesses).
+//
+// Both are idempotent: the same (tripId, matchingRound) replays the same
+// ordered result without minting new attempt identities.
 using System.Net.Sockets;
 using Microsoft.Extensions.Options;
 using RideHailing.MatchingService.Application.Matching;
@@ -23,6 +31,11 @@ public static class MatchingEndpoints
             var stopped = await work.IsCancellationStoppedAsync(tripId, round, token);
             return Results.Ok(new { tripId, matchingRound = round, state = stopped ? "STOPPED" : "PENDING" });
         });
+
+        if (app.Environment.IsProduction())
+        {
+            return;
+        }
 
         app.MapPost("/internal/matching/rounds", async (
             StartRoundRequest req,
@@ -46,7 +59,7 @@ public static class MatchingEndpoints
             catch (InvalidOperationException ex)
             {
                 // Terminal/cancelled/blocked round or exhausted ledger retry:
-                // a domain conflict, not a system error (Doc 01 §22 DOMAIN_CONFLICT).
+                // a domain conflict, not a system error (DOMAIN_CONFLICT).
                 return Results.Conflict(new { code = "DOMAIN_CONFLICT", message = ex.Message });
             }
             catch (Exception ex) when (ex is Npgsql.NpgsqlException

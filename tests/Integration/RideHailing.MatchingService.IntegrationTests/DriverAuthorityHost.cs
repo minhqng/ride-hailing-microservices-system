@@ -1,6 +1,6 @@
-// B-REC-01 production proof authority: the REAL Driver endpoints on Kestrel
-// over the shared driver_db. Matching talks HTTP only (no cross-service SQL);
-// the fault seam is the production W11 implementation.
+// Production proof authority host: the REAL Driver endpoints on Kestrel over
+// the shared driver_db. Matching talks HTTP only (no cross-service SQL); the
+// fault seam is the production faultpoint implementation.
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;

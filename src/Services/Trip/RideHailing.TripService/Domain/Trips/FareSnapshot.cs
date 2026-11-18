@@ -1,7 +1,7 @@
-// FareSnapshot value object (Doc 01 §7).
+// FareSnapshot value object.
 //
-// W3 responsibility is REPRESENTATION and INVARIANTS: the frozen
-// authoritative fare for one Trip (DSI-014). Fare calculation (distance/time
+// The responsibility here is REPRESENTATION and INVARIANTS: the frozen
+// authoritative fare for one Trip. Fare calculation (distance/time
 // formula, dynamic pricing, CreateRide-time computation) is intentionally
 // deferred and must not appear here.
 
@@ -10,7 +10,7 @@ namespace RideHailing.TripService.Domain.Trips;
 /// <summary>
 /// Immutable identity-less frozen fare for one Trip. Equality is by value;
 /// there is no mutating API, so a frozen snapshot cannot drift when pricing
-/// configuration changes or a stale message arrives (DSI-014).
+/// configuration changes or a stale message arrives.
 /// </summary>
 public sealed record FareSnapshot
 {

@@ -1,4 +1,4 @@
-// B-W03-05: ingress validation (Doc 01 §5.3). Invalid input throws (API maps to 400).
+// Ingress validation. Invalid input throws (API maps to 400).
 using RideHailing.DriverService.Domain.Drivers;
 
 namespace RideHailing.DriverService.Application.Location;
@@ -58,8 +58,9 @@ public static class LocationValidator
         }
     }
 
-    // W4 hook: Redis GEOADD only indexes lat ≈ [-85.05112878, 85.05112878].
-    // W3 accepts polar latitudes; projection decides indexability (chốt ①).
+    // Projection hook: Redis GEOADD only indexes
+    // lat ≈ [-85.05112878, 85.05112878]. The domain accepts polar latitudes;
+    // the projection decides indexability.
     public static bool IsGeoIndexable(double latitude, double longitude)
     {
         return longitude is >= -180 and <= 180

@@ -1,18 +1,17 @@
-// Saga.AfterPersistBeforeDispatch deterministic gate (A-W11-01, Doc 05A §19,
-// Doc 02 §27.2, Doc 03 REL-04/REL-07).
+// Saga.AfterPersistBeforeDispatch deterministic gate.
 //
-// FROZEN INTEGRATION CONTRACT WITH C (Doc 05C §30, Doc 04 §22) — until the
-// shared W11 FaultPointProvider lands, this module is the agreed shape of the
+// FROZEN INTEGRATION CONTRACT — until the shared FaultPointProvider lands,
+// this module is the agreed shape of the
 // Trip-side integration, designed so the shared abstraction can adopt it
 // without a Trip rewrite:
 //
-//   1. NAME      "Saga.AfterPersistBeforeDispatch" (Doc 02 §27.2 spelling).
+//  1. NAME "Saga.AfterPersistBeforeDispatch" (spelling).
 //   2. LOCATION  The owning service's Outbox relay pre-publish seam (the same
-//                boundary as C's Outbox.AfterPublishBeforeMark, one step
+//                boundary as the platform's Outbox.AfterPublishBeforeMark, one step
 //                earlier). The relay only sees rows a committed transaction
 //                produced, so the faultpoint is necessarily after-commit; it
 //                never wraps business code, never opens a transaction and
-//                never mutates domain state (Doc 02 §27.3).
+//  never mutates domain state.
 //   3. SCOPE     The saga's outbound payment dispatches (Authorize/Capture/
 //                Void). Non-saga dispatches are not gated by this name.
 //   4. ACTIVATION Double-gated and default-off: configuration
@@ -32,7 +31,7 @@
 //                faultpoint never blocks forever and never requires
 //                debugger timing or human keypresses.
 //
-// When C's shared platform lands, items 4-6 move behind its provider; the
+// When the shared platform lands, items 4-6 move behind its provider; the
 // name, location and scope above are the frozen semantics.
 
 using System.Text.Json;

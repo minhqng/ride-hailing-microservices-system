@@ -1,4 +1,4 @@
--- B-W06-04 DB defense: reserve/active identity must never be Guid.Empty.
+-- DB defense: reserve/active identity must never be Guid.Empty.
 --
 -- The Driver domain rejects empty trip/reservation/active refs on every
 -- transition, and the OCC reserve path validates them at the API boundary.
@@ -6,8 +6,8 @@
 -- persistence boundary: no direct-SQL, bypassed-domain or torn write can
 -- commit a RESERVED/ON_TRIP row carrying a corrupt empty identity that would
 -- otherwise collide across drivers or detonate at read time.
--- Faithful to frozen invariant "empty != absent" (Doc 01 §2.1 guard
--- philosophy, DSI-005 stable-identity groundwork).
+-- Faithful to the invariant "empty != absent": a stable identity is either
+-- present or NULL, never an empty Guid.
 -- Idempotent: safe to re-apply (guarded DDL). Dirty datasets fail loud with
 -- PG 23514 (no silent cleanup, no backfill: empties are never legitimate).
 DO $$

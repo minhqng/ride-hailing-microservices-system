@@ -1,4 +1,4 @@
-// B-owned hosting adapter for C's shared OutboxRelay. This class adds only
+// Hosting adapter for the shared OutboxRelay. This class adds only
 // process lifecycle, topology bootstrap and bounded restart backoff; claim,
 // confirmed publish, mark and retry semantics remain in
 // RideHailing.Messaging.Outbox.

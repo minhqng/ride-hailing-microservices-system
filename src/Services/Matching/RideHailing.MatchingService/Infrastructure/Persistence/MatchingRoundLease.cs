@@ -1,4 +1,4 @@
-// B-REC-01: cross-process per-round lease.
+// Cross-process per-round lease.
 //
 // A session-level PostgreSQL advisory lock gives exactly one worker instance
 // the right to drive one round at a time. The lock lives on a dedicated

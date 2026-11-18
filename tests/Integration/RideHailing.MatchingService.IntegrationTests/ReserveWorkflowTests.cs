@@ -1,4 +1,4 @@
-// B-W07-05..10: reserve-workflow component proof on REAL PostgreSQL ×2.
+// Reserve-workflow component proof on REAL PostgreSQL ×2.
 // The orchestrator talks to Driver exclusively through IDriverClient; the
 // stub below injects deterministic transport faults, while BOTH databases
 // stay real: attempt/round rows in matching_db, reservation truth in
@@ -58,7 +58,7 @@ public class ReserveWorkflowTests
     /// Scriptable IDriverClient: deterministic transport faults with a call
     /// log. Defaults succeed against scripted versions; tests override per
     /// scenario. A fault delegate may drive the REAL DriverRepository to
-    /// prove a commit happened before the simulated response loss (REL-01).
+    /// prove a commit happened before the simulated response loss.
     /// </summary>
     private sealed class StubDriverClient : IDriverClient
     {
@@ -176,8 +176,8 @@ public class ReserveWorkflowTests
     public async Task Round_Stops_On_Unknown_Without_Touching_Next_Candidate()
     {
 
-        // B-W07-10 negative assertion: D1 UNKNOWN ⇒ zero further Driver
-        // calls, zero further rows (DSI-017/031).
+        // Negative assertion: D1 UNKNOWN ⇒ zero further Driver
+        // calls, zero further rows.
         var trip = NewTrip();
         var d1 = Guid.NewGuid();
         var d2 = Guid.NewGuid();
@@ -202,9 +202,9 @@ public class ReserveWorkflowTests
     public async Task Round_All_Rejected_Commits_NoDriver_With_Durable_Intent()
     {
 
-        // W9: every candidate is conclusively REJECTED, so the only legal
-        // terminal is NO_DRIVER. The terminal row and its MatchingFailedV1
-        // Outbox intent commit together; the broker is never touched here.
+        // Every candidate is conclusively REJECTED, so the only legal terminal
+        // is NO_DRIVER. The terminal row and its MatchingFailedV1 Outbox intent
+        // commit together; the broker is never touched here.
         var trip = NewTrip();
         var inputMessageId = Guid.NewGuid().ToString("D");
         var stub = new StubDriverClient
@@ -277,10 +277,10 @@ public class ReserveWorkflowTests
     public async Task Response_Loss_Converges_Via_Same_Reservation_Reconcile()
     {
 
-        // REL-01 (Doc 03 §9): the stub performs a REAL reserve commit in
-        // driver_db, then suppresses the response (faultpoint equivalent).
-        // Caller sees timeout ⇒ UNKNOWN ⇒ no D2 ⇒ reconcile same R ⇒ round
-        // RESERVED. Oracles on both databases.
+        // The stub performs a REAL reserve commit in driver_db, then suppresses
+        // the response (faultpoint equivalent). Caller sees timeout ⇒ UNKNOWN ⇒
+        // no D2 ⇒ reconcile same R ⇒ round RESERVED. Oracles on both
+        // databases.
         var trip = NewTrip();
         var driverId = await SeedAvailableDriverAsync();
         var driverRepo = _drivers.CreateRepository();
@@ -530,9 +530,9 @@ public class ReserveWorkflowTests
     public async Task Reservation_Reuse_Across_Ordinals_Fails_Loud()
     {
 
-        // DSI-018: one R = one logical attempt. Reusing an R on a different
-        // ordinal trips the reservation UNIQUE (23505) — loud
-        // PostgresException, never silent convergence to a wrong row.
+        // One R = one logical attempt. Reusing an R on a different ordinal
+        // trips the reservation UNIQUE (23505) — loud PostgresException, never
+        // silent convergence to a wrong row.
         var trip = NewTrip();
         var repo = Attempts();
         await repo.EnsureRoundAsync(trip, 1, Guid.NewGuid().ToString("D"));
@@ -834,8 +834,8 @@ public class ReserveWorkflowTests
     public async Task Reconcile_Bare_404_Throw_Stays_Unknown_Bounded()
     {
 
-        // F1 CASE 5: the reconcile transport itself 404s bare (client throws
-        // per the DSI-031 rule) → stays UNKNOWN, bounded polls, visible end.
+        // F1 CASE 5: the reconcile transport itself 404s bare (the client
+        // throws on a bare 404) → stays UNKNOWN, bounded polls, visible end.
         var trip = NewTrip();
         var d1 = Guid.NewGuid();
         var queries = 0;
@@ -988,7 +988,7 @@ public class ReserveWorkflowTests
         };
         var exhausted = await Orchestrator(rejecting).ExecuteRoundAsync(trip, 8, [d1], Guid.NewGuid().ToString("D"));
         // Conclusively rejected is the one legal terminal: NO_DRIVER, never
-        // RESERVED (and never PROCESSING once W9 owns the terminal).
+        // RESERVED (and never PROCESSING once owns the terminal).
         Assert.Equal(RoundOutcome.NoDriver, exhausted.Outcome);
         Assert.Equal(
             MatchingRoundStatuses.NoDriver,

@@ -1,4 +1,4 @@
-// B-W07-09: real driver_db for cross-service component proof.
+// Real driver_db for cross-service component proof.
 // Each repository touches only its own database (Matching tests own
 // matching_db via MatchingPostgresDatabase; this fixture owns driver_db).
 // No cross-service SQL: the orchestrator under test talks to Driver
@@ -18,7 +18,9 @@ public sealed class DriverTestDatabase : IAsyncLifetime
 {
     static DriverTestDatabase()
     {
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private PostgreSqlContainer? _container;
@@ -30,9 +32,9 @@ public sealed class DriverTestDatabase : IAsyncLifetime
     public NpgsqlOutboxStore OutboxStore { get; private set; } = null!;
 
     /// <summary>
-    /// Production-shaped Driver repository over the shared pool. W9 requires a
-    /// data source + shared Outbox store; there is no connection-string-only
-    /// construction path anymore.
+    /// Production-shaped Driver repository over the shared pool. It requires a
+    /// data source plus the shared Outbox store; there is no
+    /// connection-string-only construction path anymore.
     /// </summary>
     public DriverRepository CreateRepository() => new(DataSource, OutboxStore);
 
@@ -41,6 +43,7 @@ public sealed class DriverTestDatabase : IAsyncLifetime
         var env = Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES");
         if (!string.IsNullOrWhiteSpace(env))
         {
+            EnsureDisposable(env, "DRIVER_TEST_POSTGRES");
             await using var probe = new NpgsqlConnection(env);
             await probe.OpenAsync();
             ConnectionString = env;
@@ -80,6 +83,25 @@ public sealed class DriverTestDatabase : IAsyncLifetime
         }
     }
 
+    // An external database is only accepted when it is provably disposable:
+    // the fixture applies the Driver baseline and tests truncate tables, so
+    // pointing it at a shared database must be an explicit decision.
+    private static void EnsureDisposable(string connectionString, string variable)
+    {
+        var database = new NpgsqlConnectionStringBuilder(connectionString).Database ?? "";
+        var acknowledged = Environment.GetEnvironmentVariable(variable + "_ALLOW_DESTRUCTIVE");
+        if (string.Equals(acknowledged, "1", StringComparison.Ordinal)
+            || database.EndsWith("_test", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"{variable} targets database '{database}', which is not provably disposable. " +
+            $"Use a database whose name ends with '_test', or set {variable}_ALLOW_DESTRUCTIVE=1 " +
+            "to confirm the fixture may migrate and truncate it.");
+    }
+
     private static async Task ApplyAsync(string connectionString)
     {
         await using var conn = new NpgsqlConnection(connectionString);
@@ -87,7 +109,7 @@ public sealed class DriverTestDatabase : IAsyncLifetime
         await using var cmd = new NpgsqlCommand(DriverSqlBaseline.Load(), conn);
         await cmd.ExecuteNonQueryAsync();
 
-        // W9: apply C's canonical shared Outbox schema to driver_db.
+        // Apply the canonical shared Outbox schema to driver_db.
         await DriverOutboxSchema.EnsureAsync(connectionString);
     }
 

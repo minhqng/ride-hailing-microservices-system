@@ -1,4 +1,4 @@
-// B-W06-01/02/03: OCC fence precedence matrix (Doc 01 §1.4/§4.4, DSI-001/003/005).
+// OCC fence precedence matrix.
 // Pure unit, no PG.
 using RideHailing.DriverService.Domain.Drivers;
 
@@ -62,9 +62,9 @@ public class DriverReserveTests
     [Fact]
     public void Reserve_Stale_Version_Same_Reservation_Still_Replays()
     {
-        // DSI-005 over DSI-003: the effect already exists, so the retry that
-        // carries its original (now stale) version still returns canonical
-        // success with no new effect.
+        // The effect already exists, so the retry that carries its original
+        // (now stale) version still returns canonical success with no new
+        // effect.
         var d = AvailableDriver();
         var v0 = d.Version;
         var t = Guid.NewGuid();
@@ -128,11 +128,11 @@ public class DriverReserveTests
     [Fact]
     public void Reserve_Same_Identity_After_Release_Is_A_New_Effect()
     {
-        // Boundary pin (W6 semantics; W7 owns R-freshness): once Release ends
+        // Boundary pin (semantics; owns R-freshness): once Release ends
         // the effect, the row is AVAILABLE with no memory of R. A fresh-version
-        // re-reserve with the same (T,R) is a new effect and wins — the driver
+        // re-reserve with the same (T,R) is a new effect and wins: the driver
         // layer cannot see reservation history. Cross-effect R-freshness
-        // enforcement awaits the W7 attempt ledger (UNIQUE(reservation_id)).
+        // enforcement lives in the attempt ledger (UNIQUE(reservation_id)).
         var d = AvailableDriver();
         var t = Guid.NewGuid();
         var r = Guid.NewGuid();

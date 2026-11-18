@@ -2,6 +2,7 @@ bin/
 obj/
 out/
 .env
+.env.*
 .git
 .vs/
 .idea/
@@ -11,6 +12,10 @@ TestResults/
 **/obj/
 **/appsettings.*.local.json
 **/*.pfx
+**/*.pem
+**/*.key
+**/*.p12
+**/*.trx
 secrets/
 logs/
 plans/

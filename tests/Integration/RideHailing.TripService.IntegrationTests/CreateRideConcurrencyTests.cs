@@ -114,8 +114,8 @@ public sealed class CreateRideConcurrencyTests
                 CreateRideRequestFingerprint.Compute(rider, Pickup(), Dropoff()),
                 record.RequestFingerprint);
 
-            // DSI-014 oracle: both callers resolve to the SAME persisted
-            // FareSnapshot; the winner's committed snapshot is authoritative.
+            // Both callers resolve to the SAME persisted FareSnapshot; the
+            // winner's committed snapshot is authoritative.
             var authoritative = await verify.Trips.AsNoTracking()
                 .SingleAsync(t => t.TripId == trip.TripId);
             Assert.Equal("VND", authoritative.Fare.Currency);

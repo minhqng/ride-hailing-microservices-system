@@ -1,17 +1,16 @@
 // CancelRide HTTP transport shape freeze.
 //
 // SCOPE: transport shape ONLY. No state transition, terminal logic, Matching
-// cancellation, Driver release, compensation, Outbox, or cleanup workflow
-// (all W3+).
+// cancellation, Driver release, compensation, Outbox, or cleanup workflow.
 //
-// CANONICAL SEMANTIC (Docs 00-01):
+// CANONICAL SEMANTIC:
 //   - Trip cancellation commits a terminal CANCELLED state; late
-//     DriverReserved/PaymentAuthorized must not reactivate it (DSI-010,
-//     DSI-032). Cleanup of an exact reservation (tripId + reservationId,
-//     DSI-033) is a backend Saga/Outbox concern and is NOT part of this
+//     DriverReserved/PaymentAuthorized must not reactivate it. Cleanup of an
+//     exact reservation (tripId + reservationId) is a backend Saga/Outbox
+//     concern and is NOT part of this
 //     external DTO.
 //   - tripId in the route identifies which logical ride to cancel.
-// W2 MECHANICAL FREEZE (this file):
+// MECHANICAL FREEZE (this file):
 //   - Request body is intentionally empty: POST carries the intent, the route
 //     carries tripId. No "reason" field is frozen now; a reason would be a
 //     future additive optional field, not invented here.
@@ -19,7 +18,7 @@
 //   - Intended route/method: POST /trips/{tripId:guid}/cancel (see TripRoutes).
 //     POST (not DELETE) because cancel is a domain transition with
 //     compensation side effects, not a resource deletion. Registered with the
-//     rider-scoped CancelRideHandler since W5.
+//     rider-scoped CancelRideHandler.
 
 using System.Text.Json.Serialization;
 

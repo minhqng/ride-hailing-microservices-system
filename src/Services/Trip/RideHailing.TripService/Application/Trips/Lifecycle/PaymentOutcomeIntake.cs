@@ -1,4 +1,4 @@
-// Payment-outcome saga intake (A-W10-03/04/08, Doc 05A §18, Doc 02 §14.4-14.6).
+// Payment-outcome saga intake.
 //
 // ONE shared application core for authoritative Payment outcome facts, used
 // by both the broker consumer (trip.payment-outcome.q, envelope-carried
@@ -7,17 +7,17 @@
 // outbox intents in the CALLER's open unit of work — never a separate
 // commit, never a remote Payment call.
 //
-// Lineage rules enforced before any mutation (DSI-034, Doc 05A §18.4):
+// Lineage rules enforced before any mutation:
 //   * a supplied operationKey must equal the saga's key for the awaited step;
 //   * a supplied sagaId must equal this saga's identity;
 //   * the saga must be on the step the outcome resolves.
 // DECLINED ≠ UNKNOWN: only authority-confirmed no-effect outcomes
 // (DECLINED, NO_PROVIDER_EFFECT) compensate. Transient/timeout/lost-response
 // codes are durably observed and the SAME operationKey stays in force
-// (Doc 02 §15.5). A capture failure never regresses a COMPLETED Trip
-// (DSI-028): the saga holds the pending/review state, not the ride.
+// . A capture failure never regresses a COMPLETED Trip
+// : the saga holds the pending/review state, not the ride.
 //
-// Trips without a saga keep the frozen W8 skeleton behavior: the outcome is
+// Trips without a saga keep the legacy no-saga behavior: the outcome is
 // parked durably and never mutates ride state from a tripId alone.
 
 using RideHailing.Messaging.Outbox;
@@ -83,10 +83,10 @@ public static class PaymentOutcomeIntake
 
         if (saga is null)
         {
-            // Frozen W8 skeleton: no saga lineage exists, so a tripId alone
+            // Legacy no-saga path: no saga lineage exists, so a tripId alone
             // never authorizes or fails the ride. The one recorded exception
             // (authorization success on a cancelled Trip) stays durable as a
-            // reconcile obligation for manual/W10 lineage recovery.
+            // reconcile obligation for manual lineage recovery.
             if (fact.MessageType == "PaymentAuthorizedV1" && trip.State == TripState.Cancelled)
             {
                 trip.RecordCancelledPaymentAuthorization(now);
@@ -143,7 +143,7 @@ public static class PaymentOutcomeIntake
         {
             // Authorization raced the rider's cancellation and WON at Payment
             // authority: the hold exists, so an exact void with the stable
-            // void key is dispatched. The Trip stays CANCELLED (DSI-010).
+            // void key is dispatched. The Trip stays CANCELLED.
             if (saga.CurrentStep == RideSagaStep.AuthorizePending)
             {
                 trip.RecordCancelledPaymentAuthorization(now);
@@ -190,9 +190,9 @@ public static class PaymentOutcomeIntake
 
         if (trip.State == TripState.DriverAccepted)
         {
-            // REL-09: terminal pre-start failure. One transaction carries the
+            // Terminal pre-start failure. One transaction carries the
             // Trip cancellation, the saga compensation step and the exact
-            // release/cancel-round intents (DSI-033).
+            // release/cancel-round intents.
             trip.MarkPaymentFailed(now);
             Require(saga.RecordAuthorizeDeclined(code, now));
             // DECLINED is conclusive no-effect evidence: the reconcile
@@ -291,7 +291,7 @@ public static class PaymentOutcomeIntake
 
         if (saga.CurrentStep != RideSagaStep.CapturePending || trip.State != TripState.Completed)
         {
-            // Capture success before completion is out of order (DSI-027);
+            // Capture success before completion is out of order;
             // never fabricate completion from a payment fact.
             return Review("PAYMENT_OUT_OF_ORDER");
         }
@@ -312,7 +312,7 @@ public static class PaymentOutcomeIntake
             return Review("STALE_PAYMENT_OUTCOME");
         }
 
-        // DSI-028: the ride NEVER regresses; the observation is durable and
+        // The ride NEVER regresses; the observation is durable and
         // the same capture key stays pending for forward recovery.
         Require(saga.RecordCaptureOutcomeUncertain(fact.ResultCode ?? "CAPTURE_PENDING", now));
         return Applied;

@@ -1,8 +1,8 @@
-// StartMatching application handler (A-W05-01).
+// StartMatching application handler.
 //
 // Rider-scoped: only the owning Rider can open the matching round for their
-// ride in the pre-broker skeleton (fail closed; missing and not-owned share
-// NotFound per SEC-03). Loads the Trip, calls the single aggregate
+// ride at the HTTP boundary (fail closed; missing and not-owned share
+// NotFound). Loads the Trip, calls the single aggregate
 // operation with the deterministic clock, persists the authoritative result,
 // maps the domain outcome. No FSM logic here.
 
@@ -57,11 +57,11 @@ public sealed class StartMatchingHandler
         // Round-1 replay is already current: no mutation, no new intent.
         if (!outcome.IsReplay)
         {
-            // A-W09-02: MATCHING state and its RideRequested intent commit in
+            // MATCHING state and its RideRequested intent commit in
             // one local transaction. A crash or broker outage after this
             // commit leaves a pending row for the relay, never a lost message.
             TripOutboxWriter.Enqueue(_db, TripOutboxIntents.RideRequested(trip, trip.UpdatedAt));
-            // DS03: the Rider-visible "request created" notification is a
+            // The Rider-visible "request created" notification is a
             // non-authoritative intent committed with the same transition.
             TripOutboxWriter.Enqueue(_db, TripNotificationIntents.RideRequested(trip, trip.UpdatedAt));
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

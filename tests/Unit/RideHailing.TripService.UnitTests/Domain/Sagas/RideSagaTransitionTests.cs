@@ -1,10 +1,10 @@
-// RideSaga guarded-transition proofs (A-W10-01..08, Doc 05A §18).
+// RideSaga guarded-transition proofs.
 //
 // ORACLE: the saga advances ONLY on the authoritative fact for its current
-// step, exactly once per logical fact (DSI-034), never from an uncertain
+// step, exactly once per logical fact, never from an uncertain
 // outcome (DECLINED ≠ UNKNOWN), never regressing a terminal workflow
-// (DSL-005) and never completing compensation while an obligation is still
-// outstanding (DSI-033/DSL-002). Rejected and replay operations leave
+//  and never completing compensation while an obligation is still
+// outstanding. Rejected and replay operations leave
 // StepVersion and timestamps untouched.
 
 using RideHailing.TripService.Domain.Sagas;
@@ -50,7 +50,7 @@ public sealed class RideSagaTransitionTests
         Assert.Equal($"{TripId:D}:authorize:v1", saga.AuthorizeOperationKey);
         Assert.Null(saga.CaptureOperationKey);
         Assert.Null(saga.VoidOperationKey);
-        // MayStartRide is false until authorization is authoritative (DSI-026).
+        // MayStartRide is false until authorization is authoritative.
         Assert.False(saga.MayStartRide);
     }
 
@@ -78,7 +78,7 @@ public sealed class RideSagaTransitionTests
         Assert.Equal(RideSagaStep.Authorized, saga.CurrentStep);
         Assert.True(saga.MayStartRide);
         // The duplicate payment success is a replay: no second advance and no
-        // StepVersion bump (one logical payment effect per step, DSI-034).
+        // StepVersion bump (one logical payment effect per step).
         Assert.True(duplicate.IsSuccess);
         Assert.True(duplicate.IsReplay);
         Assert.Equal(2, saga.StepVersion);
@@ -126,7 +126,7 @@ public sealed class RideSagaTransitionTests
         Assert.True(first.IsSuccess);
         Assert.False(first.IsReplay);
         // UNKNOWN must not be mistaken for a terminal failure: the step stays
-        // pending on the SAME operationKey for reconciliation (Doc 02 §15.5).
+        // pending on the SAME operationKey for reconciliation.
         Assert.Equal(RideSagaStep.AuthorizePending, saga.CurrentStep);
         Assert.Equal(RideSagaStatus.Active, saga.Status);
         Assert.Equal("TIMEOUT_AFTER_EFFECT", saga.LastErrorCode);
@@ -247,7 +247,7 @@ public sealed class RideSagaTransitionTests
         saga.RecordAuthorizeSucceededAfterCancellation(RideSagaOperationKeys.Void(TripId), Later);
 
         // Void resolves first, release still outstanding: the saga waits on
-        // the exact reservation release (DSI-033/DSL-002).
+        // the exact reservation release.
         var pending = saga.RecordVoidResolved(Later, reservationReleaseConfirmed: false);
         Assert.True(pending.IsSuccess);
         Assert.Equal(RideSagaStep.ReleasePending, saga.CurrentStep);
@@ -341,8 +341,8 @@ public sealed class RideSagaTransitionTests
         var duplicate = saga.RecordCaptureOutcomeUncertain("TRANSIENT_FAILURE", Later.AddSeconds(1));
 
         Assert.True(first.IsSuccess);
-        // DSI-028: the ride already happened; capture uncertainty holds the
-        // saga on CAPTURE_PENDING with the SAME capture key (forward recovery).
+        // The ride already happened; capture uncertainty holds the saga on
+        // CAPTURE_PENDING with the SAME capture key (forward recovery).
         Assert.Equal(RideSagaStep.CapturePending, saga.CurrentStep);
         Assert.Equal(RideSagaStatus.Active, saga.Status);
         Assert.Equal(key, saga.CaptureOperationKey);

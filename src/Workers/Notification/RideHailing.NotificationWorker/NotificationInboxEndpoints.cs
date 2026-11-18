@@ -1,4 +1,4 @@
-// DS03 authenticated notification inbox API (Doc 01 §40.2, Doc 02 §43.3).
+// Authenticated notification inbox API.
 //
 // Ownership comes exclusively from the validated JWT actor id (`sub`). A
 // client-supplied userId is never accepted, and a foreign/unknown id shares

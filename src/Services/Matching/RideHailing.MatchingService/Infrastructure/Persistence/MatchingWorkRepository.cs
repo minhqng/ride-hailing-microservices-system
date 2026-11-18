@@ -1,4 +1,4 @@
-// B-REC-01/DSI-021: durable Matching work coordination.
+// Durable Matching work coordination.
 //
 // The broker intake ACKs only after the round row durably owns the work
 // (pickup + auto_execute). This repository is the worker side of that
@@ -256,7 +256,7 @@ public sealed class MatchingWorkRepository
     }
 
     /// <summary>
-    /// DSI-021/022: advances exactly one stage when every attempt and frozen
+    /// Advances exactly one stage when every attempt and frozen
     /// snapshot entry considered by the current stage is conclusively
     /// REJECTED, no reservation succeeded, and no unresolved attempt exists.
     /// The transition is a conditional UPDATE under the round row lock, so
@@ -394,6 +394,30 @@ public sealed class MatchingWorkRepository
             flag.Parameters.AddWithValue("trip", tripId);
             flag.Parameters.AddWithValue("round", round);
             await flag.ExecuteNonQueryAsync(ct);
+        }
+
+        // A round that already committed a winning reservation will never
+        // dispatch again: no additional READY attempt can cross the remote
+        // effect boundary. Close those rows now so the cancellation proof
+        // (and the invariant audit) sees a settled round instead of an
+        // "unresolved" leftover. A PROCESSING round is left to the worker,
+        // which closes READY rows under its round lease.
+        const string CloseUnselected = """
+            UPDATE matching_attempts a
+            SET state = 'CANCELLED',
+                last_error_code = COALESCE(last_error_code, 'NOT_SELECTED'),
+                updated_at = now()
+            WHERE a.trip_id = @trip AND a.matching_round = @round AND a.state = 'READY'
+              AND EXISTS (
+                  SELECT 1 FROM matching_rounds r
+                  WHERE r.trip_id = @trip AND r.matching_round = @round
+                    AND r.status = 'RESERVED');
+            """;
+        await using (var close = new NpgsqlCommand(CloseUnselected, conn, tx))
+        {
+            close.Parameters.AddWithValue("trip", tripId);
+            close.Parameters.AddWithValue("round", round);
+            await close.ExecuteNonQueryAsync(ct);
         }
 
         await tx.CommitAsync(ct);

@@ -1,4 +1,4 @@
-// B-W08: real RabbitMQ for Driver event publication proof (no fake-green).
+// Real RabbitMQ for Driver event publication proof (no fake-green).
 // Same fail-loud contract as the Matching broker fixture.
 using Testcontainers.RabbitMq;
 
@@ -8,7 +8,9 @@ public sealed class RabbitMqDatabase : IAsyncLifetime
 {
     static RabbitMqDatabase()
     {
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private RabbitMqContainer? _container;

@@ -1,25 +1,50 @@
-# Notification Worker — Owner C
+# Notification Worker
 
-- Owner: C (reviewer A, backup B)
-- Authority: none (non-authoritative delivery projection). Must NOT mutate Trip/Driver/Payment truth.
-- DB: `notification_db` (role `notification_app`)
-- Deps: `ConnectionStrings__Postgres`, `RabbitMq__Hosts` (or `RabbitMq__Host`),
-  `Auth__PublicKeyBase64` (shared JWT validation key; required for the inbox API)
-- Read: Docs 00 §3, 01 §40.2, 02 §43, 05C §48
-- Runtime: consumes `notification.business-events.q` with manual ACK only
-  after a durable local transaction.
-  - Characterized business events keep the existing
-    `notification_deliveries` receipt (`consumer_scope` + `message_id`).
-  - `NotificationRequestedV1` additionally inserts one recipient-addressed
-    `notifications` row. Receipts are per recipient; the global
-    `notification_source_messages` ledger makes a reused messageId with a
-    changed recipient/payload a poison event. The inbox business key is
-    `(source_message_id, recipient_user_id, notification_type)`.
-- Recipient authority: Trip uses `Trip.RiderId`; Driver uses `Driver.UserId`.
-  The worker never queries another service's database and never equates
-  `driverId` with `userId`.
-- HTTP: `GET /notifications/me`, `GET /notifications/{id}`,
-  `POST /notifications/{id}/read` (JWT `sub` only; foreign ids are not-found).
-- Failure is non-authoritative: retry/DLQ visibility never mutates
-  Trip/Driver/Payment truth. Transient notification DB failures remain
-  retryable; permanently invalid events reach visible error handling.
+Notification is a non-authoritative delivery projection. It never mutates Trip,
+Driver or Payment truth; an outage delays delivery but cannot block a ride.
+
+- Database: `notification_db` (role `notification_app`).
+- Depends on: `ConnectionStrings__Postgres`, `RabbitMq__Hosts` (or
+  `RabbitMq__Host`), `Auth__PublicKeyBase64` (shared JWT validation key).
+- Contract: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md).
+
+## Delivery model
+
+`notification.business-events.q` is consumed with manual ACK only after a
+durable local transaction. Two ledgers protect delivery:
+
+- `notification_deliveries` records the consumer scope and message id.
+- `notification_source_messages` makes a reused `messageId` with a changed
+  recipient or payload a poison event.
+
+`NotificationRequestedV1` additionally inserts one recipient-addressed
+`notifications` row. The business key is
+`(source_message_id, recipient_user_id, notification_type)`, so a redelivery
+cannot create a duplicate inbox entry. Recipient authority comes from the
+owning service: Trip uses `Trip.RiderId`; Driver uses `Driver.UserId`. The
+worker never equates `driverId` with `userId` and never queries another
+service's database.
+
+## HTTP surface
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/notifications/me` | Read the caller's inbox |
+| GET | `/notifications/{id}` | Read one owned notification |
+| POST | `/notifications/{id}/read` | Mark one owned notification read |
+
+Only the JWT `sub` is trusted; foreign ids are reported as not found.
+
+## Failure behavior
+
+Transient database failures remain retryable; permanently invalid events reach
+the visible error path. Retry and DLQ visibility never touch ride truth. The
+worker starts even when the broker is temporarily unavailable and reconnects
+with bounded backoff.
+
+## Verification
+
+`tests/Integration/RideHailing.NotificationService.IntegrationTests` covers
+delivery, recipient isolation, deduplication and payload safety against real
+PostgreSQL and RabbitMQ. `release-smoke.py` Scenario C stops the worker during a
+ride and proves that notifications are delivered once after restart.

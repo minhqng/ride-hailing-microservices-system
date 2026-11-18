@@ -1,13 +1,11 @@
-// B-W08-05: best-effort publisher for the DriverLocationAcceptedV1 sample
-// fact only. P0 explicitly allows this non-relational path without Outbox
-// (Doc 02 §12); the projection Lua re-validates ordering and duplicates
-// converge. B-W09 removed the authoritative state publish path: Driver
-// available/offline/reserved/released events are now recorded in the Driver
-// Outbox in the same transaction as the row and published by C's shared relay.
-// Returns false (logged) instead of throwing; the caller never treats a
-// location publish as authoritative business state.
-// Long-lived serialized channel (same shape as the platform publisher
-// contract); interim B-owned glue converging onto C's publisher base.
+// Best-effort publisher for the DriverLocationAcceptedV1 sample fact only.
+// Location facts do not need the Outbox: the projection Lua re-validates
+// ordering and duplicates. Returns false (logged) instead of throwing; the
+// caller never treats a location publish as authoritative business state.
+//
+// Authoritative state events (available/offline/reserved/released) are written
+// to the Driver Outbox in the same transaction as the row and published by the
+// shared relay.
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;

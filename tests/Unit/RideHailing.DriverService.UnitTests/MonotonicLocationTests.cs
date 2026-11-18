@@ -1,4 +1,4 @@
-// B-W03-06: DSI-006 monotonic accepted location per session.
+// Monotonic accepted location per session.
 using RideHailing.DriverService.Application.Location;
 
 namespace RideHailing.DriverService.UnitTests;
@@ -54,7 +54,7 @@ public class MonotonicLocationTests
         Assert.Equal(LocationAcceptOutcome.Accepted, acc.Accept(first, T0).Outcome);
 
         // Same logical effect replayed (at-least-once device retry) must be
-        // canonical success, not a 409 conflict (DSR-002).
+        // canonical success, not a 409 conflict.
         var replay = acc.Accept(first with { }, T0);
         Assert.Equal(LocationAcceptOutcome.Accepted, replay.Outcome);
         Assert.Equal(first, replay.Current);

@@ -11,11 +11,17 @@
 #
 # Usage:
 #   scripts/test/hygiene-check.sh [base-ref-or-sha]   # changed-path check
+#   scripts/test/hygiene-check.sh --allow-missing-base # first push: no base yet
 #   scripts/test/hygiene-check.sh --self-test         # pattern verdict tests
 #
 # Base resolution order: explicit argument, pull-request base ref (CI),
 # push-event before-SHA (CI), origin/main (local default). Exit 0 = clean,
 # exit 1 = rejected paths listed, exit 2 = usage/environment error.
+#
+# An unresolvable base is an environment error (exit 2), never a pass: a gate
+# that cannot see the change must not report green. The only exception is the
+# explicit --allow-missing-base opt-out for a repository's first push, where
+# no comparison base exists by definition.
 set -euo pipefail
 
 # Classify one changed path. Prints the rejection reason, or nothing when the
@@ -43,9 +49,9 @@ self_test() {
   local -a cases=(
     "reject|logs/solution-build-attempt.log"
     "reject|src/Services/Trip/run.log"
-    "reject|evidence/member-a/w09-outbox/outputs/solution-build-release.txt"
-    "reject|evidence/member-a/w09-outbox/outputs/repro-20261025T042747Z/header.txt"
-    "reject|evidence/member-a/w10-saga/outputs/nested/raw.txt"
+    "reject|evidence/release/v1.0.0/outputs/solution-build-release.txt"
+    "reject|evidence/release/v1.0.0/outputs/repro-20261025T042747Z/header.txt"
+    "reject|evidence/release/v1.0.0/outputs/nested/raw.txt"
     "reject|TestResults/tests.trx"
     "reject|tests/Unit/X/TestResults/run.trx"
     "reject|plans/session-transcript.md"
@@ -55,13 +61,13 @@ self_test() {
     "reject|.vs/config/applicationhost.config"
     "reject|secrets/prod.env"
     "reject|deploy/.env"
-    "accept|evidence/member-a/w09-outbox/test-output.txt"
-    "accept|evidence/member-a/w09-outbox/manifest.json"
-    "accept|evidence/member-a/w09-outbox/reproduce.sh"
-    "accept|evidence/member-a/w10-saga/final-state/rel-09-compensation.md"
-    "accept|evidence/member-a/w10-saga/metrics/pending-age.md"
-    "accept|src/Services/Trip/RideHailing.TripService/Migrations/20261025031423_W09_TripOutbox.cs"
-    "accept|tests/Integration/RideHailing.TripService.IntegrationTests/TripW10SagaTests.cs"
+    "accept|evidence/release/v1.0.0/test-output.txt"
+    "accept|evidence/release/v1.0.0/manifest.json"
+    "accept|evidence/release/v1.0.0/reproduce.sh"
+    "accept|evidence/release/v1.0.0/final-state/rel-09-compensation.md"
+    "accept|evidence/release/v1.0.0/metrics/pending-age.md"
+    "accept|src/Services/Trip/RideHailing.TripService/Migrations/20261025031423_TripOutbox.cs"
+    "accept|tests/Integration/RideHailing.TripService.IntegrationTests/TripSagaTests.cs"
     "accept|docs/03-verification-experiments-demo.md"
     "accept|AGENTS.md"
     "accept|scripts/test/hygiene-check.sh"
@@ -91,6 +97,12 @@ if [[ "${1:-}" == "--self-test" ]]; then
   exit 0
 fi
 
+ALLOW_MISSING_BASE=0
+if [[ "${1:-}" == "--allow-missing-base" ]]; then
+  ALLOW_MISSING_BASE=1
+  shift
+fi
+
 BASE="${1:-}"
 if [[ -z "$BASE" && -n "${GITHUB_BASE_REF:-}" ]]; then BASE="origin/${GITHUB_BASE_REF}"; fi
 if [[ -z "$BASE" && -n "${GITHUB_EVENT_BEFORE:-}" &&
@@ -102,8 +114,14 @@ BASE="${BASE:-origin/main}"
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 if ! git rev-parse --verify --quiet "${BASE}^{commit}" >/dev/null 2>&1; then
-  echo "hygiene-check: base '${BASE}' is not resolvable; nothing to compare." >&2
-  exit 0
+  if (( ALLOW_MISSING_BASE )); then
+    echo "hygiene-check: base '${BASE}' is not resolvable; skipping by explicit --allow-missing-base (first push)." >&2
+    exit 0
+  fi
+  echo "hygiene-check: base '${BASE}' is not resolvable; refusing to report a false pass." >&2
+  echo "  Fetch the comparison base (for example 'git fetch origin main') or pass" >&2
+  echo "  --allow-missing-base only when this really is the repository's first push." >&2
+  exit 2
 fi
 
 # Deletions (D) are deliberately excluded from the filter: this guard judges

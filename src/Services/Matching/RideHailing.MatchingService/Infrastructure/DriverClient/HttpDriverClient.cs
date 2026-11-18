@@ -1,7 +1,7 @@
-// B-W02-02: typed HttpClient implementation of the Driver seam.
+// Typed HttpClient implementation of the Driver seam.
 // Mapping is total and explicit: every HTTP outcome becomes either a domain
 // result or a propagated transport exception. No silent fallbacks
-// (Doc 02 §19.6 forbids assuming success when Driver is unavailable).
+// (forbids assuming success when Driver is unavailable).
 using System.Net;
 using System.Net.Http.Json;
 
@@ -20,8 +20,8 @@ public sealed class HttpDriverClient : IDriverClient
         DriverReserveRequest request,
         CancellationToken cancellationToken = default)
     {
-        // Landed W6 contract: POST /drivers/{id}/reserve with the
-        // caller-observed version (B-W06-01). Mapping below is unchanged:
+        // Driver reserve contract: POST /drivers/{id}/reserve with the
+        // caller-observed version. Mapping below is unchanged:
         // 200 → Reserved, 409 → Rejected(code), 404 → Rejected(DRIVER_NOT_FOUND),
         // anything else throws for the caller to classify (UNKNOWN).
         using var response = await _http.PostAsJsonAsync(
@@ -121,7 +121,7 @@ public sealed class HttpDriverClient : IDriverClient
             $"internal/drivers/{driverId:N}/reservations/{reservationId:N}",
             cancellationToken);
 
-        // DSI-031: a BARE 404 carries no domain body, so it can never be a
+        // A BARE 404 carries no domain body, so it can never be a
         // conclusive NOT_FOUND. It may be a wrong BaseAddress, a proxy, or a
         // missing route — all transport uncertainty. Throw so the caller keeps
         // the attempt UNKNOWN and reconciles instead of advancing to the next

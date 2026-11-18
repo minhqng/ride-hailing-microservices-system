@@ -1,4 +1,4 @@
-// W12 reservation-reconciliation safety repair (L1/L2).
+// Reservation-reconciliation safety repair (L1/L2).
 //
 // Every scenario uses REAL PostgreSQL on both sides: the Driver authority is
 // the production DriverRepository (reserve/query/lifecycle), the Matching

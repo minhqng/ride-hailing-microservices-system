@@ -1,4 +1,4 @@
-// B-W02-05: Redis reachability proof on REAL Redis (no fake-green).
+// Redis reachability proof on REAL Redis (no fake-green).
 namespace RideHailing.MatchingService.IntegrationTests;
 
 [Collection(RedisCollection.Name)]

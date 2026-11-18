@@ -1,11 +1,11 @@
-// B-W09-03/04/08: atomic terminal Matching result (Doc 02 §12.8, DSI-035,
-// DSR-010). NO_DRIVER is legal only when every durable attempt is
+// Atomic terminal Matching result. NO_DRIVER is legal only when every
+// durable attempt is
 // conclusively REJECTED, no UNKNOWN/IN_FLIGHT/READY/RESERVED remains, the
 // round is still PROCESSING, cancellation was not requested, and the frozen
 // candidate snapshot (when present) is fully covered by attempt rows.
 //
 // The terminal row update and the Outbox(MatchingFailedV1) intent commit in
-// ONE database transaction. The outbox write never touches the broker; C's
+// ONE database transaction. The outbox write never touches the broker; the
 // shared relay publishes only after commit. Any failure (including a missing
 // Outbox schema) rolls the state change back, so no NO_DRIVER can exist
 // without its durable publication intent.
@@ -83,7 +83,7 @@ public sealed class MatchingTerminalizer
         TryTerminalizeNoDriverAsync(tripId, matchingRound, terminalStage: null, ct);
 
     /// <summary>
-    /// terminalStage is the final configured stage (DSI-021). When supplied,
+    /// terminalStage is the final configured stage. When supplied,
     /// NO_DRIVER is legal only when the round is already at that stage and its
     /// discovery completed; prior stages may never terminalize early.
     /// </summary>
@@ -252,7 +252,7 @@ public sealed class MatchingTerminalizer
         await EnsureOutboxIntentAsync(conn, tx, message, ct);
         await tx.CommitAsync(ct);
 
-        // B-W12-02: one committed NEW terminal decision. The replay branch above
+        // One committed NEW terminal decision. The replay branch above
         // returns before this point, so relay duplicates and terminal replays
         // never mint a second business metric.
         _metrics?.NoDriver();

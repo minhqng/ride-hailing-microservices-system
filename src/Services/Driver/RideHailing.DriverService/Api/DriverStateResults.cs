@@ -1,4 +1,4 @@
-// B-W07-01/04/07: frozen HTTP contracts for release, fenced state changes,
+// Frozen HTTP contracts for release, fenced state changes,
 // and reservation reconciliation. Pure mappings, directly unit-tested.
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;

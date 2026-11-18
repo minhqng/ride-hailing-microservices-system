@@ -1,4 +1,4 @@
-// DS03 Rider notification intent proofs (Doc 02 §43): recipient authority,
+// Rider notification intent proofs: recipient authority,
 // deterministic message identity and state misuse guards.
 
 using System.Text.Json;

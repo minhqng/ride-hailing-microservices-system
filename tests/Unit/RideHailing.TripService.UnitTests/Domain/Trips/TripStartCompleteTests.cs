@@ -1,8 +1,8 @@
-// StartTrip / CompleteTrip guards (DSI-011, DSI-012, DSI-026).
+// StartTrip / CompleteTrip guards.
 //
-// Mandatory W5 properties: StartTrip before the required authorization/state
-// is rejected with no mutation; CompleteTrip from the wrong state is
-// rejected with no mutation. Completion never touches Payment authority.
+// StartTrip before the required authorization/state is rejected with no
+// mutation; CompleteTrip from the wrong state is rejected with no mutation.
+// Completion never touches Payment authority.
 
 using RideHailing.TripService.Domain.Trips;
 

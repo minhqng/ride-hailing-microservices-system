@@ -1,4 +1,4 @@
--- W08 hardening: at most one ledger attempt per (trip_id, matching_round, driver_id).
+-- Hardening: at most one ledger attempt per (trip_id, matching_round, driver_id).
 --
 -- The compute path already treats "one attempt per driver per round" as the
 -- invariant: CandidateRanker output is deduplicated by driver (byDriver) and

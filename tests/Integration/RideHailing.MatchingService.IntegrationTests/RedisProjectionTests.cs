@@ -1,5 +1,6 @@
-// B-W04-05/06/07: projection correctness on REAL Redis (DSI-006/007, FUN-03, REL-12/13 early).
+// Projection correctness on REAL Redis (early).
 // Shares the collection RedisDatabase (one disposable container per run).
+// The FUNCTION FLUSH recovery test uses its own throwaway instance.
 // Function is ensured once per test (idempotent FUNCTION LOAD REPLACE).
 using RideHailing.MatchingService.Application.Projection;
 using StackExchange.Redis;
@@ -37,19 +38,19 @@ public class RedisProjectionTests
         }
         catch
         {
-            // best-effort
+            // Best-effort
         }
     }
 
-    private async Task<string?> HGetAsync(Guid driverId, string field)
+    private async Task<string?> HGetAsync(Guid driverId, string field, IDatabase? db = null)
     {
-        return await Db().HashGetAsync(
+        return await (db ?? Db()).HashGetAsync(
             RedisProjectionKeys.ProjectionKey(driverId), field);
     }
 
-    private async Task<bool> IsGeoMemberAsync(Guid driverId)
+    private async Task<bool> IsGeoMemberAsync(Guid driverId, IDatabase? db = null)
     {
-        var res = await Db().ExecuteAsync("GEOSEARCH",
+        var res = await (db ?? Db()).ExecuteAsync("GEOSEARCH",
             RedisProjectionKeys.GeoKey, "FROMLONLAT", "106.6", "10.8",
             "BYRADIUS", "50", "km");
         var members = (RedisResult[])res!;
@@ -57,7 +58,7 @@ public class RedisProjectionTests
         return members.Any(m => string.Equals((string?)m, want, StringComparison.Ordinal));
     }
 
-    // DSI-007: v10 RESERVED then delayed v9 AVAILABLE -> v10 remains, not in GEO (REL-12 early).
+    // v10 RESERVED then delayed v9 AVAILABLE -> v10 remains, not in GEO (early).
     [Fact]
     public async Task StateVersion_Stale_Event_Cannot_Regress()
     {
@@ -111,7 +112,7 @@ public class RedisProjectionTests
         }
     }
 
-    // DSI-006 at projection level: seq20 then seq19 -> seq20 remains (REL-13 early).
+    // At projection level: seq20 then seq19 -> seq20 remains (early).
     [Fact]
     public async Task Location_Stale_Sequence_Cannot_Regress()
     {
@@ -136,7 +137,7 @@ public class RedisProjectionTests
         }
     }
 
-    // Frozen W4 session policy: foreign session is never auto-accepted (review correction #1).
+    // Frozen session policy: a foreign session is never auto-accepted.
     // S1 seq100, then S2 seq1 -> S2 rejected, S1 remains current.
     [Fact]
     public async Task Location_Foreign_Session_Is_Rejected()
@@ -185,7 +186,7 @@ public class RedisProjectionTests
         }
     }
 
-    // FUN-03: AVAILABLE + fresh location -> discoverable via GEOSEARCH.
+    // AVAILABLE + fresh location -> discoverable via GEOSEARCH.
     [Fact]
     public async Task Available_Driver_Is_Discoverable_In_Geo()
     {
@@ -206,7 +207,7 @@ public class RedisProjectionTests
         }
     }
 
-    // Chốt ① (W3): polar latitude accepted by authority but non-indexable in GEO.
+    // Polar latitude is accepted by the authority but non-indexable in GEO.
     [Fact]
     public async Task Polar_Latitude_Applied_But_Not_Indexed()
     {
@@ -253,7 +254,7 @@ public class RedisProjectionTests
         }
     }
 
-    // REL-14 early (B-W04-08): projection path degrades instead of throwing.
+    // Early: projection path degrades instead of throwing.
     // Deterministic faultpoint: FCALL against an unknown function name makes
     // the server fail immediately (RedisServerException), which must surface
     // as Degraded — no network timing involved.
@@ -269,31 +270,35 @@ public class RedisProjectionTests
 
     // Function recovery: after FUNCTION FLUSH the library is gone, but the
     // next projection call reloads it once and applies (no restart needed).
+    // FUNCTION FLUSH is server-global, so this runs on a throwaway Redis and
+    // never touches the shared collection instance.
     [Fact]
     public async Task Updater_Recovers_After_Function_Flush()
     {
-        var updater = await ReadyUpdaterAsync();
-
-        var id = Guid.NewGuid();
+        var isolated = await RedisDatabase.CreateIsolatedAsync();
         try
         {
-            await Db().ExecuteAsync("FUNCTION", "FLUSH");
+            var db = isolated.Multiplexer().GetDatabase();
+            var updater = new RedisProjectionUpdater(isolated.Multiplexer());
+            await updater.EnsureFunctionAsync();
+
+            var id = Guid.NewGuid();
+            await db.ExecuteAsync("FUNCTION", "FLUSH");
 
             var t0 = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.Zero);
             var r1 = await updater.ApplyStateAsync(new(id, "AVAILABLE", 3));
             Assert.False(r1.Degraded);
             Assert.Equal(SectionOutcome.Applied, r1.State);
-            Assert.Equal("3", await HGetAsync(id, "driverAggregateVersion"));
+            Assert.Equal("3", await HGetAsync(id, "driverAggregateVersion", db));
 
             var r2 = await updater.ApplyLocationAsync(new(id, 106.6, 10.8, "s1", 1, t0));
             Assert.Equal(SectionOutcome.Applied, r2.Location);
             Assert.True(r2.GeoMember);
-            Assert.True(await IsGeoMemberAsync(id));
+            Assert.True(await IsGeoMemberAsync(id, db));
         }
         finally
         {
-            await CleanupAsync(id);
-            await ReadyUpdaterAsync();
+            await isolated.DisposeAsync();
         }
     }
 

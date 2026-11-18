@@ -1,4 +1,4 @@
-// B-W06-01: frozen HTTP contract for POST /drivers/{id}/reserve, proven by
+// Frozen HTTP contract for POST /drivers/{id}/reserve, proven by
 // executing the pure mapper (no HTTP server, no new test packages).
 using System.Text;
 using Microsoft.AspNetCore.Http;

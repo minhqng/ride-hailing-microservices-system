@@ -1,6 +1,7 @@
-// B-W05-05/06: Matching round/attempt persistence (Npgsql raw, no EF).
+// Matching round/attempt persistence (Npgsql raw, no EF).
 // Round identity (trip_id, matching_round) + input_message_id uniqueness
-// follow Doc 02 §12.2. All statements parameterized; fail loud on conflict.
+// follow the canonical round/attempt model. All statements parameterized;
+// fail loud on conflict.
 using Npgsql;
 using RideHailing.MatchingService.Domain.Matching;
 
@@ -130,8 +131,8 @@ public sealed class MatchingRepository
 
     /// <summary>
     /// Adds one READY attempt to a live round. The round row is locked FOR
-    /// SHARE first and held across the insert, serializing with W9
-    /// terminalization (FOR UPDATE): a NO_DRIVER terminal can never commit
+    /// SHARE first and held across the insert, serializing with terminalization
+    /// (FOR UPDATE): a NO_DRIVER terminal can never commit
     /// from a stale attempt set while a new candidate is being added, and no
     /// candidate can be added to a terminal/cancel-requested round.
     /// </summary>

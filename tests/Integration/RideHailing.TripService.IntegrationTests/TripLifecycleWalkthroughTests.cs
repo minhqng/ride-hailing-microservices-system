@@ -1,8 +1,8 @@
-// A-W05-04 first cross-service REST/system skeleton: the strongest truthful
+// First cross-service REST/system skeleton: the strongest truthful
 // pre-broker shape.
 //
 // What this proves (Trip service, real host, real PostgreSQL):
-//   - Trip boots independently and ride creation stays legal (W4 preserved);
+//  - Trip boots independently and ride creation stays legal (preserved);
 //   - the full synchronous local lifecycle walks CREATED → MATCHING →
 //     DRIVER_RESERVED → DRIVER_ACCEPTED → READY_TO_START → IN_PROGRESS →
 //     COMPLETED with exact Version advancement and a coherent assignment;
@@ -174,7 +174,7 @@ public sealed class TripLifecycleWalkthroughTests : IDisposable
         // accept, authorize, start, complete.
         Assert.Equal(6, trip.Version);
         // FareSnapshot frozen at creation is untouched by the lifecycle
-        // (DSI-014 regression): amount, currency and policy version survive.
+        // (regression): amount, currency and policy version survive.
         Assert.True(trip.Fare.Amount > 0);
         Assert.Equal("VND", trip.Fare.Currency);
         Assert.Equal("p0-w4-v1", trip.Fare.PricingPolicyVersion);
@@ -217,7 +217,7 @@ public sealed class TripLifecycleWalkthroughTests : IDisposable
             cancelled.Compensation);
         Assert.Equal("CANCELLED", await LifecycleStatusAsync(tripId, riderHeader));
 
-        // Late DriverAccepted cannot reactivate the terminal Trip (DSI-032),
+        // Late DriverAccepted cannot reactivate the terminal Trip,
         // but the assignment survives as the exact cleanup identity.
         var late = await DriveAsync(db =>
             new RecordDriverAcceptedHandler(db, Clock(), NullLogger<RecordDriverAcceptedHandler>.Instance)

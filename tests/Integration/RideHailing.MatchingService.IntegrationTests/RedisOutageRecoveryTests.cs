@@ -1,4 +1,4 @@
-// B-W11-08 (REL-14): a real disposable Redis container is network-isolated
+// A real disposable Redis container is network-isolated
 // through a test-controlled TCP gate. Closing the gate drops every client
 // connection; the production candidate path must degrade without fabricating
 // candidates or reservations. Reopening the gate proves reconnect. Redis
@@ -40,7 +40,7 @@ public sealed class RedisOutageRecoveryTests
 
     private static MessageEnvelope<JsonElement> Envelope(string type, object payload) =>
         MessageEnvelope<JsonElement>.Create(
-            type, "w11-REL14-" + Guid.NewGuid().ToString("N"),
+            type, "REL14-" + Guid.NewGuid().ToString("N"),
             JsonSerializer.SerializeToElement(payload));
 
     private static Task<HandlerOutcome> DeliverAsync(
@@ -301,7 +301,7 @@ public sealed class RedisOutageRecoveryTests
             Assert.Equal(rebuiltBefore.ReservationId, rebuiltAfter.ReservationId);
 
             _output.WriteLine(
-                $"W11 REL-14 driverSurvives={driverSurvives} driverRebuilt={driverRebuilt} " +
+                $"REL-14 driverSurvives={driverSurvives} driverRebuilt={driverRebuilt} " +
                 $"outageTrip={outageTrip} partition=closed degraded=true candidates=0 " +
                 $"attempts=0 driverUnchanged=true survived={survived} eventReplayReconstructed=true " +
                 $"recovered=true elapsedMs={elapsed.ElapsedMilliseconds}");

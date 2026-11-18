@@ -1,5 +1,5 @@
-// DSI-013 active-state classification proof (A-W04-04): exact domain set,
-// six active and three non-active states. One table-driven theory.
+// Active-state classification proof: exact domain set, six active and three
+// non-active states. One table-driven theory.
 
 using RideHailing.TripService.Domain.Trips;
 

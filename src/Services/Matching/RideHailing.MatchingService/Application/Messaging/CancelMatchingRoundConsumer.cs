@@ -1,4 +1,4 @@
-// B-REC-01: CancelMatchingRoundV1 broker consumer (matching.commands.q).
+// CancelMatchingRoundV1 broker consumer (matching.commands.q).
 // Manual ACK after the durable cancel intent/flag commit; redelivery is
 // idempotent. A cancel that precedes its RideRequestedV1 remains a durable
 // tombstone that the intake consumes.

@@ -1,4 +1,4 @@
-// B-W03-01: domain error codes. Domain throws; Application/API maps to HTTP (chốt ②).
+// Domain error codes. Domain throws; Application/API maps to HTTP.
 namespace RideHailing.DriverService.Domain.Drivers;
 
 public static class DriverErrors

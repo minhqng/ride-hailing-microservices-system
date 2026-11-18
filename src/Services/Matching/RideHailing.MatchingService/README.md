@@ -1,236 +1,88 @@
-# Matching Service — Owner B
+# Matching Service
 
-- Owner: B (reviewer A, backup C)
-- Authority: MatchingRound/Attempt, ranking, Redis projection use. Never writes Driver DB. Must never access `driver_db`.
-- DB: `matching_db` (role `matching_app`)
-- Deps: `ConnectionStrings__Postgres`, `Redis__ConnectionString`, `RabbitMq__Host`, `Services__DriverBaseUrl`
-- Read: Docs 00 §8, 01 §8-9, 02 §12-13, 05B
-- W9: terminal `NO_DRIVER` and `MatchingFailedV1` intent commit together through
-  `MatchingTerminalizer` and the shared Outbox store. The relay is enabled by
-  `RabbitMq:PublishingEnabled`; pending intents remain durable when disabled.
-- W7: durable reserve workflow on the frozen W2 attempt/round tables
-  (`Infrastructure/Persistence/MatchingAttemptRepository`: write-ahead
-  `IN_FLIGHT` persist, guarded transitions, PK-convergent duplicate workers,
-  DSI-017 unresolved guard): `Application/Reserve/MatchingReserveOrchestrator`
-  (serial executor: persist → read Driver version → reserve same-R with
-  bounded STALE retry → Reserved/Rejected/Unknown; reconcile loop with same R
-  and bounded exhaustion to visible `NeedsReview`; advance only on conclusive
-  outcomes; round stays PROCESSING unless RESERVED — NO_DRIVER needs W9
-  Outbox). `HttpDriverClient` targets the landed W6 reserve route with the
-  observed version; reconcile query maps the 7 canonical outcomes.
-  REL-01 proven via transport stub over real driver_db + matching_db.
+Matching owns durable matching rounds, attempts, deterministic candidate
+ranking and the derived Redis GEO projection. It never writes the Driver
+database; a reservation becomes authoritative only when Driver commits it.
 
-## NOT implemented (later weeks)
+- Database: `matching_db` (role `matching_app`), PostgreSQL through Npgsql.
+- Depends on: `ConnectionStrings__Postgres`, `Redis__ConnectionString`,
+  `RabbitMq__Host`, `Services__DriverBaseUrl`.
+- Contracts: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md)
+  and [workflow contract](../../../../docs/02-distributed-workflow-engineering.md).
 
-- W5 bulk pipeline (GEOSEARCH ranking/eligibility over Redis) remains absent
-  (reverted from main; W7 consumes explicit candidate lists, not the pipeline).
-- W8 broker consumers and W9 terminal publication/Outbox are implemented.
+## Intake and execution
 
-## W9 duplicate safety and recovery
+`RideRequestedV1` is a durable intake, not an execution shortcut. The handler
+commits the round, pickup, input envelope identity, `auto_execute = TRUE` and
+any pending cancellation tombstone in one transaction before ACK.
 
-Migration 006 preserves legacy `NO_DRIVER` rows without a result identity. On
-replay, the terminalizer repairs identity and intent in one transaction only if
-attempts are conclusively rejected, the snapshot is covered, and cancellation is
-absent. Unsafe legacy rows return `LEGACY_TERMINAL_REQUIRES_REVIEW`.
-Existing intents must match payload, type, schema, route, aggregate identity and
-version, Saga identity and operation key; conflicts fail before terminal commit.
+A hosted `MatchingWorkDispatcher` scans `PROCESSING` rounds from PostgreSQL,
+takes a per-round advisory-lock lease, reconciles unresolved attempts with the
+same reservation identity, and only then dispatches the next candidate. A
+crashed process drops its lease; the next scan resumes the round. There is no
+in-memory work queue.
 
-Driver projection deliveries store a semantic fingerprint at
-`driver:projection:receipt:<SHA256(messageId)>` in the same Redis function call as
-the version/session guarded projection and GEO update. Conflicting content raises
-`MESSAGE_ID_CONTENT_CONFLICT` and follows the existing poison/DLQ policy. Receipts
-have no TTL and share the derived projection's rebuild lifecycle; clear them
-with a deliberate complete projection rebuild, never independently during normal
-consumption. Redis is derived state: loss of its data also loses these conflict
-receipts. FCALL prevents interleaving; it does not roll back arbitrary server
-errors. Dependency errors retry and version/session guards converge redelivery.
+`CancelMatchingRoundV1` is consumed from `matching.commands.q`. The durable
+tombstone survives a cancel that overtakes its ride request; the worker starts
+no new attempt and reconciles an unresolved effect query-only.
 
-`CrashAfterReserveRecoveryTests` is the REL-02 W9 executable base: real PostgreSQL
-and Driver repository, exception injected after remote commit before local
-`RESERVED`, followed by fresh repository/orchestrator recovery from persisted
-`IN_FLIGHT`. Recovery replays the same reservation through the existing reserve
-reconciliation path. It proves one attempt, no next candidate, no false
-`NO_DRIVER`, and unchanged Driver version. It is not a process-kill or HTTP
-transport proof. W11 owns external kill/restart orchestration; it was not started.
-See [W9 evidence](../../../../evidence/member-b/w09-outbox/README.md).
+## Candidate pipeline
 
-## Implemented (W2+W4)
+1. Load or create the round (`PROCESSING`) and persist the pickup center.
+2. `GEOSEARCH` nearest-first from Redis with bounded oversampling.
+3. Filter by authority-safe eligibility: `AVAILABLE`, fresh location,
+   capability policy and prior rejection.
+4. Rank deterministically: distance, optional freshness weight, Driver-id
+   tie-break.
+5. Persist the frozen snapshot and a `READY` attempt ledger with stable
+   reservation identities.
 
-- W2: `Infrastructure/Persistence/Migrations/001_matching_baseline.sql`
-  (`matching_rounds`, `matching_attempts`), PG/Redis fixtures.
-- W4: Redis GEO derived projection (05B §5, 01 §21.2):
-  - `Application/Projection/RedisProjectionKeys` —
-    `driver:projection:{id}` hash + `drivers:geo` index.
-  - Split intents (review correction): `DriverStateProjectionUpdate`
-    (status+version only) and `LocationProjectionUpdate` (coords+session
-    only) — a state event can never smuggle a stale location.
-  - `Infrastructure/RedisProjection/update_projection.lua` — one atomic
-    function: version guard (DSI-007), per-session seq/capturedAt guard
-    (DSI-006), GEO recompute from current values. Frozen policy: a foreign
-    session is NEVER auto-accepted (`stale-session`); Docs 00–04 define no
-    session-transition authority, and Redis cannot order opaque sessionIds.
-    Known limitation: legitimate session rotation needs a future
-    Driver-owned current-session signal.
-  - `RedisProjectionUpdater` (StackExchange.Redis, `FCALL`; connection/
-    server failure → `Degraded`, never throws; Driver path never blocks).
-  - Program loads the function best-effort at startup.
-  - Tests: DSI-007/DSI-006 projection-level, cross-session reject,
-    state-only-no-clobber, FUN-03 GEOSEARCH discoverable, polar-lat
-    applied-but-not-indexed, RESERVED eviction, REL-14 Degraded faultpoint,
-    NOSCRIPT reload recovery, corrupt-hash heal, geo missing-coords ZREM.
-  - Fixture: explicit REDIS_TEST_CONNECTION fails loud; otherwise disposable
-    Testcontainers Redis (8.10.2, one shared container per run, AutoRemove).
-    Convention (same as PG fixtures): tests FAIL LOUD when Redis is
-    unavailable — no vacuous pass, so a run without real Redis is red, not green.
+Only conclusively rejected attempts advance a stage. An unresolved attempt
+blocks new candidates. `NO_DRIVER` is legal only at the final configured stage
+whose discovery completed, and its terminal result and
+`MatchingFailedV1` Outbox intent commit together.
 
-## Driver HTTP seam (B-W02-02) + freeze note (B-W02-08, PROPOSED)
+## Redis projection
 
-- `Infrastructure/DriverClient/`: `IDriverClient`, `HttpDriverClient` (typed
-  client, no retry handlers by design), request/response/outcome contracts,
-  `README.md` freeze note with open questions for A/C.
-- Mapping proven by stub-transport unit tests (no server needed): request
-  shape, 200/409 mapping, 5xx/timeout propagate (caller keeps UNKNOWN per
-  DSI-031); a 404 is conclusive only with the Driver-domain structured
-  `DRIVER_NOT_FOUND` body (version read and reserve), and the reservation
-  query's `NOT_FOUND` arrives only as a 200-body outcome. Bare 404s at any
-  boundary stay transport uncertainty. All 7 reconcile outcomes and
-  unknown-outcome throws are covered.
-- Driver-side `/internal/*` endpoints land in W6/W7; timeout budgets frozen there.
+`driver:projection:{id}` carries status/version and session-scoped location;
+`drivers:geo` is the candidate index. One Lua function applies a version guard
+and a per-session sequence/freshness guard atomically and recomputes GEO from
+the current values. A foreign session is never auto-accepted. Redis is derived
+state: a failure degrades candidate discovery and can waste work, but it can
+never grant a reservation.
 
-## Deterministic candidate pipeline (B-W05)
+## HTTP surface
 
-- `POST /internal/matching/rounds` (internal test/demo seam; W8 invokes the
-  same application entry from `RideRequestedV1`): body carries trip/round
-  identity + pickup only (all policy is config-owned). Idempotent replay.
-  Errors: 400 `INVALID_REQUEST` (bad input), 409 `DOMAIN_CONFLICT`
-  (terminal/cancelled/blocked round, exhausted ledger retry), 503
-  `DEPENDENCY_UNAVAILABLE` (backing store down, static message).
-- Pipeline: load-or-create round (PROCESSING, S0) → GEOSEARCH nearest-first
-  bounded → eligibility (AVAILABLE, fresh location, capability hook,
-  not-rejected; DSI-020 by type) → deterministic rank (distance ASC,
-  optional freshness weight, driverId tie-break; DSI-019) → persisted
-  snapshot + READY attempt ledger with stable reservationIds (DSI-018).
-  Concurrent duplicate triggers converge (fresh-ordinal retry, bounded);
-  unresolved attempts block new candidates (DSI-017 at the ledger).
-- Authority: Redis is a hint, Driver reserve (W6) decides. No terminal round
-  states here (`NO_DRIVER` needs W9 Outbox atomicity); empty candidates stay
-  PROCESSING. Redis failure degrades (empty + flag), never fabricates.
-- Policy: `Matching` config section (radius, bounds, freshness window,
-  capability, ranking version). Capability feed pending (projection carries
-  no vehicle data; non-null requirement safely excludes).
+| Method | Route | Purpose |
+|---|---|---|
+| POST | `/internal/matching/rounds` | Demo/regression trigger, mapped only outside Production |
+| GET | `/internal/matching/rounds/{tripId}/{round}/cancellation` | Durable cancellation state |
+| POST | `/internal/test/matching/reserve` | Test-only reserve driver, non-Production |
+| POST | `/internal/test/matching/...` | Test-only reconciliation controls, non-Production |
 
-## B-REC-01 — autonomous production execution (forward repair on W12)
+Production rounds are created by `RideRequestedV1` and driven by the worker.
+The internal test routes never initiate work in Production.
 
-`RideRequestedV1` is a durable intake, not an execution shortcut:
+## Configuration
 
-1. `RideRequestedHandler` parses the canonical payload (`tripId`,
-   `matchingRound`, `pickup`) and commits the round, pickup center,
-   `auto_execute = TRUE`, input envelope identity and any pending
-   `CancelMatchingRoundV1` tombstone in ONE transaction before ACK.
-2. `MatchingWorkDispatcher` (hosted service) scans `PROCESSING` auto-execute
-   rounds from PostgreSQL, takes a per-round `pg_try_advisory_lock` lease, and
-   drives the durable state machine. A crashed process drops its session lease;
-   recovery is the next scan, never an in-memory queue or test endpoint.
-3. Unresolved `IN_FLIGHT`/`UNKNOWN` attempts are reconciled first with the SAME
-   `reservationId`; no new Driver is attempted while unresolved. READY rows are
-   transitioned to write-ahead `IN_FLIGHT` before the remote call.
-4. `CancelMatchingRoundV1` is consumed from `matching.commands.q`. A durable
-   tombstone survives a cancel overtaking its ride request; the worker starts no
-   new attempt and reconciles an unresolved effect query-only. A committed
-   reservation remains authoritative (Trip owns exact cleanup).
+| Key | Meaning |
+|---|---|
+| `Matching:Stages` | Strictly increasing `S0..Sn` radii and candidate bounds |
+| `Matching:LocationFreshnessWindow` | Maximum accepted location age |
+| `Matching:Worker:*` | Poll interval, batch size, concurrency and reconcile backoff |
+| `DriverClient:TimeoutSeconds` | Driver attempt budget |
+| `RabbitMq:PublishingEnabled` | Host the terminal Outbox relay |
+| `Services:DriverBaseUrl` | Driver HTTP base address |
 
-`MatchingWorkRepository` owns the durable coordination: bounded due-round
-discovery with `work_checked_at` backoff, atomic stage-snapshot + READY attempt
-creation, and conditional stage advancement. Worker failures record
-`work_error_code` and leave the round PROCESSING; a Redis/Driver outage is never
-converted into `NO_DRIVER`.
+A persisted stage missing from the running configuration yields a durable
+`STAGE_CONFIGURATION_MISMATCH`; reconciliation exhaustion keeps the attempt
+`UNKNOWN` and the round `PROCESSING`. Neither case invents a terminal result.
 
-## DSI-021 — progressive stages
+## Verification
 
-`Matching:Stages` is deployment configuration (`S0..Sn`, strictly increasing
-radii). Production ships S0/S1/S2 at 5/8/12 km. The round row persists
-`current_stage` and `stage_evaluated`; each attempt row carries its logical
-stage. A stage advances only when every frozen entry and attempt in that stage
-is conclusively `REJECTED`, no unresolved/reserved effect exists, and the round
-is still PROCESSING. `NO_DRIVER` is legal only at the final configured stage
-whose discovery completed. The frozen snapshot is appended per stage; existing
-entries and reservation identities are never rewritten.
-
-Proofs: `ProductionMatchingWorkflowTests`, `ProductionMatchingStageTests` and
-`MatchingStageGateTests` in the Matching integration project run the real
-Matching process against real PostgreSQL/Redis/RabbitMQ and real Driver Kestrel
-endpoints. See
-[B-REC-01/DSI-021 evidence](../../../../evidence/member-b/b-rec01-dsi021/README.md).
-
-## W12 reconciliation-safety repair
-
-The recovery path now enforces one rule: **a reservation that may already have
-committed is never concluded rejected without authoritative identity-aware
-evidence.**
-
-1. **Reconcile before replay.** An `UNKNOWN` attempt, or an `IN_FLIGHT` attempt
-   whose durable `max_dispatched_version` fence is set (the fence commits before
-   the remote call), is transitioned to `UNKNOWN` and reconciled by querying the
-   SAME `reservationId` before any Reserve replay. `OWNED_BY_THIS_RESERVATION`
-   converges the attempt/round; a fenced negative (`AVAILABLE` with Vx > max,
-   or an incompatible state with Vx >= max) is conclusive; transport/exhaustion
-   leaves the attempt unresolved and blocks the next candidate.
-2. **STALE_RESERVATION is not a rejection.** Driver's lifecycle history guard
-   proves the identity already produced a STARTED/COMPLETED effect. The
-   orchestrator persists `RESERVE_STALE_IDENTITY` ambiguity and reconciles the
-   exact identity next pass instead of advancing to D2.
-3. **404 provenance.** A bare 404 at the version read, Reserve, or reservation
-   query is transport uncertainty. Only the structured Driver-domain
-   `DRIVER_NOT_FOUND` body (or the query's 200 `NOT_FOUND` outcome) is
-   authoritative absence.
-4. **Demo→production origin gate.** `EnsureProductionRoundAsync` only upgrades a
-   round already created by production intake (`auto_execute = TRUE`). A
-   demo/test-created row is rejected with `MATCHING_ROUND_ORIGIN_CONFLICT`
-   without mutating pickup, identity, attempts or `auto_execute`, and the
-   worker never selects it.
-5. **Attempt metric.** `matching.attempt.created_total` counts committed NEW
-   attempt identities from the initial stage snapshot only; frozen-stage
-   replay/heal rows are not counted.
-6. **Migration 007** drops only the legacy auto-named
-   `matching_attempts_state_check` constraint; unrelated state-related sentinel
-   constraints survive repeated application.
-7. **Operational visibility.** A persisted stage missing from the running
-   configuration yields durable `work_error_code = STAGE_CONFIGURATION_MISMATCH`
-   without a terminal or attempt mutation. Reconciliation exhaustion keeps the
-   attempt `UNKNOWN` with `RECONCILE_EXHAUSTED` (and the round PROCESSING with
-   `RECONCILE_PENDING`); no new terminal business state is invented.
-
-Safety proofs: `ReservationReconciliationSafetyTests` (the mandatory matrix
-plus same-R idempotency over real PostgreSQL + controlled HTTP faults),
-`ProductionOriginIsolationTests`,
-`ProductionMatchingLifecycleRecoveryTests` (real process kill/restart across
-STARTED/COMPLETED), and the L4/L5/L7 proofs in `MatchingMetricsTests`,
-`MatchingMigrationRepairTests` and `ProductionMatchingStageTests`. See the
-[W12 reconciliation-safety evidence](../../../../evidence/member-b/w12-reconciliation-safety/README.md).
-
-For `STAGE_CONFIGURATION_MISMATCH`, restore a configuration containing the
-persisted stage and its original policy before resuming the worker. Do not
-rewind `current_stage` or discard its snapshot. For `RECONCILE_EXHAUSTED`,
-restore access to Driver's reservation-query endpoint, inspect the exact
-`driver_id`/`reservation_id` and durable dispatch fence, and allow the next
-worker pass to reconcile. Keep the round PROCESSING and the attempt UNKNOWN
-until authoritative evidence resolves it; do not clear the row or manually
-mark it REJECTED to unblock another Driver. Polls remain bounded per pass and
-the configured worker backoff controls repeated checks across restarts.
-
-## Verification and operator boundaries
-
-Integrated [performance evidence](../../../../evidence/team/w13-integration/README.md)
-and [recovery evidence](../../../../evidence/team/w14-integration/README.md)
-supersede the earlier unimplemented-experiments status. Each measurement retains
-its own source revision and workload limits.
-
-The internal `POST /internal/matching/rounds` seam remains a supported demo
-trigger; production rounds are worker-owned and this endpoint does not initiate
-reserve work. Preserve it for the existing harness and regression consumers.
-
-If Redis is unavailable during startup, projection consumer registration can
-fail and requires a Matching restart after Redis returns. Reconnection and
-function reload do not rebuild lost projection data: reconstruction requires
-explicit replay of authoritative Driver events. Driver PostgreSQL remains the
-reservation authority throughout.
+- `tests/Unit/RideHailing.MatchingService.UnitTests` — ranking, eligibility,
+  attempts, terminal contracts, projection keys and broker decisions.
+- `tests/Integration/RideHailing.MatchingService.IntegrationTests` — real
+  PostgreSQL, Redis and RabbitMQ plus real Driver Kestrel endpoints: intake,
+  reservation, reconciliation, cancellation, stage progression, migration
+  repair, process crash/restart and projection recovery.

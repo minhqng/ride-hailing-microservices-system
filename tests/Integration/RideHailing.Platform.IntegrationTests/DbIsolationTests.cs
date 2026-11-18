@@ -1,12 +1,12 @@
-// B-W02-09: cross-service DB access is DENIED at the PostgreSQL authorization
-// layer — not just absent from connection strings.
-// Scope: CONNECT denial for exactly the pairs SEC-08 names (Trip→Driver DB,
-// Matching→Driver DB; plus the symmetric denials and owned-access positives).
-// Schema-level privileges (TEMPORARY, CREATE) and the remaining service roles
-// belong to the platform init script review (C-owned), not to this proof.
+// Cross-service DB access is DENIED at the PostgreSQL authorization layer —
+// not just absent from connection strings.
+// Scope: CONNECT denial for exactly the pairs the isolation rule names
+// (Trip→Driver DB, Matching→Driver DB; plus the symmetric denials and
+// owned-access positives). Schema-level privileges (TEMPORARY, CREATE) and the
+// remaining service roles belong to the platform init script review, not to
+// this proof.
 // Replicates the CONNECT half of deploy/postgres/init/01-roles-dbs.sh
 // (per-DB roles + REVOKE CONNECT FROM PUBLIC) inside a disposable container.
-// Feeds SEC-08 (Doc 03; owner C): this is B-side executable evidence C can cite.
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -18,7 +18,9 @@ public class DbIsolationTests : IAsyncLifetime
     {
         // Same as service fixtures: Ryuk cannot start inside the SDK container;
         // DisposeAsync + AutoRemove clean up explicitly.
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private PostgreSqlContainer? _container;
@@ -75,9 +77,10 @@ public class DbIsolationTests : IAsyncLifetime
 
     private async Task ApplyIsolationTopologyAsync(string superuserCs)
     {
-        // Mirror of deploy/postgres/init/01-roles-dbs.sh for the B-owned roles
-        // plus trip_app/trip_db: SEC-08 names Trip→Driver and Matching→Driver
-        // attempts, so the Trip role must exist here to execute its denial.
+        // Mirror of deploy/postgres/init/01-roles-dbs.sh for the non-Trip roles
+        // plus trip_app/trip_db: the isolation proof names Trip→Driver and
+        // Matching→Driver attempts, so the Trip role must exist here to execute
+        // its denial.
         var statements = new[]
         {
             "CREATE ROLE driver_app WITH LOGIN PASSWORD 'driver_dev_pw'",
@@ -126,7 +129,7 @@ public class DbIsolationTests : IAsyncLifetime
     [Fact]
     public async Task Trip_Role_Cannot_Connect_Driver_Db()
     {
-        // The exact second pair SEC-08 names (Trip→Driver DB).
+        // The second denied pair at the schema level (Trip→Driver DB).
         var ex = await ConnectDeniedAsync(RoleConnectionString("driver_db", "trip_app", "trip_dev_pw"));
         Assert.Equal("42501", ex.SqlState);
     }

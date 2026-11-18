@@ -1,4 +1,4 @@
-// POST /trips/{tripId}/cancel transport adapter (A-W05 cancellation matrix).
+// POST /trips/{tripId}/cancel transport adapter (cancellation matrix).
 //
 // THIN ADAPTER ONLY: resolves the authenticated Rider identity, invokes the
 // rider-scoped CancelRideHandler, and maps the application outcome to HTTP.
@@ -51,7 +51,7 @@ public static class CancelRideEndpoint
                 extensions: new Dictionary<string, object?> { ["code"] = "FORBIDDEN" });
         }
 
-        // A-W12-01: one domain-decision span per logical CancelRide. A cancel
+        // One domain-decision span per logical CancelRide. A cancel
         // stages cleanup intents in the same transaction, so this context
         // becomes the durable parent of the relayed release/cancel commands.
         using var span = TripDiagnostics.Activities.StartActivity("RideHailing.Trip/CancelRide");
@@ -83,7 +83,7 @@ public static class CancelRideEndpoint
 
         if (result.IsSuccess)
         {
-            // A-W12-02: one committed CANCELLED transition; the idempotent
+            // One committed CANCELLED transition; the idempotent
             // already-CANCELLED replay never counts.
             if (!result.IsReplay)
                 TripDiagnostics.RecordTripCancelled();
@@ -92,7 +92,7 @@ public static class CancelRideEndpoint
             return Results.Ok(new CancelRideResponse { TripId = result.TripId, Status = "CANCELLED" });
         }
 
-        // A-W12-02: domain rejections by bounded reason class.
+        // Domain rejections by bounded reason class.
         var rejection = result.ErrorCode switch
         {
             TripErrorCode.TerminalState => TripDiagnostics.RejectionReasons.TerminalState,

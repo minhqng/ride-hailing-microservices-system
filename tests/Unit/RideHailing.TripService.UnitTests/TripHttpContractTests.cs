@@ -4,7 +4,7 @@ using RideHailing.TripService.Api;
 namespace RideHailing.TripService.UnitTests;
 
 // Contract tests: transport SHAPE stability only.
-// No FSM, fare, assignment, concurrency, or idempotency semantics (W3+).
+// No FSM, fare, assignment, concurrency, or idempotency semantics.
 public sealed class TripHttpContractTests
 {
     private static readonly JsonSerializerOptions Json = new()

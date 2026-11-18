@@ -1,8 +1,8 @@
-// B-REC-01 adjacent gap: Matching had no CancelMatchingRoundV1 consumer,
-// so a Trip cancellation never reached the durable round. The handler records
-// a durable cancel intent and flags an existing round; the autonomous worker
+// Matching had no CancelMatchingRoundV1 consumer, so a Trip cancellation never
+// reached the durable round. The handler records a durable cancel intent and
+// flags an existing round; the autonomous worker
 // then starts no new attempt and reconciles any unresolved effect with the
-// SAME reservation id (Doc 02 §12.9, DSI-017/031).
+// SAME reservation id.
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RideHailing.MatchingService.Infrastructure.Persistence;

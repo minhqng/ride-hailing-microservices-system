@@ -1,4 +1,4 @@
-// B-W04-01 (revised): two independent update intents, one shared FCALL.
+// Two independent update intents, one shared FCALL.
 // A Driver state event carries NO location fields, so it can never smuggle
 // a stale location into the projection (review correction #2).
 namespace RideHailing.MatchingService.Application.Projection;

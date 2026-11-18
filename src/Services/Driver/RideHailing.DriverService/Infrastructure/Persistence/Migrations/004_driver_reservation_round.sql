@@ -1,8 +1,8 @@
--- W08 hardening (matchingRound lineage): the drivers table now records the
--- matching generation that produced the current reservation. A successful
--- reserve publishes DriverReservedV1 with that generation so Trip's
--- current-generation gate (Doc 02 §21.3, DSI-016) can apply it; the value is
--- durable here so restart, same-reservation replay and delayed publication
+-- MatchingRound lineage: the drivers table records the matching generation
+-- that produced the current reservation. A successful reserve publishes
+-- DriverReservedV1 with that generation so Trip's current-generation gate can
+-- apply it; the value is durable here so restart, same-reservation replay and
+-- delayed publication
 -- recover the SAME round, never an invented one.
 --
 -- Nullability is load-bearing: reservations written before this column carry

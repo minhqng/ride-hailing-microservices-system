@@ -1,11 +1,12 @@
-// Trip-side HTTP transport coordinate shape freeze.
+// Trip-side HTTP transport coordinate shape.
 //
-// CANONICAL SEMANTIC (Docs 00-01):
-//   - A ride request identifies pickup/dropoff (Doc 01 §6.1 Trip authority).
+// CANONICAL SEMANTICS:
+//   - A ride request identifies pickup/dropoff (Trip authority).
 //   - Coordinates must satisfy -90 <= latitude <= 90, -180 <= longitude <= 180
-//     and be finite (Doc 01 §5.3). Range/finiteness validation itself is W3+
-//     behavior and is NOT implemented here.
-// W2 MECHANICAL FREEZE (this file):
+//     and be finite. Range/finiteness validation itself is later behavior and
+//     is NOT implemented here.
+//
+// FREEZE RATIONALE (this file):
 //   - Nested object with two doubles, serialized as JSON numbers.
 //   - Wire names "latitude"/"longitude" via explicit JsonPropertyName so the
 //     contract does not depend on global serializer naming policy.

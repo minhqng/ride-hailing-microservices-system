@@ -1,4 +1,4 @@
-// B-W03-07: persistence round-trip on REAL PostgreSQL (Npgsql raw).
+// Persistence round-trip on REAL PostgreSQL (Npgsql raw).
 // Asserts the FULL persisted shape: every domain field must survive the
 // round-trip, not just status/version (lossless proof).
 using RideHailing.DriverService.Application.Messaging;
@@ -37,7 +37,7 @@ public class DriverPersistenceTests
         Assert.Null(loaded.ReservedTripId);
         Assert.Null(loaded.ReservationId);
         Assert.Null(loaded.ActiveTripId);
-        // timestamptz stores microseconds; .NET ticks carry 100ns: allow sub-ms drift.
+        // PostgreSQL timestamptz stores microseconds; .NET ticks carry 100ns: allow sub-ms drift.
         Assert.True((loaded.UpdatedAt - driver.UpdatedAt).Duration() < TimeSpan.FromMilliseconds(1));
     }
 
@@ -63,7 +63,7 @@ public class DriverPersistenceTests
     [Fact]
     public async Task Reserve_With_Generation_Survives_Repository_Restart()
     {
-        // W08 matchingRound lineage: the winning reserve records the caller's
+        // matchingRound lineage: the winning reserve records the caller's
         // generation durably, and a FRESH repository instance (process restart
         // simulation) replays the same identity with the SAME generation —
         // never re-derived, never defaulted. An unknown-generation event
@@ -151,7 +151,7 @@ public class DriverPersistenceTests
     {
         // Eight concurrent creates with the same driver id must linearize on
         // the primary key: exactly one insert wins, losers observe the
-        // conflict instead of resetting state (DSR-002 duplicate delivery).
+        // conflict instead of resetting state (duplicate delivery).
         var repo = Repo();
         var id = Guid.NewGuid();
         var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>

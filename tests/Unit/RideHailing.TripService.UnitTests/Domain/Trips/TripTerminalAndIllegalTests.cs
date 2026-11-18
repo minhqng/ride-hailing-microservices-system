@@ -1,8 +1,8 @@
-// Illegal/terminal suite: proves DSI-010 (terminal monotonicity) against
-// every implemented active operation, plus the assignment, fencing and
-// completion guards. The frozen pre-start cancellation policy (CREATED and
-// READY_TO_START allowed) is covered by TripCancellationMatrixTests; this
-// suite covers the illegal IN_PROGRESS and terminal branches.
+// Illegal/terminal suite: proves terminal monotonicity against every
+// implemented active operation, plus the assignment, fencing and completion
+// guards. The frozen pre-start cancellation policy (CREATED and READY_TO_START
+// allowed) is covered by TripCancellationMatrixTests; this suite covers the
+// illegal IN_PROGRESS and terminal branches.
 
 using RideHailing.TripService.Domain.Trips;
 
@@ -215,9 +215,9 @@ public sealed class TripTerminalAndIllegalTests
     [Fact]
     public void ReadyToStart_WithoutAssignment_IsStructurallyRejected()
     {
-        // DSI-011 is enforced at reconstitution: READY_TO_START inherits the
-        // accepted assignment, so persisting it without one is incoherent.
-        // The Start null-assignment guard remains as defense-in-depth.
+        // Enforced at reconstitution: READY_TO_START inherits the accepted
+        // assignment, so persisting it without one is incoherent. The Start
+        // null-assignment guard remains as defense-in-depth.
         Assert.Throws<ArgumentException>(() => TripTestBuilders.AtState(TripState.ReadyToStart, withAssignment: false));
     }
 

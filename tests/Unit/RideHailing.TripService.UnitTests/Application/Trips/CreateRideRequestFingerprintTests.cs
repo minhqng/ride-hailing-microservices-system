@@ -1,4 +1,4 @@
-// CreateRide fingerprint unit proofs (A-W04-03): determinism, semantic
+// CreateRide fingerprint unit proofs: determinism, semantic
 // sensitivity, +0.0/-0.0 equivalence and culture invariance. No hashing
 // internals are tested; only the contract the handler depends on.
 

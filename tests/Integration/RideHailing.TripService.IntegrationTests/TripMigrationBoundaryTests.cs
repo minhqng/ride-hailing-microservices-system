@@ -1,10 +1,10 @@
-// W3 migration-boundary proof (A-W03-07).
+// Migration-boundary proof for the trip aggregate migration.
 //
 // Historical: migrates a fresh disposable database specifically through the
-// W3 Trip migration target (not to latest), then proves the W2 baseline and
-// W3 aggregate are applied with the expected trips contract. Intentionally
-// valid after future W4/W5 migrations: it never asserts current head
-// contains only W3 schema and never asserts no pending migrations.
+// trip aggregate migration target (not to latest), then proves the baseline
+// and the aggregate are applied with the expected trips contract.
+// Intentionally valid after later migrations: it never asserts current head
+// contains only this schema and never asserts no pending migrations.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -25,7 +25,7 @@ public sealed class TripMigrationBoundaryTests
     }
 
     [Fact]
-    public async Task W03_Boundary_AppliesW02Baseline_AndW03Aggregate_WithExpectedTripsContract()
+    public async Task Boundary_AppliesBaselineAndAggregate_WithExpectedTripsContract()
     {
         var probeDb = "trip_probe_" + Guid.NewGuid().ToString("N");
         var maintenanceCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
@@ -53,14 +53,14 @@ public sealed class TripMigrationBoundaryTests
         await using (var db = new TripDbContext(probeOptions))
         {
             var defined = db.Database.GetMigrations();
-            var w03Target = Assert.Single(
-                defined.Where(m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal)).ToList());
+            var targetMigration = Assert.Single(
+                defined.Where(m => m.EndsWith("TripAggregate", StringComparison.Ordinal)).ToList());
 
-            await db.GetService<IMigrator>().MigrateAsync(w03Target);
+            await db.GetService<IMigrator>().MigrateAsync(targetMigration);
 
             var applied = await db.Database.GetAppliedMigrationsAsync();
-            Assert.Contains(applied, m => m.EndsWith("W02_TripPersistenceBaseline", StringComparison.Ordinal));
-            Assert.Contains(applied, m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal));
+            Assert.Contains(applied, m => m.EndsWith("TripPersistenceBaseline", StringComparison.Ordinal));
+            Assert.Contains(applied, m => m.EndsWith("TripAggregate", StringComparison.Ordinal));
 
             var connection = db.Database.GetDbConnection();
             await connection.OpenAsync();
@@ -107,7 +107,7 @@ public sealed class TripMigrationBoundaryTests
                 Assert.Contains(expected, columns);
             }
 
-            // At the W3 boundary no W4+ tables exist: only trips besides history.
+            // At this boundary no later tables exist: only trips besides history.
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText =

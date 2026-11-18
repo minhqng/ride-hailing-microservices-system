@@ -1,4 +1,4 @@
-// Trip RideRequested intake (A-W09-02/04, replaces W8 direct publication).
+// Trip RideRequested intake (replaces direct publication).
 //
 // RESPONSIBILITY. CreateRide commits the authoritative CREATED row. This
 // component then opens the first matching generation and stages
@@ -7,13 +7,13 @@
 //
 // CONSEQUENCES.
 //   - A broker outage cannot fail the HTTP create path: the local intent is
-//     already durable and the C-owned relay publishes it later.
+//     already durable and the shared relay publishes it later.
 //   - A crash after the HTTP response leaves a pending row; relay restart
 //     publishes the same stable messageId.
 //   - An idempotent HTTP replay of an already-MATCHING Trip does no work and
 //     therefore cannot create a second logical message.
-//   - With TripMessaging disabled the historical W4/W5 behaviour is preserved:
-//     the ride stays CREATED and no intent is staged.
+//   - With TripMessaging disabled the historical behaviour is preserved: the
+//     ride stays CREATED and no intent is staged.
 //
 // A concurrent duplicate HTTP request can lose the application-managed Version
 // fence. That is not a lost intent: the winner committed MATCHING + Outbox in
@@ -49,7 +49,7 @@ public sealed class TripRideRequestedIntake(
             // No outgoing work remains on an already progressed/terminal ride.
             if (trip.State is not (TripState.Created or TripState.Matching)) return true;
 
-            // MATCHING already owns its committed intent (W9) or predates the
+            // MATCHING already owns its committed intent or predates the
             // upgrade and is not republished by HTTP replay.
             if (trip.State == TripState.Matching) return true;
 

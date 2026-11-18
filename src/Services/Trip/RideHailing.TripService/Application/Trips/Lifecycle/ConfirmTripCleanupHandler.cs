@@ -13,7 +13,7 @@ public enum CleanupAuthorityResult
 /// <summary>
 /// Internal confirmation seam for the future workflow adapter. Inputs must be
 /// conclusive authority results for this exact intent, never send/ACK success.
-/// No HTTP route or invented Driver/Payment transport is exposed in W7.
+/// No HTTP route or invented Driver/Payment transport is exposed here.
 /// </summary>
 public sealed class ConfirmTripCleanupHandler(TripDbContext db, TimeProvider clock)
 {
@@ -46,7 +46,7 @@ public sealed class ConfirmTripCleanupHandler(TripDbContext db, TimeProvider clo
         // DriverReservationReleasedV1 intake completes. The reconciliation
         // path must advance the Saga too; otherwise a lost event would leave
         // the Trip with no pending intent while the Saga stays
-        // RELEASE_PENDING forever (DSI-033/DSL-002).
+        // RELEASE_PENDING forever.
         var sagaAdvanced = false;
         if (!outcome.IsReplay && intent.Kind == TripCleanupKind.ReleaseReservation)
         {

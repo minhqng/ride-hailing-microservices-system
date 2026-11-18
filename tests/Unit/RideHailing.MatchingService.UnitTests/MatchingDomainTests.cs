@@ -1,4 +1,4 @@
-// B-W05-05/06: round/attempt aggregate + policy baseline proofs.
+// Round/attempt aggregate + policy baseline proofs.
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

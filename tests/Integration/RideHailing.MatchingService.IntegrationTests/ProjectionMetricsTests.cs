@@ -1,4 +1,4 @@
-// B-W12-03: projection metrics observed at the REAL FCALL reply, through the
+// Projection metrics observed at the REAL FCALL reply, through the
 // REAL DriverProjectionHandler and Redis function. Counters are asserted via
 // MeterListener; Redis unavailable must degrade, never masquerade as stale.
 using System.Collections.Concurrent;
@@ -57,12 +57,12 @@ public sealed class ProjectionMetricsTests
             var seq20 = Envelope("DriverLocationAcceptedV1", new
             {
                 driverId = driver, longitude = 106.6, latitude = 10.8,
-                sessionId = "w12-s", sequenceNo = 20, capturedAt = t0,
+                sessionId = "session-1", sequenceNo = 20, capturedAt = t0,
             });
             var seq19 = Envelope("DriverLocationAcceptedV1", new
             {
                 driverId = driver, longitude = 106.7, latitude = 10.9,
-                sessionId = "w12-s", sequenceNo = 19, capturedAt = t0.AddSeconds(1),
+                sessionId = "session-1", sequenceNo = 19, capturedAt = t0.AddSeconds(1),
             });
 
             Assert.Equal(HandlerOutcome.Done, await DeliverAsync(handler, "driver.reserved.v1", reserved10));
@@ -108,10 +108,10 @@ public sealed class ProjectionMetricsTests
         {
             var v10 = new DriverStateProjectionUpdate(driver, "RESERVED", 10);
             Assert.Equal(SectionOutcome.Applied, (await updater.ApplyStateAsync(v10)).State);
-            // Frozen W4 contract: state applies only when version > projected,
-            // so an exact v10 replay is classified stale (not a regression,
-            // but the contract says stale). This is the documented exception
-            // to "replay is not automatically stale".
+            // Frozen contract: state applies only when version > projected, so
+            // an exact v10 replay is classified stale (not a regression, but the
+            // contract says stale). This is the documented exception to "replay
+            // is not automatically stale".
             Assert.Equal(SectionOutcome.Stale, (await updater.ApplyStateAsync(v10)).State);
             Assert.Equal(1, capture.Counter("matching.projection.stale_state_reject"));
 
@@ -177,7 +177,7 @@ public sealed class ProjectionMetricsTests
         var handler = new DriverProjectionHandler(
             updater, NullLogger<DriverProjectionHandler>.Instance);
         var driver = Guid.NewGuid();
-        var messageId = "w12-content-conflict-" + Guid.NewGuid().ToString("N");
+        var messageId = "content-conflict-" + Guid.NewGuid().ToString("N");
 
         var first = EnvelopeWithId("DriverAvailableV1", new
         {
@@ -205,12 +205,12 @@ public sealed class ProjectionMetricsTests
 
     private static MessageEnvelope<JsonElement> Envelope(string type, object payload) =>
         MessageEnvelope<JsonElement>.Create(
-            type, "w12-projection", JsonSerializer.SerializeToElement(payload));
+            type, "projection", JsonSerializer.SerializeToElement(payload));
 
     private static MessageEnvelope<JsonElement> EnvelopeWithId(
         string type, object payload, string messageId) =>
         MessageEnvelope<JsonElement>.Create(
-            type, "w12-projection", JsonSerializer.SerializeToElement(payload),
+            type, "projection", JsonSerializer.SerializeToElement(payload),
             messageId: messageId);
 
     private static Task<HandlerOutcome> DeliverAsync(

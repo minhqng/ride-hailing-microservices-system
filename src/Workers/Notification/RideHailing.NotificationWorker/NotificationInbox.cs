@@ -1,4 +1,4 @@
-// DS03 recipient-addressed inbox (Doc 01 §40.2, Doc 02 §43, Doc 05C §48).
+// Recipient-addressed inbox.
 //
 // The inbox is owned by notification_db and is derived, non-authoritative
 // data. A row is available to a recipient only after it is committed with a

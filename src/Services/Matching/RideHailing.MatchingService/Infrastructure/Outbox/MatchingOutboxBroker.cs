@@ -1,6 +1,6 @@
-// B-owned broker adapter for C's shared Outbox relay. The relay publisher and
+// Broker adapter for the shared Outbox relay. The relay publisher and
 // lifecycle host share one dedicated factory: automatic client recovery is
-// disabled because the host owns restart/backoff and C's ConfirmedPublisher
+// disabled because the host owns restart/backoff and the shared ConfirmedPublisher
 // reopens a lost connection on the next attempt.
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;

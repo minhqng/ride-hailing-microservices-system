@@ -12,9 +12,9 @@
 | Nguyen Hoang Khanh | B23DCVT228 | Driver/Location, Matching, reservations, concurrency and Driver lifecycle |
 | Le Anh Viet | B23DCVT453 | Payment, messaging/platform, shared Outbox relay, reliability infrastructure |
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 
-**Date:** 6 November 2026
+**Date:** 18 November 2026
 
 **Repository:** <https://github.com/minhqng/ride-hailing-microservices-system>
 
@@ -305,7 +305,7 @@ overlay forces Trip messaging on, disables Trip auto-migration and enables the
 Payment reconciliation worker. Migrations are applied as an external job against
 the Trip-owned database before the overlay starts. Image versions are pinned by
 digest. The RabbitMQ configuration uses quorum queues for critical paths; the
-HA overlay adds broker clustering and is exercised by the W14 evidence.
+HA overlay adds broker clustering and is exercised by the recovery evidence.
 
 ## 3.5 Observability
 
@@ -503,13 +503,13 @@ must still be safe.
 Fault points make failure deterministic. Trip, Matching, Driver and Payment
 processes can be stopped at defined points; the tests then restart them and
 assert that pending work resumes, duplicates are absorbed and the final
-authority state is correct. The W11 evidence records real process crash/restart
+authority state is correct. The fault evidence records real process crash/restart
 proofs, and the release smoke Scenario D stops the Trip process after a reject
 commit and verifies an exact replay after restart.
 
 ## 5.7 Invariant auditor
 
-The repository includes a Trip invariant auditor and an independent B12 audit
+The repository includes a Trip invariant auditor and an independent invariant audit
 suite. The auditor reads Trip, Driver, Matching and Payment authority state and
 checks the cross-service agreements: terminal trips have no active assignment,
 a reserved driver points at an existing active trip, matching rounds and
@@ -636,7 +636,7 @@ The release verification ran the complete solution in Release mode:
 |---|---:|---:|---:|
 | NotificationWorker.UnitTests | 13 | 0 | 0 |
 | NotificationService.IntegrationTests | 16 | 0 | 0 |
-| B12Audit.Tests | 20 | 0 | 0 |
+| InvariantAudit.Tests | 20 | 0 | 0 |
 | PaymentService.UnitTests | 38 | 0 | 0 |
 | PaymentService.IntegrationTests | 37 | 0 | 0 |
 | Platform.IntegrationTests | 76 | 0 | 0 |
@@ -666,11 +666,11 @@ crash-after-reserve recovery, lost reserve responses, Outbox relay, payment
 recovery and reconciliation, Redis outage and backlog recovery. Security proof
 includes dedicated Identity negatives, driver authorization exposure, database
 ownership, message contracts and API boundary tests. Performance proof includes
-the W13 campaigns and the W14 backlog experiment.
+the performance campaigns and the backlog experiment.
 
 ## 7.4 Concurrency and contention
 
-The W13 E01 experiment drives synchronized authenticated reserve attempts at
+The E01 experiment drives synchronized authenticated reserve attempts at
 1, 10, 25, 50 and 100 contenders. Across three repetitions there were 558 real
 HTTP requests, 15 winners and 543 expected domain conflicts. Every point had
 exactly one durable winner and one reserve intent, followed by an exact
@@ -863,15 +863,9 @@ hidden behind the green test count; they are part of the submission.
 | Nguyen Hoang Khanh | B23DCVT228 | Driver/Location, Matching, reservations, concurrency and Driver lifecycle |
 | Le Anh Viet | B23DCVT453 | Payment, messaging/platform, shared Outbox relay, reliability infrastructure |
 
-The detailed commit and PR mapping is recorded in
-`docs/07-contribution-mapping.md`, the attribution correction record in
-`docs/08-credit-balance-correction-2026-11-06.md`, and the machine-readable
-old-to-new map in `evidence/integration/credit-balance-2026-11-06/`. The
-responsibility table describes ownership of the implemented capabilities; it
-is not a claim that every historical commit was originally authored by the
-displayed Git author. Two metadata-only rewrites preserved every tree object
-and every patch, and their provenance is retained through archive tags and the
-attribution map.
+The Git history and release tag are the authoritative record of the
+implemented change set. The responsibility table describes ownership of the
+implemented capabilities.
 
 ---
 
@@ -948,15 +942,4 @@ the release notes state that boundary explicitly.
 
 | Bundle | Content |
 |---|---|
-| `evidence/team/ds03-functional-closure/` | Reject/notification closure, 1,341-test regression, release-smoke A–D |
-| `evidence/team/w16-integration/` | Release candidate assembly, exact-tree CI, automated rehearsals |
-| `evidence/team/w15-integration/` | Feature freeze, reports and source mapping |
-| `evidence/team/w14-integration/` | Quorum HA, primary loss, E04 backlog recovery |
-| `evidence/team/w13-integration/` | E01–E04 performance campaigns, samples and analysis |
-| `evidence/team/w12-integration/` | Matching recovery, observability and G4 acceptance |
-| `evidence/team/w11-integration/` | Deterministic fault campaign |
-| `evidence/member-a/` | Trip/Saga/Outbox bundles |
-| `evidence/member-b/` | Driver/Matching bundles, rehearsals and freeze |
-| `evidence/member-c/` | Payment/messaging reliability bundles |
-| `evidence/integration/` | Attribution provenance and remediation mapping |
-| `evidence/release/v1.0.0/` | Final release manifest and verification anchors |
+| `evidence/release/v1.0.1/` | Final release manifest, regression summary, live demo run and verification anchors (the `v1.0.0` bundle remains as the historical release record) |

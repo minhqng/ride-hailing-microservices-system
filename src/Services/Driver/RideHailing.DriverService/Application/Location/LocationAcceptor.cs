@@ -1,4 +1,4 @@
-// B-W03-06: monotonic accepted location per session (DSI-006).
+// Monotonic accepted location per session.
 // seq-first, capturedAt tie-break. Stale returns Rejected (API maps to 409), not throw:
 // staleness is an expected concurrent outcome, not a bug.
 using System.Collections.Concurrent;
@@ -50,7 +50,7 @@ public sealed class LocationAcceptor
 
             // Exact replay of the current sample (same seq, timestamp and
             // payload) is the same logical effect: canonical success
-            // (DSR-002 idempotent replay), not a conflict.
+            // (idempotent replay), not a conflict.
             if (sample == current.Sample)
             {
                 return new LocationAcceptResult(LocationAcceptOutcome.Accepted, current.Sample);

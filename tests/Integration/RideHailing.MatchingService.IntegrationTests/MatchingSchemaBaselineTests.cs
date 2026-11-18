@@ -1,7 +1,7 @@
-// B-W02-04 (+P0 fix): Matching schema proof on REAL PostgreSQL.
+// Matching schema proof on REAL PostgreSQL.
 // Applies 001 baseline + 002 canonical status fix in order, then proves the
-// CHECK enforces Doc 01 §8.2 vocabulary. Attempt-ledger guards (UNIQUE +
-// state vocabulary for DSI-015/017/018) live in MatchingAttemptGuardTests.
+// CHECK enforces the canonical status vocabulary. Attempt-ledger guards
+// (UNIQUE + state vocabulary) live in MatchingAttemptGuardTests.
 using Npgsql;
 
 namespace RideHailing.MatchingService.IntegrationTests;
@@ -37,7 +37,7 @@ public class MatchingSchemaBaselineTests
         var trip = Guid.NewGuid();
         try
         {
-            // W9: a new NO_DRIVER row must carry its terminal result identity
+            // A new NO_DRIVER row must carry its terminal result identity
             // (006 CHECK); every other status keeps it NULL.
             await using var cmd = new NpgsqlCommand(
                 "INSERT INTO matching_rounds " +

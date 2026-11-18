@@ -1,18 +1,19 @@
 // RideRequestedV1 payload shape: Trip-side production proposal for the
-// future Trip → Matching durable workflow start (Doc 02 §6, routing key
+// future Trip → Matching durable workflow start (routing key
 // trip.ride-requested.v1, producer Trip Outbox).
 //
-// SCOPE (A-W05-07/08): payload SHAPE ONLY. No broker runtime, no envelope
-// (C-owned MessageEnvelope), no publish path, no Outbox row, no consumer:
-// those arrive with W8/W9 and must reuse this shape. Matching's durable
-// round/attempt ledger and Driver authority stay B-owned; Trip never decides
+// SCOPE: payload SHAPE ONLY. No broker runtime, no envelope
+// (shared MessageEnvelope), no publish path, no Outbox row, no consumer:
+// those arrive later and must reuse this shape. Matching's durable
+// round/attempt ledger and Driver authority stay with those services; Trip
+// never decides
 // reservation success.
 //
 // FIELDS (mechanical proposal, semantic content canonical):
-//   tripId         one logical ride (Doc 01 §3.3).
-//   matchingRound  the open generation this request starts (DSI-016); the
+//  tripId one logical ride.
+//  matchingRound the open generation this request starts; the
 //                  consumer must treat any other generation as stale.
-//   pickup/dropoff ride request identity (Doc 01 §6.1); Matching needs the
+//  pickup/dropoff ride request identity; Matching needs the
 //                  pickup center for GEOSEARCH candidate discovery.
 //   requestedAt    when Trip opened the round (explicit timestamp; the domain
 //                  performs no clock access).
@@ -57,8 +58,8 @@ public sealed record RideRequestedV1
     /// Builds the payload from a Trip that has an open round with no
     /// assignment yet. Any other shape (no open round, already assigned,
     /// terminal) is a programming error: the producer must only emit this
-    /// intent atomically with the StartMatching transition (future W9
-    /// Outbox), never for a stale or assigned Trip.
+    /// intent atomically with the StartMatching transition (Outbox), never for
+    /// a stale or assigned Trip.
     /// </summary>
     public static RideRequestedV1 FromTrip(Trip trip, DateTimeOffset requestedAt)
     {

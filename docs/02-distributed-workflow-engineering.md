@@ -5,12 +5,12 @@
 > **Course:** Distributed Systems  
 > **Topic:** DS03 — Ride-hailing Microservices System simulating Grab/Uber  
 > **Type:** Distributed Execution Contract + Reliability Engineering Specification + Messaging/Recovery Design  
-> **Status:** **PROPOSED FREEZE v2.0 — REVIEW CANDIDATE**  
+> **Status:** Frozen execution contract  
 > **Baseline date:** **2026-09-26**  
 > **Parents:** `00-project-scope-architecture.md`, `01-domain-correctness-contract.md`  
-> **Children:** `03-verification-experiments-demo.md`, `04-team-execution-plan.md`, `05A/05B/05C`  
+> **Children:** `03-verification-experiments-demo.md`  
 > **Normative role:** source of truth for synchronous/asynchronous boundaries, service discovery, message envelope/contracts, RabbitMQ topology and delivery semantics, publisher confirms, consumer acknowledgements, idempotent consumption, Transactional Outbox, MatchingRound durability, Saga persistence, retry ownership, DLQ/error handling, UNKNOWN-outcome reconciliation, Redis projection updates, network recovery, observability propagation, health/readiness semantics and distributed fault windows.  
-> **Not source of truth for:** domain legality/invariants (`01`), exact executable test IDs/repetition/evidence (`03`), team schedule (`04`), individual work breakdown (`05`).  
+> **Not source of truth for:** domain legality/invariants (`01`), exact executable test IDs/repetition/evidence (`03`).  
 > **Executable source of truth:** exact package versions, migrations, queue arguments, exchange/queue declarations, retry numbers, timeouts, connection settings and schemas are pinned in source/config after freeze. If executable configuration changes a semantic rule in this file, this document must be updated in the same architecture change.  
 > **Change policy:** changing delivery guarantees, message ownership, command/event meaning, ACK timing, Outbox semantics, Saga persistence, retry owner, UNKNOWN handling, Redis authority, queue type for critical flow, or cross-service synchronous/asynchronous boundary requires architecture review.
 

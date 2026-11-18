@@ -1,14 +1,14 @@
-// Trip semantic Outbox intents (A-W09-02/03).
+// Trip semantic Outbox intents.
 //
 // One builder per committed business obligation. Each builder derives:
 //   - a deterministic messageId from the exact business identity (never a
 //     fresh Guid per attempt), so an uncertain publish/restart republishes
 //     the same logical message;
 //   - payload serialized from the committed aggregate/cleanup values;
-//   - the canonical envelope and transport target from Doc 02 §6.
+//   - the canonical envelope and transport target.
 //
 // These intents MUST be added to the same TripDbContext.SaveChangesAsync as
-// the Trip state transition they describe. The relay (C-owned) is the only
+// the Trip state transition they describe. The shared relay is the only
 // publisher.
 
 using RideHailing.Messaging.Contracts;
@@ -32,9 +32,9 @@ public static class TripOutboxIntents
     public const string ReleaseReservationRoutingKey = "driver.release-reservation.v1";
 
     /// <summary>
-    /// Stable RideRequested identity for one opened matching generation. W8
-    /// froze this format; it is retained so an upgrade cannot change the
-    /// logical message of an already committed round.
+    /// Stable RideRequested identity for one opened matching generation. The
+    /// format is frozen and retained so an upgrade cannot change the logical
+    /// message of an already committed round.
     /// </summary>
     public static string RideRequestedMessageId(Trip trip)
     {
@@ -153,9 +153,9 @@ public static class TripOutboxIntents
     }
 
     /// <summary>
-    /// Stages every newly added cleanup obligation that has a W9 wire
-    /// contract. Payment reconciliation is durable Trip intent but its
-    /// command belongs to W10, so it is intentionally not published here.
+    /// Stages every newly added cleanup obligation that has a wire contract.
+    /// Payment reconciliation is durable Trip intent, but its command belongs
+    /// to the payment flow, so it is intentionally not published here.
     /// </summary>
     public static void EnqueueNewCleanup(
         Trip trip,
@@ -178,7 +178,7 @@ public static class TripOutboxIntents
                     enqueue(ReleaseReservation(trip, intent, intent.CreatedAt));
                     break;
                 case TripCleanupKind.ReconcilePayment:
-                    // W10 owns payment operation lineage and commands.
+                    // Payment operation lineage and commands belong to the payment flow.
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(intent), intent.Kind, "Unknown cleanup kind.");

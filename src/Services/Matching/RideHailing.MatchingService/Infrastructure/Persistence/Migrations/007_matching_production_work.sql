@@ -1,15 +1,15 @@
--- B-REC-01/DSI-021: durable production work scheduling and progressive stages.
+-- Durable production work scheduling and progressive stages.
 -- Forward-only and append-only: 001-006 are untouched.
 --
 -- matching_rounds gains the durable intake needed to execute without the
 -- broker message (pickup center) and the durable scheduling bit that makes a
 -- round discoverable by the autonomous worker before ACK. `auto_execute`
--- separates production rounds from the W5 internal/demo and W11 test seams:
--- only a canonical RideRequestedV1 intake sets it.
+-- separates production rounds from the internal/demo and test seams: only a
+-- canonical RideRequestedV1 intake sets it.
 --
 -- matching_attempts gains the logical stage its ordinal belongs to, so a
--- stage's attempts can be conclusively exhausted before the round advances
--- (DSI-021/022), plus last_checked_at for bounded recovery backoff.
+-- stage's attempts can be conclusively exhausted before the round advances,
+-- plus last_checked_at for bounded recovery backoff.
 --
 -- matching_cancel_intents records a CancelMatchingRoundV1 that arrives before
 -- its RideRequestedV1 (independent queues have no cross-queue ordering). The
@@ -59,7 +59,7 @@ CREATE INDEX IF NOT EXISTS ix_matching_rounds_work
     ON matching_rounds (work_checked_at, updated_at)
     WHERE status = 'PROCESSING' AND auto_execute = TRUE;
 
--- Doc 01 §8.3: CANCELLED/SKIPPED is a possible extended terminal. A
+-- CANCELLED/SKIPPED is a possible extended terminal. A
 -- cancellation closes READY attempts (no effect was sent) without pretending
 -- they were Driver rejections.
 --

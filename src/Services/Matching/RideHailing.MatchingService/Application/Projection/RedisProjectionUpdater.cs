@@ -1,5 +1,5 @@
-// B-W04-02/03/04: Matching-owned projection updater (StackExchange.Redis, no EF).
-// Best-effort degraded behavior (B-W04-08): connection failure -> Degraded result,
+// Matching-owned projection updater (StackExchange.Redis, no EF).
+// Best-effort degraded behavior: connection failure -> Degraded result,
 // never throws to the caller. The Driver API path never blocks on Redis.
 using System.Diagnostics;
 using System.Globalization;

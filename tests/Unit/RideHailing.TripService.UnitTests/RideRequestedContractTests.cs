@@ -1,7 +1,7 @@
-// A-W05-07/08 proofs: RideRequestedV1 payload shape stability and the
+// Proofs: RideRequestedV1 payload shape stability and the
 // producer-side emission guard. The checked-in example fixture is the
 // cross-team review surface; these tests prove the shape Trip will emit
-// (when W9 Outbox publishes it) round-trips exactly, and that FromTrip
+// (when Outbox publishes it) round-trips exactly, and that FromTrip
 // refuses every non-emittable Trip shape.
 
 using System.Text.Json;

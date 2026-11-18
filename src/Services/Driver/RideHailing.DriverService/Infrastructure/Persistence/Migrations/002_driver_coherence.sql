@@ -1,4 +1,4 @@
--- Driver DSI-002 state/reservation coherence (defense-in-depth).
+-- Driver state/reservation coherence (defense-in-depth).
 --
 -- The Driver domain already enforces coherence in memory (AssertCoherence on
 -- every transition and on Rehydrate). This constraint makes the same rule
@@ -18,7 +18,7 @@ DECLARE
   sample text;
 BEGIN
   -- Fail loud (not silent): 001 had no coherence CHECK, so operator-written
-  -- rows may violate DSI-002. Aborting here keeps the migration all-or-nothing
+  -- rows may violate coherence. Aborting here keeps the migration all-or-nothing
   -- with a clear message instead of an obscure 23514 from ADD CONSTRAINT.
   SELECT COUNT(*) INTO incoherent FROM drivers WHERE NOT (
     (status IN ('AVAILABLE', 'OFFLINE')
@@ -38,7 +38,7 @@ BEGIN
       OR (status = 'ON_TRIP'
         AND active_trip_id IS NOT NULL AND reserved_trip_id IS NULL AND reservation_id IS NULL)
     ) LIMIT 5) bad;
-    RAISE EXCEPTION 'driver coherence pre-check failed: % incoherent rows violate DSI-002 (e.g. %); clean them before applying chk_drivers_coherence', incoherent, sample;
+    RAISE EXCEPTION 'driver coherence pre-check failed: % incoherent rows violate the state/reservation coherence rule (e.g. %); clean them before applying chk_drivers_coherence', incoherent, sample;
   END IF;
 
   IF NOT EXISTS (

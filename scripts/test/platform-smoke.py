@@ -60,7 +60,7 @@ for service in ["gateway", "identity", "driver", "trip", "matching", "payment", 
     state = json.loads(subprocess.run(["docker", "inspect", container_id], check=True,
         text=True, capture_output=True).stdout)[0]["State"]
     assert state["Running"] and not state["Restarting"], (service, state["Status"])
-# Versioned W2 declarations survive repeated Payment startup.
+# Versioned declarations survive repeated Payment startup.
 credential = base64.b64encode((os.getenv("RABBITMQ_USER", "ride_app") + ":" + os.getenv("RABBITMQ_PASSWORD", "ride_dev_pw")).encode()).decode()
 def exchange_snapshot():
     snapshot = []

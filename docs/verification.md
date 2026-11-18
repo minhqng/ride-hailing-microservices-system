@@ -1,17 +1,18 @@
 # Final verification record
 
-This page records the verification performed for the `v1.0.0` release. It
+This page records the verification performed for the `v1.0.1` release. It
 separates **what was executed on this source revision** from historical
 measurements retained in evidence bundles. Numbers are copied from the run
-outputs, not from an earlier branch.
+outputs, not from an earlier branch. The `v1.0.0` counts remain in its evidence
+bundle and are not rewritten here.
 
 ## Release revision and environment
 
-- Release: `v1.0.0` (annotated tag; exact commit and tree are recorded in
-  [evidence/release/v1.0.0/manifest.json](../evidence/release/v1.0.0/manifest.json)
+- Release: `v1.0.1` (annotated tag; exact commit and tree are recorded in
+  [evidence/release/v1.0.1/manifest.json](../evidence/release/v1.0.1/manifest.json)
   and on the GitHub Release page).
-- Host: Windows 11, Docker Desktop 29.8.2 (Linux engine), .NET SDK 10.0.403,
-  Python 3.15.2, Git for Windows.
+- Host: openSUSE Tumbleweed (Linux 7.3.4), Docker 29.9.2, Compose 5.7.1,
+  Python 3.13.16; builds and tests run in the pinned .NET 10 SDK container.
 - Providers: PostgreSQL 18.6, RabbitMQ 4.3.6 and Redis 8.10.2, pinned by
   digest in `compose.yaml` and the evidence manifests.
 - Test transports are real processes, real PostgreSQL, real RabbitMQ and real
@@ -36,24 +37,29 @@ python scripts/test/assert-trx.py --results-dir TestResults/full-release \
 |---|---:|---:|---:|
 | RideHailing.NotificationWorker.UnitTests | 13 | 0 | 0 |
 | RideHailing.NotificationService.IntegrationTests | 16 | 0 | 0 |
-| RideHailing.B12Audit.Tests | 20 | 0 | 0 |
+| RideHailing.InvariantAudit.Tests | 20 | 0 | 0 |
 | RideHailing.PaymentService.UnitTests | 38 | 0 | 0 |
 | RideHailing.PaymentService.IntegrationTests | 37 | 0 | 0 |
 | RideHailing.Platform.IntegrationTests | 76 | 0 | 0 |
 | RideHailing.MatchingService.UnitTests | 115 | 0 | 0 |
 | RideHailing.DriverService.IntegrationTests | 120 | 0 | 0 |
 | RideHailing.DriverService.UnitTests | 132 | 0 | 0 |
-| RideHailing.MatchingService.IntegrationTests | 202 | 0 | 0 |
+| RideHailing.MatchingService.IntegrationTests | 204 | 0 | 0 |
 | RideHailing.TripService.IntegrationTests | 246 | 0 | 0 |
-| RideHailing.TripService.UnitTests | 326 | 0 | 0 |
+| RideHailing.TripService.UnitTests | 327 | 0 | 0 |
 | RideHailing.IdentityService.IntegrationTests | 0 | 0 | 1 (documented opt-in) |
-| **Total** | **1341** | **0** | **1** |
+| **Total** | **1344** | **0** | **1** |
 
 TRX gate result: `PASS: TRX files=13 (executed suites=13), notexecuted=1,
-passed=1341, suite files=13`. The single skip is
+passed=1344, suite files=13`. The single skip is
 `AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState`, a
 deliberately opt-in theory; the dedicated Identity negative lane runs it
 separately and reports 7/7 passing.
+
+`scripts/test/required-suites.txt` also carries a per-assembly minimum
+(roughly 90% of the counts above). The aggregate `--min-passed 1200` proves
+the suite total, while the per-assembly floors catch a single suite that
+silently stops discovering tests.
 
 Build: `0 errors`, `0 warnings`. The final tree builds clean: the previously
 reported analyzer warnings (three nullable-argument, one nullable-dereference,
@@ -65,7 +71,7 @@ removed. No warning category is suppressed anywhere in the solution.
 
 | Gate | Result |
 |---|---|
-| Secret scan (`scripts/security/scan-secrets.py`) | PASS — 1340 tracked paths, no high-confidence secret |
+| Secret scan (`scripts/security/scan-secrets.py`) | PASS — 1334 tracked paths, no high-confidence secret |
 | Hygiene self-test (`scripts/test/hygiene-check.sh --self-test`) | PASS — 24 pattern verdicts |
 | Source-anchor fixtures (`verify-source-anchor.test.sh`) | PASS — 12 fixture cases |
 | Compose render, development files | PASS (`docker compose config --quiet`) |
@@ -79,10 +85,11 @@ isolated Compose project, applies the real Trip EF migrations externally,
 runs real authenticated journeys through the public HTTP surface, inspects
 independent owning databases and tears down its own resources.
 
-Local release run: 2026-11-06, Compose project `ride-release-final`, source
-`da85ca3` plus the release metadata/cleanup tree. The exact-tree CI run on the
-release pull request is the authoritative run for the published commit; its
-run id is recorded in the GitHub Release notes.
+Local release run: 2026-11-18, Compose project `ride-release-v101`, source
+commit recorded in
+[evidence/release/v1.0.1/manifest.json](../evidence/release/v1.0.1/manifest.json).
+This is the authoritative local run for the verified tree; the repository CI
+workflow repeats the same gates for every exact-tree checkout.
 
 - External migration: `dotnet ef database update`, 11 migrations applied.
 - Broker topology observed: 12 exchanges and 19 queues.
@@ -113,8 +120,32 @@ run id is recorded in the GitHub Release notes.
   project containers remained.
 
 The raw result of the release run is curated to
-[evidence/release/v1.0.0/](../evidence/release/v1.0.0/) with the command,
+[evidence/release/v1.0.1/](../evidence/release/v1.0.1/) with the command,
 environment, checks and source anchors.
+
+## 3a. Live demonstration on a clean stack — PASS
+
+The authoritative Vietnamese runbook `docs/demo.md` was executed end to end
+on a freshly rebuilt development stack (`docker compose down -v`, then
+`--profile obs up -d --build`) on 2026-11-18. Part C steps 1–13 and scenarios
+D.1–D.8, D.11 and D.12, plus a two-candidate matching probe, all passed. The
+final invariant audit read `cleanup_pending = 0`, `non_published_outbox = 0`,
+`reserved_rounds_with_unresolved_attempt = 0` and
+`duplicate_notifications = 0`.
+
+D.11 cancelled while Payment was stopped: the saga reached `COMPENSATED`,
+`AUTHORIZE` and `VOID` both succeeded with the same amount, and no `CAPTURE`
+was produced. D.12 pre-seeded a terminal decline: `AUTHORIZE` ended
+`DECLINED`, the trip became `CANCELLED`, `ReleaseDriverReservationV1` carried
+the exact driver and reservation, and all three cleanup obligations were
+confirmed. The two-candidate probe confirmed that a settled `RESERVED` round
+closes the unselected attempt as `CANCELLED` (`NOT_SELECTED`), so
+`CancelMatching` converges. A `DRIVER_RESERVED` cancellation now owns only
+`CancelMatching` and `ReleaseReservation`: accept is the transition that
+requests authorization, so no Payment effect exists to reconcile there.
+
+Curated results:
+[evidence/release/v1.0.1/final-state/demo-run-summary.json](../evidence/release/v1.0.1/final-state/demo-run-summary.json).
 
 ## 4. Course minimum test mapping
 
@@ -127,9 +158,9 @@ tests. Representative proofs:
 |---|---|
 | Functional (≥8) | `CreateRideHttpTests`, `CreateRideComponentTests`, `TripLifecycleComponentTests`, `TripDriverLifecycleHttpTests`, `TripDriverAgreementTests`, `TripDriverRejectTests`, `PaymentPersistenceTests`, `NotificationInboxTests`, `AuthNegativeTests` |
 | Concurrency / conflict (≥2) | `DriverReserveConcurrencyTests`, `CreateRideConcurrencyTests`, `TripConcurrencyComponentTests`, `PaymentConcurrencyTests`, `AtomicDispatchFenceTests`, `MatchingAttemptDriverUniquenessTests`, `ReconciliationRaceTests` |
-| Fault / recovery (≥2) | `TripW11FaultProcessTests`, `CrashAfterReserveRecoveryTests`, `LostReserveResponseHttpTests`, `OutboxRelayUnitTests`, `PaymentRecoveryTests`, `PaymentReconciliationTests`, `RedisOutageRecoveryTests`, `BacklogRecoveryTests`, `ProductionMatchingLifecycleRecoveryTests` |
+| Fault / recovery (≥2) | `TripFaultProcessTests`, `CrashAfterReserveRecoveryTests`, `LostReserveResponseHttpTests`, `OutboxRelayUnitTests`, `PaymentRecoveryTests`, `PaymentReconciliationTests`, `RedisOutageRecoveryTests`, `BacklogRecoveryTests`, `ProductionMatchingLifecycleRecoveryTests` |
 | Security / invalid data (≥2) | `AuthNegativeTests` (7 dedicated identity negatives), `DriverAuthorizationExposureTests`, `DriverDbOwnershipTests`, `MatchingDbOwnershipTests`, `MessageContractTests`, `TripApiBoundaryTests`, `TripHttpContractTests` |
-| Performance / scalability (≥1) | W13 E01–E04 campaigns and W14 E04 backlog recovery (see §6) |
+| Performance / scalability (≥1) | E01–E04 campaigns and the E04 backlog-recovery run (see §6) |
 
 ## 5. DS03 requirement matrix
 
@@ -142,32 +173,31 @@ tests. Representative proofs:
 | Service-owned databases / isolated schemas | One logical database and role per service | `deploy/postgres/init/01-roles-dbs.sh`, `DbIsolationTests`, `DriverDbOwnershipTests`, `MatchingDbOwnershipTests` |
 | No cross-service production DB access | Each service connects only to its owned connection string; no shared context | Ownership tests + role grants |
 | Service identities and contracts | Per-service `ServiceInstanceId`, DNS names, versioned message envelopes, stable IDs | `MessageEnvelope`, `RideTopology`, docs 00–03 |
-| Multiple concurrent requests | Async intake, OCC reservation, concurrency and contention tests | `DriverReserveConcurrencyTests`, `CreateRideConcurrencyTests`, W13 E01/E02 |
+| Multiple concurrent requests | Async intake, OCC reservation, concurrency and contention tests | `DriverReserveConcurrencyTests`, `CreateRideConcurrencyTests`, E01/E02 |
 | Registration, login and roles | Identity `/auth/register`, `/auth/login`, `/connect/token`; Rider/Driver/Service roles | `IdentityService` source; `AuthNegativeTests`; release smoke |
 | Driver status and simulated location | Driver online/offline and location endpoints; Redis GEO projection | `DriverEndpoints`, `DriverLocationIngressTests`, release smoke |
 | Passenger ride creation | `POST /trips` with durable idempotency key | `CreateRideEndpoint`, `CreateRideHttpTests`, release smoke |
 | Driver search and selection | Matching candidate discovery, deterministic ranking | `MatchingPipelineTests`, `ProductionMatchingWorkflowTests`, release smoke |
 | Driver acceptance or rejection | Authenticated accept/reject with exact `(driverId, reservationId)` fencing | `TripDriverDecisionTests`, `TripDriverRejectTests`, release smoke Scenario A |
-| No simultaneous assignment to two trips | Driver PostgreSQL OCC reservation; stale release fencing | `DriverReserveConcurrencyTests`, `DriverRaceFencingTests`, W13 E01 |
+| No simultaneous assignment to two trips | Driver PostgreSQL OCC reservation; stale release fencing | `DriverReserveConcurrencyTests`, `DriverRaceFencingTests`, E01 |
 | Trip lifecycle through completion/cancellation | Trip FSM with terminal monotonicity, cancellation cleanup and Saga compensation | `TripLifecycleComponentTests`, `TripCancellationMatrixTests`, release smoke |
 | Fare calculation and simulated payment | Deterministic fare snapshot; durable payment operations with `operationKey` | `DeterministicFareCalculatorTests`, `FareSnapshotTests`, `PaymentPersistenceTests`, release smoke |
-| Passenger and driver notifications | Outbox intents → Notification worker → per-recipient inbox; JWT owner isolation | `NotificationInboxTests`, `TripW18NotificationOutboxTests`, release smoke |
+| Passenger and driver notifications | Outbox intents → Notification worker → per-recipient inbox; JWT owner isolation | `NotificationInboxTests`, `TripNotificationOutboxTests`, release smoke |
 | Event identity, idempotency and deduplication | `messageId`, `correlationId`, `processed_messages`, payment `operationKey` | `MessageContractTests`, `W9DedupTests`, `PaymentReplayTests` |
 | Bounded retry and DLQ | Finite delivery attempts, `<queue>.dead`, quarantine queue | `FailurePolicyTests`, `TopologySmoke`, `BrokerConsumeTests` |
 | Correlation IDs | W3C trace context propagation; correlation ID logging/echo | `TraceHeaderPropagation`, `ReserveTraceContinuityTests` |
-| Real Saga or compensation | Persisted `RideSaga` with Authorize/Capture/Void and compensation | `RideSagaTransitionTests`, `TripW10SagaTests`, release smoke A/C |
-| Concurrency control and final-state consistency | OCC, guarded transitions, invariant auditor | Concurrency suites, `TripInvariantAuditor`, B12 audit |
-| Failure detection, recovery and restart | Fault points, process crash/restart, Outbox recovery, reconciliation workers | `TripW11FaultProcessTests`, `CrashAfterReserveRecoveryTests`, W11/W14 evidence, release smoke C/D |
+| Real Saga or compensation | Persisted `RideSaga` with Authorize/Capture/Void and compensation | `RideSagaTransitionTests`, `TripSagaTests`, release smoke A/C |
+| Concurrency control and final-state consistency | OCC, guarded transitions, invariant auditor | Concurrency suites, `TripInvariantAuditor`, invariant audit |
+| Failure detection, recovery and restart | Fault points, process crash/restart, Outbox recovery, reconciliation workers | `TripFaultProcessTests`, `CrashAfterReserveRecoveryTests`, real process crash/restart runs, release smoke C/D |
 | Authentication and access control | RSA JWT validation, role checks, service permissions, owner isolation | `AuthNegativeTests`, `DriverAuthorizationExposureTests`, security gate 55 checks |
 | Input validation and message/input-size limits | Fluent validation at boundaries; Kestrel body limits; bounded payload parsing | `TripApiBoundaryTests`, `DriverLocationIngressTests`, `DriverIngressLimits` |
 | Secure secret configuration, no hardcoded credentials | `.env.example` placeholders only; release overlay fails closed; secret scanner | `scan-secrets.py` PASS; release overlay negative render PASS |
 
 ## 6. Performance and high-availability evidence
 
-The measured campaigns are retained with their source identity, environment,
-raw-sample hashes and acceptance analysis under
-[evidence/team/w13-integration](../evidence/team/w13-integration/README.md) and
-[evidence/team/w14-integration](../evidence/team/w14-integration/README.md).
+The measured campaigns were executed on a single host with synthetic load. The
+raw harness and samples are not part of the final deliverable; the results and
+their validity limits are summarized here.
 
 - **E01 — Driver contention.** Three repetitions at each of 1/10/25/50/100
   contenders; 558 real authenticated HTTP requests, 15 winners, 543 expected
@@ -200,9 +230,6 @@ validity conditions and retain failed/rejected attempts.
 - The final release record maps the release commit/tree to the evidence used
   for this verification. Historical bundles keep their original source SHA,
   including bundles produced before the tree-identical attribution rewrites.
-- The attribution rewrite is recorded in
-  [docs/08-credit-balance-correction-2026-11-06.md](../docs/08-credit-balance-correction-2026-11-06.md)
-  and its machine-readable old→new map.
 - No raw secrets, bearer tokens, database volumes or full engine streams are
   committed.
 
@@ -213,7 +240,6 @@ validity conditions and retain failed/rejected attempts.
 - Payment is a simulated provider; the provider boundary is real PostgreSQL
   and durable operations, not a card network.
 - Notification delivery is in-app only.
-- CI billing availability is external; the exact-tree GitHub Actions runs that
-  did execute are linked in the W15/W16 evidence, and the local Release build,
+- CI billing availability is external; the local Release build,
   real-infrastructure suites, release smoke and clean-clone checks are the
-  release-gate substitutes when a CI run is unavailable.
+  release-gate substitutes when a hosted CI run is unavailable.

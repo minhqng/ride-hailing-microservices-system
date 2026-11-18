@@ -1,4 +1,4 @@
-// B-W09-03/04: append-only upgrade proof for 006 on REAL PostgreSQL.
+// Append-only upgrade proof for 006 on REAL PostgreSQL.
 // A legacy database at 005 may already contain NO_DRIVER rows without a
 // result identity. 006 must add the new NO_DRIVER identity CHECK as NOT VALID
 // (legacy rows stay readable) while enforcing it for every new row, and the

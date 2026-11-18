@@ -1,4 +1,4 @@
-// B-W11-01: the fault seam must be inert outside the explicit Testing
+// The fault seam must be inert outside the explicit Testing
 // environment, observable when enabled, and bounded when never released.
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;

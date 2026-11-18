@@ -1,4 +1,4 @@
-// B-REC-01 worker policy. Bounded operational tuning, validated at startup;
+// Autonomous worker policy. Bounded operational tuning, validated at startup;
 // no business semantics live here.
 namespace RideHailing.MatchingService.Application.Matching;
 

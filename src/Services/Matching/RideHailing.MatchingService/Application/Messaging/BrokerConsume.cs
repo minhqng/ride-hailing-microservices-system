@@ -1,12 +1,12 @@
-// B-W08 minimal manual-ACK consume loop (Doc 02 §9.1 critical pattern).
-// Interim B-owned glue, deliberately narrow: connect with reconnect loop
-// (never crashes the host over a broker outage), declare the frozen topology
-// idempotently, consume one queue with manual ACK, and apply exactly:
+// Minimal manual-ACK consume loop, deliberately narrow: connect with a
+// reconnect loop (never crashes the host over a broker outage), declare the
+// frozen topology idempotently, consume one queue with manual ACK, and apply
+// exactly:
 //   handler success → ACK (durable effect committed)
 //   handler failure → bounded requeue (transient/cancel) or drop+log
-//     (permanent/poison/unknown-past-budget; DLQ arrival is C/W9 scope)
+//  (permanent/poison/unknown-past-budget; DLQ arrival is out of scope)
 // No retry headers of its own, no prefetch tuning beyond validated config,
-// no breaker. Converges onto C's consumer base when that lands (same
+// no breaker. Converges onto the shared consumer base when that lands (same
 // exchanges/queues/envelope/ACK-after-commit discipline).
 using System.Text.Json;
 using System.Diagnostics;
@@ -138,7 +138,7 @@ public static class BrokerConsume
         var count = BrokerDecisions.DeliveryCount(headers, delivery.Redelivered);
         if (BrokerDecisions.ExceedsBudget(count, maxRedeliveries))
         {
-            // Bounded poison path (DLQ arrival is C/W9 scope): drop loudly,
+            // Bounded poison path (DLQ arrival is C/ scope): drop loudly,
             // never hot-loop, never advance workflow on it.
             logger.LogError(
                 "Dropping poison message after {Count} deliveries: queue={Queue}, routing={RoutingKey}.",

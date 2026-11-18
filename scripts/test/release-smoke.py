@@ -424,7 +424,7 @@ def main():
             check("RECIPIENT-INBOXES", True)
 
             token, trip_id, reservation, proof = start_trip("cancelled")
-            # AUD-05 frozen policy: cancel after the authorization succeeded.
+            # Frozen policy: cancel after the authorization succeeded.
             # READY_TO_START cancellation must release the exact reservation,
             # void the hold with the stable void key, and compensate the Saga.
             driver_action(trip_id, "accept", driver_id, reservation, driver_token)

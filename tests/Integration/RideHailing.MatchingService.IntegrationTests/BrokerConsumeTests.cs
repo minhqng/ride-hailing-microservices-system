@@ -1,4 +1,4 @@
-// B-W08-01/02/06/07/09: broker consumption proof on REAL RabbitMQ +
+// Broker consumption proof on REAL RabbitMQ +
 // REAL PostgreSQL (+ REAL Redis for projection paths). The consumer loop
 // runs in-process against the test broker; oracles are durable state
 // (round rows, Redis projection, queue depth), never message counts alone.
@@ -458,7 +458,7 @@ public class BrokerConsumeTests
         Assert.Equal("RESERVED", (string?)await db.HashGetAsync($"driver:projection:{driver:N}", "derivedStatus"));
 
         // Frozen catalog also routes trip lifecycle keys here (producers land
-        // with A-owned trip work): status is stored verbatim and version
+        // with Trip-owned trip work): status is stored verbatim and version
         // guarded; non-AVAILABLE stays out of GEO. Same code path as above.
         var started = MessageEnvelope<JsonElement>.Create(
             "DriverTripStartedV1", Guid.NewGuid().ToString("N"),
@@ -575,7 +575,7 @@ public class BrokerConsumeTests
     }
 
     [Fact]
-    public async Task W11_Rel12_StaleState_ViaBroker_DoesNotRegressProjection()
+    public async Task StaleState_ViaBroker_DoesNotRegressProjection()
     {
         await PurgeProjectionQueueAsync();
         var driver = Guid.NewGuid();
@@ -594,7 +594,7 @@ public class BrokerConsumeTests
         var location = Env("DriverLocationAcceptedV1", new
         {
             driverId = driver, longitude = 106.6, latitude = 10.8,
-            sessionId = "w11-rel12", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
+            sessionId = "rel12", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
         });
         var reserved10 = Env("DriverReservedV1", new
         {
@@ -647,7 +647,7 @@ public class BrokerConsumeTests
                     RedisProjectionKeys.GeoKey, RedisProjectionKeys.Member(driver)));
 
                 _output.WriteLine(
-                    $"W11 REL-12-broker driver={driver} staleVersion=9 finalVersion=10 " +
+                    $"REL-12-broker driver={driver} staleVersion=9 finalVersion=10 " +
                     $"finalStatus=RESERVED geo=absent receipts=4/4 ordered=true " +
                     $"elapsedMs={elapsed.ElapsedMilliseconds}");
             }
@@ -676,7 +676,7 @@ public class BrokerConsumeTests
     }
 
     [Fact]
-    public async Task W11_Rel13_StaleLocation_ViaBroker_DoesNotRegressProjection()
+    public async Task StaleLocation_ViaBroker_DoesNotRegressProjection()
     {
         await PurgeProjectionQueueAsync();
         var driver = Guid.NewGuid();
@@ -755,7 +755,7 @@ public class BrokerConsumeTests
                 Assert.Equal(10.8, pos!.Value.Latitude, 4);
 
                 _output.WriteLine(
-                    $"W11 REL-13-broker driver={driver} authoritativeSeq=20 staleSeq=19 " +
+                    $"REL-13-broker driver={driver} authoritativeSeq=20 staleSeq=19 " +
                     $"foreignSession=rejected lat=10.8 receipts=4/4 ordered=true " +
                     $"elapsedMs={elapsed.ElapsedMilliseconds}");
             }

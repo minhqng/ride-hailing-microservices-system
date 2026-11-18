@@ -1,7 +1,0 @@
-name=/rhw11b-20261026t175213z-1324-match02b
-id=d9d05a1a723a8ba34eaf68ab68aa94014768eb3ad0cb4b77d25f2b56e04d0c39
-pid=38514
-started=2026-10-26T17:53:01.524884537Z
-running=true
-exit_code=0
-oom_killed=false

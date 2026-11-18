@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Verification-only controlled actor for the core runtime proof.
+
+    The public edge deliberately exposes no Driver accept/start/complete
+    transport. This console therefore
+    invokes the PRODUCTION Trip application handlers as the trusted system
+    intakes they already are. It never writes business rows directly, never
+    emits an authority event itself, and never substitutes for a service:
+    Trip, Driver, Matching, Payment and RabbitMQ all run from compose and do
+    the actual cross-service work.
+
+    Kept out of the solution so a normal `dotnet test` never needs compose.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Services/Trip/RideHailing.TripService/RideHailing.TripService.csproj" />
+    <ProjectReference Include="../../../src/Services/Matching/RideHailing.MatchingService/RideHailing.MatchingService.csproj" />
+    <!-- TripService's Design PrivateAssets block otherwise leaves this project
+         resolving the provider minimum (10.0.4) and failing at runtime. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+</Project>

@@ -21,35 +21,45 @@ builder.Services.AddHealthChecks();
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
 
+// Payment is an authoritative consumer, not a standalone simulator. Without
+// its owned database it cannot persist an operation; without the broker it
+// cannot receive the Saga's authorize/capture/void commands or publish its
+// confirmed outcomes. A database-only or broker-only process would still pass
+// a generic readiness check while silently dropping business work, so refuse
+// to start instead. Development simulator control routes are extra surface on
+// top of this runtime, never a replacement for it.
 var connectionString = builder.Configuration.GetConnectionString("Postgres");
-if (!string.IsNullOrWhiteSpace(connectionString))
+var rabbitHost = builder.Configuration["RabbitMq:Host"];
+if (string.IsNullOrWhiteSpace(connectionString) || string.IsNullOrWhiteSpace(rabbitHost))
 {
-    builder.Services.AddSingleton(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = 32 }.ConnectionString));
-    builder.Services.AddSingleton<PaymentExecution>();
-    builder.Services.AddSingleton<PaymentOperationRepository>();
-    builder.Services.AddSingleton(new ProviderLedger(connectionString));
-    builder.Services.AddSingleton<PaymentSimulator>();
-    builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-    builder.Services.AddSingleton<ProcessedMessageStore>();
-    builder.Services.AddSingleton<NpgsqlOutboxStore>();
-    builder.Services.AddSingleton<IOutboxStore>(services => services.GetRequiredService<NpgsqlOutboxStore>());
+    throw new InvalidOperationException(
+        "Payment requires ConnectionStrings:Postgres and RabbitMq:Host. " +
+        "Provide ConnectionStrings__Postgres and RabbitMq__Host (see compose.yaml / " +
+        "deploy/postgres/init). A database-only or broker-only Payment process is not a supported runtime mode.");
 }
 
-var rabbitHost = builder.Configuration["RabbitMq:Host"];
-ConnectionFactory? connectionFactory = null;
-if (!string.IsNullOrWhiteSpace(rabbitHost))
+builder.Services.AddSingleton(NpgsqlDataSource.Create(new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = 32 }.ConnectionString));
+builder.Services.AddSingleton<PaymentExecution>();
+builder.Services.AddSingleton<PaymentOperationRepository>();
+builder.Services.AddSingleton(new ProviderLedger(connectionString));
+builder.Services.AddSingleton<PaymentSimulator>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<ProcessedMessageStore>();
+builder.Services.AddSingleton<NpgsqlOutboxStore>();
+builder.Services.AddSingleton<IOutboxStore>(services => services.GetRequiredService<NpgsqlOutboxStore>());
+
+var connectionFactory = RabbitConnectionFactory.Create(
+    builder.Configuration["RabbitMq:Hosts"] ?? rabbitHost,
+    builder.Configuration.GetValue("RabbitMq:Port", 5672),
+    builder.Configuration["RabbitMq:Username"]
+        ?? throw new InvalidOperationException("RabbitMq:Username is required when RabbitMQ is enabled."),
+    builder.Configuration["RabbitMq:Password"]
+        ?? throw new InvalidOperationException("RabbitMq:Password is required when RabbitMQ is enabled."),
+    "payment-service");
+builder.Services.AddSingleton(connectionFactory);
+builder.Services.AddSingleton<ConfirmedPublisher>();
+using (var bootstrapTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
 {
-    connectionFactory = RabbitConnectionFactory.Create(
-        builder.Configuration["RabbitMq:Hosts"] ?? rabbitHost,
-        builder.Configuration.GetValue("RabbitMq:Port", 5672),
-        builder.Configuration["RabbitMq:Username"]
-            ?? throw new InvalidOperationException("RabbitMq:Username is required when RabbitMQ is enabled."),
-        builder.Configuration["RabbitMq:Password"]
-            ?? throw new InvalidOperationException("RabbitMq:Password is required when RabbitMQ is enabled."),
-        "payment-service");
-    builder.Services.AddSingleton(connectionFactory);
-    builder.Services.AddSingleton<ConfirmedPublisher>();
-    using var bootstrapTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
     await using var connection = await connectionFactory.CreateConnectionAsync(bootstrapTimeout.Token);
     await RideTopology.DeclareAsync(connection, bootstrapTimeout.Token);
 }
@@ -59,103 +69,97 @@ builder.Configuration.GetSection("Reconciliation").Bind(reconciliationOptions);
 reconciliationOptions.Validate();
 builder.Services.AddSingleton(Options.Create(reconciliationOptions));
 
-if (!string.IsNullOrWhiteSpace(connectionString) && connectionFactory is not null)
+builder.Services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
+builder.Services.AddSingleton(new OutboxRelayOptions
 {
-    builder.Services.AddSingleton<IOutboxPublisher, RabbitOutboxPublisher>();
-    builder.Services.AddSingleton(new OutboxRelayOptions
-    {
-        RelayId = builder.Configuration["Outbox:RelayId"]
-            ?? $"payment:{builder.Configuration["ServiceInstanceId"] ?? Environment.MachineName}",
-        BatchSize = builder.Configuration.GetValue("Outbox:BatchSize", 8),
-        ClaimLease = TimeSpan.FromSeconds(builder.Configuration.GetValue("Outbox:ClaimLeaseSeconds", 30)),
-        PollInterval = TimeSpan.FromMilliseconds(builder.Configuration.GetValue("Outbox:PollIntervalMilliseconds", 500)),
-        MaxAttempts = builder.Configuration.GetValue("Outbox:MaxAttempts", 5),
-        RetryDelay = TimeSpan.FromSeconds(builder.Configuration.GetValue("Outbox:RetryDelaySeconds", 1)),
-    });
-    builder.Services.AddSingleton<OutboxRelay>();
-    builder.Services.AddSingleton<PaymentMessageProcessor>();
-    builder.Services.AddHostedService<PaymentMessagingHostedService>();
-    if (reconciliationOptions.Enabled)
-    {
-        builder.Services.AddHostedService<PaymentReconciliationWorker>();
-    }
+    RelayId = builder.Configuration["Outbox:RelayId"]
+        ?? $"payment:{builder.Configuration["ServiceInstanceId"] ?? Environment.MachineName}",
+    BatchSize = builder.Configuration.GetValue("Outbox:BatchSize", 8),
+    ClaimLease = TimeSpan.FromSeconds(builder.Configuration.GetValue("Outbox:ClaimLeaseSeconds", 30)),
+    PollInterval = TimeSpan.FromMilliseconds(builder.Configuration.GetValue("Outbox:PollIntervalMilliseconds", 500)),
+    MaxAttempts = builder.Configuration.GetValue("Outbox:MaxAttempts", 5),
+    RetryDelay = TimeSpan.FromSeconds(builder.Configuration.GetValue("Outbox:RetryDelaySeconds", 1)),
+});
+builder.Services.AddSingleton<OutboxRelay>();
+builder.Services.AddSingleton<PaymentMessageProcessor>();
+builder.Services.AddHostedService<PaymentMessagingHostedService>();
+if (reconciliationOptions.Enabled)
+{
+    builder.Services.AddHostedService<PaymentReconciliationWorker>();
 }
 
 var app = builder.Build();
 
-if (!string.IsNullOrWhiteSpace(connectionString))
+await app.Services.GetRequiredService<PaymentOperationRepository>()
+    .InitializeAsync(CancellationToken.None);
+await app.Services.GetRequiredService<ProcessedMessageStore>()
+    .EnsureSchemaAsync(CancellationToken.None);
+await app.Services.GetRequiredService<NpgsqlOutboxStore>()
+    .EnsureSchemaAsync(CancellationToken.None);
+
+if (app.Environment.IsDevelopment())
 {
-    await app.Services.GetRequiredService<PaymentOperationRepository>()
-        .InitializeAsync(CancellationToken.None);
-    await app.Services.GetRequiredService<ProcessedMessageStore>()
-        .EnsureSchemaAsync(CancellationToken.None);
-    await app.Services.GetRequiredService<NpgsqlOutboxStore>()
-        .EnsureSchemaAsync(CancellationToken.None);
-
-    if (app.Environment.IsDevelopment())
+    app.MapPost("/simulator/operations", async (
+        SimulatePaymentRequest request,
+        PaymentOperationRepository repository,
+        PaymentExecution execution,
+        CancellationToken cancellationToken) =>
     {
-        app.MapPost("/simulator/operations", async (
-            SimulatePaymentRequest request,
-            PaymentOperationRepository repository,
-            PaymentExecution execution,
-            CancellationToken cancellationToken) =>
+        PaymentOperation operation;
+        try
         {
-            PaymentOperation operation;
-            try
-            {
-                if (!Enum.IsDefined(request.Mode)) throw new ArgumentException("Unsupported simulator mode.");
-                operation = PaymentOperation.Create(request.OperationKey, request.TripId, request.Type,
-                    request.AmountMinor, request.Currency, DateTimeOffset.UtcNow);
-            }
-            catch (ArgumentException exception)
-            {
-                return Results.BadRequest(new { error = exception.Message });
-            }
-            PaymentOperation result;
-            try { result = await execution.ExecuteAsync(operation, request.Mode, cancellationToken); }
-            catch (PaymentConflictException)
-            {
-                return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" });
-            }
+            if (!Enum.IsDefined(request.Mode)) throw new ArgumentException("Unsupported simulator mode.");
+            operation = PaymentOperation.Create(request.OperationKey, request.TripId, request.Type,
+                request.AmountMinor, request.Currency, DateTimeOffset.UtcNow);
+        }
+        catch (ArgumentException exception)
+        {
+            return Results.BadRequest(new { error = exception.Message });
+        }
+        PaymentOperation result;
+        try { result = await execution.ExecuteAsync(operation, request.Mode, cancellationToken); }
+        catch (PaymentConflictException)
+        {
+            return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" });
+        }
 
-            return result.State == PaymentOperationState.Unknown
-                ? Results.Json(result, statusCode: StatusCodes.Status504GatewayTimeout)
-                : result.ResultCode == "TRANSIENT_FAILURE"
-                    ? Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable)
-                    : Results.Ok(result);
-        });
+        return result.State == PaymentOperationState.Unknown
+            ? Results.Json(result, statusCode: StatusCodes.Status504GatewayTimeout)
+            : result.ResultCode == "TRANSIENT_FAILURE"
+                ? Results.Json(result, statusCode: StatusCodes.Status503ServiceUnavailable)
+                : Results.Ok(result);
+    });
 
-        app.MapPost("/simulator/operations/{id:guid}/reconcile", async (Guid id,
-            PaymentOperationRepository repository, PaymentExecution execution, ProviderLedger provider, CancellationToken token) =>
-        {
-            var operation = await repository.GetAsync(id, token);
-            if (operation is null) return Results.NotFound();
-            try { return Results.Ok(await execution.ReconcileAsync(operation.OperationKey, provider, token)); }
-            catch (PaymentConflictException) { return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" }); }
-        });
-        app.MapPost("/simulator/operations/{id:guid}/retry", async (Guid id, RetryPaymentRequest request,
-            PaymentOperationRepository repository, PaymentExecution execution, CancellationToken token) =>
-        {
-            if (!Enum.IsDefined(request.Mode)) return Results.BadRequest();
-            var operation = await repository.GetAsync(id, token);
-            if (operation is null) return Results.NotFound();
-            try { return Results.Ok(await execution.ExecuteAsync(operation, request.Mode, token, retry: true)); }
-            catch (PaymentConflictException) { return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" }); }
-        });
+    app.MapPost("/simulator/operations/{id:guid}/reconcile", async (Guid id,
+        PaymentOperationRepository repository, PaymentExecution execution, ProviderLedger provider, CancellationToken token) =>
+    {
+        var operation = await repository.GetAsync(id, token);
+        if (operation is null) return Results.NotFound();
+        try { return Results.Ok(await execution.ReconcileAsync(operation.OperationKey, provider, token)); }
+        catch (PaymentConflictException) { return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" }); }
+    });
+    app.MapPost("/simulator/operations/{id:guid}/retry", async (Guid id, RetryPaymentRequest request,
+        PaymentOperationRepository repository, PaymentExecution execution, CancellationToken token) =>
+    {
+        if (!Enum.IsDefined(request.Mode)) return Results.BadRequest();
+        var operation = await repository.GetAsync(id, token);
+        if (operation is null) return Results.NotFound();
+        try { return Results.Ok(await execution.ExecuteAsync(operation, request.Mode, token, retry: true)); }
+        catch (PaymentConflictException) { return Results.Conflict(new { error = "IDEMPOTENCY_CONFLICT" }); }
+    });
 
-        app.MapGet("/simulator/operations/{id:guid}", async (
-            Guid id,
-            PaymentOperationRepository repository,
-            CancellationToken cancellationToken) =>
-        {
-            var operation = await repository.GetAsync(id, cancellationToken);
-            return operation is null ? Results.NotFound() : Results.Ok(operation);
-        });
-    }
+    app.MapGet("/simulator/operations/{id:guid}", async (
+        Guid id,
+        PaymentOperationRepository repository,
+        CancellationToken cancellationToken) =>
+    {
+        var operation = await repository.GetAsync(id, cancellationToken);
+        return operation is null ? Results.NotFound() : Results.Ok(operation);
+    });
 }
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "payment-service" }));
-app.MapRideReadiness();
+app.MapRideReadiness(requiresOwnedDatabase: true);
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new
     {

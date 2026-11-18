@@ -1,4 +1,4 @@
-// B-W08: broker decision/unit proof (pure logic, no infrastructure).
+// Broker decision/unit proof (pure logic, no infrastructure).
 // Covers failure classification, redelivery bounds, payload mapping, and
 // options validation for the Matching consumption side.
 using System.Net.Sockets;

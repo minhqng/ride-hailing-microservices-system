@@ -1,4 +1,4 @@
-// B-W05-03/07: deterministic ranking proofs (DSI-019).
+// Deterministic ranking proofs.
 // Same snapshot+config ⇒ same order, always; ties break by driverId.
 using RideHailing.MatchingService.Domain.Matching;
 

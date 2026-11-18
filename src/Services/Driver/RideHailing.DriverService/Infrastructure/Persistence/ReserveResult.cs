@@ -1,4 +1,4 @@
-// B-W06-01/02/03: OCC reserve outcome (Doc 01 §4.4 completeness rule).
+// OCC reserve outcome (completeness rule).
 // Every (state, request) classifies as exactly one case: the winner writes,
 // a replay returns canonical success, anything else conflicts or misses.
 // No `undefined`.

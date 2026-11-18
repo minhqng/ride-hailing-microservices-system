@@ -1,4 +1,4 @@
-// Hardening: Vehicle input classification (Doc 01 §22).
+// Hardening: Vehicle input classification.
 // Unfixable input must be 400-class (INVALID_IDENTITY/INVALID_REQUEST),
 // never 409-conflict (a conflict retry could never succeed).
 using RideHailing.DriverService.Domain.Drivers;

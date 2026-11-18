@@ -1,4 +1,4 @@
--- W9 shared Transactional Outbox schema. Applied by the owning service
+-- Shared Transactional Outbox schema. Applied by the owning service
 -- against its own PostgreSQL database; never shared across service DBs.
 CREATE TABLE IF NOT EXISTS outbox_messages (
     message_id        text        NOT NULL,

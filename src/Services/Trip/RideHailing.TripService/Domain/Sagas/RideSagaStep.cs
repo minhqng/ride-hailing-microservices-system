@@ -1,7 +1,7 @@
-// RideSaga step vocabulary (Doc 05A §18.3, Doc 02 §14.4).
+// RideSaga step vocabulary.
 //
 // The current step is the saga's own position in the payment orchestration,
-// not a copy of Trip state: Trip owns the ride FSM (Doc 01 §6), the saga owns
+// not a copy of Trip state: Trip owns the ride FSM, the saga owns
 // which logical Payment operation / compensation obligation is awaited.
 
 namespace RideHailing.TripService.Domain.Sagas;
@@ -12,8 +12,8 @@ public enum RideSagaStep
     AuthorizePending = 0,
 
     /// <summary>
-    /// Authorization succeeded (DSI-026 authoritative); the ride may legally
-    /// start and complete; capture has not been dispatched yet (DSI-027).
+    /// Authorization succeeded (authoritative); the ride may legally
+    /// start and complete; capture has not been dispatched yet.
     /// </summary>
     Authorized = 1,
 
@@ -24,7 +24,7 @@ public enum RideSagaStep
     Captured = 3,
 
     /// <summary>
-    /// Compensation: exact reservation release awaited (Doc 01 DSI-033).
+    /// Compensation: exact reservation release awaited.
     /// Void, when it exists, has already resolved or was never needed.
     /// </summary>
     ReleasePending = 4,

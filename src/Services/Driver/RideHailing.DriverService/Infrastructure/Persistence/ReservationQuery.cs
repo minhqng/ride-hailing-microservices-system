@@ -1,4 +1,4 @@
-// B-W07-07: read-only reservation truth for reconciliation (Doc 02 §12.6).
+// Read-only reservation truth for reconciliation.
 // The seven canonical outcomes; the endpoint emits the first six as 200-body
 // values (DEPENDENCY_UNAVAILABLE never comes from this query — transport
 // failure surfaces as HTTP 503 and the CALLER maps it).

@@ -1,4 +1,4 @@
-"""W4 broker routing/redeclare and Production simulator isolation. Disposable Compose only."""
+"""Broker routing/redeclare and Production simulator isolation. Disposable Compose only."""
 import base64
 import json
 import os
@@ -78,7 +78,7 @@ else:
 assert snapshot() == before
 
 # Route every catalog contract via disposable probe queues.
-# B-W08 rationale: production consumers (matching.ride-requested.q,
+# Rationale: production consumers (matching.ride-requested.q,
 # matching.driver-projection.q) compete for deliveries with destructive
 # basic.get. Probing the production queue therefore flakes (empty set)
 # even when exchanges/queues/bindings are exact. Use an independent

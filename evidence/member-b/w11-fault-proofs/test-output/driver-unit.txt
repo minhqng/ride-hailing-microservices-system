@@ -1,4 +1,0 @@
-Test run for D:\rh-w11b\tests\Unit\RideHailing.DriverService.UnitTests\bin\Release\net10.0\RideHailing.DriverService.UnitTests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-
-Passed!  - Failed:     0, Passed:   129, Skipped:     0, Total:   129, Duration: 241 ms - RideHailing.DriverService.UnitTests.dll (net10.0)

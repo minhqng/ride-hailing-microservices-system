@@ -1,13 +1,12 @@
-// Payment/matching-outcome system intake (A-W05-04 local leg, A-W10-03/04
-// saga-aware).
+// Payment/matching-outcome system intake, saga-aware.
 //
 // Applies authoritative-shaped Payment authorization success, terminal
 // Payment failure and Matching terminal failure to the Trip lifecycle. Trip
 // never decides payment truth: the trusted system caller supplies the
-// authority's fact. Since W10 the same PaymentOutcomeIntake core drives this
+// authority's fact. The same PaymentOutcomeIntake core drives this
 // path and the broker consumer, so a saga (when present) advances with the
 // Trip transition and every outgoing obligation (void/cleanup intents)
-// commits atomically. A saga-less Trip keeps the W5 local lifecycle leg.
+// commits atomically. A saga-less Trip keeps the local lifecycle leg.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

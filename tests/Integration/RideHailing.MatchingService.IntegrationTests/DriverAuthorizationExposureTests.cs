@@ -19,7 +19,7 @@ using Xunit.Abstractions;
 
 namespace RideHailing.MatchingService.IntegrationTests;
 
-[Collection(W12IngressCollection.Name)]
+[Collection(DriverIngressCollection.Name)]
 
 public sealed class DriverAuthorizationExposureTests
 {

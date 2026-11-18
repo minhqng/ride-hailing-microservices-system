@@ -1,5 +1,5 @@
-// B-W07-01/02/04: guarded Driver state-mutation outcomes (DSI-003/004).
-// Same shape as the W6 reserve result: the mutation either applies, is an
+// Guarded Driver state-mutation outcomes.
+// Same shape as the reserve result: the mutation either applies, is an
 // idempotent no-op on already-holding state, conflicts, or misses the row.
 using RideHailing.DriverService.Domain.Drivers;
 

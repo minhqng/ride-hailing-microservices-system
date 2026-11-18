@@ -43,7 +43,7 @@ public static class TripMessagingRegistration
     public static IServiceCollection AddTripMessaging(
         this IServiceCollection services, IConfiguration config, IHostEnvironment environment)
     {
-        // A-W11-01: faultpoints are testing-only and double-gated. Refusing an
+        // Faultpoints are testing-only and double-gated. Refusing an
         // explicit enable in Production at startup is fail-fast misconfiguration
         // handling — the flag must never survive into a production host.
         var faultPoints = TripFaultPointSettings.FromConfiguration(config);
@@ -78,7 +78,7 @@ public static class TripMessagingRegistration
         services.AddHealthChecks().AddCheck<TripMessagingReadiness>("trip-messaging", tags: ["ready"]);
         services.AddScoped<TripMessageHandler>();
 
-        // W9: reuse C's shared relay against the Trip-owned database. A
+        // Reuse the shared relay against the Trip-owned database. A
         // supplies only semantic intents; claim/publish/confirm/mark/retry and
         // outbox.pending / outbox.oldest_pending.age metrics stay shared.
         services.AddSingleton<IOutboxStore>(sp =>

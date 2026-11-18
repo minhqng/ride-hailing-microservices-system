@@ -27,8 +27,8 @@ def main():
     parser.add_argument('--output',required=True,type=Path)
     args=parser.parse_args()
     project=os.environ.get('COMPOSE_PROJECT_NAME','')
-    if not project.startswith(('ride-ci-','team-w13-')):
-        raise SystemExit('A dedicated ride-ci-* or team-w13-* project is required.')
+    if not project.startswith(('ride-ci-','ride-release-')):
+        raise SystemExit('A dedicated ride-ci-* or ride-release-* project is required.')
     queries={
         'payment_operations':'payment_operation_operations_total',
         'payment_consumer_deliveries':'consumer_delivery_messages_total{exported_job="payment-service"}',

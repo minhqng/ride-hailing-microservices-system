@@ -1,11 +1,11 @@
-// Pre-W06 hardening proof: a stored candidate snapshot is the round's frozen
-// logical sequence (Doc 02 §12.7: on redelivery resume; do not create a new
-// candidate sequence; do not generate new reservation IDs). Redis is a hint;
-// Driver reserve is the only assignment authority. Recomputing the same
-// (tripId, matchingRound) after Redis churn must replay the original order
-// and identities, never mint replacement reservation IDs, never orphan
-// READY attempt rows from the snapshot. An EMPTY stored snapshot means no
-// decision was ever made, so late arrivals may still complete it.
+// Hardening proof: a stored candidate snapshot is the round's frozen logical
+// sequence (on redelivery resume; do not create a new candidate sequence; do
+// not generate new reservation IDs). Redis is a hint; Driver reserve is the
+// only assignment authority. Recomputing the same (tripId, matchingRound) after
+// Redis churn must replay the original order and identities, never mint
+// replacement reservation IDs, never orphan READY attempt rows from the
+// snapshot. An EMPTY stored snapshot means no decision was ever made, so late
+// arrivals may still complete it.
 using System.Text.Json;
 using Npgsql;
 using RideHailing.MatchingService.Application.Matching;
@@ -22,7 +22,9 @@ public sealed class MatchingSnapshotPreservationTests : IAsyncLifetime
 {
     static MatchingSnapshotPreservationTests()
     {
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);

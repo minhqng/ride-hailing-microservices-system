@@ -1,4 +1,4 @@
-// B-REC-01: autonomous production execution for durable matching rounds.
+// Autonomous production execution for durable matching rounds.
 //
 // The broker intake commits the round + pickup + auto_execute before ACK.
 // This hosted worker is the only production trigger: it discovers due rounds
@@ -383,7 +383,7 @@ public sealed class MatchingWorkDispatcher : BackgroundService
         if (reserved is not null)
         {
             // An authoritative reservation outlived cancellation. The Trip
-            // owns exact cleanup (Doc 02 §12.9); Matching only reports truth.
+            // owns exact cleanup; Matching only reports truth.
             await _attempts.TryMarkRoundReservedAsync(
                 tripId, round, reserved.DriverId, reserved.ReservationId, ct);
             return null;

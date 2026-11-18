@@ -1,5 +1,5 @@
-// B-W03-01: domain exception. Carries a stable Code so API can map to 400/409.
-// Domain never knows HTTP (chốt ②).
+// Domain exception. Carries a stable Code so API can map to 400/409.
+// Domain never knows HTTP.
 namespace RideHailing.DriverService.Domain.Drivers;
 
 public sealed class DriverDomainException : Exception

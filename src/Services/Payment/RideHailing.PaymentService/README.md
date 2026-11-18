@@ -1,13 +1,42 @@
-# Payment Simulator Service — Owner C
+# Payment Service
 
-- Owner: C (reviewer A, backup B)
-- Authority: Authorize/Capture/Void logical ops, idempotency by `operationKey`. No real provider.
-- DB: `payment_db` (role `payment_app`)
-- Deps: `ConnectionStrings__Postgres`, `RabbitMq__Host`
-- Read: Docs 00 §3, 01 §10, 02 §15, 05C
-- Development-only simulator backed by durable Payment operations. PostgreSQL enforces one exact `operationKey`; equivalent requests replay the canonical result, and changes to type, trip, amount or currency return HTTP 409 without overwriting the original. Changing simulator mode does not create a new logical request.
+Payment is the authority for simulated authorization, capture and void
+operations. It is a development simulator, not a real card-network
+integration, but its operation ledger is durable and transactionally correct.
 
-With the stack running, a deterministic success can be exercised with:
+- Database: `payment_db` (role `payment_app`), PostgreSQL.
+- Depends on: `ConnectionStrings__Postgres`, `RabbitMq__Host`.
+- Contracts: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md)
+  and [workflow contract](../../../../docs/02-distributed-workflow-engineering.md).
+
+## Operation authority
+
+Every logical request is keyed by an exact `operationKey` chosen by Trip
+(`{tripId}:authorize|capture|void:v1`). PostgreSQL enforces one row per key:
+
+- An equivalent request replays the canonical result.
+- A different type, trip, amount or currency for the same key returns `409`
+  without overwriting the original.
+- Changing simulator mode does not mint a new logical request.
+
+The provider simulator commits in an independent transaction and pool inside
+`payment_db`, so a provider effect can survive rollback of the Payment
+transaction. Recovery resolves that existing effect by the same key instead of
+guessing.
+
+## Broker contracts
+
+`payment.commands.q` consumes `AuthorizePaymentV1`, `CapturePaymentV1` and
+`VoidPaymentAuthorizationV1` from the Trip Outbox, with the envelope
+`operationKey` as the idempotency authority. The consumer ACKs only after the
+durable local effect and receipt commit. An uncertain outcome stays `Unknown`
+and is reconciled against the same operation; it is never retried blindly.
+
+The reconciliation worker resolves pending/unknown operations under persisted
+backoff with a bounded attempt count. Exhaustion becomes `RequiresReview`, not
+a fabricated success or failure.
+
+## Simulator surface (Development only)
 
 ```bash
 curl -X POST http://localhost:8105/simulator/operations \
@@ -15,24 +44,35 @@ curl -X POST http://localhost:8105/simulator/operations \
   -d '{"operationKey":"trip-demo:authorize:v1","tripId":"11111111-1111-1111-1111-111111111111","type":"Authorize","amountMinor":12000,"currency":"VND","mode":"Success"}'
 ```
 
-Choose `TimeoutAfterEffect` to receive HTTP 504 while the persisted operation reports `state: Unknown` and `providerEffectOccurred: false` until reconciled against the independently committed provider simulator ledger; inspect it with the returned `id` at `GET /simulator/operations/{id}`. Reposting the same operation key returns the same persisted result, including after abrupt process restart.
+| Method | Route | Purpose |
+|---|---|---|
+| POST | `/simulator/operations` | Create or replay an operation |
+| GET | `/simulator/operations/{id}` | Read the persisted operation |
+| POST | `/simulator/operations/{id}/reconcile` | Resolve an unknown outcome |
+| POST | `/simulator/operations/{id}/retry` | Retry pending work under backoff |
 
-Verification and known limits: `docs/05C-member-c-payment-messaging-platform.md` §22, Doc 01 §10. TransientFailure returns HTTP 503; illegal request values return HTTP 400 before persistence.
+`TimeoutAfterEffect` returns HTTP 504 while the persisted operation reports
+`Unknown`; reconcile against the provider ledger to resolve it. `TransientFailure`
+returns HTTP 503 and invalid request values return HTTP 400 before persistence.
+These routes are absent from the Production overlay.
 
-## Recovering an uncertain result
+## Configuration
 
-All simulator routes require the Development environment. They are direct service controls for verification, not authenticated Mobile payment APIs.
+| Key | Meaning |
+|---|---|
+| `Outbox:BatchSize`, `ClaimLeaseSeconds`, `PollIntervalMilliseconds`, `MaxAttempts`, `RetryDelaySeconds` | Shared relay tuning |
+| `ConnectionStrings__Postgres` | Owned database |
+| `RabbitMq__Host`, `RabbitMq__Username`, `RabbitMq__Password` | Broker connection |
 
-```bash
-curl -X POST http://localhost:8105/simulator/operations/OPERATION_ID/reconcile
-curl -X POST http://localhost:8105/simulator/operations/OPERATION_ID/retry \
-  -H 'Content-Type: application/json' -d '{"mode":"Success"}'
-```
-
-Replace `OPERATION_ID` with the returned UUID. Reconcile keeps the same key: an existing provider effect yields Succeeded; absence yields Pending. Unknown cannot be retried before reconciliation. Ordinary POST replay never retries. Explicit retry only executes Pending work after persisted backoff, with at most three attempts; exhaustion yields RequiresReview. Retry/reconcile return the current operation (HTTP 200 when found), so inspect `state`; missing IDs return 404.
-
-The provider simulator uses an independent transaction and bounded pool in `payment_db`. A provider effect can survive rollback of the Payment transaction. Recovery resolves that existing effect even when the new simulator mode says Decline. It does not call a real financial provider. Automated Saga scheduling and authenticated client-facing orchestration belong to later integration.
+Readiness requires the owned database. The service never auto-migrates in the
+release overlay; migrations run externally before startup.
 
 ## Verification
 
-Run `python scripts/test/payment-smoke.py` only against a disposable Compose project: it creates operations, sends SIGKILL to Payment, restarts it, and proves durable replay plus same-key reconciliation. Real PostgreSQL tests include all request fingerprint conflicts, barrier-synchronized N=10/50/100 for Authorize/Capture/Void, independent provider commit followed by Payment rollback, and finite retries. CI publishes TRX results and platform logs.
+- `tests/Unit/RideHailing.PaymentService.UnitTests` — request fingerprinting,
+  operation semantics and message contracts.
+- `tests/Integration/RideHailing.PaymentService.IntegrationTests` — real
+  PostgreSQL: persistence, concurrency, provider-effect rollback, retries and
+  reconciliation.
+- `scripts/test/payment-smoke.py` — disposable Compose run with process kill,
+  durable replay and same-key reconciliation.

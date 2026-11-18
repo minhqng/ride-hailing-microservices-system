@@ -1,4 +1,4 @@
-// Deterministic P0 fare unit proofs (A-W04-05): frozen policy markers,
+// Deterministic P0 fare unit proofs: frozen policy markers,
 // zero-distance base fare, determinism and timestamp flow. No live
 // maps/network; the known-vector amount pins the frozen formula.
 

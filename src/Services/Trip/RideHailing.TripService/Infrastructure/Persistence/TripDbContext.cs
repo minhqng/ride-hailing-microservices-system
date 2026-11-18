@@ -1,6 +1,5 @@
-// Trip-owned EF Core persistence (A-W02-02 foundation, A-W03-07 aggregate,
-// A-W04-02 request idempotency, A-W04-04 active-Rider defense, A-W09-01
-// Trip-owned Outbox intent, A-W10-01 Trip-owned RideSaga).
+// Trip-owned EF Core persistence: aggregate, request idempotency,
+// active-Rider defense, Trip-owned Outbox intent and Trip-owned RideSaga.
 //
 // SCOPE: Trip aggregate, the Trip-owned ride saga, Trip-local
 // request-idempotency bookkeeping, durable message receipts and pending
@@ -36,24 +35,24 @@ public sealed class TripDbContext : DbContext
     {
     }
 
-    /// <summary>Authoritative W3 Trip aggregate set.</summary>
+    /// <summary>Authoritative Trip aggregate set.</summary>
     public DbSet<Trip> Trips => Set<Trip>();
 
     /// <summary>
-    /// W10 Trip-owned persisted ride workflow: exactly one authoritative
-    /// current saga per Trip (Doc 05A §18, Doc 02 §14).
+    /// Trip-owned persisted ride workflow: exactly one authoritative
+    /// current saga per Trip.
     /// </summary>
     public DbSet<RideSaga> RideSagas => Set<RideSaga>();
 
     public DbSet<TripMessageReceipt> MessageReceipts => Set<TripMessageReceipt>();
 
     /// <summary>
-    /// W9 Trip-owned pending outgoing intents. Rows are appended atomically
-    /// with the business transition; the shared C-owned relay owns delivery.
+    /// Trip-owned pending outgoing intents. Rows are appended atomically with
+    /// the business transition; the shared relay owns delivery.
     /// </summary>
     public DbSet<TripOutboxMessage> OutboxMessages => Set<TripOutboxMessage>();
 
-    /// <summary>W4 request-idempotency bookkeeping set (not a domain aggregate).</summary>
+    /// <summary>Request-idempotency bookkeeping set (not a domain aggregate).</summary>
     public DbSet<RequestIdempotencyRecord> RequestIdempotency => Set<RequestIdempotencyRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -298,7 +297,7 @@ public sealed class TripDbContext : DbContext
                 return new TripConcurrencyConflictException(trip.TripId, expected, ex);
             }
 
-            // W10: the saga row shares the same transaction and the same OCC
+            // The saga row shares the same transaction and the same OCC
             // discipline; a losing saga writer must surface as the same
             // transient conflict so redelivery reconciles it.
             if (entry.Entity is RideSaga saga)

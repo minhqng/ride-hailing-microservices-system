@@ -1,4 +1,4 @@
-// B-W07-01/02/03/04: exact release, stale-release fencing (CON-04), and
+// Exact release, stale-release fencing (CON-04), and
 // Race B GoOffline-vs-Reserve (CON-02) on REAL PostgreSQL. Final DB rows are
 // the oracle throughout: R2 (or the single legal winner) survives with exact
 // version accounting, losers conflict without mutation.
@@ -63,7 +63,7 @@ public class DriverRaceFencingTests
     public async Task Concurrent_GoOffline_Vs_Reserve_Exactly_One_Wins()
     {
 
-        // CON-02 (Doc 03 §8, DSR-004): barrier-released pair from the same
+        // CON-02: barrier-released pair from the same
         // AVAILABLE version. Allowed finals: OFFLINE or RESERVED — never a
         // stale overwrite, never both committed. Contenders run on pool
         // threads (Task.Run) so the blocking barrier cannot wedge the
@@ -132,7 +132,7 @@ public class DriverRaceFencingTests
     public async Task Stale_Release_After_ReReserve_Cannot_Free_Newer_Owner()
     {
 
-        // CON-04 (Doc 03 §8, DSI-004/033): R1 → release R1 → R2 → late
+        // CON-04: R1 → release R1 → R2 → late
         // release R1 ⇒ R2 survives with exact version accounting.
         var repo = Repo();
         var driverId = await SeedAvailableDriverAsync(repo);
@@ -166,7 +166,7 @@ public class DriverRaceFencingTests
         Assert.Equal(1, await ReleaseEventsForReservationAsync(r1));
         Assert.Equal(0, await ReleaseEventsForReservationAsync(r2));
         _output.WriteLine(
-            $"W11 CON-04-direct driver={driverId} r1={r1} r2={r2} trip2={t2} " +
+            $"CON-04-direct driver={driverId} r1={r1} r2={r2} trip2={t2} " +
             $"lateDisposition=Conflict reason={late.ConflictCode} finalVersion={final.Version} " +
             $"releaseIntentsR1=1 releaseIntentsR2=0");
     }

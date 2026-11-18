@@ -20,7 +20,10 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
         // Ryuk (Testcontainers janitor) cannot start reliably from inside the
         // SDK container on Docker Desktop. Cleanup is explicit (AutoRemove +
         // DisposeAsync), so disabling it is safe and keeps runs deterministic.
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        // An explicit TESTCONTAINERS_RYUK_DISABLED value always wins.
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private PostgreSqlContainer? _container;
@@ -43,6 +46,7 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
         var env = Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES");
         if (!string.IsNullOrWhiteSpace(env))
         {
+            EnsureDisposable(env, "DRIVER_TEST_POSTGRES");
             await using var probe = new NpgsqlConnection(env);
             await probe.OpenAsync();
             ConnectionString = env;
@@ -115,6 +119,25 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
         Environment.GetEnvironmentVariable("DRIVER_TEST_POSTGRES")
         ?? "Host=localhost;Port=5432;Database=driver_db;Username=driver_app;Password=driver_dev_pw";
 
+    // An external database is only accepted when it is provably disposable:
+    // the fixture applies migrations and tests truncate tables, so pointing it
+    // at a shared database must be an explicit, acknowledged decision.
+    private static void EnsureDisposable(string connectionString, string variable)
+    {
+        var database = new NpgsqlConnectionStringBuilder(connectionString).Database ?? "";
+        var acknowledged = Environment.GetEnvironmentVariable(variable + "_ALLOW_DESTRUCTIVE");
+        if (string.Equals(acknowledged, "1", StringComparison.Ordinal)
+            || database.EndsWith("_test", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"{variable} targets database '{database}', which is not provably disposable. " +
+            $"Use a database whose name ends with '_test', or set {variable}_ALLOW_DESTRUCTIVE=1 " +
+            "to confirm the fixture may migrate and truncate it.");
+    }
+
     public async Task<HashSet<string>> GetTablesAsync()
     {
         await using var conn = new NpgsqlConnection(ConnectionString);
@@ -141,8 +164,8 @@ public sealed class DriverPostgresDatabase : IAsyncLifetime
             await cmd.ExecuteNonQueryAsync();
         }
 
-        // W9: the Outbox table is C-owned shared schema, applied from C's
-        // embedded canonical DDL rather than duplicated in Driver migrations.
+        // The Outbox table is shared schema, applied from the embedded
+        // canonical DDL rather than duplicated in Driver migrations.
         await DriverOutboxSchema.EnsureAsync(connectionString);
     }
 

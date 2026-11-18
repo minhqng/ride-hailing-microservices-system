@@ -1,4 +1,4 @@
-"""Negative controls for AUD-01: CI must fail closed on zero/missing TRX."""
+"""Negative controls: CI must fail closed on zero/missing TRX."""
 from pathlib import Path
 import subprocess
 import sys
@@ -7,7 +7,7 @@ import unittest
 
 SCRIPT = Path(__file__).with_name("assert-trx.py")
 SUITES = [
-    "RideHailing.B12Audit.Tests",
+    "RideHailing.InvariantAudit.Tests",
     "RideHailing.DriverService.UnitTests",
     "RideHailing.DriverService.IntegrationTests",
     "RideHailing.IdentityService.IntegrationTests",
@@ -61,11 +61,27 @@ def check(directory, minimum="1", files="1", skipped="0", extra=()):
     )
 
 
+def required_minimums():
+    minima = {}
+    path = SCRIPT.with_name("required-suites.txt")
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        name, separator, minimum = line.rpartition(":")
+        minima[name] = int(minimum) if separator and minimum.isdigit() else 1
+    return minima
+
+
 def write_suites(directory, passed=100, skip_identity=False):
+    minima = required_minimums()
     for index, suite in enumerate(SUITES):
+        # Stay above the per-assembly floor in the real required-suites.txt so
+        # this fixture proves acceptance, not accidental rejection.
+        count = max(passed, minima.get(suite.lower(), 1) + 5)
         skipped = 1 if skip_identity and "Identity" in suite else 0
         trx(Path(directory) / f"suite{index}.trx", suite,
-            passed - skipped, skipped=skipped, counter_skipped=0,
+            count - skipped, skipped=skipped, counter_skipped=0,
             skip_name=KNOWN_SKIP if skipped else None)
 
 
@@ -141,7 +157,7 @@ class TrxExecutionGateTests(unittest.TestCase):
             trx(Path(d) / "system.trx", "RideHailing.SystemTests")
             result = check(d, minimum="1000", files="12",
                            extra=["--require-suite",
-                                  "ridehailing.b12audit.tests:1"])
+                                  "ridehailing.invariantaudit.tests:1"])
             self.assertNotEqual(0, result.returncode)
             self.assertIn("required suite", result.stderr)
 

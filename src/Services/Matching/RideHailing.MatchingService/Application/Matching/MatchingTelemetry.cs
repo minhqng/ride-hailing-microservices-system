@@ -1,6 +1,6 @@
-// B-owned telemetry identity and additive registration. C's PlatformBootstrap
-// remains the owner of the OpenTelemetry provider and exporter; this extension
-// only adds B's ActivitySource/Meter and the HTTP client instrumentation needed
+// Telemetry identity and additive registration. PlatformBootstrap remains the
+// owner of the OpenTelemetry provider and exporter; this extension only adds
+// the service's ActivitySource/Meter and the HTTP client instrumentation needed
 // for the Driver reserve/reconcile seam.
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;

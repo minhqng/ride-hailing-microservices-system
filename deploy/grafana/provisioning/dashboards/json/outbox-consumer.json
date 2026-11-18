@@ -10,7 +10,7 @@
     {"type":"timeseries","title":"Dedup outcomes","id":5,"gridPos":{"h":8,"w":12,"x":12,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (outcome) (rate({__name__=~\"dedup_processed(_messages)?_total\"}[1m]))","legendFormat":"{{outcome}}","refId":"A"}]}
   ],
   "schemaVersion": 41,
-  "tags": ["member-c","outbox","consumer"],
+  "tags": ["outbox","consumer","reliability"],
   "templating": {"list": []},
   "time": {"from":"now-1h","to":"now"},
   "title": "Outbox and Consumer Reliability",

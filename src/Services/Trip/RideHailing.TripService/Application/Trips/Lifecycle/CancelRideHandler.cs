@@ -1,7 +1,7 @@
-// CancelRide application handler (A-W05 cancellation matrix, pre-start).
+// CancelRide application handler (cancellation matrix, pre-start).
 //
 // Rider-scoped: only the owning Rider can cancel their ride (fail closed;
-// missing and not-owned share NotFound per SEC-03). Loads the Trip, calls
+// missing and not-owned share NotFound). Loads the Trip, calls
 // the single aggregate Cancel operation with the deterministic clock,
 // persists the authoritative terminal result, maps the domain outcome
 // including durable cleanup intents saved atomically with cancellation.
@@ -62,7 +62,7 @@ public sealed class CancelRideHandler
         // A legacy/authority-shaped intake can mark READY_TO_START without a
         // persisted saga. Cancelling that ride cannot mint the exact void
         // operation lineage, so refuse it instead of stranding an
-        // authorization; the normal W10 path always has the saga.
+        // authorization; the normal path always has the saga.
         if (trip.State == TripState.ReadyToStart && saga is null)
         {
             return TripLifecycleResult.Fail(trip, TripOutcome.Fail(
@@ -81,7 +81,7 @@ public sealed class CancelRideHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        // A-W10: cancelling at DRIVER_ACCEPTED with an in-flight
+        // Cancelling at DRIVER_ACCEPTED with an in-flight
         // authorization flips the saga to COMPENSATING immediately (release
         // and matching cleanup exist now), while the void decision waits for
         // the authority-confirmed outcome — never assume the effect absent.
@@ -120,14 +120,14 @@ public sealed class CancelRideHandler
             }
         }
 
-        // A-W09-02: CANCELLED + CancelMatchingRound/ReleaseDriverReservation
+        // CANCELLED + CancelMatchingRound/ReleaseDriverReservation
         // intents commit atomically. The ReconcilePayment intent resolves via
-        // the W10 payment outcome/void lineage, not a published command here.
+        // the payment outcome/void lineage, not a published command here.
         TripOutboxWriter.EnqueueNewCleanup(_db, trip, preexistingCleanup);
         TripOutboxWriter.Enqueue(_db, TripNotificationIntents.Cancelled(trip, trip.UpdatedAt));
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // A-W12-02: post-commit observation only — the committed saga status
+        // Post-commit observation only — the committed saga status
         // transition into COMPENSATING is counted once, here, where the unit
         // of work is known durable. A failed save never reaches this line.
         if (saga is not null && sagaStatusBefore != RideSagaStatus.Compensating &&

@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace RideHailing.Messaging.Contracts;
 
-// Canonical V1 wire shape, Doc 02 sections 5-6. Trace context belongs in transport headers.
+// Canonical V1 wire shape. Trace context belongs in transport headers.
 public sealed record MessageEnvelope<T>(
     [property: JsonPropertyName("messageId")] string MessageId,
     [property: JsonPropertyName("messageType")] string MessageType,

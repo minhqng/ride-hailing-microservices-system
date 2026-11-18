@@ -1,12 +1,12 @@
-// CreateRide application handler (A-W04-01): deterministic stable create
-// with request-idempotency persistence and the DSI-013 advisory precheck.
+// CreateRide application handler: deterministic stable create
+// with request-idempotency persistence and the active-Trip advisory precheck.
 //
 // ALGORITHM. Replay precedence: an existing (scope,key) record resolves BEFORE
 // any active-Trip check, so a response-loss retry on an active Trip still
 // replays. Same key + same fingerprint returns the canonical Trip with
 // IsReplay; same key + different fingerprint is IDEMPOTENCY_CONFLICT. Only on
 // a key miss does the advisory active-Trip query run (clarity only — the
-// PostgreSQL partial unique index is the race-safe DSI-013 defense; the
+// PostgreSQL partial unique index is the race-safe defense; the
 // precheck alone proves nothing under concurrency).
 //
 // NEW CREATE: one TimeProvider timestamp feeds Trip.CreatedAt,
@@ -18,7 +18,7 @@
 // active-Rider index are reconciled against committed database truth (never
 // blind-retried, never answered from the losing local TripId). Either guard
 // may fail first under concurrent writes, so the constraint name only
-// classifies "expected W4 create race"; the final result always comes from
+// classifies the "expected create race"; the final result always comes from
 // re-reading (scope,key) first, then the Rider's active Trip.
 
 using Microsoft.EntityFrameworkCore;
@@ -133,7 +133,7 @@ public sealed class CreateRideHandler
         {
             return CreateRideResult.Fail(
                 CreateRideError.ActiveTripConflict,
-                "Rider already holds an active Trip (DSI-013).");
+                "Rider already holds an active Trip.");
         }
 
         var now = _time.GetUtcNow();
@@ -227,7 +227,7 @@ public sealed class CreateRideHandler
         {
             return CreateRideResult.Fail(
                 CreateRideError.ActiveTripConflict,
-                "Rider already holds an active Trip (DSI-013).");
+                "Rider already holds an active Trip.");
         }
 
         throw new InvalidOperationException(

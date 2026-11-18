@@ -1,4 +1,4 @@
-// B-W05-02: eligibility before ranking (DSI-020).
+// Eligibility before ranking.
 // A failing candidate can never become reservable via score: the ranker only
 // accepts EligibleCandidate, enforced by TYPE (not by convention).
 namespace RideHailing.MatchingService.Domain.Matching;
@@ -16,9 +16,9 @@ public enum EligibilityReason
 }
 
 /// <summary>
-/// Pure eligibility decision. Capability source is injected: the W4 projection
+/// Pure eligibility decision. Capability source is injected: the projection
 /// carries no vehicle data, so the default source reports unknown and any
-/// non-null requirement safely excludes (documented W6-feed limitation).
+/// non-null requirement safely excludes (documented capability-feed limitation).
 /// </summary>
 public static class CandidateEligibility
 {

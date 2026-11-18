@@ -1,10 +1,10 @@
-# Release v1.0.0
+# Release v1.0.1
 
-Status: **final release.** The annotated tag `v1.0.0` points at the commit
+Status: **final release.** The annotated tag `v1.0.1` points at the commit
 that contains this document. The exact commit SHA, tree object and evidence
 anchors are recorded in
-[evidence/release/v1.0.0/manifest.json](../evidence/release/v1.0.0/manifest.json)
-and on the GitHub Release page.
+[evidence/release/v1.0.1/manifest.json](../evidence/release/v1.0.1/manifest.json)
+and on the GitHub Release page. `v1.0.0` remains an immutable historical tag.
 
 This document is the deployment and release record. It does not replace the
 canonical contracts in Docs 00–03.
@@ -13,11 +13,11 @@ canonical contracts in Docs 00–03.
 
 | Item | Value |
 |---|---|
-| Version | `v1.0.0` |
+| Version | `v1.0.1` |
 | Tag type | Annotated |
-| Release date | 2026-11-06 |
-| Base | `main` after the DS03 functional closure and aud remediation |
-| Report | [report.pdf](report.pdf) |
+| Release date | 2026-11-18 |
+| Base | `v1.0.0` plus the repository cleanup and the matching closure fix |
+| Report | [report.pdf](report.pdf) (academic submission; unchanged from `v1.0.0`) |
 | Slides | [slides.pdf](slides.pdf) |
 | Verification record | [verification.md](verification.md) |
 
@@ -35,22 +35,54 @@ canonical contracts in Docs 00–03.
 - Verification suites, evidence bundles, deployment configuration, the final
   report and presentation slides.
 
+## Changes in v1.0.1
+
+- **Matching closure fix.** A matching round that committed one reservation
+  now closes every remaining un-dispatched `READY` attempt as `CANCELLED`
+  (`NOT_SELECTED`) in the same transaction. A cancellation that arrives after
+  the winner committed also closes them. Before this fix, a round with more
+  than one available candidate kept an unresolved attempt forever: the
+  invariant audit reported `RESERVED_ROUND_HAS_UNRESOLVED_ATTEMPT`, and Trip's
+  `CancelMatching` cleanup obligation could never be confirmed, so
+  `cleanupPending` stayed true.
+- **Pre-authorization cleanup fix.** Cancelling a `DRIVER_RESERVED` ride no
+  longer mints a `ReconcilePayment` obligation. Authorization is requested only
+  by accept, so no Payment effect can exist at that state; the obligation had
+  no path to confirmation and kept `cleanupPending` true forever. A cancel at
+  `DRIVER_ACCEPTED` or `READY_TO_START` still reconciles, because an
+  authorization outcome may be in flight there.
+- **Demo runbook corrections.** D.1 now states and verifies its real
+  precondition (exactly one available Driver) and cancels the actual winner
+  rather than assuming `$T1`. D.5 and D.6 create their own trips instead of
+  depending on the completed Part C trip. D.1 and D.12 wait for durable cleanup
+  confirmation instead of asserting after a fixed sleep.
+- **New demo scenarios.** D.11 cancels during authorization and proves `VOID`
+  instead of `CAPTURE`; D.12 forces a terminal authorization decline and proves
+  `CANCELLED` plus an exact `ReleaseDriverReservationV1`.
+- **Repository cleanup.** Weekly/team execution artifacts, member diaries and
+  duplicate design notes were removed; the canonical Docs 00–03, operating
+  guides and final submission record remain.
+
 ## Verified results
 
 The release verification record is [verification.md](verification.md). In
 summary:
 
-- Full .NET regression: **1,341 passed, 0 failed, 1 documented opt-in skip**
+- Full .NET regression: **1,344 passed, 0 failed, 1 documented opt-in skip**
   across 13 executable suites; TRX gate PASS.
-- Production overlay smoke: **19/19 checks PASS**, including external
+- Production overlay smoke: **{{SMOKE_CHECKS}} checks PASS**, including external
   migrations, a completed ride, cancellation/void, driver rejection,
   notification-outage isolation and reject-commit crash replay.
-- Static gates: secret scan PASS (1,340 tracked paths), hygiene self-test
-  24/24, source-anchor fixtures 12/12.
-- Performance and HA evidence: W13 E01–E04 and W14 quorum/broker recovery,
-  with raw samples and analysis retained under `evidence/`.
-- GitHub Actions exact-tree runs for the integrated candidates are recorded in
-  `evidence/team/w15-integration/` and `evidence/team/w16-integration/`.
+- Live demo run on a clean development stack: Part C 13 steps plus D.1–D.8,
+  D.11, D.12 and a multi-candidate closure probe; every asserted state read
+  back from the owning database, Redis or Prometheus.
+- Static gates: secret scan PASS, hygiene self-test 24/24, source-anchor
+  fixtures 12/12.
+- Performance and HA measurements are not part of the published deliverable;
+  the release demonstrates functional correctness, not production capacity.
+- The repository CI workflow defines the hygiene, build-test, platform-smoke
+  and release-smoke gates for any exact-tree checkout; the local gate results
+  recorded in the evidence bundle are the verification for this tagged tree.
 
 ## Prerequisites
 
@@ -65,7 +97,7 @@ summary:
 ```bash
 git clone https://github.com/minhqng/ride-hailing-microservices-system.git
 cd ride-hailing-microservices-system
-git checkout v1.0.0
+git checkout v1.0.1
 cp .env.example .env
 python3 scripts/security/init-local-auth.py
 docker compose up -d --build
@@ -107,6 +139,13 @@ form is `python3 scripts/test/release-smoke.py`; the manual form is:
    key pair and client secrets in ignored `.env`; release operators replace
    every value with environment-specific secrets. Never commit or print them.
 
+   Before starting the overlay, run the release preflight
+   (`pwsh scripts/evidence/release-check.ps1` or the equivalent
+   `scripts/test/release-smoke.py` secret checks). It rejects the known
+   development placeholders (`*_dev_pw` and the `.env.example` authentication
+   values) as well as missing values, so a copied development `.env` cannot be
+   mistaken for a release configuration.
+
 3. Start PostgreSQL, Redis and RabbitMQ, then apply Trip migrations externally
    from the empty database (the overlay disables Trip auto-migration):
 
@@ -145,11 +184,11 @@ form is `python3 scripts/test/release-smoke.py`; the manual form is:
 
 ## Upgrade and rollback
 
-There is no earlier published release. To roll back a deployment, check out a
-previous verified `main` commit and redeploy with a separate Compose project;
-do not move or delete the `v1.0.0` tag. Database migrations are forward-only
-for this course release; restore the disposable volume or apply the documented
-migration procedure when rebuilding an environment.
+`v1.0.1` is a patch release on top of `v1.0.0`. To roll back a deployment,
+check out `v1.0.0` and redeploy with a separate Compose project; do not move or
+delete either tag. Database migrations are forward-only for this course
+release; restore the disposable volume or apply the documented migration
+procedure when rebuilding an environment.
 
 ## Security
 
@@ -177,12 +216,12 @@ migration procedure when rebuilding an environment.
 
 ## Release checklist
 
-- [x] Source freeze, service documentation and member/team reports
+- [x] Source freeze, service documentation and the final technical report
 - [x] Fail-closed release configuration and secret scan
-- [x] Exact-tree CI on integrated candidates and local release gates
+- [x] Exact-tree CI and local release gates
 - [x] Automated technical rehearsals and authority journeys
 - [x] Evidence manifests and source anchors
 - [x] Full regression and Production overlay smoke on the release source
 - [x] Clean-clone deployment check
-- [x] `v1.0.0` annotated tag and GitHub Release
+- [x] `v1.0.1` annotated tag and GitHub Release
 - [ ] Human team rehearsal, oral defense and peer sign-off (team activity)

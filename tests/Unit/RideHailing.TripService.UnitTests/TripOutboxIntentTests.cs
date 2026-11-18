@@ -1,4 +1,4 @@
-// Trip Outbox intent identity (A-W09-02/03).
+// Trip Outbox intent identity.
 //
 // The relay may republish after an uncertain confirm or a crash. Identity
 // therefore comes from the committed business fact, never from time, retries
@@ -97,9 +97,14 @@ public sealed class TripOutboxIntentTests
     public void NewCleanup_EnqueuesWireCommandsOnly_AndSkipsPaymentReconciliation()
     {
         var trip = Matching();
-        Assert.True(trip.ApplyDriverReserved(Guid.NewGuid(), Guid.NewGuid(), 1, Now.AddSeconds(1)).IsSuccess);
+        var driverId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+        Assert.True(trip.ApplyDriverReserved(driverId, reservationId, 1, Now.AddSeconds(1)).IsSuccess);
         Assert.True(trip.Cancel(Now.AddSeconds(2)).IsSuccess);
-        Assert.Contains(trip.CleanupIntents, i => i.Kind == TripCleanupKind.ReconcilePayment);
+        // Authorization is only requested at accept. Cancelling a
+        // DRIVER_RESERVED ride owns no Payment effect to reconcile.
+        Assert.DoesNotContain(trip.CleanupIntents, i => i.Kind == TripCleanupKind.ReconcilePayment);
+        Assert.Equal(2, trip.CleanupIntents.Count);
 
         var messages = new List<OutboxMessage>();
         TripOutboxIntents.EnqueueNewCleanup(trip, new HashSet<string>(StringComparer.Ordinal), messages.Add);
@@ -114,6 +119,26 @@ public sealed class TripOutboxIntentTests
         TripOutboxIntents.EnqueueNewCleanup(trip,
             trip.CleanupIntents.Select(i => i.Key).ToHashSet(StringComparer.Ordinal), repeated.Add);
         Assert.Empty(repeated);
+    }
+
+    [Fact]
+    public void CancellationAfterAccept_RequiresPaymentReconciliation_ButNoPaymentWireCommand()
+    {
+        var trip = Matching();
+        var driverId = Guid.NewGuid();
+        var reservationId = Guid.NewGuid();
+        Assert.True(trip.ApplyDriverReserved(driverId, reservationId, 1, Now.AddSeconds(1)).IsSuccess);
+        Assert.True(trip.RecordDriverAccepted(driverId, reservationId, Now.AddSeconds(2)).IsSuccess);
+        Assert.True(trip.Cancel(Now.AddSeconds(3)).IsSuccess);
+        Assert.Contains(trip.CleanupIntents, i => i.Kind == TripCleanupKind.ReconcilePayment);
+
+        var messages = new List<OutboxMessage>();
+        TripOutboxIntents.EnqueueNewCleanup(trip, new HashSet<string>(StringComparer.Ordinal), messages.Add);
+
+        Assert.Equal(2, messages.Count);
+        Assert.Contains(messages, m => m.MessageType == TripOutboxIntents.CancelMatchingRoundType);
+        Assert.Contains(messages, m => m.MessageType == TripOutboxIntents.ReleaseReservationType);
+        Assert.DoesNotContain(messages, m => m.MessageType.Contains("Payment", StringComparison.Ordinal));
     }
 
     [Fact]

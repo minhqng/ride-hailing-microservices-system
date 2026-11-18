@@ -3,19 +3,19 @@
 // SCOPE: external/read DTO surface ONLY. No PostgreSQL query, no EF model,
 // no Saga/Outbox exposure, no invented product fields.
 //
-// CANONICAL SEMANTIC (Docs 00-01):
-//   - tripId: one logical ride (Doc 01 §3.3).
+// CANONICAL SEMANTIC:
+//  - tripId: one logical ride.
 //   - status: Trip P0 states CREATED, MATCHING, DRIVER_RESERVED,
 //     DRIVER_ACCEPTED, READY_TO_START, IN_PROGRESS, COMPLETED, CANCELLED,
 //     MATCH_FAILED; terminal set COMPLETED/CANCELLED/MATCH_FAILED never
-//     regresses (Doc 01 §6.2-6.4, DSI-010).
-//   - pickup/dropoff: ride request identity (Doc 01 §6.1).
-//   - matchingRound: one matching generation; stale-round fencing (Doc 01
-//     §3.3, DSI-016). Only the current round may become the assignment.
-//   - assignedDriverId + reservationId: current assignment reference
-//     (Doc 01 §6.1, DSI-008/009). Coherence rule frozen here: both null when
+//  regresses.
+//  - pickup/dropoff: ride request identity.
+//   - matchingRound: one matching generation; stale rounds are fenced out.
+//     Only the current round may become the assignment.
+//   - assignedDriverId + reservationId: current assignment reference.
+//     Coherence rule: both null when
 //     there is no current assignment; both present when there is one.
-// W2 MECHANICAL FREEZE (this file):
+// MECHANICAL FREEZE (this file):
 //   - status as JSON string (not numeric enum) so wire values match canonical
 //     state names without requiring a global enum-converter policy.
 //   - matchingRound as CLR int / JSON number: visibly a generation/version,
@@ -23,10 +23,11 @@
 //   - assignedDriverId / reservationId as nullable CLR Guid / JSON string-or-
 //     null. Null = no current assignment (honest absence, not a fake zero).
 //   - Fare, timestamps, Saga, Outbox, MatchingAttempt, Payment internals are
-//     intentionally absent. Fare belongs to W4 (A-W04-05); the rest are never
+//     intentionally absent. Fare belongs to the CreateRide flow; the rest are
+//     never
 //     part of the external read surface.
 //   - Intended route/method: GET /trips/{tripId:guid} (see TripRoutes).
-//     Registered with the rider-scoped read adapter since W5.
+//     Registered with the rider-scoped read adapter.
 
 using System.Text.Json.Serialization;
 
@@ -80,7 +81,7 @@ public sealed record GetTripResponse
 
     /// <summary>
     /// Durable MATCH_FAILED reason (NO_DRIVER_AVAILABLE or DRIVER_REJECTED),
-    /// or null for every other state and for historical rows (Doc 01 §40.1.2).
+    /// or null for every other state and for historical rows.
     /// </summary>
     [JsonPropertyName("failureReason")]
     public string? FailureReason { get; init; }

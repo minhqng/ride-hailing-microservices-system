@@ -1,7 +1,0 @@
-# B-W12-04 trace evidence (final run)
-
- REJECT trace=9c6cc79ca37f0d13d83a6cdcf83f658b reserveOutcomes=won,conflict releaseOutcome=conflict httpStatuses=200,409,409
- trace=2662a68291796704b99ac13e6a36b3cd round=6fc6124dfd83428b attempt=aa6174f7cd823824 http=821d5705a9a0db67 server=46020146b5d64b57 driverTxn=0032cf2f613efb85
- REL01 trace=484669c9a330c84e3c21f4949a245764 round=34f78300b45371de attempt=8db6e0ad2b2d2326 http=ce4f76beb94d7459 driverTxn=a516b9330255c3d8 reconcile=ccbb076cf70866dd reservation=aa0501ca-d9af-4559-a4a6-c26c20548bd7 attemptOutcome=Unknown driverTxnOutcome=won finalRound=RESERVED
-
-Tests: ReserveTraceContinuityTests 3/3 passed.

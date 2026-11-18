@@ -1,11 +1,11 @@
-// POST /trips transport adapter (W4).
+// POST /trips transport adapter.
 //
 // THIN ADAPTER ONLY: resolves the authenticated Rider identity, reads the
 // opaque Idempotency-Key header, converts transport coordinates to domain
 // TripLocation values, invokes CreateRideHandler, and maps the application
 // outcome to HTTP. No fingerprinting, fare calculation, active-Trip checks or
 // database access live here; those remain application responsibilities.
-// Authentication itself (JWT issuance/validation) is a shared/C-owned
+// Authentication itself (JWT issuance/validation) is a shared platform
 // concern: until shared middleware populates HttpContext.User, anonymous
 // requests safely receive 401.
 
@@ -88,7 +88,7 @@ public static class CreateRideEndpoint
                 extensions: new Dictionary<string, object?> { ["code"] = "VALIDATION_ERROR" });
         }
 
-        // A-W12-01: one domain-decision span per logical CreateRide. Its
+        // One domain-decision span per logical CreateRide. Its
         // context becomes the durable traceparent of the RideRequested outbox
         // row (via Activity.Current at intent creation), so the later relay
         // publication and every downstream consumer stay children of this
@@ -103,7 +103,7 @@ public static class CreateRideEndpoint
         if (result.IsSuccess)
         {
             span?.SetTag("trip.id", result.TripId.ToString());
-            // W9: durable local intent replaces the W8 direct publish. Broker
+            // The durable local intent replaces a direct publish: broker
             // availability is the relay's problem, not this request's.
             if (!await rideRequested.EnsureRideRequestedAsync(result.TripId, riderId, cancellationToken))
             {
@@ -117,7 +117,7 @@ public static class CreateRideEndpoint
                     });
             }
 
-            // A-W12-02: the Trip row committed inside the handler, so a new
+            // The Trip row committed inside the handler, so a new
             // non-replay create is exactly one committed business creation.
             // Idempotent replays and create-race reconciliation never count.
             if (!result.IsReplay)
@@ -133,7 +133,7 @@ public static class CreateRideEndpoint
                 : Results.Created($"/trips/{result.TripId:D}", body);
         }
 
-        // Domain-conflict rejections only (A-W12-02): validation 400s are
+        // Domain-conflict rejections only: validation 400s are
         // input hygiene, not business-transition rejections.
         var rejection = result.Error switch
         {

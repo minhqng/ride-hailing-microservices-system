@@ -1,8 +1,4 @@
 <Solution>
-  <Folder Name="/scripts/" />
-  <Folder Name="/scripts/perf/">
-    <Project Path="scripts/perf/recovery-probe/recovery-probe.csproj" />
-  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/">
     <Project Path="src/BuildingBlocks/RideHailing.Messaging/RideHailing.Messaging.csproj" />
@@ -34,7 +30,7 @@
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Audit/">
-    <Project Path="tests/Audit/RideHailing.B12Audit.Tests/RideHailing.B12Audit.Tests.csproj" />
+    <Project Path="tests/Audit/RideHailing.InvariantAudit.Tests/RideHailing.InvariantAudit.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/Integration/">
     <Project Path="tests/Integration/RideHailing.DriverService.IntegrationTests/RideHailing.DriverService.IntegrationTests.csproj" />

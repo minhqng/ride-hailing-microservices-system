@@ -1,9 +1,9 @@
-// Rider identity extraction at the Trip transport boundary (W4).
+// Rider identity extraction at the Trip transport boundary.
 //
 // CONSUMER-COMPATIBILITY RULE ONLY. Trip consumes an already-authenticated
 // ClaimsPrincipal and derives the Rider actor identity from it; Trip never
 // issues tokens, validates signatures, or configures JWT infrastructure
-// (shared/C-owned concerns). Supported identity representations, in order:
+// (shared platform concerns). Supported identity representations, in order:
 // ClaimTypes.NameIdentifier first, "sub" fallback. If both exist they must
 // agree or the request fails closed with no identity. Role membership
 // accepts ClaimTypes.Role or "jwt role claim" values equal to "Rider".

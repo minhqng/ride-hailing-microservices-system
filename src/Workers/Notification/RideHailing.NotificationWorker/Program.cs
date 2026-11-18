@@ -45,7 +45,7 @@ app.MapGet("/health/ready", async (NotificationProjectionStore store, Cancellati
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "notification-service", environment = env.EnvironmentName }));
 
-// DS03: recipient-addressed in-app inbox, served by the existing Notification
+// Recipient-addressed in-app inbox, served by the existing Notification
 // component with its own notification_db and asynchronous worker.
 app.MapNotificationInboxEndpoints();
 

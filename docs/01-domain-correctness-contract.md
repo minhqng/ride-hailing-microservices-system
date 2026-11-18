@@ -5,12 +5,12 @@
 > **Course:** Distributed Systems  
 > **Topic:** DS03 — Ride-hailing Microservices System simulating Grab/Uber  
 > **Type:** Domain Model + Correctness Contract + Formal Invariant Specification  
-> **Status:** **PROPOSED FREEZE v2.0 — REVIEW CANDIDATE**  
+> **Status:** Frozen correctness contract  
 > **Baseline date:** **2026-09-26**  
 > **Parent:** `00-project-scope-architecture.md`  
-> **Children:** `02-distributed-workflow-engineering.md`, `03-verification-experiments-demo.md`, `04-team-execution-plan.md`, `05A/05B/05C`  
+> **Children:** `02-distributed-workflow-engineering.md`, `03-verification-experiments-demo.md`  
 > **Normative role:** source of truth for domain vocabulary, aggregate ownership, entity/value-object semantics, state machines, legal commands, stable identities, local preconditions/postconditions, safety invariants, liveness obligations, race outcomes and consistency contracts.  
-> **Not source of truth for:** broker topology, queue/routing names, retry delays, ACK/confirm mechanics, Outbox relay implementation, exact test IDs, deployment profiles, weekly scheduling. Those belong to Docs 02–05.  
+> **Not source of truth for:** broker topology, queue/routing names, retry delays, ACK/confirm mechanics, Outbox relay implementation, exact test IDs, deployment profiles. Those belong to Docs 02–03.  
 > **Change policy:** any change to a domain state, legal transition, authority boundary, invariant, stable business identity or race outcome requires updating this document before or together with implementation.
 
 > **Correctness thesis.**  
@@ -894,7 +894,11 @@ A terminal Trip does not regress into an active state.
 from every pre-start state: `CREATED`, `MATCHING`, `DRIVER_RESERVED`,
 `DRIVER_ACCEPTED` and `READY_TO_START`. `CREATED` has no cleanup obligation.
 Assigned pre-start states commit the exact reservation release and matching
-cancellation. `READY_TO_START` additionally commits the exact Payment void
+cancellation. `DRIVER_ACCEPTED` additionally commits Payment reconciliation:
+accept is the transition that requests authorization, so an authorization
+outcome may be in flight. `DRIVER_RESERVED` never requested one, so it has no
+Payment effect to reconcile. `READY_TO_START` additionally commits the exact
+Payment void
 with the stable per-Trip void operation key in the same Transaction as the
 Trip transition; the ride never starts afterwards. `IN_PROGRESS` and terminal
 states reject cancellation. Cancellation is idempotent: an already
@@ -3178,9 +3182,9 @@ Before promoting Doc 01 to **ACCEPTED/FROZEN**:
 # 40. DS03 functional closure amendment — Driver Reject and recipient notification (2026-11-05)
 
 > **Status:** normative amendment approved for the DS03 functional-closure work
-> (PR `docs/ds03-functional-policy`). It adds the two missing DS03 statements
-> to the frozen W01–W16 contract without rewriting historical requirements.
-> **Why:** the W16 contract defined `DRIVER_RESERVED + DriverRejected` only as
+> It adds the two missing DS03 statements
+> to the frozen contract without rewriting historical requirements.
+> **Why:** the original contract defined `DRIVER_RESERVED + DriverRejected` only as
 > a validation that exposed a future cleanup requirement, and it defined
 > Notification only as a non-authoritative delivery *projection*. Both were
 > insufficient for the DS03 statements “Drivers accept or reject trips” and
@@ -3223,7 +3227,7 @@ Driver accepting the ride*. It carries a durable `failure_reason`:
 | --- | --- |
 | `NO_DRIVER_AVAILABLE` | Matching exhausted its bounded candidates without a reservation. |
 | `DRIVER_REJECTED` | A Driver was reserved and then rejected the exact assignment. |
-| `NULL` | Historical W01–W16 `MATCH_FAILED` row created before this amendment (reason not recorded; never guessed). |
+| `NULL` | Historical `MATCH_FAILED` row created before this amendment (reason not recorded; never guessed). |
 
 No other state may carry a non-null `failure_reason`. The reason is part of the
 Rider-visible result and is returned by the Trip read surface; a Driver

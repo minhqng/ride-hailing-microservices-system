@@ -1,12 +1,12 @@
-// A-W12-06 Trip-side invariant auditor (Doc 03 §11). TEST-SCOPE VERIFICATION
+// Trip-side invariant auditor. TEST-SCOPE VERIFICATION
 // TOOLING, not application business code: read-only SQL over the Trip-owned
 // database in disposable test/fault environments.
 //
 // HONESTY CONTRACT. A check the Trip database cannot authoritatively answer
 // is reported NOT RUN with its owner/dependency — never silently PASS. A
-// Trip-only dataset cannot prove Driver exclusivity (AUD-01/02/04) or the
-// Payment side of operation-key uniqueness (AUD-05) and matching-terminal
-// uniqueness (AUD-06); those Trip-side PROXIES are labelled as proxies and
+// A Trip-only dataset cannot prove Driver exclusivity or the Payment side of
+// operation-key uniqueness and matching-terminal uniqueness; those Trip-side
+// PROXIES are labelled as proxies and
 // the full properties stay NOT RUN until cross-service read access exists.
 
 using Npgsql;
@@ -123,21 +123,21 @@ public static class TripInvariantAuditor
         return new AuditorReport(runId, commit, DateTimeOffset.UtcNow, checks);
     }
 
-    // AUD-01/02/04: the Trip database cannot answer Driver-owned invariants.
+    // The Trip database cannot answer Driver-owned invariants.
     private static AuditorCheck AuditDriverExclusiveReservation() =>
         AuditorCheck.NotRun("AUD-01", "Exclusive Driver reservation",
-            "Requires the Driver-owned database (Member B); cross-service read access is not configured in A's test environment.");
+            "Requires the Driver-owned database; cross-service read access is not configured in the Trip test environment.");
 
     private static AuditorCheck AuditDriverStateCoherence() =>
         AuditorCheck.NotRun("AUD-02", "Driver state coherence",
-            "Requires the Driver-owned database (Member B); cross-service read access is not configured in A's test environment.");
+            "Requires the Driver-owned database; cross-service read access is not configured in the Trip test environment.");
 
     private static AuditorCheck AuditDriverTripAgreement() =>
         AuditorCheck.NotRun("AUD-04", "Driver/Trip agreement",
-            "Requires Driver current reservation state (Member B); cross-service read access is not configured in A's test environment.");
+            "Requires Driver current reservation state; cross-service read access is not configured in the Trip test environment.");
 
     /// <summary>
-    /// AUD-03 Trip-side executable form: the Trip holds at most one current
+    /// Trip-side executable form: the Trip holds at most one current
     /// assignment reference. Extra active references appear as OPEN
     /// (unconfirmed) release intents that point at a reservation other than
     /// the current assignment, or at more than one distinct reservation.
@@ -178,9 +178,9 @@ public static class TripInvariantAuditor
     }
 
     /// <summary>
-    /// AUD-05 Trip-side PROXY: saga operation keys are globally unique and
+    /// Trip-side PROXY: saga operation keys are globally unique and
     /// follow the frozen per-trip lineage. The Payment-side one-logical-effect
-    /// half of AUD-05 stays NOT RUN (C-owned data). Both halves are also
+    /// half stays NOT RUN (Payment-owned data). Both halves are also
     /// structurally enforced on this database (UNIQUE trip_id plus the
     /// operation-lineage CHECK); the auditor re-verifies read-only.
     /// </summary>
@@ -219,15 +219,15 @@ public static class TripInvariantAuditor
 
         return findings.Count == 0
             ? AuditorCheck.LocalProxyPass("AUD-05", "Payment logical uniqueness (Trip-side proxy)",
-                "Level B: Trip-side obligation ledger only — saga operation keys unique + frozen lineage (also DB-CHECK-enforced), re-verified read-only. The authoritative Payment effect ledger (one logical effect per key) is NOT inspected: full AUD-05 requires C-owned data (DEPENDENCY_PENDING).")
+                "Level B: Trip-side obligation ledger only — saga operation keys unique + frozen lineage (also DB-CHECK-enforced), re-verified read-only. The authoritative Payment effect ledger (one logical effect per key) is NOT inspected: full AUD-05 requires Payment-owned data (DEPENDENCY_PENDING).")
             : AuditorCheck.Fail("AUD-05", "Payment logical uniqueness (Trip-side proxy)",
                 $"{findings.Count} operation-key violation(s) in the Trip-owned ledger.", findings);
     }
 
     /// <summary>
-    /// AUD-06 Trip-side PROXY: no trip has both an applied MatchingFailedV1
+    /// Trip-side PROXY: no trip has both an applied MatchingFailedV1
     /// and an applied DriverReservedV1 for the same matching round. The
-    /// Matching-ledger half stays NOT RUN (B-owned data).
+    /// Matching-ledger half stays NOT RUN (Matching-owned data).
     /// </summary>
     private static async Task<AuditorCheck> AuditMatchingTerminalProxyAsync(NpgsqlConnection connection, CancellationToken token)
     {
@@ -251,16 +251,16 @@ public static class TripInvariantAuditor
 
         return findings.Count == 0
             ? AuditorCheck.LocalProxyPass("AUD-06", "Matching terminal uniqueness (Trip-side proxy)",
-                "Level B: Trip's applied-fact ledger shows no contradictory applied terminal facts per (trip, round). The authoritative Matching ledger is NOT inspected: full AUD-06 requires B-owned data (DEPENDENCY_PENDING).")
+                "Level B: Trip's applied-fact ledger shows no contradictory applied terminal facts per (trip, round). The authoritative Matching ledger is NOT inspected: full AUD-06 requires Matching-owned data (DEPENDENCY_PENDING).")
             : AuditorCheck.Fail("AUD-06", "Matching terminal uniqueness (Trip-side proxy)",
                 $"{findings.Count} contradictory terminal fact pair(s) in the Trip-owned ledger.", findings);
     }
 
     /// <summary>
-    /// AUD-07: after scenario quiescence, a terminal pre-start Trip must not
+    /// After scenario quiescence, a terminal pre-start Trip must not
     /// still hold a Driver reservation. Assigned terminal trips must carry a
     /// ReleaseReservation obligation; a terminal trip with a release
-    /// obligation (including a DS03 rejection, which clears the Trip-side
+    /// obligation (including a Driver rejection, which clears the Trip-side
     /// assignment but preserves the exact obligation) must have it completed
     /// when the scenario is quiesced.
     /// </summary>
@@ -315,15 +315,15 @@ public static class TripInvariantAuditor
         // Level B: Trip proves its obligation ledger is coherent and that
         // Driver AUTHORITY confirmed each release (completed_at is set only by
         // DriverReservationReleasedV1 intake), but the canonical property also
-        // asserts the Driver's own reservation state — B-owned data.
+        // asserts the Driver's own reservation state — Driver-owned data.
         return findings.Count == 0
             ? AuditorCheck.LocalProxyPass("AUD-07", "No leaked pre-start reservation", note +
-                " Level B: Trip ledger + Driver-confirmed releases; full AUD-07 additionally requires the Driver reservation table (B-owned, DEPENDENCY_PENDING).")
+                " Level B: Trip ledger + Driver-confirmed releases; full AUD-07 additionally requires the Driver reservation table (Driver-owned, DEPENDENCY_PENDING).")
             : AuditorCheck.Fail("AUD-07", "No leaked pre-start reservation", note, findings);
     }
 
     /// <summary>
-    /// AUD-08: nothing is silently stuck — pending/failed outbox rows and
+    /// Nothing is silently stuck: pending/failed outbox rows and
     /// non-terminal sagas must resolve inside the scenario's accepted bound.
     /// </summary>
     private static async Task<AuditorCheck> AuditUnresolvedAgeAsync(

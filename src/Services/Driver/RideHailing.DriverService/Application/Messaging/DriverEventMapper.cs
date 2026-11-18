@@ -1,10 +1,10 @@
-// B-W08-05: pure mapping from Driver mutation outcomes to canonical events.
-// W9 split the two concerns:
+// Pure mapping from Driver mutation outcomes to canonical events.
+// Split the two concerns:
 //   - For*Effect methods map only a COMMITTED state change; the repository
 //     records that event as an Outbox intent in the same transaction.
-//   - For*Result methods preserve the W8 compatibility contract (win/applied
+//   - For*Result methods preserve the compatibility contract (win/applied
 //     and idempotent replay/noop yield the same event for read-only consumers);
-//     they are not used to create a second W9 intent for a no-op.
+//     they never create a second intent for a no-op.
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Persistence;
 
@@ -29,7 +29,7 @@ public static class DriverEventMapper
     // Committed-effect mappings used by the persistence layer when it records
     // the durable Outbox intent in the SAME transaction as the Driver row.
     // Only an actually applied effect is passed here: an idempotent replay or
-    // no-op has no new authoritative state, so W9 records no new event for it.
+    // no-op has no new authoritative state, so records no new event for it.
     public static DriverEventToPublish ForReservedEffect(
         Driver driver, Guid tripId, Guid reservationId) =>
         Event(
@@ -52,8 +52,8 @@ public static class DriverEventMapper
             driver.DriverId, DriverEventTypes.Offline, DriverEventRoutes.Offline,
             "OFFLINE", driver.Version, null, null);
 
-    // W8 outcome mapping retained for compatibility tests and read-only
-    // consumers. W9 persistence uses the committed-effect methods above, so a
+    // Outcome mapping retained for compatibility tests and read-only
+    // consumers. Persistence uses the committed-effect methods above, so a
     // Replayed/Unchanged outcome never creates a second logical Outbox row.
     public static DriverEventToPublish? ForReserveResult(
         Guid driverId, Guid tripId, Guid reservationId, ReserveResult result) =>

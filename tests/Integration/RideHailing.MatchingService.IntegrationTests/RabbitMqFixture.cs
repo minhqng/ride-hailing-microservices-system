@@ -1,4 +1,4 @@
-// B-W08: real RabbitMQ for broker proofs (no fake-green).
+// Real RabbitMQ for broker proofs (no fake-green).
 // RABBITMQ_TEST_CONNECTION explicitly set => verified now, failure throws
 // loud. Otherwise disposable Testcontainers RabbitMQ
 // (rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58, pinned like compose); any start failure throws
@@ -12,7 +12,9 @@ public sealed class RabbitMqDatabase : IAsyncLifetime
 {
     static RabbitMqDatabase()
     {
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private RabbitMqContainer? _container;

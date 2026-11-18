@@ -1,7 +1,7 @@
-// Trip-owned durable outgoing-intent row (A-W09-01).
+// Trip-owned durable outgoing-intent row.
 //
-// The physical table is the SHARED W9 Outbox contract (C owns relay
-// mechanics: claim/publish/confirm/mark/retry/metrics). Trip owns the
+// The physical table is the SHARED Outbox contract (the relay layer owns
+// claim/publish/confirm/mark/retry/metrics). Trip owns the
 // semantic decision to create an intent and MUST create it in the same local
 // transaction as the business transition it belongs to.
 //
@@ -51,7 +51,7 @@ public sealed class TripOutboxMessage
 
     /// <summary>
     /// Maps the canonical shared intent (already serialized and validated by
-    /// C's <see cref="OutboxMessage.Create"/>) onto the Trip EF row. Only
+    /// shared <see cref="OutboxMessage.Create"/>) onto the Trip EF row. Only
     /// fresh pending intents may be written here.
     /// </summary>
     public static TripOutboxMessage From(OutboxMessage message)

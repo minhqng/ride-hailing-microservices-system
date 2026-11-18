@@ -1,11 +1,11 @@
-// B-W11-02 (REL-01): the lost Reserve response is exercised across a REAL
+// The lost Reserve response is exercised across a REAL
 // Kestrel/HTTP boundary, not a transport stub. The Driver endpoints, repository
 // and Outbox commit are the production implementations; Matching itself runs
 // its production orchestrator and typed HTTP client.
 //
 // Controlled sequence:
 //   write-ahead IN_FLIGHT -> real POST reserve -> Driver commit + Outbox
-//   -> B-owned post-commit barrier -> Matching timeout -> UNKNOWN (no advance)
+//   -> Matching post-commit barrier -> Matching timeout -> UNKNOWN (no advance)
 //   -> release -> reconcile the SAME reservationId -> RESERVED.
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;

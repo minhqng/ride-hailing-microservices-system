@@ -1,4 +1,4 @@
-// DS03 Driver Reject domain proofs (Doc 01 §40.1, Doc 05A §37).
+// Driver Reject domain proofs.
 //
 // The rejection is a real terminal transition, never a validation-only
 // operation: the exact reservation identity survives in durable cleanup

@@ -47,7 +47,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
         catch (Exception ex) when (ex is ArgumentException or JsonException or InvalidOperationException)
         { throw new DeliveryFailureException(FailureKind.Poison, "INVALID_TRIP_MESSAGE"); }
 
-        // A-W12-01: one domain-decision span per applied authority fact. It
+        // One domain-decision span per applied authority fact. It
         // nests under the shared "consume" transport span (different concern:
         // domain decision, not delivery) and, via Activity.Current at intent
         // creation, becomes the durable traceparent of every outgoing
@@ -87,7 +87,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                     throw new DeliveryFailureException(FailureKind.Poison, "MESSAGE_ID_CONTENT_CONFLICT");
                 await transaction.CommitAsync(token);
                 // Redelivery replay: no business transition happened, so no
-                // metric may claim one (A-W12-02 replay semantics).
+                // metric may claim one (replay semantics).
                 span?.SetTag("ride.outcome", "receipt_replay");
                 log.LogInformation("Trip message replay {MessageId} correlation {CorrelationId} result {Disposition}",
                     envelope.MessageId, envelope.CorrelationId, receipt.Disposition);
@@ -97,7 +97,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
             var trip = await db.Trips.SingleOrDefaultAsync(x => x.TripId == tripId, token);
             if (trip is null)
             {
-                // C's error envelope retains identity metadata, not the original
+                // The error envelope retains identity metadata, not the original
                 // payload. Preserve out-of-order evidence locally for explicit
                 // reconciliation instead of discarding it after bounded retries.
                 receipt.Disposition = "PendingWorkflow";
@@ -119,7 +119,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 await db.SaveChangesAsync(token);
                 await transaction.CommitAsync(token);
 
-                // A-W12-02: post-commit observation only. The disposition was
+                // Post-commit observation only. The disposition was
                 // decided inside the committed transaction; a rollback above
                 // never reaches this point, so counters describe committed
                 // effects, never handler invocations.
@@ -155,7 +155,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
     }
 
     /// <summary>
-    /// A-W12-01/02 post-commit observation: span tags, one structured log and
+    /// Post-commit observation: span tags, one structured log and
     /// counters that describe only durable effects. Receipt dispositions map
     /// to bounded outcome/reason vocabularies; saga counters fire once per
     /// committed NEW status entry, so redelivery (receipt replay) and domain
@@ -223,9 +223,9 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
     {
         if (e.MessageType.StartsWith("Payment", StringComparison.Ordinal))
         {
-            // W10: the outcome resolves the saga's awaited step only under the
+            // The outcome resolves the saga's awaited step only under the
             // frozen operationKey/sagaId lineage; a tripId alone never moves
-            // ride state (Doc 05A §18, DSI-034).
+            // ride state.
             var result = PaymentOutcomeIntake.Apply(trip, saga, PaymentFact(e), now, db);
             receipt.Disposition = result.Disposition;
             receipt.Reason = result.Reason;
@@ -245,7 +245,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                 {
                     // Driver carries matchingRound when it holds durable
                     // generation provenance for the reservation identity
-                    // (W08 lineage). Events may still omit it from historical
+                    // (lineage). Events may still omit it from historical
                     // rows; park those for review — never guess a round from
                     // mutable Trip state.
                     if (!e.Payload.TryGetProperty("matchingRound", out _))
@@ -304,7 +304,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
                     if (outcome.IsSuccess && !outcome.IsReplay)
                     {
                         // The physical ride pivot happened: dispatch the capture
-                        // obligation with the stable capture key (DSI-027/028).
+                        // obligation with the stable capture key.
                         // No MarkDriverTripCompleted command: Driver authority
                         // supplied this completion fact itself.
                         if (saga is not null)
@@ -333,7 +333,7 @@ public sealed class TripMessageHandler(TripDbContext db, TimeProvider time, ILog
     }
 
     /// <summary>
-    /// DS03: stages the Rider-visible notification only for a FIRST applied
+    /// Stages the Rider-visible notification only for a FIRST applied
     /// business fact. Late/duplicate/terminal facts that are parked or replayed
     /// never produce a second notification; a late reservation that merely
     /// creates cleanup evidence is not an assignment event.

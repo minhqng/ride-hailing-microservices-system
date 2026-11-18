@@ -10,14 +10,14 @@ public sealed class OutboxRelayOptions
     public TimeSpan RetryDelay { get; init; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Deterministic test seam for REL-18: runs after claim and before publish.
+    /// Deterministic test seam: runs after claim and before publish.
     /// A throw simulates process death, leaving the row claimed until lease
     /// expiry. Production leaves this null.
     /// </summary>
     public Func<OutboxMessage, CancellationToken, Task>? BeforePublish { get; init; }
 
     /// <summary>
-    /// Deterministic test seam for REL-05: runs after the publisher confirm and
+    /// Deterministic test seam: runs after the publisher confirm and
     /// before the local mark. A throw simulates a lost mark, leaving the row
     /// pending for a safe same-identity republish. Production leaves this null.
     /// </summary>

@@ -3,7 +3,7 @@
 // Rider identity/role gating, rider-scoped ownership (missing and not-owned
 // share 404 without disclosure), response/status mapping, diagnostic
 // correlation echo, and proof that rejected auth/identity requests cause no
-// business side effects. Lifecycle states are driven through the W5
+// business side effects. Lifecycle states are driven through the lifecycle
 // application handlers against the same disposable database the SUT reads.
 
 using System.Net;

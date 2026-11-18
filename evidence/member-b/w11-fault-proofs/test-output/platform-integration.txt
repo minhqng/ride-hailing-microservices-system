@@ -1,9 +1,0 @@
-  Determining projects to restore...
-  Restored D:\rh-w11b\src\BuildingBlocks\RideHailing.Messaging\RideHailing.Messaging.csproj (in 1.22 sec).
-  1 of 2 projects are up-to-date for restore.
-  RideHailing.Messaging -> D:\rh-w11b\src\BuildingBlocks\RideHailing.Messaging\bin\Release\net10.0\RideHailing.Messaging.dll
-  RideHailing.Platform.IntegrationTests -> D:\rh-w11b\tests\Integration\RideHailing.Platform.IntegrationTests\bin\Release\net10.0\RideHailing.Platform.IntegrationTests.dll
-Test run for D:\rh-w11b\tests\Integration\RideHailing.Platform.IntegrationTests\bin\Release\net10.0\RideHailing.Platform.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-
-Passed!  - Failed:     0, Passed:    60, Skipped:     0, Total:    60, Duration: 37 s - RideHailing.Platform.IntegrationTests.dll (net10.0)

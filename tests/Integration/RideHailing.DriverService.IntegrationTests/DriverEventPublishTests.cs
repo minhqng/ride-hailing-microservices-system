@@ -1,9 +1,9 @@
-// B-W09-01/02/05: Driver authoritative events are durable Outbox intents
-// committed with the Driver row, then published by C's shared relay on REAL
-// PostgreSQL + REAL RabbitMQ. These tests assert the full seam: same-tx
-// recording, atomic rollback on Outbox failure, exact replay without a second
-// intent, confirmed publish/mark, stable message identity across relay
-// restart, and broker-unavailable retention. No fake-green path.
+// Driver authoritative events are durable Outbox intents committed with the
+// Driver row, then published by the shared relay on REAL PostgreSQL + REAL
+// RabbitMQ. These tests assert the full seam: same-transaction recording,
+// atomic rollback on Outbox failure, exact replay without a second intent,
+// confirmed publish/mark, stable message identity across relay restart, and
+// broker-unavailable retention. No fake-green path.
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -94,7 +94,7 @@ public class DriverEventPublishTests
 
     private async Task RemoveNotificationIntentsAsync(Guid driverId)
     {
-        // The DS03 recipient notification is a second, independently proven
+        // The recipient notification is a second, independently proven
         // intent. Keep these Driver-event relay proofs focused on the Driver
         // event row instead of making relay ordering depend on two kinds.
         await using var conn = await _db.DataSource.OpenConnectionAsync();
@@ -303,7 +303,7 @@ public class DriverEventPublishTests
         Assert.Equal(DriverMutationOutcome.Unchanged, releaseReplay.Outcome);
         Assert.Equal(afterRelease.Version, (await repo.LoadAsync(driverId))!.Version);
 
-        // available -> offline -> available, each a real effect.
+        // Available -> offline -> available, each a real effect.
         Assert.Equal(DriverMutationOutcome.Applied,
             (await repo.TryGoOfflineAsync(driverId, afterRelease.Version)).Outcome);
         var offline = (await repo.LoadAsync(driverId))!;

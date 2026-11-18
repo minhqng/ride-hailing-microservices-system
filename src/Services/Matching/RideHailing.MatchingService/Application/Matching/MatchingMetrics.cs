@@ -1,6 +1,6 @@
-// B-W05-09/B-W12-02/03: Matching pipeline instruments. Live here because the
-// Matching application owns these quantities; OTLP export wiring stays
-// C-owned (PlatformBootstrap) and tests observe via MeterListener.
+// Matching pipeline instruments. Live here because the Matching application
+// owns these quantities; OTLP export wiring stays in PlatformBootstrap and
+// tests observe via MeterListener.
 //
 // Semantics are deliberately split by truth source:
 //   matching.round.duration      one orchestration REQUEST (including replay).
@@ -111,7 +111,7 @@ public sealed class MatchingMetrics
     /// <summary>
     /// One observation per FCALL result. Stale counters are emitted only from
     /// the updater (the layer that sees the function reply), never from the
-    /// handler, so layering cannot double count. The W4 contract classifies an
+    /// handler, so layering cannot double count. The updater contract classifies an
     /// equal aggregate version and a non-advancing location sample as
     /// 'stale'; those semantic replays therefore increment the same counter.
     /// </summary>

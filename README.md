@@ -62,9 +62,12 @@ never grant a reservation. Driver PostgreSQL is the sole reservation authority.
 
 ## Distributed-system mechanisms
 
-- **Authority and fencing** — Driver reservation linearizes at a guarded
-  `UPDATE ... WHERE status = 'AVAILABLE' AND version = :v`. Trip assignment,
-  reservation identity and matching round identity are fenced end to end.
+- **Authority and fencing** — Driver reservation linearizes in a short
+  PostgreSQL transaction: `SELECT ... FOR UPDATE` serializes contenders, the
+  aggregate re-validates state and expected version on the fresh row, and the
+  successful commit that writes the reservation plus its Outbox intent is the
+  linearization point. Trip assignment, reservation identity and matching round
+  identity are fenced end to end.
 - **Transactional Outbox** — business state and outgoing intent commit in one
   local transaction; a relay publishes with publisher confirms and marks the
   intent `PUBLISHED` only after the broker confirms.
@@ -107,6 +110,7 @@ cp .env.example .env
 python3 scripts/security/init-local-auth.py
 docker compose up -d --build
 
+# Liveness: the process is up.
 curl http://localhost:8080/health/live
 curl http://localhost:8101/health/live
 curl http://localhost:8102/health/live
@@ -114,7 +118,24 @@ curl http://localhost:8103/health/live
 curl http://localhost:8104/health/live
 curl http://localhost:8105/health/live
 curl http://localhost:8106/health/live
+
+# Readiness: dependencies the service owns are usable. Database-owning
+# services report their own database; the Gateway reports process readiness
+# because it owns no database.
+curl http://localhost:8080/health/ready
+curl http://localhost:8101/health/ready
+curl http://localhost:8102/health/ready
+curl http://localhost:8103/health/ready
+curl http://localhost:8104/health/ready
+curl http://localhost:8105/health/ready
+curl http://localhost:8106/health/ready
 ```
+
+Running more than one checkout on the same Docker host? Set a distinct
+`COMPOSE_PROJECT_NAME` before `up` (for example
+`export COMPOSE_PROJECT_NAME=ride-hailing-dev-2`). Without it, Compose reuses
+the project name derived from the directory and can recreate or remove another
+checkout's containers and volumes.
 
 RabbitMQ management UI: <http://localhost:15672> (development defaults in
 `.env.example`; never reuse them outside a disposable environment).
@@ -138,8 +159,10 @@ service permissions and local key setup.
 
 ## Verification
 
-Automated verification covers real PostgreSQL, RabbitMQ and Redis boundaries,
-not mocks:
+Automated verification exercises real PostgreSQL, RabbitMQ and Redis
+boundaries instead of replacing them with in-memory fakes. Transport stubs
+appear only in component tests where the owning authority is still the real
+database or service process:
 
 ```bash
 # Full .NET regression (13 suites) in the pinned SDK container
@@ -157,8 +180,9 @@ python3 scripts/test/topology-smoke.py
 python3 scripts/test/release-smoke.py
 ```
 
-The latest verified results, test counts and evidence bundles are recorded in
-[docs/verification.md](docs/verification.md) and [evidence/](evidence/).
+The latest verified results and test counts are recorded in
+[docs/verification.md](docs/verification.md); the release evidence bundle is in
+[evidence/release/v1.0.1/](evidence/release/v1.0.1/README.md).
 
 ## Demonstration
 
@@ -166,8 +190,9 @@ The authoritative presentation runbook is [docs/demo.md](docs/demo.md), written
 in Vietnamese for the DS03 defense. It covers preparation and readiness checks,
 the architecture and its authority boundaries, a 13-step live ride, ten
 extended distributed-systems scenarios (concurrency, idempotency, transactional
-outbox, payment `UNKNOWN` reconciliation, Saga compensation, notification
-outage, crash recovery, observability, performance and HA scope), speaker
+outbox, payment `UNKNOWN` reconciliation, Saga compensation, cancellation during
+authorization, authorization decline, notification outage, crash recovery,
+observability, performance and HA scope), speaker
 handover for the three members, and examiner Q&A.
 
 Every command in it was executed against a clean deployment of this source
@@ -188,7 +213,7 @@ actually support are stated as limitations rather than simulated.
 | [docs/report.pdf](docs/report.pdf) | Final project report |
 | [docs/slides.pdf](docs/slides.pdf) | Presentation slides |
 | [docs/README.md](docs/README.md) | Full documentation index |
-| [evidence/README.md](evidence/README.md) | Evidence bundle index |
+| [evidence/release/v1.0.1/README.md](evidence/release/v1.0.1/README.md) | Release evidence bundle |
 | [docs/release.md](docs/release.md) | Release identity, deployment and known limitations |
 
 ## Team
@@ -203,11 +228,8 @@ GitHub: [minhqng](https://github.com/minhqng) (Nguyen Quang Minh),
 [Fried-toofuu](https://github.com/Fried-toofuu) (Nguyen Hoang Khanh),
 [Nerduckk](https://github.com/Nerduckk) (Le Anh Viet).
 
-Detailed commit and attribution evidence is in
-[docs/07-contribution-mapping.md](docs/07-contribution-mapping.md) and
-[evidence/](evidence/). The responsibility table describes ownership of the
-implemented capabilities; it is not a claim that every historical commit was
-originally authored by the displayed Git author.
+The responsibility table describes ownership of the implemented capabilities.
+The full technical report is [docs/report.pdf](docs/report.pdf).
 
 ## Known limitations
 
@@ -225,5 +247,5 @@ originally authored by the displayed Git author.
 
 ## Release
 
-Final tag: `v1.0.0` — see [docs/release.md](docs/release.md) and the GitHub
+Final tag: `v1.0.1` — see [docs/release.md](docs/release.md) and the GitHub
 Release page for the verified commit SHA, evidence summary and download links.

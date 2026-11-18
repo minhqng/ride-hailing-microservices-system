@@ -1,4 +1,4 @@
-// TripLocation domain validation tests (Doc 01 §5.3).
+// TripLocation domain validation tests.
 
 using RideHailing.TripService.Domain.Trips;
 

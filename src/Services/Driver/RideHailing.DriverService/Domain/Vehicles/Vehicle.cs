@@ -1,4 +1,4 @@
-// B-W03-02: Vehicle baseline — operational association only, no fare policy (05B §4.2).
+// Vehicle baseline — operational association only, no fare policy.
 using RideHailing.DriverService.Domain.Drivers;
 
 namespace RideHailing.DriverService.Domain.Vehicles;

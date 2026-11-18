@@ -1,7 +1,5 @@
-// B-W08-05: Driver authoritative event contracts (Doc 02 §12 catalog,
-// 05B §6.1; producer = Driver Service only). Payloads are B-defined on both
-// ends (Driver publishes, Matching consumes); the Matching DriverClient
-// README records the frozen wire form plus remaining A/C open questions.
+// Driver authoritative event contracts (producer = Driver Service only).
+// Payloads are B-defined on both ends (Driver publishes, Matching consumes);
 // Routing keys mirror the frozen RideTopology catalog exactly.
 // Wire form is explicit camelCase via JsonPropertyName (same style as the
 // shared MessageEnvelope): payload shape never depends on ambient serializer
@@ -37,7 +35,7 @@ public static class DriverEventRoutes
 /// tripId/reservationId present only when the state carries them.
 /// matchingRound is the matching generation that produced a reservation
 /// identity (RESERVED wins/replays). Absence of the FIELD means "generation
-/// unknown" (historical row without provenance) — Trip consumers park such
+/// unknown" (historical row without provenance) - Trip consumers park such
 /// events for review and never infer a round; producers omit the property
 /// rather than write null so Trip's presence check stays meaningful.</summary>
 public sealed record DriverStateEventPayload(
@@ -62,7 +60,7 @@ public sealed record DriverLocationEventPayload(
 public static class DriverEventMessageIds
 {
     // Deterministic per logical effect (NOT per publish attempt): the value is
-    // computed once when the W9 Outbox intent is recorded, then stored verbatim
+    // computed once when the Outbox intent is recorded, then stored verbatim
     // in outbox_messages. Relay retries, restarts and republication after a
     // lost confirm reuse that stored id, so downstream dedup/version guards
     // converge. New effects (new reservation or new version) produce new ids.

@@ -1,6 +1,6 @@
-// B-W03-01: Driver aggregate — local authority state machine (Doc 01 §4.2-4.5).
-// W3 scope: pure domain transitions + DSI-002 coherence. No Redis, no OCC,
-// no UNKNOWN, no Outbox. Concurrency guards (W6) and fencing persistence (W7) come later.
+// Driver aggregate — local authority state machine.
+// Scope: pure domain transitions + state/reservation coherence. No Redis, no OCC,
+// no UNKNOWN, no Outbox. Concurrency guards and fencing persistence come later.
 // Version here is a simple bump-on-change counter, NOT an OCC token yet.
 namespace RideHailing.DriverService.Domain.Drivers;
 
@@ -65,7 +65,7 @@ public sealed class Driver
         return new Driver(driverId, userId, DriverStatus.Offline, 1, null, null, null, null, vehicleId, DateTimeOffset.UtcNow);
     }
 
-    // Rehydration from persistence. Same coherence rules as live transitions (DSI-002).
+    // Rehydration from persistence. Same coherence rules as live transitions.
     public static Driver Rehydrate(
         Guid driverId, Guid userId, DriverStatus status, int version,
         Guid? reservedTripId, Guid? reservationId, int? reservationRound,
@@ -115,12 +115,12 @@ public sealed class Driver
         Touch();
     }
 
-    // OFFLINE -> AVAILABLE with OCC fence (B-W07-04 Race-B family, DSI-003).
+    // OFFLINE -> AVAILABLE with OCC fence (Race-B family).
     // Precedence mirrors Reserve: idempotent retry first (already AVAILABLE
     // succeeds regardless of version — the desired end-state already holds),
     // then the version fence (a stale caller must not overwrite newer
     // authority), then state legality. A blind full-row overwrite of a newer
-    // RESERVED row is exactly the lost-reservation shape DSI-003 forbids.
+    // RESERVED row is exactly the lost-reservation shape the rule forbids.
     public void GoOnline(int expectedVersion)
     {
         if (expectedVersion < 1)
@@ -157,7 +157,7 @@ public sealed class Driver
         }
     }
 
-    // AVAILABLE -> OFFLINE with OCC fence (B-W07-04 Race B, DSR-004/DSI-003).
+    // AVAILABLE -> OFFLINE with OCC fence (Race B).
     // Same precedence: already-OFFLINE replay succeeds version-agnostic, then
     // the fence, then legality (RESERVED with an active reservation rejects;
     // only the guarded path may decide offline-vs-reserved).
@@ -200,18 +200,17 @@ public sealed class Driver
         }
     }
 
-    // Domain-level reserve with OCC fence (B-W06-01/02/03, Doc 01 §1.4/§4.4,
-    // DSI-001/003/005). Precedence is load-bearing:
+    // Domain-level reserve with OCC fence. Precedence is load-bearing:
     //   1. empty identity rejection (never a candidate effect);
-    //   2. same-reservation replay (DSI-005): the effect already exists, so
+    //  2. same-reservation replay: the effect already exists, so
     //      return canonical success WITHOUT consulting expectedVersion — a
     //      retry carries the version it originally saw;
-    //   3. expected-version fence (DSI-003): a stale caller must not overwrite
+    //  3. expected-version fence: a stale caller must not overwrite
     //      newer authority even when the driver happens to be AVAILABLE again;
-    //   4. state legality (DSI-001): only AVAILABLE can be taken.
-    // matchingRound (W08 hardening): the matching generation that produced this
+    //  4. state legality: only AVAILABLE can be taken.
+    // matchingRound: the matching generation that produced this
     // reservation identity, recorded with the win and published as
-    // DriverReservedV1.matchingRound (Doc 02 §21.3). Write-once wins: a replay
+    // DriverReservedV1.matchingRound. Write-once wins: a replay
     // never overwrites or backfills the recorded generation, so one logical
     // reservation publishes ONE stable round across restart/replay/heal (a
     // backfilled legacy row would change the event content under the same
@@ -241,7 +240,7 @@ public sealed class Driver
         if (Status == DriverStatus.Reserved
             && ReservedTripId == tripId && ReservationId == reservationId)
         {
-            return; // same-reservation idempotent replay (DSI-005): no new effect, provenance holds.
+            return; // same-reservation idempotent replay: no new effect, provenance holds.
         }
 
         if (Version != expectedVersion)
@@ -275,7 +274,7 @@ public sealed class Driver
         }
     }
 
-    // Exact-token release with fencing (B-W07-01/02, DSI-004/033, R-06).
+    // Exact-token release with fencing.
     // Rule: release returns success iff the AVAILABLE-no-refs end-state holds
     // or is achieved by this call; a DIFFERENT live reservation conflicts and
     // is never freed. Concretely: exact token on RESERVED frees (effect);
@@ -374,8 +373,8 @@ public sealed class Driver
         Touch();
     }
 
-    // DSI-002: state/reservation coherence. Never persist AVAILABLE+reservationId etc.
-    // The reservation round (W08 provenance) follows the same lifecycle: only
+    // State/reservation coherence. Never persist AVAILABLE+reservationId etc.
+    // The reservation round follows the same lifecycle: only
     // RESERVED may carry it (NULL allowed for historical rows); AVAILABLE,
     // OFFLINE and ON_TRIP must have cleared it together with the refs.
     private void AssertCoherence()

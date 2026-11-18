@@ -5,15 +5,14 @@
 > **Course:** Distributed Systems  
 > **Topic:** DS03 — Ride-hailing Microservices System simulating Grab/Uber  
 > **Type:** Verification Strategy + Experimental Methodology + Fault Campaign + Evidence Contract + Demonstration/Defense Runbook  
-> **Status:** **PROPOSED FREEZE v2.0 — REVIEW CANDIDATE**  
+> **Status:** Frozen verification contract  
 > **Baseline date:** **2026-09-26**  
 > **Parents:**  
 > `00-project-scope-architecture.md` — scope, architecture, failure model, technology baseline  
 > `01-domain-correctness-contract.md` — state machines, DSI safety invariants, DSL liveness obligations, DSR races  
 > `02-distributed-workflow-engineering.md` — message/retry/Outbox/Saga/RabbitMQ/Redis/recovery semantics  
-> **Children:** `04-team-execution-plan.md`, `05A/05B/05C`  
 > **Normative role:** source of truth for test taxonomy, exact proof families, scenario IDs, concurrency/fault methodology, invariant-auditor expectations, performance experiments, evidence bundles, test environments, acceptance gates, demo sequence and claim discipline.  
-> **Not source of truth for:** domain semantics (`01`), distributed mechanism semantics (`02`), task ownership/calendar (`04/05`).  
+> **Not source of truth for:** domain semantics (`01`), distributed mechanism semantics (`02`).  
 > **Change policy:** weakening a test oracle, removing a proof for a DSI/DSL, replacing a real dependency with a mock where dependency behavior is the subject of the claim, lowering mandatory fault/concurrency coverage, or changing experiment methodology requires review against Docs 00–02.
 
 > **Verification thesis.**  
@@ -2656,7 +2655,7 @@ AUD-01 PASS
 
 Do not use N=100 if it risks demo timing; N=100 remains recorded evidence.
 
-Member B explains linearization/OCC.
+The Driver/Matching speaker explains linearization and OCC.
 
 ---
 
@@ -2710,7 +2709,7 @@ Driver available
 
 Show final auditor.
 
-Member A/C explain Saga and operation identity.
+The Trip and Payment speakers explain Saga and operation identity.
 
 ---
 
@@ -2728,7 +2727,7 @@ State claim narrowly.
 
 # 31. Demo role split
 
-## Member A
+## Trip and Saga speaker
 
 Explains:
 
@@ -2738,11 +2737,11 @@ Explains:
 - compensation;
 - terminal monotonicity.
 
-Runs/owns compensation segment.
+Runs/owns the compensation segment.
 
 ---
 
-## Member B
+## Driver and Matching speaker
 
 Explains:
 
@@ -2752,11 +2751,11 @@ Explains:
 - UNKNOWN reservation;
 - performance.
 
-Runs contention/reservation fault segment.
+Runs the contention/reservation fault segment.
 
 ---
 
-## Member C
+## Payment and Platform speaker
 
 Explains:
 
@@ -2766,7 +2765,7 @@ Explains:
 - observability;
 - broker recovery.
 
-Runs messaging failure segment or Payment path.
+Runs the messaging failure segment or Payment path.
 
 ---
 
@@ -3358,9 +3357,9 @@ restart delivers the queued notifications without duplicates.
 
 ```text
 R1–R20   Driver Reject domain, HTTP, race, crash/outbox, release and
-         terminal-monotonicity cases (Doc 05A §37).
+         terminal-monotonicity cases.
 N1–N22   Recipient resolution, inbox isolation, dedup, replay, outage,
-         migration and content-safety cases (Doc 05C §48).
+         migration and content-safety cases.
 ```
 
 Critical integration cases use real PostgreSQL and RabbitMQ; release-smoke
@@ -3384,5 +3383,5 @@ SHA/tree, environment and provider versions, HTTP request/result, JWT role
 (no secret or token), RabbitMQ message identities, authoritative Trip/Driver/
 Matching/Payment DB rows, notification DB rows, Outbox/processed-message
 records, TRX/test output and the final invariant-auditor result. Logs alone,
-event-row insertion alone, or an old W13 performance figure are never proof
+event-row insertion alone, or an old performance figure are never proof
 for this amendment.

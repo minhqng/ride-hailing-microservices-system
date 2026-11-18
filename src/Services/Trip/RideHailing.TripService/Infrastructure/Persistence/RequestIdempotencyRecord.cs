@@ -1,4 +1,4 @@
-// Request-idempotency persistence type (A-W04-02).
+// Request-idempotency persistence type.
 //
 // Durable local request-effect bookkeeping, NOT a Trip domain entity: it
 // records that one (scope,key) logical request already produced one Trip

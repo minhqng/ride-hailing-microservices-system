@@ -1,4 +1,4 @@
-// W08 migration proof on REAL PostgreSQL (reservation round lineage).
+// Migration proof on REAL PostgreSQL (reservation round lineage).
 // Path A (fresh): the applied baseline carries the reserved_round provenance
 // column with its range and coherence constraints.
 // Path B (upgrade): a disposable pre-004 database (001-003 only) keeps a

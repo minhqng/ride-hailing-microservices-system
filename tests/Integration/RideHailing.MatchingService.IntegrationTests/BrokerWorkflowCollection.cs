@@ -1,4 +1,4 @@
-// B-W08: shared disposable infrastructure for broker component proof:
+// Shared disposable infrastructure for broker component proof:
 // matching_db (round ledger) + Redis (derived projection) + RabbitMQ
 // (transport). One set per test run.
 namespace RideHailing.MatchingService.IntegrationTests;

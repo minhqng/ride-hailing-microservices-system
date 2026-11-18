@@ -1,8 +1,8 @@
-// B-W05-06: MatchingAttempt ledger base (Doc 01 §8.3, Doc 02 §12.3).
-// W5 scope: READY rows with stable reservationIds (DSI-018 groundwork) +
-// REJECTED marking vocabulary (read by eligibility for DSI-023).
-// IN_FLIGHT/UNKNOWN/RESERVED transitions belong to the reserve flow (W6/W7)
-// and do not exist here by design.
+// MatchingAttempt ledger base.
+// Scope: READY rows with stable reservationIds (groundwork) and the REJECTED
+// marking vocabulary read by eligibility.
+// IN_FLIGHT/UNKNOWN/RESERVED transitions belong to the reserve flow and do not
+// exist here by design.
 namespace RideHailing.MatchingService.Domain.Matching;
 
 public enum MatchingAttemptState
@@ -59,8 +59,9 @@ public sealed class MatchingAttempt
     }
 
     /// <summary>
-    /// Marks a conclusively rejected candidate (eligibility reads this for DSI-023).
-    /// Only READY → REJECTED exists in W5; reserve-driven transitions are W6/W7.
+    /// Marks a conclusively rejected candidate (eligibility reads this state).
+    /// Only READY → REJECTED exists here; reserve-driven transitions belong to
+    /// the reserve flow.
     /// </summary>
     public void MarkRejected()
     {

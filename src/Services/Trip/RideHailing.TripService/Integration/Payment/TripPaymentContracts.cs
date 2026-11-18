@@ -1,11 +1,11 @@
-// Trip-produced Payment command payloads (A-W10, Doc 05A §5.1, Doc 02 §15).
+// Trip-produced Payment command payloads.
 //
-// SHAPE ONLY for the W10 producer leg: Payment (C) owns consuming
+// SHAPE ONLY for the producer leg: Payment owns consuming
 // payment.commands.q and deciding provider effects; Trip owns the exact
 // logical identities. Every command carries its stable operationKey on both
 // the envelope and payload; Payment rejects any mismatch. sagaId remains
 // envelope lineage. One saga step = one operationKey = at most one logical
-// Payment effect (DSI-034). The payload also carries the ride identity and
+// Payment effect. The payload also carries the ride identity and
 // frozen fare required by Payment authority.
 
 using System.Text.Json.Serialization;
@@ -64,7 +64,7 @@ public sealed record VoidPaymentAuthorizationV1
 /// <summary>
 /// Deterministic frozen-fare → minor-unit conversion shared by all three
 /// Payment commands, so authorize/capture/void always quote the same amount
-/// for one ride (the fare snapshot is immutable, DSI-014).
+/// for one ride (the fare snapshot is immutable).
 /// </summary>
 public static class PaymentAmounts
 {

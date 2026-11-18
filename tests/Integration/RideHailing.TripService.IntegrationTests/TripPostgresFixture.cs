@@ -1,4 +1,4 @@
-// Shared disposable real-PostgreSQL fixture (A-W02-05).
+// Shared disposable real-PostgreSQL fixture.
 //
 // Uses Testcontainers.PostgreSql with the repository-pinned PostgreSQL family
 // (postgres:18.6@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81, same as compose.yaml). One container per test run, started

@@ -23,7 +23,7 @@ try {
 
     $filter = 'FullyQualifiedName~FailurePolicyTests|FullyQualifiedName~OutboxRelayUnitTests|FullyQualifiedName~MessagingMetricsTests|FullyQualifiedName~OutboxMessageTests|FullyQualifiedName~RabbitConnectionFactoryTests'
     dotnet test tests/Integration/RideHailing.Platform.IntegrationTests -c Release --no-build --nologo --filter $filter
-    Assert-LastExitCode 'Deterministic Member C integration regression failed.'
+    Assert-LastExitCode 'Deterministic platform integration regression failed.'
 
     if ($WithDocker) {
         if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -38,6 +38,17 @@ try {
         })
         if ($missing.Count -gt 0) {
             throw "Release Compose requires explicit secrets: $($missing -join ', ')"
+        }
+        # Non-empty is not the same as production-safe. The development
+        # placeholders from .env.example must never reach a release render.
+        $developmentPlaceholders = @(
+            'postgres_dev_pw', 'identity_dev_pw', 'driver_dev_pw', 'trip_dev_pw',
+            'matching_dev_pw', 'payment_dev_pw', 'notification_dev_pw', 'ride_dev_pw')
+        $weak = @($releaseSecrets | Where-Object {
+            $developmentPlaceholders -contains [Environment]::GetEnvironmentVariable($_, 'Process')
+        })
+        if ($weak.Count -gt 0) {
+            throw "Release Compose received development placeholder values for: $($weak -join ', ')"
         }
 
         docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
@@ -73,7 +84,13 @@ try {
         Assert-LastExitCode 'HA Compose validation failed.'
     }
 
-    Write-Output 'PASS: Member C deterministic release gate.'
+    if ($WithDocker) {
+        Write-Output 'PASS: release gate (secret scan, build, unit/regression lanes, Compose release render).'
+    }
+    else {
+        Write-Output 'PASS: deterministic unit/build gate (secret scan, build, unit/regression lanes). Compose release render was not checked.'
+        Write-Output 'NOTE: use -WithDocker for the release Compose and HA-overlay acceptance checks.'
+    }
 }
 finally {
     Pop-Location

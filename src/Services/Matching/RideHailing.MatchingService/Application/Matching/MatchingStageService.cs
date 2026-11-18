@@ -1,4 +1,4 @@
-// B-REC-01/DSI-021: stage-aware candidate discovery for the production worker.
+// Stage-aware candidate discovery for the production worker.
 //
 // The broker only records durable intake. This service decides one stage at a
 // time: replay a frozen stage verbatim, or discover and freeze it atomically

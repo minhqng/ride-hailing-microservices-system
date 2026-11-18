@@ -1,7 +1,7 @@
-// CreateRide application command (A-W04-01).
+// CreateRide application command.
 //
 // Semantic/trusted inputs only: the Rider identity arrives as an explicit
-// application input (production auth extraction belongs to a later W4 slice),
+// application input (production auth extraction belongs to a later slice),
 // locations are domain TripLocation values, and the opaque client-supplied
 // Idempotency-Key travels as an exact string. No correlation/trace identity,
 // no HTTP context, no generated Trip identity, no fare, no timestamp: the

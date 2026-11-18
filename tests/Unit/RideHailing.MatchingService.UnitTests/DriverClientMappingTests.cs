@@ -1,4 +1,4 @@
-// B-W02-02: total-mapping proof for the Driver seam (stub transport, no server).
+// Total-mapping proof for the Driver seam (stub transport, no server).
 // Every row: request shape asserted + outcome mapping asserted.
 using System.Net;
 using System.Text;
@@ -76,7 +76,7 @@ public class DriverClientMappingTests
         Assert.Equal(trip.ToString(), body.GetProperty("tripId").GetString());
         Assert.Equal(res.ToString(), body.GetProperty("reservationId").GetString());
         Assert.Equal(3, body.GetProperty("expectedVersion").GetInt32());
-        // W09: the durable round rides the wire (Doc 02 §21.3) — Driver stores
+        // The durable round rides the wire — Driver stores
         // it on the win so restart/replay publication carries the SAME round.
         Assert.Equal(5, body.GetProperty("matchingRound").GetInt32());
         Assert.Equal(DriverReserveOutcomeKind.Reserved, result.Kind);
@@ -161,7 +161,7 @@ public class DriverClientMappingTests
         };
         var client = Client(stub, out _);
 
-        // Never a business answer: caller classifies UNKNOWN (W6/W7).
+        // Never a business answer: caller classifies UNKNOWN.
         await Assert.ThrowsAsync<HttpRequestException>(
             () => client.ReserveAsync(new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 1, MatchingRound: 2)));
     }
@@ -238,10 +238,10 @@ public class DriverClientMappingTests
     [Fact]
     public async Task Reconcile_Bare_Http404_Throws_Never_Maps_NotFound()
     {
-        // DSI-031: a bare 404 carries no domain body — it may be a wrong
-        // BaseAddress/proxy/missing route. Mapping it to conclusive NOT_FOUND
-        // would let the caller advance to the next candidate while an earlier
-        // reservation may already be committed (double reservation).
+        // A bare 404 carries no domain body: it may be a wrong BaseAddress,
+        // proxy or missing route. Mapping it to conclusive NOT_FOUND would let
+        // the caller advance to the next candidate while an earlier reservation
+        // may already be committed (double reservation).
         // NOT_FOUND arrives ONLY as a 200 body outcome (proven above).
         var driver = Guid.NewGuid();
         var res = Guid.NewGuid();

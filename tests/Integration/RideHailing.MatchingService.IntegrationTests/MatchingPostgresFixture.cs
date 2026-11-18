@@ -13,18 +13,21 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
 {
     static MatchingPostgresDatabase()
     {
-        // See DriverPostgresDatabase: explicit dispose, Ryuk disabled for determinism.
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        // See DriverPostgresDatabase: explicit dispose; Ryuk disabled by
+        // default, but an explicit operator value wins.
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private PostgreSqlContainer? _container;
 
     public string ConnectionString { get; private set; } = "";
 
-    /// <summary>Connection pool used by W9 Outbox/terminalization components.</summary>
+    /// <summary>Connection pool used by Outbox/terminalization components.</summary>
     public NpgsqlDataSource DataSource { get; private set; } = null!;
 
-    /// <summary>C's canonical shared Outbox store over the Matching database.</summary>
+    /// <summary>Canonical shared Outbox store over the Matching database.</summary>
     public NpgsqlOutboxStore OutboxStore { get; private set; } = null!;
 
     public async Task InitializeAsync()
@@ -32,6 +35,7 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
         var env = Environment.GetEnvironmentVariable("MATCHING_TEST_POSTGRES");
         if (!string.IsNullOrWhiteSpace(env))
         {
+            EnsureDisposable(env, "MATCHING_TEST_POSTGRES");
             await using var probe = new NpgsqlConnection(env);
             await probe.OpenAsync();
             ConnectionString = env;
@@ -72,7 +76,7 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
     }
 
     /// <summary>
-    /// W9: apply C's embedded Outbox DDL after the Matching-owned migrations.
+    /// Apply the embedded Outbox DDL after the Matching-owned migrations.
     /// NpgsqlOutboxStore.EnsureSchemaAsync is the single schema source (no
     /// test-local copy), matching the production startup path.
     /// </summary>
@@ -98,6 +102,25 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
     public static string ConfiguredConnectionString() =>
         Environment.GetEnvironmentVariable("MATCHING_TEST_POSTGRES")
         ?? "Host=localhost;Port=5432;Database=matching_db;Username=matching_app;Password=matching_dev_pw";
+
+    // An external database is only accepted when it is provably disposable:
+    // the fixture applies migrations and tests truncate tables, so pointing it
+    // at a shared database must be an explicit, acknowledged decision.
+    private static void EnsureDisposable(string connectionString, string variable)
+    {
+        var database = new NpgsqlConnectionStringBuilder(connectionString).Database ?? "";
+        var acknowledged = Environment.GetEnvironmentVariable(variable + "_ALLOW_DESTRUCTIVE");
+        if (string.Equals(acknowledged, "1", StringComparison.Ordinal)
+            || database.EndsWith("_test", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"{variable} targets database '{database}', which is not provably disposable. " +
+            $"Use a database whose name ends with '_test', or set {variable}_ALLOW_DESTRUCTIVE=1 " +
+            "to confirm the fixture may migrate and truncate it.");
+    }
 
     public async Task<HashSet<string>> GetTablesAsync()
     {
@@ -136,7 +159,7 @@ public sealed class MatchingPostgresDatabase : IAsyncLifetime
 
     private static string FindMigrationsDir()
     {
-        // NOTE (B-W07): source-tree candidates come FIRST. Test assemblies
+        // NOTE: source-tree candidates come FIRST. Test assemblies
         // that (transitively) reference another service inherit that
         // service's copied *.sql Content into their own output dir, so the
         // bin-dir candidate below can resolve to FOREIGN scripts (e.g. driver

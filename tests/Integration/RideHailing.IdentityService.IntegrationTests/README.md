@@ -1,7 +1,7 @@
 # Auth negative tests (SEC-01–04)
 
-Executable negative-test skeleton for authentication/authorization on real
-business APIs. The seven cases run against owner-supplied fixtures and assert
+Executable negative-test suite for authentication/authorization on real
+business APIs. The seven cases run against an owner-supplied fixture and assert
 that rejected requests leave authoritative state unchanged.
 
 Spec: `../../../docs/03-verification-experiments-demo.md` SEC-01–04.
@@ -9,17 +9,20 @@ Test: `AuthNegativeTests.cs` in this directory.
 
 ## Status
 
-Skipped until `RIDE_AUTH_FIXTURE` is configured. Missing fixture fields or
-cases fail once enabled. Passing these tests does not constitute production
-auth acceptance; owner review of route semantics, tokens and snapshot coverage
-is required.
+Opt-in in the solution-wide regression: the theory skips unless
+`RIDE_AUTH_FIXTURE` is set, so the full run reports one documented skip.
+`scripts/test/security-gate.py --identity-tests` generates the fixture and runs
+all seven cases against the live stack. Missing fixture fields or cases fail
+once enabled. Passing these tests is evidence for the SEC-01–04 boundaries, not
+a substitute for owner review of route semantics, tokens and snapshot coverage.
 
 ## Activation
 
 1. Start the real APIs, Identity and owned DBs with deterministic users
    (e.g. Rider A, Rider B, Driver A). Keep unrelated writers out of fixture
    scope.
-2. Create a local JSON fixture file using the shape below. Replace routes,
+2. Create a local JSON fixture file using the shape below (or let
+   `security-gate.py --identity-tests` generate it). Replace routes,
    request bodies, environment variable names and SQL with the actual owner
    contracts.
 3. Set `RIDE_AUTH_FIXTURE` to its absolute path. Provide tokens and the owner

@@ -1,7 +1,7 @@
-// W5 lifecycle component proofs against disposable real PostgreSQL 18.x.
+// Lifecycle component proofs against disposable real PostgreSQL 18.x.
 //
-// Exercises the A-W05 application coordination (load → identity → single
-// aggregate operation → persist → map) for every local lifecycle intake:
+// Exercises the application coordination (load → identity → single aggregate
+// operation → persist → map) for every local lifecycle intake:
 // StartMatching, Driver reservation/accept/reject, payment authorization,
 // matching failure, start/complete and cancel. Each test asserts the
 // authoritative reloaded row (never the handler result alone), the exact
@@ -335,9 +335,9 @@ public sealed class TripLifecycleComponentTests
         Assert.Equal(driverId, trip.Assignment!.DriverId);
         Assert.Equal(reservationId, trip.Assignment.ReservationId);
         Assert.Equal(1, trip.CurrentMatchingRound);
-        // W5 counted four transitions; W10's saga path additionally discharges
-        // the ReconcilePayment obligation in the same commit because DECLINED
-        // is conclusive no-effect authority evidence.
+        // Four transitions, plus the saga path discharging the ReconcilePayment
+        // obligation in the same commit because DECLINED is conclusive no-effect
+        // authority evidence.
         Assert.Equal(5, trip.Version);
         Assert.True(Math.Abs((trip.UpdatedAt.ToUniversalTime() - ActionAt).TotalMilliseconds) < 1);
     }
@@ -566,7 +566,7 @@ public sealed class TripLifecycleComponentTests
     {
         await MigrateAsync();
         var rider = Guid.NewGuid();
-        var tripId = await CreateOwnedTripAsync(rider, "w10-cancel-start-race");
+        var tripId = await CreateOwnedTripAsync(rider, "cancel-start-race");
         var driverId = Guid.NewGuid();
         var reservationId = Guid.NewGuid();
 

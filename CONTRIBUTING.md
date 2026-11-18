@@ -54,4 +54,4 @@ exact expected old SHA. See the published-history protocol in
 
 Mention: issue, canonical doc section, DSI/DSL where relevant, tests, evidence path, reviewer focus. Use `.github/PULL_REQUEST_TEMPLATE.md`.
 
-No CODEOWNERS (no usernames supplied; Doc 04 §3.3 defines reviewer matrix).
+No CODEOWNERS file is used; the maintainer assigns a reviewer per PR.

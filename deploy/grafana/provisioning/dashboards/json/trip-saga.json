@@ -10,7 +10,7 @@
     {"type":"timeseries","title":"Trip Outbox backlog / age","id":5,"gridPos":{"h":8,"w":8,"x":16,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum({__name__=~\"outbox_pending(_messages)?\"})","legendFormat":"pending","refId":"A"},{"expr":"max({__name__=~\"outbox_oldest_pending_age(_seconds)?\"})","legendFormat":"oldest seconds","refId":"B"}]}
   ],
   "schemaVersion": 41,
-  "tags": ["member-a","trip","saga","outbox"],
+  "tags": ["trip","saga","outbox"],
   "templating": {"list": []},
   "time": {"from":"now-1h","to":"now"},
   "title": "Trip, Saga and Outbox",

@@ -94,7 +94,7 @@ public class PaymentMessagingTransactionTests(PaymentDatabase database) : IClass
 
         var tripId = Guid.NewGuid();
         var operationKey = $"{tripId:D}:authorize:v1";
-        // Exact Trip (A-W10) producer shape: operationKey/sagaId travel on the
+        // Exact Trip producer shape: operationKey/sagaId travel on the
         // envelope and are deliberately absent from the payload.
         var payload = JsonSerializer.SerializeToElement(new
         {

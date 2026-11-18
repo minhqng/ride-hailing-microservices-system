@@ -1,10 +1,9 @@
-// Trip aggregate EF mapping (A-W03-07, A-W04-04 active-Rider defense,
-// A-W05 round/timestamp durability).
+// Trip aggregate EF mapping.
 //
-// Authoritative W3 persistence for the Trip aggregate only, plus the W4
-// DSI-013 partial unique index (one active Trip per Rider) and the W5
-// lifecycle columns (current matching round, last-transition timestamp) with
-// round/assignment database defense (DSI-009, DSI-016). Value objects
+// Authoritative persistence for the Trip aggregate only, plus the partial
+// unique index (one active Trip per Rider) and the lifecycle columns
+// (current matching round, last-transition timestamp) with
+// round/assignment database defense. Value objects
 // map into the same trips table as ComplexProperty columns (relational, not
 // JSON); no separate value-object tables, no entity keys for value objects,
 // no Driver/Matching/Payment/Saga/Outbox/Inbox tables. Request-idempotency
@@ -75,7 +74,7 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             .IsRequired()
             .HasConversion(StateConverter());
 
-        // DSI-013 race-safe defense: at most one active-state Trip row per
+        // Race-safe defense: at most one active-state Trip row per
         // Rider. The state set comes from the domain policy
         // (TripStatePolicy.ActiveForRiderBooking) mapped through the canonical
         // wire names, so the index predicate cannot drift from the domain
@@ -99,7 +98,7 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             .ValueGeneratedNever()
             .IsConcurrencyToken();
 
-        // DS03 Driver Reject (Doc 01 §40.1.2): a bounded durable reason for
+        // Driver Reject: a bounded durable reason for
         // MATCH_FAILED. Null is valid for every non-terminal state and for
         // historical MATCH_FAILED rows created before this amendment.
         builder.Property(e => e.FailureReason)
@@ -113,7 +112,7 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             .HasColumnName("created_at")
             .IsRequired();
 
-        // W5 lifecycle durability (A-W05-01/02): the current matching
+        // Lifecycle durability: the current matching
         // generation and the last-transition timestamp. The round starts at 0
         // (no round opened) and StartMatching advances it to 1; UpdatedAt
         // starts equal to CreatedAt and advances once per committed local
@@ -166,7 +165,7 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
         });
 
         // Optional coherent assignment reference: all NULL when absent,
-        // all NOT NULL when present (DSI-009 defense-in-depth). The complex
+        // all NOT NULL when present (defense-in-depth). The complex
         // itself is optional; its scalar columns are nullable in the table
         // because the parent is optional even though the CLR scalars are
         // non-nullable value types. Do NOT mark the inner scalars optional:
@@ -203,7 +202,7 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
             t.HasCheckConstraint(
                 "CK_trips_fare_amount_non_negative",
                 "fare_amount >= 0");
-            // W5 round durability (DSI-009, DSI-016): the current generation
+            // Round durability: the current generation
             // never goes negative; CREATED never carries a round; every other
             // non-cancelled state went through StartMatching so it carries an
             // open round (CANCELLED is excluded so a future pre-matching

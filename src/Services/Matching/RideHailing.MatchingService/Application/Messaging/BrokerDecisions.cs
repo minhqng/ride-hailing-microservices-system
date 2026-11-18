@@ -1,7 +1,7 @@
-// B-W08 failure disposition for consumed messages (Doc 02 §16.2 taxonomy,
-// interim until C's DLQ lands). Pure functions, directly unit-tested:
+// Failure disposition for consumed messages (interim until the DLQ lands).
+// Pure functions, directly unit-tested:
 //   - validation/domain/permanent/bug → Drop (poison must never hot-loop;
-//     DLQ/error-store arrival is W9/C scope, error is logged with identity).
+//     DLQ/error-store arrival is out of scope; the error is logged with identity).
 //   - transient infrastructure (PG down, socket, timeout) → Requeue.
 //   - caller cancellation → Requeue (redeliver later; never ACK away work).
 // Bounded by the broker acquisition count: RabbitMQ 4.x quorum queues

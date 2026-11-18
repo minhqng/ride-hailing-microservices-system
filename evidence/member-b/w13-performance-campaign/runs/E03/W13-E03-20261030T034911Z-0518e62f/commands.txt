@@ -1,1 +1,0 @@
-python scripts/perf/w13.py e03 --replicas 1 --rate 5.0 --duration 5s --worker-mode disabled --seed 1303 --mode smoke

@@ -20,8 +20,8 @@ import uuid
 root = Path(__file__).resolve().parents[2]
 (root / "plans/reports").mkdir(parents=True, exist_ok=True)
 project = os.environ.get("COMPOSE_PROJECT_NAME", "")
-if not project.startswith(("team-w12-", "ride-ci-")):
-    raise SystemExit("A dedicated team-w12-* or ride-ci-* Compose project is required.")
+if not project.startswith(("ride-test-", "ride-ci-")):
+    raise SystemExit("A dedicated ride-test-* or ride-ci-* Compose project is required.")
 settings = dict(line.split("=", 1) for line in (root / ".env").read_text().splitlines() if "=" in line and not line.startswith("#"))
 checks = []
 
@@ -92,7 +92,7 @@ driver = expect("own-driver-create", 201, 8080, "POST", "/drivers", {"userId": o
 driver_id = driver["driverId"]
 expect("own-driver-read", 200, 8080, "GET", "/drivers/" + driver_id, token=owner)
 
-# DS03 inbox boundary: no client-supplied identity is accepted, and both the
+# Inbox boundary: no client-supplied identity is accepted, and both the
 # direct service and the Gateway enforce the authenticated principal.
 expect("notification-gateway-missing-token", 401, 8080, "GET", "/notifications/me")
 expect("notification-direct-missing-token", 401, 8106, "GET", "/notifications/me")
@@ -207,7 +207,7 @@ if "--identity-tests" in sys.argv:
         connection = connection.replace("127.0.0.1", "host.docker.internal")
         environment["RIDE_AUTH_FIXTURE"] = "/work/TestResults/security-fixture.json"
         environment["GATE_DATABASE"] = connection
-        command = ["docker", "run", "--rm", "--name", "team-w12-identity-gate", "-v", str(root).replace("\\", "/") + ":/work", "-w", "/work"] + sum((["-e", key] for key in environment if key.startswith("GATE_") or key == "RIDE_AUTH_FIXTURE"), []) + ["mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b"] + command
+        command = ["docker", "run", "--rm", "--name", "ride-identity-gate", "-v", str(root).replace("\\", "/") + ":/work", "-w", "/work"] + sum((["-e", key] for key in environment if key.startswith("GATE_") or key == "RIDE_AUTH_FIXTURE"), []) + ["mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b"] + command
     else:
         environment["RIDE_AUTH_FIXTURE"] = str(fixture_path)
         environment["GATE_DATABASE"] = connection

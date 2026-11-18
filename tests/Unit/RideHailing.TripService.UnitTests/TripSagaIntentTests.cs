@@ -1,12 +1,12 @@
-// Trip saga payment/driver intent identity (A-W10-02/04/05/06/07).
+// Trip saga payment/driver intent identity.
 //
 // ORACLE: every saga obligation derives its messageId from the exact
-// business identity and its operationKey from the frozen per-trip lineage
-// (Doc 05A §18.4). A retry, redelivery or restart rebuilds the IDENTICAL
-// logical message — never a fresh identity — and the payload quotes the
-// immutable frozen fare (DSI-014) deterministically converted to minor
-// units. Capture intents are constructible ONLY from a COMPLETED Trip
-// (DSI-027) and void intents only from a CANCELLED one.
+// business identity and its operationKey from the frozen per-trip lineage.
+// A retry, redelivery or restart rebuilds the IDENTICAL logical message —
+// never a fresh identity — and the payload quotes the immutable frozen fare
+// deterministically converted to minor units. Capture intents are
+// constructible ONLY from a COMPLETED Trip
+//  and void intents only from a CANCELLED one.
 
 using System.Text.Json;
 using RideHailing.Messaging.Topology;
@@ -26,7 +26,7 @@ public sealed class TripSagaIntentTests
     private static Trip TripAt(Func<Trip, bool> advance)
     {
         var trip = Trip.Create(Guid.NewGuid(), Guid.NewGuid(), new(10.7, 106.6),
-            new(10.8, 106.7), new("VND", 50000m, "w10", Now), Now);
+            new(10.8, 106.7), new("VND", 50000m, "v1", Now), Now);
         Assert.True(advance(trip));
         return trip;
     }
@@ -134,7 +134,7 @@ public sealed class TripSagaIntentTests
         Assert.Equal(intent.OperationKey,
             JsonDocument.Parse(intent.PayloadJson).RootElement.GetProperty("operationKey").GetString());
 
-        // DSI-027: capture is constructible only after the completion pivot.
+        // Capture is constructible only after the completion pivot.
         var notCompleted = InProgressRide();
         var authorizedSaga = SagaFor(notCompleted, RideSagaStep.Authorized);
         Assert.Throws<InvalidOperationException>(() =>

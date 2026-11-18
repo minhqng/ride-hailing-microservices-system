@@ -1,4 +1,4 @@
-// B-W09-03/04: frozen Matching terminal-result contract. The identity is a
+// Frozen Matching terminal-result contract. The identity is a
 // deterministic RFC 9562 UUIDv8 derived from (tripId, matchingRound), so every
 // retry, duplicate request, restart and relay republish reuses exactly one
 // logical result identity. The wire payload stays the minimal shape the

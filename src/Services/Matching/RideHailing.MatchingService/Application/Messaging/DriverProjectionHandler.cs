@@ -1,5 +1,5 @@
-// B-W08-03/04: Driver state/location events -> derived Redis projection.
-// The W4 atomic function owns all guard semantics (version/freshness/GEO);
+// Driver state/location events -> derived Redis projection.
+// The atomic projection function owns all guard semantics (version/freshness/GEO);
 // this handler only maps broker events to updater intents. Degraded updater
 // results become bounded redelivery (transient/degraded), never silent
 // success: a degraded projection must heal via redelivery or later events.

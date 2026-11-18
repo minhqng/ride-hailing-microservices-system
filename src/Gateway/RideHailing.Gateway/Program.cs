@@ -51,7 +51,8 @@ app.UseAuthorization();
 app.MapReverseProxy();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "gateway-service" }));
-app.MapRideReadiness();
+// Stateless edge: no owned database, so process-only readiness is correct.
+app.MapRideReadiness(requiresOwnedDatabase: false);
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "gateway-service", environment = env.EnvironmentName }));
 

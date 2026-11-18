@@ -1,4 +1,4 @@
-// B-W04-01: projection key layout (05B section 5). Matching-owned derived state.
+// Projection key layout. Matching-owned derived state.
 namespace RideHailing.MatchingService.Application.Projection;
 
 public static class RedisProjectionKeys

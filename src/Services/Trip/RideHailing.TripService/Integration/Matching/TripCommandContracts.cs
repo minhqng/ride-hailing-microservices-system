@@ -1,12 +1,12 @@
-// Trip-produced command payloads (Doc 02 §6, §12.9).
+// Trip-produced command payloads.
 //
-// SHAPE ONLY for the W9 Outbox producer leg. Matching/Driver own the consumer
+// SHAPE ONLY for the Outbox producer leg. Matching/Driver own the consumer
 // semantics; Trip owns the exact identities and emits these commands only
 // atomically with the terminal Trip transition that created the obligation.
 //
 // ReleaseDriverReservationV1 never carries a Driver id alone: the exact
 // (tripId, driverId, reservationId, matchingRound) tuple is required so a
-// stale or foreign reservation can never be released (A-W07-02).
+// stale or foreign reservation can never be released.
 
 using System.Text.Json.Serialization;
 
@@ -39,8 +39,9 @@ public sealed record ReleaseDriverReservationV1
 }
 
 /// <summary>
-/// Driver-actor command: mark the exact reservation's trip as started (B owns
-/// the Driver FSM transition; Trip only emits the durable command).
+/// Driver-actor command: mark the exact reservation's trip as started (the
+/// Driver service owns the FSM transition; Trip only emits the durable
+/// command).
 /// </summary>
 public sealed record MarkDriverTripStartedV1
 {

@@ -1,4 +1,4 @@
-// B-W08 broker options for the Driver service (05B §17). Queue/exchange
+// Broker options for the Driver service. Queue/exchange
 // names come from the frozen catalog (RideTopology); only connection,
 // budgets and enablement are operator configuration, validated at startup.
 namespace RideHailing.DriverService.Application.Messaging;

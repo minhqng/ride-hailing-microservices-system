@@ -1,13 +1,13 @@
-// Trip-owned diagnostics instruments (A-W12-01/02, Doc 05A §20.2).
+// Trip-owned diagnostics instruments.
 //
 // OBSERVATION ONLY. Every instrument here is best-effort: recording never
 // throws into a business path, never writes to the database and never
 // influences a Trip/Saga/Outbox transaction. Logs and traces are diagnostic
-// correlation, never authoritative recovery state (Doc 05A §20 mistake 7).
+// correlation, never authoritative recovery state (mistake 7).
 //
-// NAMING. Instruments follow the repository dot convention (like C's
-// outbox.pending); an OTel Prometheus exporter renders them as the canonical
-// Doc 05A §20.2 names:
+// NAMING. Instruments follow the repository dot convention (like the shared
+// outbox.pending); an OTel Prometheus exporter renders them as canonical
+// names:
 //
 //   trip.created                 -> trip_created_total
 //   trip.cancelled               -> trip_cancelled_total
@@ -15,17 +15,17 @@
 //   saga.compensation            -> saga_compensation_total
 //   saga.requires_review         -> saga_requires_review_total
 //   saga.active{step}            -> saga_active{step}
-//   (outbox.pending / outbox.oldest_pending.age stay C-owned shared
-//    instruments; Trip reuses them and adds no duplicate measurement)
+//   (outbox.pending / outbox.oldest_pending.age stay shared instruments;
+//    Trip reuses them and adds no duplicate measurement)
 //
 // CARDINALITY. Only bounded vocabulary values become dimensions: the
 // `reason` tag carries domain rejection class names (never TripErrorCode
 // messages), the `step` tag carries canonical RideSagaStep names. tripId,
 // reservationId, sagaId, operationKey, messageId, riderId and traceId are
-// span/log diagnostic fields (Doc 05A §20.2 safe-field list), never metric
+// span/log diagnostic fields (safe-field list), never metric
 // labels.
 //
-// SEMANTICS (frozen; see also the W12 telemetry tests):
+// SEMANTICS (frozen; see also the telemetry tests):
 //   - trip.created counts one COMMITTED new Trip, never a replay and never a
 //     create-race reconciliation (the loser observed the winner's commit).
 //   - trip.cancelled counts one COMMITTED new CANCELLED transition, never an

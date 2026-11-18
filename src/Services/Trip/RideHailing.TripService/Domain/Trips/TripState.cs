@@ -1,4 +1,4 @@
-// Trip business-state vocabulary (Doc 01 §6.2-§6.4).
+// Trip business-state vocabulary.
 //
 // The nine P0 states below are the canonical ride lifecycle. Workflow-only
 // states (for example payment tracking or compensation tracking) belong to
@@ -7,7 +7,7 @@
 namespace RideHailing.TripService.Domain.Trips;
 
 /// <summary>
-/// Canonical P0 Trip business state (Doc 01 §6.2).
+/// Canonical P0 Trip business state.
 /// </summary>
 public enum TripState
 {
@@ -23,14 +23,13 @@ public enum TripState
 }
 
 /// <summary>
-/// Durable Trip-state helpers: the canonical terminal set (Doc 01 §6.4,
-/// DSI-010) and canonical wire names.
+/// Durable Trip-state helpers: the canonical terminal set and wire names.
 /// </summary>
 public static class TripStateRules
 {
     /// <summary>
     /// Canonical terminal states: COMPLETED, CANCELLED, MATCH_FAILED.
-    /// A terminal Trip never regresses to an active state (DSI-010).
+    /// A terminal Trip never regresses to an active state.
     /// </summary>
     public static bool IsTerminal(this TripState state) =>
         state is TripState.Completed or TripState.Cancelled or TripState.MatchFailed;

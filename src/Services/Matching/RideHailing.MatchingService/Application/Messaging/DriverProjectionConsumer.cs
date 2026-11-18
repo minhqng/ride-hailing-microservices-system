@@ -1,4 +1,4 @@
-// B-W08-03/04: Driver state/location broker consumer (BackgroundService).
+// Driver state/location broker consumer (BackgroundService).
 // Subscribes matching.driver-projection.q with manual ACK; each delivery
 // runs DriverProjectionHandler (derived Redis update) to completion before
 // ACK. Redis stays derived: Degraded results requeue boundedly and heal via

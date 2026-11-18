@@ -1,8 +1,8 @@
-// Canonical cancellation matrix (A-W05 cancellation + compensation
-// requirement). Every allowed pre-start state reaches CANCELLED with the
-// exact cleanup requirement REPRESENTED on the outcome (never executed:
-// no Saga, no broker dispatch, no release orchestration in W5). Rejected
-// branches prove no partial mutation.
+// Canonical cancellation matrix (cancellation + compensation requirement).
+// Every allowed pre-start state reaches CANCELLED with the exact cleanup
+// requirement REPRESENTED on the outcome (never executed: no Saga, no broker
+// dispatch, no release orchestration). Rejected branches prove no partial
+// mutation.
 
 using RideHailing.TripService.Domain.Trips;
 

@@ -1,4 +1,4 @@
-// B-W08-01/02 + B-REC-01: RideRequestedV1 durable intake.
+// RideRequestedV1 durable intake.
 // The handler commits the round, the canonical pickup center and the
 // auto-execute obligation BEFORE the consumer ACKs. The autonomous worker
 // (MatchingWorkDispatcher) is the production execution trigger; this handler
@@ -90,7 +90,7 @@ public sealed class RideRequestedHandler
     /// <summary>
     /// Production payload reader: identity plus the pickup center Matching
     /// needs to discover candidates after a restart. Dropoff and requestedAt
-    /// remain A-owned fields Matching does not consume; extra properties stay
+    /// remain Trip-owned fields Matching does not consume; extra properties stay
     /// forward-compatible.
     /// </summary>
     public static RideRequestedPayload ReadProductionPayload(

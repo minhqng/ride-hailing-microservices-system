@@ -1,4 +1,4 @@
-// Trip integration-test host (A-W02-04).
+// Trip integration-test host.
 //
 // Uses the ACTUAL Trip ASP.NET Core application via the standard
 // WebApplicationFactory<Program> pattern. No fake application entry path.

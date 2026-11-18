@@ -1,6 +1,6 @@
-// B-W05-01: candidate discovery over the W4 derived projection.
+// Candidate discovery over the derived projection.
 // Reads GEO (nearest-first, bounded) + projection hashes. Never authoritative:
-// every hit is re-validated by eligibility and finally by Driver reserve (W6).
+// every hit is re-validated by eligibility and finally by Driver reserve.
 // Redis failure propagates as RedisConnectionException/Timeout for the caller
 // to degrade (never silent empty, never fabricated candidates).
 using System.Globalization;

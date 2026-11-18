@@ -29,7 +29,7 @@ public class PaymentMessageContractsTests
     {
         // Trip's saga intake reads `reasonCode` from this outcome. The field
         // name is cross-service authority: renaming it would turn a terminal
-        // DECLINED into an uncertain outcome and strand REL-09 compensation.
+        // DECLINED into an uncertain outcome and strand compensation.
         var pending = PaymentOperation.Create("trip-1:authorize:v1", Guid.NewGuid(),
             PaymentOperationType.Authorize, 100, "VND", DateTimeOffset.UtcNow);
         var declined = await new PaymentSimulator().ExecuteAsync(

@@ -1,4 +1,4 @@
-// Rider identity derivation proof (A-W04-01 transport boundary).
+// Rider identity derivation proof (transport boundary).
 //
 // Trip consumes an already-authenticated ClaimsPrincipal and derives the
 // Rider actor from it; Trip never issues tokens or validates signatures

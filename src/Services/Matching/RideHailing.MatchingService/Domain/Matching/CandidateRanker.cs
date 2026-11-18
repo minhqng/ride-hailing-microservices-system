@@ -1,4 +1,4 @@
-// B-W05-03/07: deterministic ranking (DSI-019).
+// Deterministic ranking.
 // Total order, no floating-point equality traps for ORDERING purposes:
 // score ASC, then driverId ASC (Guid.CompareTo is total and stable).
 // NaN scores are rejected, not ordered (fail-closed: NaN input = bug).
@@ -50,7 +50,7 @@ public static class CandidateRanker
     }
 
     /// <summary>
-    /// Deterministic snapshot hash (DSI-019 replay key): SHA-256 over the full
+    /// Deterministic snapshot hash (replay key): SHA-256 over the full
     /// ordering determinants — config version, rank instant, and per entry the
     /// order, identity, distance, score, version and captured timestamp.
     /// Same (snapshot, config, rank instant) ⇒ same hash, always. A different

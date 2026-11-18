@@ -1,5 +1,5 @@
-// B-W09-03/04: Matching terminal-result event contract (Doc 02 §12.8,
-// DSI-035/DSR-010). The message type, exchange and routing key mirror the
+// Matching terminal-result event contract. The message type, exchange and
+// routing key mirror the
 // frozen catalog in RideTopology and the executable Trip consumer
 // (TripMessageHandler: MatchingFailedV1 on matching.failed.v1).
 //

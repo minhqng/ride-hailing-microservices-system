@@ -1,6 +1,6 @@
-// B-W03-07: Npgsql raw repository (chốt ③). Plain upsert/load; no OCC yet (W6).
-// B-W09-02: every authoritative Try* mutation records its required Driver
-// event through C's shared Outbox store on the SAME connection/transaction.
+// Npgsql raw repository. Plain upsert/load; no OCC yet.
+// every authoritative Try* mutation records its required Driver
+// event through the shared Outbox store on the SAME connection/transaction.
 using System.Diagnostics;
 using Npgsql;
 using RideHailing.DriverService.Domain.Drivers;
@@ -28,7 +28,7 @@ public sealed partial class DriverRepository
     {
         await using var conn = await _dataSource.OpenConnectionAsync(ct);
         await using var transaction = await conn.BeginTransactionAsync(ct);
-        // AUD-10: replicas serialize the baseline on a stable advisory key,
+        // Replicas serialize the baseline on a stable advisory key,
         // matching Payment's migration coordination. Transactional DDL rolls
         // back on a crash and releases the lock with the transaction.
         await using (var gate = new NpgsqlCommand(
@@ -46,7 +46,7 @@ public sealed partial class DriverRepository
     /// TEST/SEED-ONLY blind upsert (round-trips, fixture seeding). Production
     /// HTTP mutations MUST use the guarded Try* methods: a blind full-row
     /// overwrite with a stale object silently unreserves newer state
-    /// (DSI-003 lost-reservation shape). Kept public for test seeding.
+    /// (lost-reservation shape). Kept public for test seeding.
     /// </summary>
     public async Task SaveAsync(Driver driver, CancellationToken ct = default)
     {
@@ -82,7 +82,7 @@ public sealed partial class DriverRepository
     /// Insert-only create path for POST /drivers. Concurrent duplicate
     /// creates linearize on the drivers primary key: exactly one insert
     /// wins, losers observe the unique violation instead of silently
-    /// resetting existing state (DSR-002 duplicate-delivery safety).
+    /// resetting existing state (duplicate-delivery safety).
     /// Returns false when a driver with the same id already exists.
     /// </summary>
     public async Task<bool> TryInsertAsync(Driver driver, CancellationToken ct = default)
@@ -133,7 +133,7 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
-    /// B-W06-01/02/03: OCC reserve (Doc 01 §1.4/§4.4, DSI-001/003/005, Doc 02 §1.4).
+    /// OCC reserve.
     /// One short local transaction, no network call inside: SELECT .. FOR UPDATE
     /// serializes concurrent contenders on the driver row (the linearization
     /// point is lock acquisition order), then the single domain rule
@@ -142,10 +142,10 @@ public sealed partial class DriverRepository
     /// and foreign reservations conflict without mutating.
     /// A cross-row reservation_id collision (caller reused R on another driver)
     /// is backstopped by ux_drivers_reservation_id and reported as conflict.
-    /// matchingRound (W08 hardening): provenance for DriverReservedV1 — recorded
+    /// matchingRound: provenance for DriverReservedV1 — recorded
     /// on the win so restart/replay publication carries the SAME generation.
     ///
-    /// B-W12-01/04: instrumented entry. The success counter is emitted only
+    /// instrumented entry. The success counter is emitted only
     /// after the core returns, which is after COMMIT; conflicts are counted
     /// only when the domain rule or the reservation-identity backstop rejected
     /// them. Database/transport exceptions propagate without a domain metric.
@@ -305,7 +305,7 @@ public sealed partial class DriverRepository
         {
             // Backstop for the documented cross-row reservation collision: the
             // caller reused one reservationId on two drivers, so exactly one
-            // identity table row may hold it. NARROW on purpose (W08 hardening):
+            // identity table row may hold it. NARROW on purpose:
             // any OTHER unique violation is a system anomaly, not a domain
             // conflict — masking it here would let Matching advance the
             // candidate on a fabricated rejection instead of staying UNKNOWN.
@@ -331,8 +331,8 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
-    /// B-W12-01/04: instrumented exact-token release. A conflict means the
-    /// current reservation fenced this stale release (DSI-004); an
+    /// instrumented exact-token release. A conflict means the
+    /// current reservation fenced this stale release; an
     /// AVAILABLE-no-refs replay is an idempotent success and is never counted
     /// as a second mutation.
     /// </summary>
@@ -373,8 +373,8 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
-    /// B-W07-01/02: exact-token release under the same row-lock discipline as
-    /// reserve (DSI-004 fencing, DSI-033 exact identity, R-06). The domain
+    /// exact-token release under the same row-lock discipline as
+    /// reserve (fencing, exact identity). The domain
     /// decides on the fresh locked row: exact token frees (effect), coherent
     /// AVAILABLE is an idempotent cleanup no-op, a live foreign reservation
     /// conflicts without mutation. No version parameter: token equality on
@@ -451,7 +451,7 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
-    /// B-W07-04 Race B: version-fenced GoOffline under row lock (DSR-004).
+    /// Version-fenced GoOffline under row lock.
     /// Only one of offline-vs-reserve may commit from the same version; the
     /// loser observes the winner's row and conflicts.
     /// </summary>
@@ -502,7 +502,7 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
-    /// DSI-003 closure for the online path: version-fenced GoOnline under row
+    /// Version-fenced GoOnline under row
     /// lock. A stale online object must not overwrite a newer RESERVED row
     /// (the same lost-reservation shape as Race B, via the blind upsert).
     /// </summary>
@@ -553,7 +553,7 @@ public sealed partial class DriverRepository
     }
 
     /// <summary>
-    /// B-W07-07: read-only reservation truth for reconciliation (Doc 02 §12.6).
+    /// read-only reservation truth for reconciliation.
     /// Plain SELECT, no lock: this is a truth query, not a mutation. A racing
     /// writer only means "current truth", which is exactly what polling needs.
     /// </summary>
@@ -636,7 +636,7 @@ public sealed partial class DriverRepository
     /// <summary>
     /// Single rehydration point for every drivers-table read shape: the
     /// reserved_round provenance column travels with the row so the published
-    /// event generation stays stable across restart (W08 matchingRound lineage).
+    /// event generation stays stable across restart (matchingRound lineage).
     /// </summary>
     private static Driver RehydrateFromReader(NpgsqlDataReader reader)
     {

@@ -1,8 +1,23 @@
-# Identity Service — Shared / A-supported
+# Identity Service
 
-- Owner: Shared/A (reviewer C, backup B)
-- Authority: user/account, role, auth baseline. Does NOT own Driver/Trip/Payment.
-- DB: `identity_db` (role `identity_app`)
-- Deps: `ConnectionStrings__Postgres`, RSA validation/signing keys and service credentials described in [authentication runtime](../../../../docs/authentication-runtime.md).
-- Read: Docs 00 §3, 01 §3, 05A
-- Registration/login use the owned PostgreSQL account store and ASP.NET Core password hashing. Signed short-lived user and service grants are validated independently by Gateway and receiving services.
+Identity owns user accounts, roles and signed access grants. It does not own
+Driver, Trip or Payment state.
+
+- Database: `identity_db` (role `identity_app`).
+- Depends on: `ConnectionStrings__Postgres`, RSA signing/validation keys and
+  service credentials described in
+  [authentication runtime](../../../../docs/authentication-runtime.md).
+- Contract: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md).
+
+Registration and login use the owned PostgreSQL account store and ASP.NET Core
+password hashing. Short-lived user and service JWTs are RSA-signed and
+validated independently by the Gateway and every receiving service.
+
+| Method | Route | Purpose |
+|---|---|---|
+| POST | `/auth/register` | Create a Rider or Driver account |
+| POST | `/auth/login` | Issue a signed user token |
+| POST | `/connect/token` | Issue a signed service grant |
+
+The service exposes `/health/live`, `/health/ready` and `/info`. Readiness
+reports the owned database state.

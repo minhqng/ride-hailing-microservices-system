@@ -42,13 +42,29 @@ public static class PlatformBootstrap
             });
     }
 
-    public static void MapRideReadiness(this WebApplication app)
+    /// <summary>
+    /// Maps <c>/health/ready</c>. A service that owns a database must pass
+    /// <paramref name="requiresOwnedDatabase"/> = true: a missing connection
+    /// string is then a misconfiguration (503), never a "process-only" Ready
+    /// that hides a service which cannot persist anything. Only a stateless
+    /// process such as the Gateway may report process-only readiness.
+    /// </summary>
+    public static void MapRideReadiness(this WebApplication app, bool requiresOwnedDatabase = false)
     {
         app.MapGet("/health/ready", async (CancellationToken requestCancellation) =>
         {
             var connectionString = app.Configuration.GetConnectionString("Postgres");
             if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                if (requiresOwnedDatabase)
+                {
+                    return Results.Json(
+                        new { status = "NotReady", dependency = "owned-database", detail = "connection string not configured" },
+                        statusCode: 503);
+                }
+
                 return Results.Ok(new { status = "Ready", scope = "process-only; no database configured" });
+            }
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(requestCancellation);
             timeout.CancelAfter(TimeSpan.FromSeconds(3));
             try

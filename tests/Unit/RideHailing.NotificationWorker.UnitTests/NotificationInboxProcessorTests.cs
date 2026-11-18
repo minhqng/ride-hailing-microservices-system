@@ -1,4 +1,4 @@
-// DS03 notification inbox semantics (Doc 01 §40.2, Doc 02 §43, Doc 05C §48).
+// Notification inbox semantics.
 
 using System.Text.Json;
 using RideHailing.Messaging.Contracts;

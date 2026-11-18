@@ -1,6 +1,6 @@
 """Exercise authenticated ride intake, durable Matching and real business authorities.
 
-Requires the W10 controlled lifecycle actor built in Release. It invokes the
+Requires the controlled lifecycle actor built in Release. It invokes the
 production accept/start/complete handlers; these operations have no public HTTP
 transport. It never fabricates authority events or writes business rows directly.
 """
@@ -18,7 +18,7 @@ import uuid
 
 root = Path(__file__).resolve().parents[2]
 project = os.environ.get("COMPOSE_PROJECT_NAME", "")
-if not project.startswith(("team-w12-", "ride-ci-")):
+if not project.startswith(("ride-test-", "ride-ci-")):
     raise SystemExit("A dedicated test Compose project is required.")
 settings = dict(line.split("=", 1) for line in (root / ".env").read_text().splitlines() if "=" in line and not line.startswith("#"))
 
@@ -62,8 +62,8 @@ def account(role):
 def actor(command, trip, driver, reservation):
     # Only Trip's own connection is supplied to this operator-controlled actor.
     environment = dict(os.environ, TRIP_DB="Host=postgres;Database=trip_db;Username=trip_app;Password=" + settings["TRIP_DB_PASSWORD"], TRACEPARENT=trace_parent)
-    args = ["docker", "run", "--rm", "--name", "team-w12-lifecycle-actor", "--network", project + "_ride-net", "-v", str(root).replace("\\", "/") + ":/work:ro", "-w", "/work", "-e", "TRIP_DB", "-e", "TRACEPARENT",
-            "mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b", "dotnet", "scripts/test/w10-g3-harness/bin/Release/net10.0/RideHailing.W10Harness.dll", command, trip, driver, reservation]
+    args = ["docker", "run", "--rm", "--name", "ride-lifecycle-actor", "--network", project + "_ride-net", "-v", str(root).replace("\\", "/") + ":/work:ro", "-w", "/work", "-e", "TRIP_DB", "-e", "TRACEPARENT",
+            "mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b", "dotnet", "scripts/test/core-lifecycle-harness/bin/Release/net10.0/RideHailing.CoreLifecycleHarness.dll", command, trip, driver, reservation]
     result = subprocess.run(args, cwd=root, env=environment, capture_output=True, text=True, check=True)
     value = json.loads(result.stdout.strip().splitlines()[-1])
     assert value["ok"], "Production lifecycle handler rejected " + command
@@ -86,9 +86,9 @@ wait("Matching location projection", projection, lambda value: "AVAILABLE" in va
 scenarios = []
 assignment_proofs = []
 broker_recovery = []
-ha_recovery = os.environ.get("W14_BROKER_RECOVERY") == "1"
-if ha_recovery and (project != "team-w12-w14-ha" or not os.environ.get("COMPOSE_FILE")):
-    raise SystemExit("Broker recovery is restricted to the explicit disposable W14 HA project.")
+ha_recovery = os.environ.get("BROKER_RECOVERY") == "1"
+if ha_recovery and (not project.startswith("ride-test-ha-") or not os.environ.get("COMPOSE_FILE")):
+    raise SystemExit("Broker recovery is restricted to the explicit disposable HA project.")
 
 
 def brokers(action):
@@ -265,12 +265,12 @@ def git(*arguments):
 source = {"commit": git("rev-parse", "HEAD"), "tree": git("rev-parse", "HEAD^{tree}"), "status": git("status", "--porcelain"),
           "runId": os.environ.get("GITHUB_RUN_ID"), "checkoutSha": os.environ.get("GITHUB_SHA")}
 providers = {"postgres": rows("trip_db", "SELECT current_setting('server_version') AS version")[0]["version"]}
-rabbit_control = os.environ.get("W14_RABBIT_CONTROL_SERVICE", "rabbitmq")
+rabbit_control = os.environ.get("RABBIT_CONTROL_SERVICE", "rabbitmq")
 assert rabbit_control in ("rabbitmq", "rabbitmq-2", "rabbitmq-3")
 for service, control, command in [("rabbitmq", rabbit_control, ["rabbitmq-diagnostics", "server_version"]), ("redis", "redis", ["redis-server", "--version"])]:
     providers[service] = subprocess.check_output(["docker", "compose", "exec", "-T", control, *command], cwd=root, text=True).strip()
 providers["rabbitmqControlService"] = rabbit_control
-output = root / "plans/reports/core-runtime-gate.json"
+output = root / "TestResults/core-runtime-gate.json"
 output.parent.mkdir(parents=True, exist_ok=True)
 output.write_text(json.dumps({"project": project, "source": source, "providers": providers, "metrics": metrics, "scenarios": scenarios, "assignmentProofs": assignment_proofs, "checks": checks, "brokerRecovery": broker_recovery,
     "proofBoundary": "Real authenticated public ride intake; controlled production lifecycle handlers; live service authorities, providers and broker. No public accept/start/complete HTTP transport claim."}, indent=2) + "\n")

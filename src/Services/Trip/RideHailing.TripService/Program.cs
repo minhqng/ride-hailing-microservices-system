@@ -9,11 +9,12 @@ using RideHailing.TripService.Infrastructure.Persistence;
 using RideHailing.TripService.Integration.Messaging;
 using RideHailing.TripService.Integration.Observability;
 
-// Bootstrap skeleton for RideHailing.TripService (Trip service).
-// Owns: see src/Services/Trip/RideHailing.TripService/README.md.
-// W4: registers Trip-local CreateRide application dependencies and maps the
-// frozen POST /trips transport adapter. Authentication infrastructure (JWT
-// issuance/validation, Gateway forwarding) is a shared/C-owned concern: the
+// RideHailing.TripService host: Trip lifecycle, fare snapshot, persisted Saga
+// and transactional Outbox. Owns: see
+// src/Services/Trip/RideHailing.TripService/README.md.
+// Registers Trip-local CreateRide application dependencies and maps the
+// POST /trips transport adapter. Authentication infrastructure (JWT
+// issuance/validation, Gateway forwarding) is a shared platform concern: the
 // endpoint consumes an already-authenticated ClaimsPrincipal and anonymous
 // requests safely receive 401 until shared middleware populates it.
 
@@ -21,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 RideHailing.Security.RideAuthentication.AddRideAuthentication(builder.Services, builder.Configuration);
 RideHailing.Messaging.FaultPoints.Current = RideHailing.Messaging.Faults.FaultPoint.ForHostEnvironment(builder.Environment.EnvironmentName);
 builder.AddRideTelemetry("trip-service");
-// A-W12-01/02: Trip domain spans and metrics ride the SAME OpenTelemetry
+// Trip domain spans and metrics ride the SAME OpenTelemetry
 // pipeline as the shared messaging instruments — one registry, no second
 // exporter. The meter is observed regardless of messaging enablement so
 // saga.active reflects durable workflow state even without a broker.
@@ -35,9 +36,9 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(TripRateLimitPolicy.CreateRide, TripRateLimitPolicy.CreateRidePartition);
 });
 
-// (A-W02-02) Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
+//  Trip-owned PostgreSQL context. Reads ONLY the Trip-owned
 // connection string (key "Postgres", supplied as ConnectionStrings__Postgres
-// by compose / C-owned bootstrap). Fail-fast on missing configuration: no
+// by compose / platform bootstrap). Fail-fast on missing configuration: no
 // hard-coded password, no fallback credential, no foreign database.
 // NOTE: production startup does NOT auto-migrate; integration tests apply
 // migrations explicitly via Database.MigrateAsync() on disposable databases.
@@ -46,7 +47,7 @@ var postgresConnection = builder.Configuration.GetConnectionString("Postgres")
         "Missing Trip PostgreSQL connection string 'ConnectionStrings:Postgres'. " +
         "Provide ConnectionStrings__Postgres (see compose.yaml / deploy/postgres/init).");
 
-// One pooled data source serves both EF and the C-owned Outbox store. The
+// One pooled data source serves both EF and the shared Outbox store. The
 // relay must read the SAME Trip database that owns the transaction; sharing
 // the data source avoids a second credential/pool and guarantees identical
 // connection settings. EF does not dispose an externally supplied source.
@@ -59,13 +60,11 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(postgresConnection));
 builder.Services.AddDbContext<TripDbContext>((sp, options) =>
     options.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>()));
 
-// W4-local application dependencies: scoped handler/DbContext per request,
-// single system clock, stateless deterministic fare policy needs no service.
-// W5 adds the lifecycle intake handlers (rider-scoped StartMatching/Cancel
-// plus system-shaped reservation/decision/payment/matching/progress intakes);
-// the W5 skeleton has no broker, so the system intakes are exercised by
-// component/system tests with authoritative-shaped fixtures until W8 wires
-// real transport.
+// Application dependencies: scoped handler/DbContext per request, one system
+// clock, stateless deterministic fare policy. The lifecycle intakes are also
+// exercised directly by component tests with authoritative-shaped fixtures;
+// production transport and consumers are registered by AddTripMessaging below
+// when TripMessaging:Enabled is true.
 builder.Services.AddScoped<CreateRideHandler>();
 builder.Services.AddScoped<StartMatchingHandler>();
 builder.Services.AddScoped<CancelRideHandler>();
@@ -79,7 +78,7 @@ builder.Services.AddScoped<MarkMatchingFailedHandler>();
 builder.Services.AddScoped<StartTripHandler>();
 builder.Services.AddScoped<CompleteTripHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-// AUD-02: public Driver lifecycle transport resolves the authenticated
+// Public Driver lifecycle transport resolves the authenticated
 // Driver's owning profile through the Driver service before the aggregate
 // checks the exact assignment. The caller's own token is forwarded; no
 // client-supplied actor identity is trusted.
@@ -106,7 +105,7 @@ if (builder.Configuration.GetValue<bool>("TripMessaging:Enabled"))
     builder.Services.AddHostedService<MatchingCleanupReconciler>();
     builder.Services.AddHostedService<DriverCleanupReconciler>();
 }
-// A-W12-02: durable saga-backlog observation (saga.active{step}) runs in every
+// Durable saga-backlog observation (saga.active{step}) runs in every
 // host: it only reads the Trip-owned database and never touches the broker.
 builder.Services.AddHostedService<TripMetricsObserver>();
 
@@ -115,8 +114,8 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 
-// (A-W08) Opt-in Trip auto-migrate for compose local/CI reproducibility.
-// Platform contract (C-owned): /health/ready requires zero pending Trip
+//  Opt-in Trip auto-migrate for compose local/CI reproducibility.
+// Platform contract: /health/ready requires zero pending Trip
 // migrations (see TripDatabaseReadiness). Fresh postgres volumes only create
 // roles/DBs (deploy/postgres/init), so without a migrate step readiness stays
 // 503 and platform-smoke times out on :8103. Compose sets

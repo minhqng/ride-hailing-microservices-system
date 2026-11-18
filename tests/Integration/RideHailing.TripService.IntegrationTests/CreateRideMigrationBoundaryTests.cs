@@ -1,12 +1,12 @@
-// W4 migration-boundary proof (A-W04-02/04).
+// Migration-boundary proof for the CreateRide migration.
 //
 // Historical: migrates a fresh disposable database specifically through the
-// W4 CreateRide target (not to latest), then proves W2, W3 and W4 are applied
-// with the expected contracts: request_idempotency table/columns, composite
-// uniqueness, the resource FK with RESTRICT behavior, and the active-Rider
-// partial unique index whose predicate holds exactly the six DSI-013 active
-// states. Intentionally valid after future W5 migrations: it never asserts
-// current head contains only W4 schema.
+// CreateRide target (not to latest), then proves the earlier and current
+// migrations are applied with the expected contracts: request_idempotency
+// table/columns, composite uniqueness, the resource FK with RESTRICT
+// behavior, and the active-Rider partial unique index whose predicate holds
+// exactly the six active states. Intentionally valid after later migrations:
+// it never asserts current head contains only this schema.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -27,7 +27,7 @@ public sealed class CreateRideMigrationBoundaryTests
     }
 
     [Fact]
-    public async Task W04_Boundary_AppliesW02W03W04_WithIdempotencyAndActiveRiderDefense()
+    public async Task Boundary_AppliesInitialMigrations_WithIdempotencyAndActiveRiderDefense()
     {
         var probeDb = "trip_probe_" + Guid.NewGuid().ToString("N");
         var maintenanceCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
@@ -57,15 +57,15 @@ public sealed class CreateRideMigrationBoundaryTests
             await using (var db = new TripDbContext(probeOptions))
             {
                 var defined = db.Database.GetMigrations();
-            var w04Target = Assert.Single(
-                defined.Where(m => m.EndsWith("W04_CreateRideIdempotency", StringComparison.Ordinal)).ToList());
+            var targetMigration = Assert.Single(
+                defined.Where(m => m.EndsWith("CreateRideIdempotency", StringComparison.Ordinal)).ToList());
 
-            await db.GetService<IMigrator>().MigrateAsync(w04Target);
+            await db.GetService<IMigrator>().MigrateAsync(targetMigration);
 
             var applied = await db.Database.GetAppliedMigrationsAsync();
-            Assert.Contains(applied, m => m.EndsWith("W02_TripPersistenceBaseline", StringComparison.Ordinal));
-            Assert.Contains(applied, m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal));
-            Assert.Contains(applied, m => m.EndsWith("W04_CreateRideIdempotency", StringComparison.Ordinal));
+            Assert.Contains(applied, m => m.EndsWith("TripPersistenceBaseline", StringComparison.Ordinal));
+            Assert.Contains(applied, m => m.EndsWith("TripAggregate", StringComparison.Ordinal));
+            Assert.Contains(applied, m => m.EndsWith("CreateRideIdempotency", StringComparison.Ordinal));
 
             var connection = db.Database.GetDbConnection();
             await connection.OpenAsync();
@@ -132,7 +132,7 @@ public sealed class CreateRideMigrationBoundaryTests
                 $"Resource FK must refuse dangling deletes, got '{fkDef}'.");
 
             // Active-Rider partial unique index: exists, unique, and its
-            // predicate holds exactly the six DSI-013 active states.
+            // predicate holds exactly the six active states.
             var indexDef = await SingleStringAsync(
                 "SELECT pg_get_indexdef(indexrelid) FROM pg_index " +
                 "WHERE indexrelid = 'public.\"UX_trips_one_active_per_rider\"'::regclass");
@@ -156,7 +156,7 @@ public sealed class CreateRideMigrationBoundaryTests
     }
 
     [Fact]
-    public async Task W04_Collation_AppliesOnLatest_WithDownUpRoundTrip()
+    public async Task Collation_AppliesOnLatest_WithDownUpRoundTrip()
     {
         var probeDb = "trip_probe_" + Guid.NewGuid().ToString("N");
         var maintenanceCs = new NpgsqlConnectionStringBuilder(_fixture.ConnectionString)
@@ -186,8 +186,8 @@ public sealed class CreateRideMigrationBoundaryTests
             await using (var db = new TripDbContext(probeOptions))
             {
                 var defined = db.Database.GetMigrations();
-            var w04Target = Assert.Single(
-                defined.Where(m => m.EndsWith("W04_CreateRideIdempotency", StringComparison.Ordinal)).ToList());
+            var targetMigration = Assert.Single(
+                defined.Where(m => m.EndsWith("CreateRideIdempotency", StringComparison.Ordinal)).ToList());
             var migrator = db.GetService<IMigrator>();
 
             async Task<string?> SingleStringAsync(string sql)
@@ -232,8 +232,8 @@ public sealed class CreateRideMigrationBoundaryTests
                     "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' " +
                     "AND tablename = 'request_idempotency' AND indexname = 'IX_request_idempotency_resource_id'"));
 
-            // Down to the W04 target: collation pin is removed, table contract stays.
-            await migrator.MigrateAsync(w04Target);
+            // Down to the earlier target: collation pin is removed, contract stays.
+            await migrator.MigrateAsync(targetMigration);
             Assert.NotEqual("C", await ColumnCollationAsync("scope"));
             Assert.Equal(
                 "5",

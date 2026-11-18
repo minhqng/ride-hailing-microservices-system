@@ -10,7 +10,7 @@
     {"type":"timeseries","title":"Notification delivery projection","id":5,"gridPos":{"h":8,"w":8,"x":16,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (outcome) (rate({__name__=~\"notification_delivery(_events)?_total\"}[1m]))","legendFormat":"{{outcome}}","refId":"A"}]}
   ],
   "schemaVersion": 41,
-  "tags": ["member-c","payment","notification"],
+  "tags": ["payment","notification","reliability"],
   "templating": {"list": []},
   "time": {"from":"now-1h","to":"now"},
   "title": "Payment and Notification",

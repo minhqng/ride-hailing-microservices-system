@@ -1,19 +1,19 @@
 // CreateRide HTTP transport shape freeze.
 //
 // SCOPE: transport SHAPES ONLY. No handler, persistence, idempotency-record,
-// fingerprint, active-trip guard, or FareSnapshot calculation (W3/W4).
+// fingerprint, active-trip guard, or FareSnapshot calculation.
 //
 // CANONICAL SEMANTIC (Docs 00-02):
 //   - Trip Service is authoritative for ride-request identity, pickup/dropoff,
-//     FareSnapshot, lifecycle, assignment reference, cancellation (Doc 01 §6.1).
+//  FareSnapshot, lifecycle, assignment reference, cancellation.
 //   - Rider identity comes from the authenticated context, NOT the body
-//     (Doc 03 SEC-04 actor-ID spoofing). Hence no riderId in this DTO.
+//  (actor-ID spoofing). Hence no riderId in this DTO.
 //   - Idempotency is a domain property backed by durable identity, not an HTTP
-//     method property (Doc 00 §2.11). Transport uses POST; idempotency key (if
+//  method property. Transport uses POST; idempotency key (if
 //     present) travels in the Idempotency-Key header (see TripRoutes /
 //     StableIdentities). Same-key/same-request vs same-key/conflict semantics
-//     belong to W4 and are NOT proven here.
-// W2 MECHANICAL FREEZE (this file):
+//     belong to later work and are NOT proven here.
+// MECHANICAL FREEZE (this file):
 //   - Namespace RideHailing.TripService.Api: Trip-local transport contracts.
 //     HTTP DTO != Domain aggregate != Persistence entity != Integration message.
 //     Nothing added to BuildingBlocks.
@@ -50,7 +50,7 @@ public sealed record CreateRideResponse
 {
     /// <summary>
     /// One logical ride; stable for ride lifetime (canonical).
-    /// CLR Guid / wire JSON string (W2 mechanical).
+    /// CLR Guid / wire JSON string (mechanical).
     /// </summary>
     [JsonPropertyName("tripId")]
     public required Guid TripId { get; init; }

@@ -1,4 +1,4 @@
-// AUD-02 public Driver lifecycle transport proofs against the real Trip host
+// Public Driver lifecycle transport proofs against the real Trip host
 // and real PostgreSQL. The only test override is the Driver directory (the
 // production client calls the Driver service); identity, role, assignment and
 // reservation fencing all run through the production endpoint and aggregate.

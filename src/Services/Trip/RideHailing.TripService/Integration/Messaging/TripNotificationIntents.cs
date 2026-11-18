@@ -1,4 +1,4 @@
-// DS03 Rider notification intents (Doc 01 §40.2, Doc 02 §43).
+// Rider notification intents.
 //
 // Each builder derives a deterministic message identity from the exact
 // logical notification, serializes the recipient-addressed intent from the

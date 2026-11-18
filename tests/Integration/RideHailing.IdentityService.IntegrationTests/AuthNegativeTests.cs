@@ -11,7 +11,7 @@ public sealed class AuthHandoffTheoryAttribute : TheoryAttribute
     public AuthHandoffTheoryAttribute()
     {
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RIDE_AUTH_FIXTURE")))
-            Skip = "Blocked: A/B must supply real auth/API fixtures via RIDE_AUTH_FIXTURE; skeleton is not auth acceptance.";
+            Skip = "Opt-in: RIDE_AUTH_FIXTURE is not set. Run scripts/test/security-gate.py --identity-tests to generate the fixture and execute all seven cases.";
     }
 }
 

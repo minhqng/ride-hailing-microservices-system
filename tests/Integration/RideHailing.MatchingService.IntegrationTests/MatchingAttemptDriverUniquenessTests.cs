@@ -1,4 +1,4 @@
-// W08 hardening: one ledger attempt per (trip, matching_round, driver).
+// One ledger attempt per (trip, matching_round, driver).
 // The compute path deduplicates candidates by driver, but before
 // ux_matching_attempts_trip_round_driver no DB constraint enforced it: two
 // racing computes could mint two ordinals (two reservationIds) for one driver

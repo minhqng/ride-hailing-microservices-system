@@ -1,4 +1,4 @@
-// B-W08 migration proof on REAL PostgreSQL (mandatory Path A + Path B).
+// Migration proof on REAL PostgreSQL (mandatory Path A + Path B).
 // Path A (fresh): all migrations in order yield TEXT NOT NULL + unique index,
 // non-UUID identities round-trip verbatim with duplicate protection.
 // Path B (upgrade): a disposable database at the pre-004 UUID schema keeps

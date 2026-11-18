@@ -1,8 +1,8 @@
-// B-W08 message-identity fix: cross-contract proof using A's REAL fixture.
-// Loads src/Services/Trip/.../Fixtures/ride-requested-v1.example.json from
-// the repository (never a hand-copied approximation), wraps that exact payload
-// in C's real MessageEnvelope<JsonElement> with a valid NON-UUID messageId,
-// and proves the W8 handler persists the raw envelope identity verbatim.
+// Message-identity fix: cross-contract proof using the real Trip fixture.
+// Loads src/Services/Trip/.../Fixtures/ride-requested-v1.example.json from the
+// repository (never a hand-copied approximation), wraps that exact payload in
+// the real MessageEnvelope<JsonElement> with a valid NON-UUID messageId, and
+// proves the handler persists the raw envelope identity verbatim.
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Npgsql;

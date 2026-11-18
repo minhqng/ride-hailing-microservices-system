@@ -18,48 +18,48 @@ public enum TripErrorCode
 
     /// <summary>
     /// The operation is not a legal edge from the current Trip state
-    /// (Doc 01 §6.5 transition table).
+    /// (transition table).
     /// </summary>
     IllegalTransition = 1,
 
     /// <summary>
     /// The Trip is terminal (COMPLETED, CANCELLED, MATCH_FAILED) and no
-    /// active transition may reactivate it (DSI-010, DSI-032).
+    /// active transition may reactivate it.
     /// </summary>
     TerminalState = 2,
 
     /// <summary>
     /// The operation requires an assignment identity that was not supplied:
     /// empty driver/reservation identity on intake, or no current assignment
-    /// where the transition requires one (DSI-009, DSI-011).
+    /// where the transition requires one.
     /// </summary>
     AssignmentRequired = 3,
 
     /// <summary>
     /// The supplied driver/reservation identity does not match the current
-    /// assignment (DSI-009). The aggregate is unchanged.
+    /// assignment. The aggregate is unchanged.
     /// </summary>
     AssignmentIdentityMismatch = 4,
 
     /// <summary>
-    /// The operation would create a second simultaneous current assignment
-    /// (DSI-008). The aggregate is unchanged.
+    /// The operation would create a second simultaneous current assignment.
+    /// The aggregate is unchanged.
     /// </summary>
     AssignmentAlreadyPresent = 5,
 
     /// <summary>
     /// The supplied round/reservation generation is not the Trip's current
     /// generation: an older/superseded round, an old reservation from a
-    /// previous assignment, or an unknown future generation (DSI-016).
+    /// previous assignment, or an unknown future generation.
     /// The aggregate is unchanged; the caller must reconcile against the
     /// current round/reservation instead of overwriting it.
     /// </summary>
     StaleIdentity = 7,
 
     /// <summary>
-    /// The W10 payment leg cannot quote a positive amount from the frozen
-    /// fare (DSI-014), so the ride cannot start its Payment orchestration
-    /// (A-W10-02). The aggregate is unchanged; the caller must reject the
+    /// The payment leg cannot quote a positive amount from the frozen fare, so
+    /// the ride cannot start its Payment orchestration. The aggregate is
+    /// unchanged; the caller must reject the
     /// intake instead of mutating a Trip whose acceptance could never
     /// dispatch AuthorizePayment.
     /// </summary>

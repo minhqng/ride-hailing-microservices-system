@@ -1,4 +1,4 @@
-// B-W12-01: label-domain tests. These are pure predicates, so they run without
+// Label-domain tests. These are pure predicates, so they run without
 // infrastructure and pin the bounded semantics used by the counters.
 using RideHailing.DriverService.Domain.Drivers;
 using RideHailing.DriverService.Infrastructure.Telemetry;

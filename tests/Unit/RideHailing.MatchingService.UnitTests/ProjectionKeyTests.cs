@@ -1,4 +1,4 @@
-// B-W04-01: key layout unit proof (no Redis).
+// Key layout unit proof (no Redis).
 using RideHailing.MatchingService.Application.Projection;
 
 namespace RideHailing.MatchingService.UnitTests;

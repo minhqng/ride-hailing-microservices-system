@@ -1,4 +1,4 @@
-// B-W08-05: Driver event identity/options proof (pure logic, no broker).
+// Driver event identity/options proof (pure logic, no broker).
 using RideHailing.DriverService.Application.Messaging;
 
 namespace RideHailing.DriverService.UnitTests;

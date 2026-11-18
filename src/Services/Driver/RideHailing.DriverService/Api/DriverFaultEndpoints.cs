@@ -1,4 +1,4 @@
-// B-W11-01: test-only control surface for the B-owned fault seam. Mapped
+// Test-only control surface for the fault seam. Mapped
 // only in the explicit Testing environment with a configured token; it never
 // exists in Production and cannot activate a fault (activation is process
 // environment at startup).

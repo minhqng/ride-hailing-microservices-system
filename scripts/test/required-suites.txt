@@ -1,19 +1,23 @@
 # Test assemblies that must execute in the solution-wide dotnet test run.
 # Format: assembly-name-substring[:minimum passing tests]
-# The empty SystemTests placeholder was removed (AUD-09); the thirteen
+# The empty SystemTests placeholder was removed; the thirteen
 # assemblies below are the complete executable test set. Identity's exclusive
 # negative cases run in the platform-smoke Identity gate, so the solution run
 # requires presence only.
-ridehailing.b12audit.tests
-ridehailing.driverservice.unittests
-ridehailing.driverservice.integrationtests
+#
+# Per-assembly minima are roughly 90% of the recorded v1.0.0 release counts
+# (docs/verification.md §1). They catch a suite that silently stops discovering
+# tests without turning every added/renamed test into a gate edit.
+ridehailing.invariantaudit.tests:18
+ridehailing.driverservice.unittests:118
+ridehailing.driverservice.integrationtests:108
 ridehailing.identityservice.integrationtests:0
-ridehailing.matchingservice.unittests
-ridehailing.matchingservice.integrationtests
-ridehailing.notificationservice.integrationtests
-ridehailing.notificationworker.unittests
-ridehailing.paymentservice.unittests
-ridehailing.paymentservice.integrationtests
-ridehailing.platform.integrationtests
-ridehailing.tripservice.unittests
-ridehailing.tripservice.integrationtests
+ridehailing.matchingservice.unittests:103
+ridehailing.matchingservice.integrationtests:181
+ridehailing.notificationservice.integrationtests:14
+ridehailing.notificationworker.unittests:11
+ridehailing.paymentservice.unittests:34
+ridehailing.paymentservice.integrationtests:33
+ridehailing.platform.integrationtests:68
+ridehailing.tripservice.unittests:293
+ridehailing.tripservice.integrationtests:221

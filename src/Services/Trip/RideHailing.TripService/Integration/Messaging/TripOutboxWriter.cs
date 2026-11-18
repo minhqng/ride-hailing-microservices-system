@@ -1,9 +1,9 @@
-// Atomic Trip Outbox staging (A-W09-02).
+// Atomic Trip Outbox staging.
 //
 // Every Trip transition that creates an external obligation stages the
 // corresponding pending Outbox row on the SAME DbContext and lets the single
-// SaveChangesAsync commit both. This is the whole point of the W9 change:
-// there is no window in which the business row is committed without its
+// SaveChangesAsync commit both. That is the whole point: there is no window
+// in which the business row is committed without its
 // outgoing intent, and no window in which an intent exists for an uncommitted
 // transition.
 //
@@ -38,7 +38,7 @@ public static class TripOutboxWriter
 
     /// <summary>
     /// Stages the wire obligations newly added by this transition. Payment
-    /// reconciliation stays Trip-durable but is not published in W9.
+    /// reconciliation stays Trip-durable but is not published here.
     /// </summary>
     public static void EnqueueNewCleanup(
         TripDbContext db, Trip trip, IReadOnlySet<string> preexistingKeys)

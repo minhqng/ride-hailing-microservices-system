@@ -1,4 +1,4 @@
-// B-W12-06/SEC-07: Driver accepts only small JSON command bodies. The limit
+// Driver accepts only small JSON command bodies. The limit
 // is applied by Kestrel before endpoint binding so an oversized body is
 // rejected without reaching the location validator or any mutation.
 using Microsoft.AspNetCore.Builder;

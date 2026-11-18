@@ -1,5 +1,5 @@
-// B-W09-01/02: records the canonical Driver event as a durable Outbox intent
-// using C's shared NpgsqlOutboxStore. The caller MUST pass the same open
+// Records the canonical Driver event as a durable Outbox intent
+// using the shared NpgsqlOutboxStore. The caller MUST pass the same open
 // connection/transaction that persists the authoritative Driver row; this
 // type never opens its own connection and never talks to RabbitMQ.
 using Npgsql;
@@ -45,7 +45,7 @@ public sealed class DriverOutboxWriter(NpgsqlOutboxStore store)
             driver.UpdatedAt, ct);
 
     /// <summary>
-    /// DS03: stages the Driver-addressed notification intent in the same
+    /// Stages the Driver-addressed notification intent in the same
     /// transaction as the reservation/release effect. The recipient is the
     /// Driver aggregate's authoritative UserId, never the driverId.
     /// </summary>

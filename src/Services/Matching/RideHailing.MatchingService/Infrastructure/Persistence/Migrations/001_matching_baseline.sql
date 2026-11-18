@@ -1,6 +1,6 @@
--- B-W02-04 Matching PostgreSQL schema baseline (W2, no ranking/reserve logic yet).
--- Authority: MatchingRound/MatchingAttempt (Doc 00 §4.3-4.4, 05B §4.3-4.4).
--- Matching must NEVER access driver_db (05B §11.3). This file applies to matching_db only.
+-- Matching PostgreSQL schema baseline: MatchingRound/MatchingAttempt, no
+-- ranking or reserve logic yet.
+-- Matching must NEVER access driver_db. This file applies to matching_db only.
 
 CREATE TABLE IF NOT EXISTS matching_rounds (
     trip_id                 UUID NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS matching_attempts (
         REFERENCES matching_rounds (trip_id, matching_round) ON DELETE CASCADE
 );
 
--- One logical reserve attempt = one reservationId (DSI-018 groundwork).
+-- One logical reserve attempt = one reservationId.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_matching_attempts_reservation_id
     ON matching_attempts (reservation_id);
 CREATE INDEX IF NOT EXISTS ix_matching_attempts_driver_id

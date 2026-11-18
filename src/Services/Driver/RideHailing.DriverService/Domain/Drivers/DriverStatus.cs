@@ -1,4 +1,4 @@
-// B-W03-01: canonical P0 Driver states (Doc 01 §4.2).
+// Canonical P0 Driver states.
 namespace RideHailing.DriverService.Domain.Drivers;
 
 public enum DriverStatus

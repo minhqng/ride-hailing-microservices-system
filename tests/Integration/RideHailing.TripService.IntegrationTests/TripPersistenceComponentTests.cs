@@ -1,6 +1,6 @@
-// Trip W3 component proofs against disposable real PostgreSQL.
+// Trip component proofs against disposable real PostgreSQL.
 //
-// Required properties (A-W02-02/04/05/06 evolved for A-W03-07):
+// Required properties (evolved over time):
 //   A. TripApplication_Boots_WithRealPostgres
 //   B. HealthLive_ReturnsSuccess
 //   C. HealthReady_ReturnsSuccess
@@ -108,8 +108,8 @@ public sealed class TripPersistenceComponentTests
             Assert.Empty(await db.Database.GetPendingMigrationsAsync());
             Assert.True(await db.Database.CanConnectAsync());
 
-            // W3 scope: the authoritative trips table must exist at
-            // current head. No assertion that it is the ONLY table forever.
+            // Scope: the authoritative trips table must exist at current
+            // head. No assertion that it is the ONLY table forever.
             var connection = db.Database.GetDbConnection();
             await connection.OpenAsync();
             await using var command = connection.CreateCommand();
@@ -135,10 +135,10 @@ public sealed class TripPersistenceComponentTests
         var applied = await db.Database.GetAppliedMigrationsAsync();
 
         Assert.Equal(defined, applied);
-        Assert.Contains(defined, m => m.EndsWith("W02_TripPersistenceBaseline", StringComparison.Ordinal));
-        Assert.Contains(applied, m => m.EndsWith("W02_TripPersistenceBaseline", StringComparison.Ordinal));
-        Assert.Contains(defined, m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal));
-        Assert.Contains(applied, m => m.EndsWith("W03_TripAggregate", StringComparison.Ordinal));
+        Assert.Contains(defined, m => m.EndsWith("TripPersistenceBaseline", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("TripPersistenceBaseline", StringComparison.Ordinal));
+        Assert.Contains(defined, m => m.EndsWith("TripAggregate", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("TripAggregate", StringComparison.Ordinal));
     }
 
     [Fact]

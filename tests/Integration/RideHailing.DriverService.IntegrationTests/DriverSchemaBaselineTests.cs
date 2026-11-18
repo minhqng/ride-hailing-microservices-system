@@ -1,4 +1,4 @@
-// B-W02-03: Driver schema baseline proof on REAL PostgreSQL.
+// Driver schema baseline proof on REAL PostgreSQL.
 // Infra is guaranteed by the shared collection fixture: any setup failure
 // fails every test loudly. No skip path, no vacuous pass.
 namespace RideHailing.DriverService.IntegrationTests;

@@ -1,6 +1,6 @@
--- B-W02-03 Driver PostgreSQL schema baseline (W2, no business logic).
--- Authority: Driver/Vehicle/Location (Doc 00 §3.2, 05B §4.1-4.2).
--- W3+ adds FSM/OCC/fencing on top. W6 adds stronger DB defense if needed.
+-- Driver PostgreSQL schema baseline: Driver/Vehicle/Location, no business
+-- logic yet.
+-- Later migrations add FSM/OCC/fencing and stronger database defenses.
 -- Idempotent: safe to re-apply (IF NOT EXISTS).
 
 CREATE TABLE IF NOT EXISTS drivers (
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS drivers (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Stable reservation identity must be unique when present (DSI-005 groundwork).
+-- Stable reservation identity must be unique when present.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_drivers_reservation_id
     ON drivers (reservation_id) WHERE reservation_id IS NOT NULL;
 

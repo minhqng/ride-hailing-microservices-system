@@ -5,7 +5,8 @@ namespace RideHailing.Messaging.Contracts;
 
 public static class MessageProperties
 {
-    // Property convention only. Publishing, confirms and ACK lifecycle arrive in W8.
+    // Property convention only. Publishing, confirms and the ACK lifecycle are
+    // handled by the broker layer.
     public static BasicProperties Create<T>(MessageEnvelope<T> envelope, ActivityContext context = default)
     {
         envelope.Validate();

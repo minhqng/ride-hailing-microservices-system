@@ -1,4 +1,4 @@
-// DS03 Driver Reject recovery (Doc 01 §40.1.3): a reject/cancellation commits
+// Driver Reject recovery: a reject/cancellation commits
 // the release obligation before the Driver command is published. The normal
 // completion path is the authoritative DriverReservationReleasedV1 event, but
 // that event does not exist when the Driver already stopped owning the exact

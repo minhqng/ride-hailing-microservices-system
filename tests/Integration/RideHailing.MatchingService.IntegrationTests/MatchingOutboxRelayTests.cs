@@ -1,8 +1,8 @@
-// B-W09-03/04/08: durable-intent publication proof on REAL PostgreSQL +
-// REAL RabbitMQ. C's shared OutboxRelay is used unchanged. The terminal row
-// commits before any broker activity; a crash after commit or after the
-// publisher confirm must replay the SAME message identity, never mint a new
-// logical result or a second intent.
+// Durable-intent publication proof on REAL PostgreSQL + REAL RabbitMQ. The
+// shared OutboxRelay is used unchanged. The terminal row commits before any
+// broker activity; a crash after commit or after the publisher confirm must
+// replay the SAME message identity, never mint a new logical result or a
+// second intent.
 using System.Text.Json;
 using Npgsql;
 using RabbitMQ.Client;

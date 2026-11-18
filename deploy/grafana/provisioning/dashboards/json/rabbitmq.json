@@ -10,7 +10,7 @@
     {"type":"timeseries","title":"Dead-letter queue depth","id":5,"gridPos":{"h":8,"w":8,"x":16,"y":8},"datasource":{"type":"prometheus","uid":"prometheus"},"targets":[{"expr":"sum by (queue) (rabbitmq_detailed_queue_messages_ready{queue=~\".*\\.dead|ride\\.quarantine\\.q\"})","legendFormat":"{{queue}}","refId":"A"}]}
   ],
   "schemaVersion": 41,
-  "tags": ["member-c","rabbitmq"],
+  "tags": ["rabbitmq","messaging","reliability"],
   "templating": {"list": []},
   "time": {"from":"now-1h","to":"now"},
   "title": "RabbitMQ Delivery Reliability",

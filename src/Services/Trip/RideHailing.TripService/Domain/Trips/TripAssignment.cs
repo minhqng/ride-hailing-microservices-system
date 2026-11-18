@@ -1,4 +1,4 @@
-// Trip-side assignment reference (Doc 01 §6.1, DSI-008, DSI-009).
+// Trip-side assignment reference.
 //
 // A single coherent current assignment: driver, reservation effect and the
 // matching generation that produced it. A partial assignment is

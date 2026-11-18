@@ -1,16 +1,16 @@
-// Matching service (Owner B). W4: Redis GEO projection ownership (derived only).
-// W8: broker consumption (RideRequestedV1 durable intake; Driver
-// state/location events into the derived projection) with manual ACK after
-// durable effect. W9: NO_DRIVER terminal state and MatchingFailedV1 Outbox
-// intent commit in one transaction; C's shared relay publishes committed
-// intents. B-REC-01: the intake persists pickup + auto_execute before ACK and
-// MatchingWorkDispatcher autonomously executes reserve/reconcile/stages.
-// Broker retry/DLQ mechanics beyond bounded requeue remain C platform scope.
+// Matching service: Redis GEO projection ownership (derived only), broker
+// consumption (RideRequestedV1 durable intake; Driver state/location events
+// into the derived projection) with manual ACK after the durable effect, and
+// NO_DRIVER terminal state plus MatchingFailedV1 Outbox intent committed in one
+// transaction. The shared relay publishes committed intents: the intake
+// persists pickup + auto_execute before ACK and MatchingWorkDispatcher
+// autonomously executes reserve/reconcile/stages. Broker retry/DLQ mechanics
+// beyond bounded requeue stay in the platform.
 // Startup loads the Lua function best-effort; the service still boots if Redis is down.
 // Calls self-heal a missing function library (reload-once-and-retry on the
 // missing-function server error), so recovery needs no restart after Redis
 // restarts or FUNCTION FLUSH.
-// B-W02-02 seam: typed Driver HTTP client (no retry handlers by design, Doc 02 §19).
+// Driver seam: typed HTTP client (no retry handlers by design).
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -39,9 +39,13 @@ builder.AddRideTelemetry("matching-service");
 builder.AddMatchingTelemetry();
 builder.Services.AddHealthChecks();
 
-var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
-    ?? "Host=localhost;Port=5432;Database=matching_db;Username=matching_app;Password=matching_dev_pw";
+var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres");
+if (string.IsNullOrWhiteSpace(postgresConnectionString))
+{
+    throw new InvalidOperationException(
+        "Missing Matching PostgreSQL connection string 'ConnectionStrings:Postgres'. " +
+        "Provide ConnectionStrings__Postgres (see compose.yaml / deploy/postgres/init).");
+}
 
 builder.Services.AddOptions<MatchingPolicy>()
     .Bind(builder.Configuration.GetSection("Matching"))
@@ -55,7 +59,8 @@ builder.Services.AddSingleton(sp => new MatchingTerminalizer(
     sp.GetRequiredService<NpgsqlDataSource>(),
     sp.GetRequiredService<NpgsqlOutboxStore>(),
     sp.GetRequiredService<TimeProvider>(),
-    sp.GetRequiredService<MatchingMetrics>()));builder.Services.AddSingleton(_ =>
+    sp.GetRequiredService<MatchingMetrics>()));
+builder.Services.AddSingleton(_ =>
 {
     var cs = builder.Configuration["Redis__ConnectionString"]
         ?? Environment.GetEnvironmentVariable("Redis__ConnectionString")
@@ -90,7 +95,7 @@ builder.Services.AddScoped(sp => new MatchingReserveOrchestrator(
     sp.GetRequiredService<MatchingTerminalizer>(),
     metrics: sp.GetRequiredService<MatchingMetrics>()));
 
-// B-REC-01: the autonomous production trigger. The broker intake commits
+// The autonomous production trigger. The broker intake commits
 // durable work before ACK; this hosted worker discovers it from PostgreSQL
 // and drives reserve/reconcile/terminalization without any test-only call.
 builder.Services.AddOptions<MatchingWorkerOptions>()
@@ -138,13 +143,13 @@ builder.Services.AddSingleton(_ => RabbitConnectionFactory.Create(
 builder.Services.AddSingleton<RideRequestedHandler>();
 builder.Services.AddHostedService<RideRequestedConsumer>();
 
-// B-REC-01: canonical cancellation input (Doc 02 §12.9). The durable intent
+// Canonical cancellation input. The durable intent
 // survives a cancel arriving before its RideRequestedV1.
 builder.Services.AddSingleton<CancelMatchingRoundHandler>();
 builder.Services.AddHostedService<CancelMatchingRoundConsumer>();
 
-// W9: C's shared Outbox relay publishes only committed intents. Matching owns
-// only the intent creation (same transaction as the NO_DRIVER row) and this
+// The shared Outbox relay publishes only committed intents. Matching owns only
+// the intent creation (same transaction as the NO_DRIVER row) and this
 // lifecycle/topology adapter; claim/publish-confirm/mark semantics stay in
 // RideHailing.Messaging.Outbox.
 var outboxOptions = new OutboxRelayOptions();
@@ -165,7 +170,8 @@ if (brokerOptions.PublishingEnabled)
 // updater, handler and consumer are all registered; on failure only a
 // warning is logged and the projection path stays down until restart — the
 // round consumer above is unaffected (blast-radius isolation; derived state
-// rebuilds from authority later).
+// rebuilds from authority later). The startup function load below reuses this
+// same multiplexer, so there is exactly one bootstrap connection.
 IConnectionMultiplexer? mux = null;
 using (var bootLogs = LoggerFactory.Create(logging => logging.AddConsole()))
 {
@@ -219,7 +225,7 @@ app.Use(async (context, next) =>
 });
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "matching-service" }));
-app.MapRideReadiness();
+app.MapRideReadiness(requiresOwnedDatabase: true);
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "matching-service", environment = env.EnvironmentName }));
 
@@ -232,7 +238,7 @@ if (app.Environment.IsEnvironment("Testing"))
     {
         MatchingTestEndpoints.Map(app, controlToken);
         app.Logger.LogWarning(
-            "B-W11 Matching test-control endpoints enabled for the explicit Testing environment.");
+            "Matching test-control endpoints enabled for the explicit Testing environment.");
     }
 }
 
@@ -263,19 +269,10 @@ catch (Exception ex)
         "Matching Outbox schema bootstrap failed. Terminal writes will fail closed until the shared schema is available.");
 }
 
-try
-{
-    var redisCs = builder.Configuration["Redis__ConnectionString"]
-        ?? Environment.GetEnvironmentVariable("Redis__ConnectionString")
-        ?? "localhost:6379";
-    using var pipelineMux = await RedisProjectionUpdater.ConnectAsync(redisCs);
-    await new RedisProjectionUpdater(pipelineMux).EnsureFunctionAsync();
-    app.Logger.LogInformation("Redis projection function loaded.");
-}
-catch (Exception ex)
-{
-    app.Logger.LogWarning(ex, "Redis projection function load failed at startup; projection calls will report Degraded until Redis recovers.");
-}
+// The projection function was loaded by the single bootstrap connection above;
+// there is no second connection or second load here. If that bootstrap failed,
+// projection calls self-heal by reloading the library once on the missing-
+// function error, so recovery still needs no restart.
 
 app.Run();
 

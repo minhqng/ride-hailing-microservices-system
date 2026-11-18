@@ -1,7 +1,8 @@
-// Frozen P0 deterministic fare policy (A-W04-05, DSI-014 support).
+// Frozen P0 deterministic fare policy (support).
 //
-// MECHANICAL W4 values, not real Grab/Uber pricing: VND currency, policy
-// version "p0-w4-v1", 10_000 base fare plus 5_000 per straight-line Haversine
+// Frozen representative values, not real Grab/Uber pricing: VND currency,
+// policy version "p0-w4-v1", 10_000 base fare plus 5_000 per straight-line
+// Haversine
 // kilometre. No routing API, no traffic, no surge, no dynamic config, no
 // Pricing service. The snapshot freezes Amount/Currency/PolicyVersion at the
 // application-supplied creation timestamp; replay never recalculates.

@@ -124,7 +124,7 @@ public sealed class ProductionMatchingLifecycleRecoveryTests : ProductionMatchin
             var winner = Assert.Single(attempts, a => a.DriverId == d1.DriverId);
             Assert.Equal("RESERVED", winner.State);
             Assert.Equal(reservationId, winner.ReservationId);
-            Assert.Equal("READY", Assert.Single(attempts, a => a.DriverId == d2.DriverId).State);
+            Assert.Equal("CANCELLED", Assert.Single(attempts, a => a.DriverId == d2.DriverId).State);
             Assert.Equal(d1.DriverId, round.SelectedDriverId);
             Assert.Equal(reservationId, round.SelectedReservationId);
             Assert.Equal(

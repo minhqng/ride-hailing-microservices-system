@@ -1,6 +1,6 @@
 // RideSaga domain operation outcome: explicit success/failure without thrown
-// exceptions for normal conflicts, mirroring TripOutcome taxonomy (Doc 01
-// §15.2). Failed and replay outcomes never advance StepVersion.
+// exceptions for normal conflicts, mirroring the TripOutcome taxonomy.
+// Failed and replay outcomes never advance StepVersion.
 
 namespace RideHailing.TripService.Domain.Sagas;
 
@@ -16,7 +16,7 @@ public enum RideSagaErrorCode
     TerminalState = 2,
 
     /// <summary>The supplied operation identity does not match this step's
-    /// lineage (DSI-034): a different operationKey cannot drive this saga.</summary>
+    /// lineage: a different operationKey cannot drive this saga.</summary>
     OperationKeyMismatch = 3,
 
     /// <summary>Malformed input: empty identity or blank key.</summary>

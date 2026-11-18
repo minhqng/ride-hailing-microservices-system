@@ -1,4 +1,4 @@
-// Shared real-PostgreSQL + real-host fixture for the DS03 notification inbox
+// Shared real-PostgreSQL + real-host fixture for the notification inbox
 // suite. The host runs the production Program with messaging disabled (no
 // broker consumer in this unit of proof) and a generated RSA key so tests use
 // REAL signed JWTs, not a test-principal bypass.

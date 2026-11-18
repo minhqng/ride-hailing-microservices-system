@@ -1,4 +1,4 @@
-// B-W08-05: endpoint publish-decision proof (pure mapping, no broker).
+// Endpoint publish-decision proof (pure mapping, no broker).
 // Proves which mutation outcomes emit which authoritative events, so the
 // thin endpoint glue (call mapper, publish if non-null) needs no HTTP test.
 using RideHailing.DriverService.Domain.Drivers;

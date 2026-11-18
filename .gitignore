@@ -15,7 +15,12 @@ __pycache__/
 
 # Env / secrets
 .env
+.env.*
+!.env.example
 *.pfx
+*.pem
+*.key
+*.p12
 appsettings.*.local.json
 secrets/
 

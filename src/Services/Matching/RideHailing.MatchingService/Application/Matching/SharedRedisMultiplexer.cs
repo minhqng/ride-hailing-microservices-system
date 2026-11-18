@@ -1,6 +1,7 @@
-// Shared lazy Redis multiplexer for the pipeline (W4 updater keeps its own
-// short-lived connection for startup load). First use connects; failures
-// propagate so the caller degrades explicitly. Disposed with the host.
+// Shared lazy Redis multiplexer for the pipeline (the projection updater
+// keeps its own short-lived connection for startup load). First use connects;
+// failures propagate so the caller degrades explicitly. Disposed with the
+// host.
 using RideHailing.MatchingService.Application.Projection;
 using StackExchange.Redis;
 

@@ -1,5 +1,5 @@
-// B-W11-02/03: test-only workflow triggers for the real Matching process.
-// The production service has no reserve/reconcile transport yet, so W11's
+// Test-only workflow triggers for the real Matching process.
+// The production service has no reserve/reconcile transport yet, so the
 // process-kill proof needs a way to invoke the real orchestrator inside the
 // real host. Mapped only under the explicit Testing environment with a
 // configured control token; absent in Production.

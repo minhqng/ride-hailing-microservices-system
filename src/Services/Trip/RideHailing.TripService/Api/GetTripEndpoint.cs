@@ -1,10 +1,10 @@
-// GET /trips/{tripId} transport adapter (A-W05 read seam).
+// GET /trips/{tripId} transport adapter (read seam).
 //
 // THIN ADAPTER ONLY: resolves the authenticated Rider identity, loads the
 // owned Trip, and projects the authoritative business truth (canonical
 // status, current matching round, coherent assignment reference) to the
 // frozen GetTripResponse shape. Missing and not-owned Trips share 404
-// without disclosure (SEC-03). The optional X-Correlation-Id header is
+// without disclosure. The optional X-Correlation-Id header is
 // diagnostic only: accepted, logged and echoed, never used as business
 // identity. No fare/Saga/Outbox/Payment internals on this surface.
 

@@ -1,13 +1,12 @@
-// CreateRide W4 sequential proofs against disposable real PostgreSQL 18.x.
+// CreateRide sequential proofs against disposable real PostgreSQL 18.x.
 //
-// Covers A-W04-01/02/03/04/05 at the handler level: FUN-04 sequential
-// idempotency (same K/X replays, same K/Y conflicts), response-loss replay,
-// replay precedence over the active-Trip rule, sequential active-Trip
-// conflict, terminal-frees-Rider, cross-Rider key isolation, key validation,
-// FareSnapshot stability and the direct partial-unique-index defense
-// (DSI-013). Each test uses fresh Rider identities so the shared disposable
-// database cannot leak state between tests. Concurrent race proofs belong to
-// the next W4 slice.
+// Covers the handler level: sequential idempotency (same K/X replays, same
+// K/Y conflicts), response-loss replay, replay precedence over the active-Trip
+// rule, sequential active-Trip conflict, terminal-frees-Rider, cross-Rider key
+// isolation, key validation, FareSnapshot stability and the direct
+// partial-unique-index defense. Each test uses fresh Rider identities so the
+// shared disposable database cannot leak state between tests. Concurrent race
+// proofs live in the dedicated concurrency suite.
 
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -168,8 +167,8 @@ public sealed class CreateRideComponentTests
         var first = await CreateAsync(rider, "active-replay");
         Assert.True(first.IsSuccess);
 
-        // The referenced Trip is CREATED, which IS an active DSI-013 state: a
-        // handler that checked active-before-replay would wrongly conflict.
+        // The referenced Trip is CREATED, which IS an active state: a handler
+        // that checked active-before-replay would wrongly conflict.
         var replay = await CreateAsync(rider, "active-replay");
         Assert.True(replay.IsSuccess);
         Assert.True(replay.IsReplay);
@@ -352,7 +351,7 @@ public sealed class CreateRideComponentTests
         static async Task InsertTripAsync(NpgsqlConnection connection, Guid tripId, Guid rider, string state)
         {
             await using var cmd = connection.CreateCommand();
-            // W5 round durability: post-CREATED non-cancelled states carry an
+            // Round durability: post-CREATED non-cancelled states carry an
             // open round, so the helper mirrors the domain invariant
             // (MATCHING/MATCH_FAILED rows carry round 1, the rest carry 0).
             var round = state is "MATCHING" or "MATCH_FAILED" ? 1 : 0;

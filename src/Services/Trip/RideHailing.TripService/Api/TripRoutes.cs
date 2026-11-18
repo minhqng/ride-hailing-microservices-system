@@ -1,30 +1,29 @@
-// Trip HTTP route/method mechanical freeze.
+// Trip HTTP route and method contract.
 //
-// W2 froze the intended routes as documented constants; W5 registered the
-// first behavior-backed slice (CreateRide since W4; GetTrip + CancelRide
-// since W5). The Driver-actor accept/start/complete transport is registered
-// since AUD-02: its identity is the authenticated Driver principal, bound to
-// the Driver-owned profile and the exact Trip assignment. DS03 adds the
-// public Driver Reject route backed by the durable MATCH_FAILED/DRIVER_REJECTED
+// The routes are frozen constants. The first behavior-backed slice is
+// CreateRide, then GetTrip + CancelRide. The Driver-actor
+// accept/start/complete transport uses the authenticated Driver principal,
+// bound to the Driver-owned profile and the exact Trip assignment. The public
+// Driver reject route is backed by the durable MATCH_FAILED/DRIVER_REJECTED
 // policy and exact cleanup intents.
 //
-// W2 MECHANICAL FREEZE — reasons:
+// FREEZE RATIONALE:
 //   - Resource noun "/trips" (not "/rides"): aligns with the canonical
-//     aggregate name Trip (Doc 01 §6) and the stable tripId identity, avoiding
+//     aggregate name Trip and the stable tripId identity, avoiding
 //     a ride/trip synonym split across Trip-owned URLs. Handler names
 //     (CreateRide/CancelRide) keep the user-facing verb; URLs keep the
 //     authority noun.
 //   - POST for CreateRide (not PUT): idempotency here is a domain property
 //     backed by durable identity + Idempotency-Key header, not an HTTP-method
-//     property (Doc 00 §2.11). POST is the correct transport for "create one
-//     logical ride, deduplicated by key" (W4 semantics, not proven here).
+//     property. POST is the correct transport for "create one
+//     logical ride, deduplicated by key" (semantics, not proven here).
 //   - GET for GetTrip: safe read of one logical ride by stable identity.
 //   - POST /trips/{id}/cancel (not DELETE): cancel is a guarded domain
 //     transition with compensation/cleanup side effects, not a resource
 //     deletion. Explicit sub-resource action keeps the terminal intent visible.
 //   - No /v1 prefix: no versioned HTTP surface exists yet in the repo
 //     (only /health/*, /info). Versioning stays future-additive; integration
-//     message versioning (V1) is a separate C-owned concern (Doc 02 §6).
+//     message versioning (V1) is a separate platform concern.
 //   - Route constraint "{tripId:guid}" documents that tripId is a Guid on the
 //     wire (uuid string form), consistent with StableIdentities.
 

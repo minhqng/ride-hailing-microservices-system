@@ -1,19 +1,19 @@
-// Start/complete ride system intake (A-W10-05/06/07).
+// Start/complete ride system intake.
 //
 // Applies Driver-actor start/completion evidence to the Trip lifecycle. The
 // supplied driver/reservation identity is fenced against the authoritative
-// current assignment by the aggregate (DSI-011, DSI-012); authorization
-// ordering is enforced by lifecycle state (DSI-026: READY_TO_START is the
+// current assignment by the aggregate; authorization
+// ordering is enforced by lifecycle state (READY_TO_START is the
 // local proof that authorization was recorded) and, when a saga exists, by
-// the saga's authorized-ride phase as a second guard (Doc 05A §18.3
-// A-W10-05). Driver transport authentication and profile binding are
+// the saga's authorized-ride phase as a second guard. Driver transport
+// authentication and profile binding are
 // enforced by the public lifecycle endpoint; this handler stays HTTP-independent.
 //
-// W10 obligations committed atomically with each FIRST transition:
-//   Start:    Trip IN_PROGRESS + Outbox MarkDriverTripStartedV1 (B owns the
-//             Driver RESERVED→ON_TRIP authority).
+// Saga obligations committed atomically with each FIRST transition:
+//   Start:    Trip IN_PROGRESS + Outbox MarkDriverTripStartedV1 (the Driver
+//             service owns the RESERVED→ON_TRIP authority).
 //   Complete: Trip COMPLETED + Saga CAPTURE_PENDING + Outbox CapturePayment
-//             (stable K_capture, DSI-027) + Outbox MarkDriverTripCompletedV1.
+//  (stable K_capture) + Outbox MarkDriverTripCompletedV1.
 // Replays stage nothing: a duplicate fact must never mint a second logical
 // payment effect or driver command.
 
@@ -74,7 +74,7 @@ public sealed class StartTripHandler
         {
             return TripLifecycleResult.Fail(trip, TripOutcome.Fail(
                 TripErrorCode.IllegalTransition,
-                $"Start requires the saga's authoritative authorization (DSI-026) but the saga is {saga.Status.ToCanonicalName()}/{saga.CurrentStep.ToCanonicalName()}."));
+                $"Start requires the saga's authoritative authorization, but the saga is {saga.Status.ToCanonicalName()}/{saga.CurrentStep.ToCanonicalName()}."));
         }
 
         var outcome = trip.Start(driverId, reservationId, _time.GetUtcNow());
@@ -122,7 +122,7 @@ public sealed class CompleteTripHandler
 
     /// <summary>
     /// Completes the ride for the exact current assignment and dispatches the
-    /// capture obligation (forward recovery begins; DSI-027/DSI-028).
+    /// capture obligation (forward recovery begins).
     /// </summary>
     public async Task<TripLifecycleResult> HandleAsync(
         Guid tripId,

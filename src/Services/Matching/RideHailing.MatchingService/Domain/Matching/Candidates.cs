@@ -1,5 +1,5 @@
-// B-W05-01/02/03: candidate pipeline records. Staging by TYPE enforces
-// DSI-020 (eligibility before ranking): the ranker only accepts
+// Candidate pipeline records. Staging by TYPE enforces
+// Eligibility before ranking: the ranker only accepts
 // EligibleCandidate, so an ineligible driver can never be ranked in.
 namespace RideHailing.MatchingService.Domain.Matching;
 
@@ -17,7 +17,7 @@ public sealed record EnrichedCandidate(
     DateTimeOffset CapturedAt,
     string? Capability);
 
-/// <summary>Passed eligibility; the only legal ranker input (DSI-020).</summary>
+/// <summary>Passed eligibility; the only legal ranker input.</summary>
 public sealed record EligibleCandidate(
     Guid DriverId,
     double DistanceKm,
@@ -37,7 +37,7 @@ public sealed record RankedCandidate(
 /// <summary>
 /// Persisted snapshot entry: ranked order + attempt identity + the full
 /// ordering determinants (score inputs), so the hash binds what the order
-/// depended on (DSI-019), and W6 can resume without recomputation.
+/// depended on, so a later stage can resume without recomputation.
 /// </summary>
 public sealed record SnapshotEntry(
     int Ordinal,

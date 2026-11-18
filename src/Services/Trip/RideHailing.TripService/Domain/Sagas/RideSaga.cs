@@ -1,12 +1,11 @@
-// RideSaga aggregate root: Trip-owned persisted ride workflow (A-W10-01,
-// Doc 05A §18, Doc 02 §14).
+// RideSaga aggregate root: Trip-owned persisted ride workflow.
 //
 // The saga is the durable orchestration state for the payment legs of one
-// ride: which logical Payment operation is in flight (by stable operationKey,
-// DSI-034), where the workflow stands, and what compensation remains. It
+// ride: which logical Payment operation is in flight (by stable operationKey),
+// where the workflow stands, and what compensation remains. It
 // never mutates Driver/Payment authority and never executes compensation
 // itself: handlers pair each saga transition with the Trip transition and the
-// required Outbox intents in ONE Trip database transaction (Doc 02 §14.3).
+// required Outbox intents in ONE Trip database transaction.
 //
 // Guard precedence inside every method:
 //   terminal status → TerminalState (no reactivation)
@@ -89,7 +88,7 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Creates the saga at the DriverAccepted→Authorize step (A-W10-02): the
+    /// Creates the saga at the DriverAccepted→Authorize step: the
     /// caller commits this row in the same transaction as the Trip's
     /// DRIVER_ACCEPTED transition and the AuthorizePayment(K) outbox intent.
     /// </summary>
@@ -121,7 +120,7 @@ public sealed class RideSaga
 
     /// <summary>
     /// Reconstitutes persisted state with structural-coherence validation.
-    /// Operation keys must match the frozen per-trip lineage (DSI-034), and
+    /// Operation keys must match the frozen per-trip lineage, and
     /// step/operation presence must agree (capture step ⇒ capture key, void
     /// step ⇒ void key, terminal success ⇒ captured step).
     /// </summary>
@@ -155,7 +154,7 @@ public sealed class RideSaga
             IsBlankMismatch(captureKey, RideSagaOperationKeys.Capture(tripId)) ||
             IsBlankMismatch(voidKey, RideSagaOperationKeys.Void(tripId)))
         {
-            throw new ArgumentException("Operation keys must be null or follow the frozen per-trip lineage (DSI-034).");
+            throw new ArgumentException("Operation keys must be null or follow the frozen per-trip lineage.");
         }
 
         if (authorizeKey is null)
@@ -191,7 +190,7 @@ public sealed class RideSaga
         key is not null && key != expected;
 
     /// <summary>
-    /// Authoritative authorization success (A-W10-03): AUTHORIZE_PENDING →
+    /// Authoritative authorization success: AUTHORIZE_PENDING →
     /// AUTHORIZED. The handler verifies the outcome's operationKey against
     /// <see cref="AuthorizeOperationKey"/> and applies the Trip's
     /// MarkPaymentAuthorized in the same transaction. Legal from REQUIRES_REVIEW
@@ -230,10 +229,10 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Non-terminal authorization outcome (DECLINED ≠ UNKNOWN, A-W10-04):
+    /// Non-terminal authorization outcome (DECLINED ≠ UNKNOWN):
     /// transient/timeout/unknown results are durably observed but never
-    /// compensate, because the provider effect may have happened (Doc 02
-    /// §15.5). The same operationKey stays in force for reconciliation.
+    /// compensate, because the provider effect may have happened. The same
+    /// operationKey stays in force for reconciliation.
     /// </summary>
     public SagaOutcome RecordAuthorizeOutcomeUncertain(string errorCode, DateTimeOffset now)
     {
@@ -262,7 +261,7 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Terminal authorization failure (A-W10-04): AUTHORIZE_PENDING →
+    /// Terminal authorization failure: AUTHORIZE_PENDING →
     /// COMPENSATING/RELEASE_PENDING. Only callable with an authority-confirmed
     /// no-effect outcome (DECLINED); the handler pairs it with the Trip's
     /// MarkPaymentFailed and the exact release/cancel-round outbox intents.
@@ -293,7 +292,7 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Rider cancellation racing an in-flight authorization (mission §7): the
+    /// Rider cancellation racing an in-flight authorization (mission): the
     /// workflow flips to COMPENSATING immediately (release/matching cleanup
     /// obligations exist on the Trip), but the void decision waits for the
     /// authority-confirmed outcome — the authorization step stays pending.
@@ -365,10 +364,10 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Authorization succeeded AFTER the Trip already cancelled (A-W10-04
-    /// race): the authorization effect exists at Payment authority, so an
+    /// Authorization succeeded AFTER the Trip already cancelled (race): the
+    /// authorization effect exists at Payment authority, so an
     /// exact Void operation with the stable void key is required. The Trip
-    /// stays CANCELLED (DSI-010) — this never revives the ride.
+    /// stays CANCELLED — this never revives the ride.
     /// </summary>
     public SagaOutcome RecordAuthorizeSucceededAfterCancellation(string voidOperationKey, DateTimeOffset now)
     {
@@ -402,7 +401,7 @@ public sealed class RideSaga
     /// PaymentAuthorizationVoided confirmed: the void obligation is resolved.
     /// <paramref name="reservationReleaseConfirmed"/> comes from the Trip's
     /// durable cleanup ledger in the same transaction; COMPENSATED requires
-    /// BOTH obligations resolved (DSI-033 + DSL-002).
+    /// BOTH obligations resolved.
     /// </summary>
     public SagaOutcome RecordVoidResolved(DateTimeOffset now, bool reservationReleaseConfirmed)
     {
@@ -525,22 +524,22 @@ public sealed class RideSaga
 
     /// <summary>
     /// Start guard support: the ride may legally start only when the saga
-    /// holds an authoritative authorization (A-W10-05, DSI-026).
+    /// holds an authoritative authorization.
     /// </summary>
     public bool MayStartRide =>
         Status == RideSagaStatus.Active && CurrentStep == RideSagaStep.Authorized;
 
     /// <summary>
-    /// Legal completion precheck (A-W10-06): capture is emitted only from the
+    /// Legal completion precheck: capture is emitted only from the
     /// authorized, non-compensating ride phase.
     /// </summary>
     public bool MayCompleteRide =>
         Status == RideSagaStatus.Active && CurrentStep == RideSagaStep.Authorized;
 
     /// <summary>
-    /// Ride completed (A-W10-07): AUTHORIZED → CAPTURE_PENDING with the stable
+    /// Ride completed: AUTHORIZED → CAPTURE_PENDING with the stable
     /// capture operation key, committed atomically with the Trip's COMPLETED
-    /// transition and the CapturePayment outbox intent (DSI-027).
+    /// transition and the CapturePayment outbox intent.
     /// </summary>
     public SagaOutcome RecordRideCompleted(string captureOperationKey, DateTimeOffset now)
     {
@@ -577,7 +576,7 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Capture succeeded (A-W10-07): CAPTURE_PENDING → CAPTURED/COMPLETED.
+    /// Capture succeeded: CAPTURE_PENDING → CAPTURED/COMPLETED.
     /// </summary>
     public SagaOutcome RecordCaptureSucceeded(DateTimeOffset now)
     {
@@ -607,7 +606,7 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Capture uncertain/transient after completion (A-W10-08, DSI-028): the
+    /// Capture uncertain/transient after completion: the
     /// observation is durable but the Trip is NEVER regressed — the saga stays
     /// durably pending on the SAME capture operationKey for forward recovery.
     /// </summary>
@@ -637,7 +636,7 @@ public sealed class RideSaga
     }
 
     /// <summary>
-    /// Explicit visible review state (A-W10-08): Payment authority signalled
+    /// Explicit visible review state: Payment authority signalled
     /// REQUIRES_REVIEW (for example RETRY_EXHAUSTED). The current step is
     /// preserved so a later authoritative resolution can continue the saga.
     /// A COMPENSATING saga is never owned by the review signal: the review is

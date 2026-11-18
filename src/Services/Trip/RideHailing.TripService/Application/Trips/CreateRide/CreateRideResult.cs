@@ -1,9 +1,9 @@
-// CreateRide application result (A-W04-01).
+// CreateRide application result.
 //
-// Minimal: new success vs idempotent-replay success vs the three W4 failure
+// Minimal: new success vs idempotent-replay success vs the three failure
 // outcomes. Carries the canonical Trip identity and whether the caller is
 // seeing a replay; no FareSnapshot (tests read authoritative database state),
-// no HTTP status codes (transport mapping belongs to a later W4 slice).
+// no HTTP status codes (transport mapping belongs to a later slice).
 
 namespace RideHailing.TripService.Application.Trips.CreateRide;
 

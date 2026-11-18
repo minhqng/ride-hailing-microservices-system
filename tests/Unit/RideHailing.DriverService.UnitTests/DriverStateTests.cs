@@ -1,4 +1,4 @@
-// B-W03-04: DSI-002/003 coherence + legal/illegal transition matrix (Doc 01 §4.4).
+// State coherence + legal/illegal transition matrix.
 // Pure unit, no PG/Redis.
 using RideHailing.DriverService.Domain.Drivers;
 
@@ -24,7 +24,7 @@ public class DriverStateTests
     public void Create_Empty_Identity_Is_Invalid_Not_Conflict(bool emptyDriver, bool emptyUser)
     {
         // Unfixable input must classify 400 (INVALID_IDENTITY), never 409:
-        // a conflict-retry on empty GUIDs could never succeed (Doc 01 §22).
+        // a conflict-retry on empty GUIDs could never succeed.
         var ex = Assert.Throws<DriverDomainException>(() => Driver.Create(
             emptyDriver ? Guid.Empty : Guid.NewGuid(),
             emptyUser ? Guid.Empty : Guid.NewGuid()));
@@ -219,7 +219,7 @@ public class DriverStateTests
         var v = d.Version;
         // Replay carries the version the caller originally saw (now stale):
         // same logical effect already exists, so canonical success with no
-        // new effect and no version bump (DSI-005 over DSI-003 precedence).
+        // new effect and no version bump (over precedence).
         d.Reserve(t, r, v0);
         Assert.Equal(DriverStatus.Reserved, d.Status);
         Assert.Equal(v, d.Version);
@@ -331,7 +331,7 @@ public class DriverStateTests
     [Fact]
     public void Rehydrate_Rejects_Incoherent_State()
     {
-        // AVAILABLE must not carry reservation refs (DSI-002).
+        // AVAILABLE must not carry reservation refs.
         Assert.Throws<DriverDomainException>(() => Driver.Rehydrate(
             Guid.NewGuid(), Guid.NewGuid(), DriverStatus.Available, 1,
             Guid.NewGuid(), Guid.NewGuid(), null, null, null, DateTimeOffset.UtcNow));

@@ -11,7 +11,7 @@ namespace RideHailing.TripService.Api;
 /// production Trip handlers: no business rules live here. The authenticated
 /// Driver principal is bound to the Driver-owned profile, and the aggregate
 /// still checks the exact current assignment and reservation identity.
-/// Reject is exposed with the DS03 terminal-rejection policy (Doc 01 §40.1);
+/// Reject is exposed with the terminal-rejection policy;
 /// it records a durable MATCH_FAILED/DRIVER_REJECTED result and exact cleanup
 /// intents, never a claim that the remote release already happened.
 /// </summary>

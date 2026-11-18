@@ -46,7 +46,7 @@ public sealed class TripCleanupTests
 
     [Theory]
     [InlineData(TripState.Matching, 1)]
-    [InlineData(TripState.DriverReserved, 3)]
+    [InlineData(TripState.DriverReserved, 2)]
     [InlineData(TripState.DriverAccepted, 3)]
     public void Cancel_CreatesExactObligations(TripState state, int count)
     {
@@ -54,6 +54,10 @@ public sealed class TripCleanupTests
         Assert.True(trip.Cancel(TripTestBuilders.ActionMoment).IsSuccess);
         Assert.Equal(count, trip.CleanupIntents.Count);
         Assert.All(trip.CleanupIntents, i => { Assert.Equal(trip.TripId, i.TripId); Assert.Null(i.CompletedAt); });
+        // Payment reconciliation only exists once accept requested an
+        // authorization; a DRIVER_RESERVED cancellation has no such effect.
+        Assert.Equal(state is TripState.DriverAccepted,
+            trip.CleanupIntents.Any(i => i.Kind == TripCleanupKind.ReconcilePayment));
         if (trip.Assignment is not null)
         {
             var release = Assert.Single(trip.CleanupIntents, i => i.Kind == TripCleanupKind.ReleaseReservation);
@@ -86,9 +90,9 @@ public sealed class TripCleanupTests
     public void CleanupIntakes_CannotChangeOtherStates(TripState state)
     {
         // MatchFailed is intentionally excluded: pre-start terminal cleanup
-        // accepts exact late reservations via RecordPreStartTerminalReservation
-        // (DSL-002). This theory pins the legacy Cancelled-only shim plus
-        // non-terminal rejection; see MatchFailed_LateReservation above.
+        // accepts exact late reservations via RecordPreStartTerminalReservation.
+        // This theory pins the legacy Cancelled-only shim plus non-terminal
+        // rejection; see MatchFailed_LateReservation above.
         var trip = TripTestBuilders.AtState(state);
         var version = trip.Version;
         Assert.False(trip.RecordCancelledReservation(Guid.NewGuid(), Guid.NewGuid(), 1, TripTestBuilders.ActionMoment).IsSuccess);

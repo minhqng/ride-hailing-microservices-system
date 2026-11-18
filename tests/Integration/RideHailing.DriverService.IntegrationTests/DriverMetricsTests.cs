@@ -1,4 +1,4 @@
-// B-W12-01: MeterListener proof over the REAL Driver repository and REAL
+// MeterListener proof over the REAL Driver repository and REAL
 // Kestrel/HTTP reserve/release endpoints. No mocked meter, no fabricated
 // count: every assertion reads an actual instrument measurement.
 using System.Collections.Concurrent;
@@ -199,7 +199,7 @@ public sealed class DriverMetricsTests
 
         // Broker compensation with a foreign reservation is fenced stale.
         var staleCommand = ReleaseCommand(
-            driver.DriverId, trip, Guid.NewGuid(), "w12-broker-stale-" + Guid.NewGuid().ToString("N"));
+            driver.DriverId, trip, Guid.NewGuid(), "broker-stale-" + Guid.NewGuid().ToString("N"));
         var stale = await repo.HandleCommandAsync(staleCommand);
         Assert.Equal("Rejected", stale.Disposition);
         Assert.Equal(1, capture.Counter(
@@ -210,7 +210,7 @@ public sealed class DriverMetricsTests
         Assert.Equal(DriverMutationOutcome.Applied,
             (await repo.TryReleaseAsync(driver.DriverId, trip, reservation)).Outcome);
         var provenanceCommand = ReleaseCommand(
-            driver.DriverId, trip, reservation, "w12-broker-provenance-" + Guid.NewGuid().ToString("N"));
+            driver.DriverId, trip, reservation, "broker-provenance-" + Guid.NewGuid().ToString("N"));
         var provenance = await repo.HandleCommandAsync(provenanceCommand);
         Assert.Equal("Rejected", provenance.Disposition);
         Assert.Equal(1, capture.Counter("driver_stale_release_blocked_total"));

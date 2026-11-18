@@ -1,9 +1,8 @@
-// B-W07-05/08: Matching attempt + round durable workflow state
-// (Doc 02 §12.2–12.4, DSI-015/017/018/031). Tables come from the frozen W2
-// baseline (001/002); this repository is the write-ahead USAGE: persist
-// IN_FLIGHT before the remote call, transition on classification, reload for
-// resume. Matching owns this DB exclusively; Driver truth is only ever read
-// through the Driver HTTP contract, never SQL.
+// Matching attempt + round durable workflow state.
+// Tables come from the frozen baseline (001/002); this repository is the
+// write-ahead usage: persist IN_FLIGHT before the remote call, transition on
+// classification, reload for resume. Matching owns this DB exclusively; Driver
+// truth is only ever read through the Driver HTTP contract, never SQL.
 using Npgsql;
 using RideHailing.MatchingService.Application.Matching;
 
@@ -16,6 +15,7 @@ public static class MatchingAttemptStates
     public const string Unknown = "UNKNOWN";
     public const string Rejected = "REJECTED";
     public const string Reserved = "RESERVED";
+    public const string Cancelled = "CANCELLED";
 }
 
 public static class MatchingRoundStatuses
@@ -75,7 +75,7 @@ public sealed class MatchingAttemptRepository
 
     /// <summary>
     /// Ensures the round row exists (PROCESSING). On PK conflict
-    /// (duplicate trigger, DSR-009 spirit) converges to the existing row
+    /// (duplicate trigger, spirit) converges to the existing row
     /// WITHOUT overwriting its stored input_message_id: the durable
     /// primary identity is (tripId, matchingRound) and the first writer's
     /// envelope MessageId wins. A UNIQUE(input_message_id) conflict (same
@@ -88,9 +88,9 @@ public sealed class MatchingAttemptRepository
         await EnsureRoundCoreAsync(tripId, round, inputMessageId, null, null, ct);
 
     /// <summary>
-    /// B-REC-01 durable intake: the canonical RideRequestedV1 commits the
-    /// pickup center, the auto-execute obligation and any cancellation that
-    /// overtook this message in the SAME transaction, before the consumer
+    /// Durable intake: the canonical RideRequestedV1 commits the pickup center,
+    /// the auto-execute obligation and any cancellation that overtook this
+    /// message in the SAME transaction, before the consumer
     /// ACKs. A crash after ACK therefore leaves work that the autonomous
     /// worker can discover and execute; no in-memory queue is involved.
     /// Duplicate deliveries converge; the first pickup identity wins (never
@@ -323,7 +323,11 @@ public sealed class MatchingAttemptRepository
 
     /// <summary>
     /// Marks the round RESERVED with the winning identity. Conditional on
-    /// PROCESSING: a settled round never advances silently (DSI-015).
+    /// PROCESSING: a settled round never advances silently. One reservation
+    /// wins the round, so every remaining READY attempt can no longer be
+    /// dispatched; they are closed in the same transaction. Leaving them
+    /// READY would keep the terminal round "unresolved" for the invariant
+    /// audit and for the cancellation proof read by Trip's cleanup.
     /// </summary>
     public async Task<bool> TryMarkRoundReservedAsync(
         Guid tripId, int round, Guid driverId, Guid reservationId,
@@ -335,23 +339,47 @@ public sealed class MatchingAttemptRepository
                 updated_at = now()
             WHERE trip_id = @trip AND matching_round = @round AND status = 'PROCESSING';
             """;
+        const string CloseUnselected = """
+            UPDATE matching_attempts
+            SET state = 'CANCELLED',
+                last_error_code = COALESCE(last_error_code, 'NOT_SELECTED'),
+                updated_at = now()
+            WHERE trip_id = @trip AND matching_round = @round AND state = 'READY'
+              AND reservation_id <> @reservation;
+            """;
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand(Sql, conn);
-        cmd.Parameters.AddWithValue("trip", tripId);
-        cmd.Parameters.AddWithValue("round", round);
-        cmd.Parameters.AddWithValue("driver", driverId);
-        cmd.Parameters.AddWithValue("reservation", reservationId);
-        return await cmd.ExecuteNonQueryAsync(ct) == 1;
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        int rows;
+        await using (var cmd = new NpgsqlCommand(Sql, conn, tx))
+        {
+            cmd.Parameters.AddWithValue("trip", tripId);
+            cmd.Parameters.AddWithValue("round", round);
+            cmd.Parameters.AddWithValue("driver", driverId);
+            cmd.Parameters.AddWithValue("reservation", reservationId);
+            rows = await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        if (rows == 1)
+        {
+            await using var close = new NpgsqlCommand(CloseUnselected, conn, tx);
+            close.Parameters.AddWithValue("trip", tripId);
+            close.Parameters.AddWithValue("round", round);
+            close.Parameters.AddWithValue("reservation", reservationId);
+            await close.ExecuteNonQueryAsync(ct);
+        }
+
+        await tx.CommitAsync(ct);
+        return rows == 1;
     }
 
     /// <summary>
-    /// Persists the write-ahead IN_FLIGHT attempt (Doc 02 §12.4). On PK
+    /// Persists the write-ahead IN_FLIGHT attempt. On PK
     /// conflict (duplicate worker, same ordinal) converges to the existing
-    /// row so both workers share one reservation identity (DSI-018).
+    /// row so both workers share one reservation identity.
     ///
     /// The round row is locked FOR SHARE before the insert and held for the
-    /// whole short transaction. W9 terminalization locks the same round row
+    /// whole short transaction. Terminalization locks the same round row
     /// FOR UPDATE before reading attempts: a terminal NO_DRIVER can therefore
     /// never commit from a stale attempt set while this new attempt is being
     /// created, and an attempt can never be created on a terminal round.
@@ -389,7 +417,7 @@ public sealed class MatchingAttemptRepository
             await cmd.ExecuteNonQueryAsync(ct);
             await tx.CommitAsync(ct);
 
-            // B-W12-02: one durable ATTEMPT IDENTITY per inserted row. A
+            // One durable ATTEMPT IDENTITY per inserted row. A
             // duplicate worker converges on the existing row and is not
             // counted again; retries/reconnects reuse the same reservation.
             _metrics?.AttemptCreated();
@@ -484,7 +512,7 @@ public sealed class MatchingAttemptRepository
         return rows;
     }
 
-    /// <summary>DSI-017/022 guard: any IN_FLIGHT/UNKNOWN attempt in the round.</summary>
+    /// <summary>Guard: any IN_FLIGHT/UNKNOWN attempt in the round.</summary>
     public async Task<bool> HasUnresolvedAsync(
         Guid tripId, int round, CancellationToken ct = default)
     {
@@ -551,7 +579,7 @@ public sealed class MatchingAttemptRepository
     /// then marks the round CANCELLED only when no unresolved or reserved
     /// effect remains. An unresolved attempt keeps the round PROCESSING so it
     /// is still reconciled; a reservation that committed wins (Trip performs
-    /// exact cleanup per Doc 02 §12.9).
+    /// exact cleanup).
     /// </summary>
     public async Task<bool> TryMarkRoundCancelledAsync(
         Guid tripId, int round, CancellationToken ct = default)
@@ -747,8 +775,8 @@ public sealed class MatchingAttemptRepository
     }
 
     /// <summary>
-    /// Acquires the W9 serialization lock used by every operation that can
-    /// add or authorize a new attempt. Share mode lets concurrent attempt
+    /// Acquires the serialization lock used by every operation that can add or
+    /// authorize a new attempt. Share mode lets concurrent attempt
     /// creators/dispatchers proceed together, but excludes the terminalizer's
     /// FOR UPDATE. A terminal round or a cancellation request yields false.
     /// </summary>

@@ -1,4 +1,4 @@
-// Trip-side domain coordinate: pickup or dropoff (Doc 01 §5.3, §6.1).
+// Trip-side domain coordinate: pickup or dropoff.
 //
 // This is a domain value object, not the HTTP transport DTO
 // (RideHailing.TripService.Api.TripLocationDto): the domain layer must not
@@ -20,7 +20,7 @@ public sealed record TripLocation
 
     /// <summary>
     /// Creates a coordinate. Rejects non-finite values and values outside
-    /// the canonical ranges (Doc 01 §5.3).
+    /// the canonical ranges.
     /// </summary>
     public TripLocation(double latitude, double longitude)
     {

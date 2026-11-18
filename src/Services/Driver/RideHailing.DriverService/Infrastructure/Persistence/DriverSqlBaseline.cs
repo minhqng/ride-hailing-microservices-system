@@ -1,5 +1,5 @@
-// B-W03-07: loads ALL W2+ migration scripts in filename order (001, 002, ...).
-// Single source shared by the service startup path (chốt ③: Npgsql raw, no EF in W3).
+// Loads all migration scripts in filename order (001, 002, ...).
+// Single source shared by the service startup path (Npgsql raw, no EF in).
 namespace RideHailing.DriverService.Infrastructure.Persistence;
 
 public static class DriverSqlBaseline

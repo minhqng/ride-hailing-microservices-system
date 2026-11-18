@@ -335,7 +335,7 @@ public sealed class DriverCompensationTests
         Assert.Equal(0, await ReleaseEventsForReservation(r2));
 
         _output.WriteLine(
-            $"W11 CON-04-broker driver={driver} r1={r1} r2={r2} trip2={trip2} " +
+            $"CON-04-broker driver={driver} r1={r1} r2={r2} trip2={trip2} " +
             $"lateDisposition=Rejected reason={late.Reason} replayDisposition=Applied " +
             $"finalVersion={after.Version} releaseIntentsR2=0");
     }

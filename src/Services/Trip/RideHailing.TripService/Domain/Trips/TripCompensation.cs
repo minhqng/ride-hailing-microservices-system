@@ -1,10 +1,10 @@
-// Trip-side compensation requirement representation (Doc 01 §6.5, §12.4,
-// DSI-033, DSL-002).
+// Trip-side compensation requirement representation.
 //
-// A W5 domain result may establish that future workflow work is REQUIRED
+// A domain result may establish that future workflow work is REQUIRED
 // (exact Driver release, matching-round cancellation) without executing it:
-// Saga, broker dispatch and Driver/Payment orchestration belong to later
-// weeks. These flags are durable domain knowledge carried on the domain
+// Saga, broker dispatch and Driver/Payment orchestration belong to the future
+// workflow layer. These flags are durable domain knowledge carried on the
+// domain
 // outcome; the future workflow layer reads them together with the Trip's
 // current assignment/round to build exact fenced commands. No flag ever
 // performs a side effect.
@@ -22,7 +22,7 @@ public enum TripCompensation
 
     /// <summary>
     /// The future workflow must release the exact current reservation
-    /// (tripId + reservationId, DSI-033). Never a driver-only release.
+    /// (tripId + reservationId). Never a driver-only release.
     /// </summary>
     ReleaseReservation = 1,
 

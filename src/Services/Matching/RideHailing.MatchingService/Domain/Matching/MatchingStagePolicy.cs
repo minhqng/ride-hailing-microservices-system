@@ -1,4 +1,4 @@
-// DSI-021/022: progressive search stages S0 -> S1 -> S2 (Doc 01 §9).
+// Progressive search stages S0 -> S1 -> S2.
 // Radius/budget values are deployment configuration, never correctness
 // constants. The stage names themselves are the canonical generations; the
 // validator requires a contiguous S0..Sn sequence with strictly expanding

@@ -1,5 +1,5 @@
-// Driver-decision system intake (A-W05-03 accept/reject proof, A-W10-02
-// accept→authorize saga step).
+// Driver-decision system intake: accept/reject plus the accept→authorize
+// saga step.
 //
 // Applies a Driver accept or validated rejection for the Trip's current
 // assignment. The supplied driver/reservation identity is fenced against the
@@ -8,7 +8,7 @@
 // authentication and profile binding are enforced by the public lifecycle
 // endpoint; this handler stays HTTP-independent.
 //
-// W10: the FIRST applied acceptance starts the persisted ride saga and
+// The FIRST applied acceptance starts the persisted ride saga and
 // stages the AuthorizePayment(K) outbox intent in the SAME transaction
 // (Trip DRIVER_ACCEPTED + saga AUTHORIZE_PENDING + intent = one commit).
 // Duplicate acceptance replays and never creates a second authorization:
@@ -70,7 +70,7 @@ public sealed class RecordDriverAcceptedHandler
         // The payment leg must be quotable BEFORE any mutation: a frozen fare
         // that cannot produce a positive payment amount could never dispatch
         // AuthorizePayment, so acceptance is rejected up front instead of
-        // mutating a Trip whose saga step would permanently fail (A-W10-02).
+        // mutating a Trip whose saga step would permanently fail.
         try
         {
             _ = PaymentAmounts.ToMinorUnits(trip.Fare);
@@ -88,9 +88,9 @@ public sealed class RecordDriverAcceptedHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        // Exact acceptance replay is already current (DSI-008): no mutation,
+        // Exact acceptance replay is already current: no mutation,
         // so skip the write and keep Version/UpdatedAt stable. A replay
-        // without a saga row is a pre-W10 Trip: its payment lineage cannot be
+        // without a saga row predates the saga: its payment lineage cannot be
         // invented post-hoc from a duplicate acceptance.
         if (!outcome.IsReplay)
         {
@@ -122,7 +122,7 @@ public sealed class RecordDriverAcceptedHandler
 /// <summary>
 /// System-side DriverRejected intake. Records the terminal rejection result
 /// and stages the exact cleanup obligations through the Trip Outbox in the
-/// same local transaction (Doc 01 §40.1). No assignment is cleared until the
+/// same local transaction. No assignment is cleared until the
 /// aggregate has captured the exact reservation identity in its cleanup
 /// intents; the response never claims the remote release already happened.
 /// </summary>

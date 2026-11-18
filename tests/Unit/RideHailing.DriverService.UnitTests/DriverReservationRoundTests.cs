@@ -1,4 +1,4 @@
-// W08 hardening: reservation generation provenance (matchingRound lineage).
+// Reservation generation provenance (matchingRound lineage).
 // Pure unit, no PG. The generation is write-once at the winning reserve,
 // published as DriverReservedV1.matchingRound, cleared exactly with the
 // reservation refs, never backfilled on replay and never fabricated.
@@ -26,8 +26,8 @@ public class DriverReservationRoundTests
     [Fact]
     public void Reserve_Without_Generation_Leaves_Provenance_Unknown()
     {
-        // Deploy skew: a W08-era caller sends no round. Row stays RESERVED
-        // with NULL provenance; the event will omit the field for Trip review.
+        // Deploy skew: an older caller sends no round. The row stays RESERVED
+        // with NULL provenance; the event omits the field for Trip review.
         var d = AvailableDriver();
         d.Reserve(Guid.NewGuid(), Guid.NewGuid(), d.Version);
         Assert.Null(d.ReservationRound);

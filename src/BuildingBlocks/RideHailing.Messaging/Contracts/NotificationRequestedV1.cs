@@ -1,10 +1,10 @@
-// DS03 recipient-addressed notification intent (Doc 01 §40.2, Doc 02 §43).
+// Recipient-addressed notification intent.
 //
 // The authoritative owner of the recipient identity publishes this minimum
 // intent through its existing Transactional Outbox in the same transaction as
 // the business effect. It carries no free-form content, token, credential or
 // payment secret: the Notification worker maps the bounded type/reason to safe
-// human-readable content and persists a recipient-addressed inbox row.
+// content and persists a recipient-addressed inbox row.
 using System.Text.Json.Serialization;
 
 namespace RideHailing.Messaging.Contracts;

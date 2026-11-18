@@ -1,4 +1,4 @@
-// B-W12-01: Driver authority instruments. These counters describe committed
+// Driver authority instruments. These counters describe committed
 // authoritative effects and definitive domain rejections only; transport and
 // database failures are never classified as domain outcomes. Caller-observed
 // reserve uncertainty belongs to Matching (matching_unknown_total), because
@@ -24,7 +24,7 @@ public sealed class DriverMetrics
 
     private readonly Counter<long> _staleReleaseBlocked = Meter.CreateCounter<long>(
         "driver_stale_release_blocked_total",
-        description: "Release attempts blocked by current-reservation fencing (DSI-004). Idempotent no-ops are not counted.");
+        description: "Release attempts blocked by current-reservation fencing. Idempotent no-ops are not counted.");
 
     public void ReserveSucceeded() => _reserveSuccess.Add(1);
 
@@ -57,7 +57,7 @@ public sealed class DriverMetrics
     /// <summary>
     /// Only exact-token/round fencing rejections are "stale release blocked".
     /// Provenance/legality refusals are not stale-release signals and must not
-    /// inflate DSI-004.
+    /// inflate the conflict counter.
     /// </summary>
     public static bool IsStaleReleaseBlocked(string? conflictCode) =>
         conflictCode is DriverErrors.StaleReservation or "RESERVATION_ROUND_MISMATCH";

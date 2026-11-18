@@ -1,8 +1,9 @@
-// Trip Outbox relay host (A-W09-04).
+// Trip Outbox relay host.
 //
-// A owns Trip semantic intent creation; C owns claim/publish/confirm/mark,
-// retry and backlog metrics. This worker only supplies the Trip-owned
-// lifetime: run C's relay one cycle at a time, and only while the Trip schema
+// Trip owns semantic intent creation; the shared relay owns
+// claim/publish/confirm/mark, retry and backlog metrics. This worker only
+// supplies the Trip-owned lifetime: run the relay one cycle at a time, and
+// only while the Trip schema
 // is migrated and the broker publish path is actually usable.
 //
 // Why gate publication at all: a cycle against an unreachable broker burns

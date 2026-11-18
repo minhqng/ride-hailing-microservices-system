@@ -1,12 +1,12 @@
--- B-W09-03/04: durable terminal-result identity for NO_DRIVER (DSI-035,
--- DSR-010, Doc 02 §12.8). Forward-only and append-only: 001-005 are untouched.
+-- Durable terminal-result identity for NO_DRIVER. Forward-only and append-only:
+-- 001-005 are untouched.
 --
--- result_message_id already exists (UUID NULL) from 001. W9 uses it as the
+-- result_message_id already exists (UUID NULL) from 001. It is the
 -- canonical persisted identity, equal to Outbox message_id and the wire
 -- envelope messageId. A terminal NO_DRIVER without that identity would make
 -- an exact replay unable to reuse one logical result, so new terminal writes
 -- must supply it. NOT VALID deliberately preserves any legacy NO_DRIVER rows
--- created before W9; PostgreSQL still enforces the check for every new or
+-- created earlier; PostgreSQL still enforces the check for every new or
 -- updated row.
 --
 -- The partial unique index makes one logical terminal result map to exactly

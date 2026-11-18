@@ -1,4 +1,4 @@
-// W07 reconciliation race — version-fenced repair proof.
+// Reconciliation race — version-fenced repair proof.
 // Proves: Matching must not treat current AVAILABLE as conclusive non-commit
 // while an earlier R may still commit (pre-lock and pre-commit races).
 // Uses REAL PostgreSQL on both sides; stub only coordinates transport faults.
@@ -151,7 +151,7 @@ public sealed class ReconciliationRaceTests
 
         // Query sees AVAILABLE with Vx == max (no version advance): must NOT
         // conclude REJECTED. All polls stay inconclusive, so bounded exhaustion
-        // becomes visible review with the row staying UNKNOWN (DSL-001).
+        // becomes visible review with the row staying UNKNOWN.
         var reconciled = await orch.ReconcileAsync(trip, 1, 0);
         // Safety invariant: must NOT conclude REJECTED/RESERVED while R1 may still commit.
         Assert.True(

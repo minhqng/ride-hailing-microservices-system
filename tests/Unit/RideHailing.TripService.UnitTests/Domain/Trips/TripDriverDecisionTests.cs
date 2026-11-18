@@ -1,11 +1,10 @@
-// Driver accept/reject + cancellation-path domain proof (A-W05-03, DS03).
+// Driver accept/reject + cancellation-path domain proof.
 //
-// Mandatory W5 properties: repeated DriverAccepted for the same legal current
-// assignment is replay-safe; DriverAccepted for an old reservation is
-// stale/rejected with no mutation. DS03 rejection records a real terminal
-// MATCH_FAILED/DRIVER_REJECTED result with exact cleanup intents; a duplicate
-// exact rejection is an idempotent replay and every other rejection leaves
-// the aggregate untouched.
+// Repeated DriverAccepted for the same legal current assignment is replay-safe;
+// DriverAccepted for an old reservation is stale/rejected with no mutation.
+// A rejection records a real terminal MATCH_FAILED/DRIVER_REJECTED result with
+// exact cleanup intents; a duplicate exact rejection is an idempotent replay
+// and every other rejection leaves the aggregate untouched.
 
 using RideHailing.TripService.Domain.Trips;
 

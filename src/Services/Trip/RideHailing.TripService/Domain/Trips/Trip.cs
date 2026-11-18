@@ -1,9 +1,9 @@
-// Trip aggregate root: authoritative local ride lifecycle (Doc 01 §6).
+// Trip aggregate root: authoritative local ride lifecycle.
 //
-// The aggregate guards DSI-008 (at most one current assignment), DSI-009
-// (assignment identity coherence), DSI-010 (terminal monotonicity), DSI-011
-// (start requires current assignment), DSI-012 (completion only from
-// IN_PROGRESS) and DSI-016 (stale-round fencing via CurrentMatchingRound).
+// The aggregate guards: at most one current assignment, assignment identity
+// coherence, terminal monotonicity, start-requires-current-assignment,
+// completion only from IN_PROGRESS, and stale-round fencing via
+// CurrentMatchingRound.
 // It records only the Trip-side reference to authoritative Driver/Payment
 // results; reservation and payment authority stay with the Driver and Payment
 // services. Saga, Outbox, broker and rematch orchestration belong to later
@@ -11,7 +11,7 @@
 // executed here.
 //
 // Identity/fence precedence inside every intake method:
-//   terminal state  → TerminalState (DSI-010/DSI-032; no reactivation, no
+//   terminal state  → TerminalState (no reactivation, no
 //                     replay-success on terminal rows)
 //   malformed input → AssignmentRequired (empty identities; no mutation)
 //   stale generation→ StaleIdentity (round/reservation not current; no
@@ -53,27 +53,26 @@ public sealed class Trip
     /// <summary>Requested dropoff. Immutable.</summary>
     public TripLocation Dropoff { get; private set; }
 
-    /// <summary>Frozen authoritative fare (DSI-014). Immutable.</summary>
+    /// <summary>Frozen authoritative fare. Immutable.</summary>
     public FareSnapshot Fare { get; private set; }
 
     /// <summary>Current P0 business state.</summary>
     public TripState State { get; private set; }
 
     /// <summary>
-    /// Current matching generation (DSI-016). Zero means no round has been
+    /// Current matching generation. Zero means no round has been
     /// opened yet; StartMatching advances it to 1. Only the current round may
     /// become (or remain) the assignment. Later rematch rounds belong to
     /// future workflow work.
     /// </summary>
     public int CurrentMatchingRound { get; private set; }
 
-    /// <summary>Zero or one coherent current assignment (DSI-008).</summary>
+    /// <summary>Zero or one coherent current assignment.</summary>
     public TripAssignment? Assignment { get; private set; }
 
     /// <summary>
-    /// Durable reason for a MATCH_FAILED result (Doc 01 §40.1.2). Null for
-    /// every non-terminal state and for historical rows created before the
-    /// DS03 amendment.
+    /// Durable reason for a MATCH_FAILED result. Null for every non-terminal
+    /// state and for historical rows created before the reason was recorded.
     /// </summary>
     public TripFailureReason? FailureReason { get; private set; }
 
@@ -93,7 +92,7 @@ public sealed class Trip
     /// </summary>
     public int Version { get; private set; }
 
-    // Persistence materialization path (A-W03-07): EF Core 10 cannot bind
+    // Persistence materialization path: EF Core 10 cannot bind
     // ComplexProperty references through the domain constructor, so the
     // model uses this private parameterless constructor plus private setters.
     // Public immutability is preserved; all business construction still goes
@@ -175,15 +174,15 @@ public sealed class Trip
     /// Reconstitutes persisted historical state. Enforces structural
     /// coherence: DRIVER_RESERVED, DRIVER_ACCEPTED, READY_TO_START,
     /// IN_PROGRESS and COMPLETED require a coherent current assignment
-    /// because each is reachable only with one (DSI-009, DSI-011, DSI-012).
+    /// because each is reachable only with one.
     /// CREATED requires round zero with no assignment; MATCH_FAILED requires
     /// no assignment; CANCELLED allows either form so pre-assignment
     /// cancellation and post-assignment cleanup identity both survive. Any
-    /// present assignment must agree with the current round (DSI-009).
+    /// present assignment must agree with the current round.
     /// MATCHING requires an open round (>= 1) and normally carries no
     /// assignment; a coherent MATCHING + assignment shape may still be
     /// constructed in memory to prove generation-before-conflict fencing
-    /// (DSI-016 before DSI-008). That shape is never persistable: the
+    /// (before). That shape is never persistable: the
     /// state/assignment database checks reject MATCHING rows with an
     /// assignment and remain the persisted-state backstop.
     /// </summary>
@@ -266,7 +265,7 @@ public sealed class Trip
         if (assignment is not null && (currentMatchingRound < 1 || assignment.MatchingRound != currentMatchingRound))
         {
             throw new ArgumentException(
-                "Cannot reconstitute a current assignment that disagrees with the current matching round (DSI-009).",
+                "Cannot reconstitute a current assignment that disagrees with the current matching round.",
                 nameof(assignment));
         }
 
@@ -283,7 +282,7 @@ public sealed class Trip
 
     /// <summary>
     /// Opens the first matching round: CREATED → MATCHING with the current
-    /// round initialized to 1 (A-W05-01, A-W05-02). Repeating the call on a
+    /// round initialized to 1. Repeating the call on a
     /// round-1 MATCHING Trip is an idempotent replay. Later rematch rounds
     /// belong to future workflow work and are rejected here.
     /// </summary>
@@ -332,8 +331,8 @@ public sealed class Trip
     /// MATCHING → DRIVER_RESERVED with one coherent assignment. The caller
     /// supplies authoritative facts; this method never contacts the Driver
     /// service and never trusts a stale generation: only the current round
-    /// may become the assignment (DSI-016), and only when no assignment
-    /// exists yet (DSI-008). A duplicate of the exact current assignment on
+    /// may become the assignment, and only when no assignment
+    /// exists yet. A duplicate of the exact current assignment on
     /// an assigned Trip is an idempotent replay; a non-current round is
     /// stale; a different identity for the current round is a conflict.
     /// </summary>
@@ -358,8 +357,8 @@ public sealed class Trip
 
         if (State == TripState.Matching)
         {
-            // Generation gate before same-generation conflict (DSI-016
-            // before DSI-008): a fact from a superseded generation is stale
+            // Generation gate before same-generation conflict: a fact from a
+            // superseded generation is stale
             // regardless of any assignment the Trip holds; only a current
             // generation fact can conflict as a second assignment.
             if (matchingRound != CurrentMatchingRound)
@@ -371,7 +370,7 @@ public sealed class Trip
             {
                 return TripOutcome.Fail(
                     TripErrorCode.AssignmentAlreadyPresent,
-                    "Trip already holds a current assignment; a second simultaneous assignment is rejected (DSI-008).");
+                    "Trip already holds a current assignment; a second simultaneous assignment is rejected.");
             }
 
             Assignment = new TripAssignment(driverId, reservationId, matchingRound);
@@ -466,11 +465,11 @@ public sealed class Trip
     }
 
     /// <summary>
-    /// Records a Driver rejection as the Trip's terminal matching result
-    /// (Doc 01 §40.1): DRIVER_RESERVED → MATCH_FAILED with
+    /// Records a Driver rejection as the Trip's terminal matching result:
+    /// DRIVER_RESERVED → MATCH_FAILED with
     /// failure_reason=DRIVER_REJECTED, one exact ReleaseReservation intent and
     /// one CancelMatching intent. The current assignment is cleared because
-    /// the canonical MATCH_FAILED shape is unassigned (DSI-008); the exact
+    /// the canonical MATCH_FAILED shape is unassigned; the exact
     /// reservation identity survives in the cleanup intents and Matching's
     /// historical round. No rematch, no payment command and no Driver release
     /// is executed here: the caller stages the durable Outbox intents and the
@@ -616,9 +615,9 @@ public sealed class Trip
 
     /// <summary>
     /// Records the locally deterministic matching failure:
-    /// MATCHING → MATCH_FAILED for the current round (A-W05-04). A stale
+    /// MATCHING → MATCH_FAILED for the current round. A stale
     /// round never fails the Trip, and an existing current assignment
-    /// contradicts a clean matching failure (DSI-008).
+    /// contradicts a clean matching failure.
     /// </summary>
     public TripOutcome MarkMatchingFailed(int matchingRound, DateTimeOffset now)
     {
@@ -663,12 +662,12 @@ public sealed class Trip
     }
 
     /// <summary>
-    /// Starts the ride: READY_TO_START → IN_PROGRESS (DSI-011). Requires the
+    /// Starts the ride: READY_TO_START → IN_PROGRESS. Requires the
     /// current assignment to exist with matching identity. READY_TO_START
     /// itself is the local fact that authorization was previously accepted;
     /// no remote service is consulted. Repeating the exact current start on
     /// IN_PROGRESS is an idempotent replay. Starting before the required
-    /// authorization/state is rejected with no mutation (DSI-026).
+    /// authorization/state is rejected with no mutation.
     /// </summary>
     public TripOutcome Start(Guid driverId, Guid reservationId, DateTimeOffset now)
     {
@@ -710,7 +709,7 @@ public sealed class Trip
     }
 
     /// <summary>
-    /// Completes the ride: IN_PROGRESS → COMPLETED (DSI-012) for the current
+    /// Completes the ride: IN_PROGRESS → COMPLETED for the current
     /// Trip/Driver relationship. Afterwards the Trip is terminal. No Payment
     /// capture is performed here.
     /// </summary>
@@ -753,7 +752,7 @@ public sealed class Trip
     /// policy (2026-11-03): cancellation is allowed from CREATED, MATCHING,
     /// DRIVER_RESERVED, DRIVER_ACCEPTED and READY_TO_START; IN_PROGRESS is
     /// rejected because the physical ride has begun. Any present assignment
-    /// is preserved for exact later cleanup (DSI-033), and the outcome exposes
+    /// is preserved for exact later cleanup, and the outcome exposes
     /// the cleanup requirement (exact release when an assignment exists;
     /// matching cancellation when a round was opened). READY_TO_START
     /// cancellation additionally requires the Saga's exact void leg, which the
@@ -812,7 +811,7 @@ public sealed class Trip
         return RecordPreStartTerminalReservation(driverId, reservationId, matchingRound, now);
     }
 
-    /// <summary>DSL-002 covers failed as well as cancelled pre-start rides.
+    /// <summary>Compensation covers failed as well as cancelled pre-start rides.
     /// A late authority fact creates exact cleanup, never a new assignment.</summary>
     public TripOutcome RecordPreStartTerminalReservation(Guid driverId, Guid reservationId,
         int matchingRound, DateTimeOffset now)
@@ -869,9 +868,18 @@ public sealed class Trip
         {
             AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReleaseReservation,
                 Assignment.MatchingRound, now, Assignment.DriverId, Assignment.ReservationId));
-            // Authorization can be in flight at cancellation. Reconcile first;
-            // this is not an invented Payment operation key or a direct void.
-            AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReconcilePayment, CurrentMatchingRound, now));
+            // Authorization is only requested when the Driver accepts. A
+            // DRIVER_RESERVED cancellation therefore has no Payment effect to
+            // reconcile, and minting the obligation would leave it open
+            // forever because no authorization outcome can confirm it.
+            if (State is TripState.DriverAccepted or TripState.ReadyToStart)
+            {
+                // Authorization can be in flight at cancellation. Reconcile
+                // first; this is not an invented Payment operation key or a
+                // direct void.
+                AddCleanup(TripCleanupIntent.Create(TripId, TripCleanupKind.ReconcilePayment,
+                    CurrentMatchingRound, now));
+            }
         }
     }
 
@@ -917,12 +925,12 @@ public sealed class Trip
     private TripOutcome Terminal(string operation) =>
         TripOutcome.Fail(
             TripErrorCode.TerminalState,
-            $"{operation} is rejected: the Trip is terminal ({State.ToCanonicalName()}) and cannot reactivate (DSI-010).");
+            $"{operation} is rejected: the Trip is terminal ({State.ToCanonicalName()}) and cannot reactivate.");
 
     private TripOutcome StaleRound(string operation, int matchingRound) =>
         TripOutcome.Fail(
             TripErrorCode.StaleIdentity,
-            $"{operation} references matching round {matchingRound} but the Trip's current round is {CurrentMatchingRound} (DSI-016); a stale generation cannot overwrite current state.");
+            $"{operation} references matching round {matchingRound} but the Trip's current round is {CurrentMatchingRound}; a stale generation cannot overwrite current state.");
 
     private TripOutcome? CheckCurrentAssignment(Guid driverId, Guid reservationId, string operation)
     {

@@ -1,5 +1,5 @@
-// B-W07-01/02/04: exact release, stale-release fencing, and version-fenced
-// online/offline (DSI-004/033, DSR-004 Race B, DSI-003). Pure unit, no PG.
+// Exact release, stale-release fencing, and version-fenced
+// online/offline (Race B). Pure unit, no PG.
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;

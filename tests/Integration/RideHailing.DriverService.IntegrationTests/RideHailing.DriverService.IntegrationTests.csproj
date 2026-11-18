@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- W12 metrics/security proofs host the real Driver endpoints on Kestrel. -->
+    <!-- Metrics/security proofs host the real Driver endpoints on Kestrel. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

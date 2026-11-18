@@ -1,4 +1,4 @@
-// B-W11-04 (CON-02): both legal winning schedules for GoOffline vs Reserve
+// Both legal winning schedules for GoOffline vs Reserve
 // on REAL PostgreSQL. A DB row lock cannot be told which contender to grant
 // first, so each schedule is forced after a common barrier: one contender
 // commits, then the other is released with the SAME starting version. This
@@ -97,7 +97,7 @@ public sealed class DriverCon02DeterministicTests
         Assert.Equal(1, await EventCountAsync(driverId, DriverEventTypes.Offline));
         Assert.Equal(0, await EventCountAsync(driverId, DriverEventTypes.Reserved));
         _output.WriteLine(
-            $"W11 CON-02 schedule=offline-wins barrier=reached driver={driverId} " +
+            $"CON-02 schedule=offline-wins barrier=reached driver={driverId} " +
             $"lostReservation={reservation} finalVersion={final.Version} " +
             $"offlineIntents=1 reservedIntents=0 elapsedMs={elapsed.ElapsedMilliseconds}");
     }
@@ -152,7 +152,7 @@ public sealed class DriverCon02DeterministicTests
         Assert.Equal(1, await EventCountAsync(driverId, DriverEventTypes.Reserved));
         Assert.Equal(0, await EventCountAsync(driverId, DriverEventTypes.Offline));
         _output.WriteLine(
-            $"W11 CON-02 schedule=reserve-wins barrier=reached driver={driverId} " +
+            $"CON-02 schedule=reserve-wins barrier=reached driver={driverId} " +
             $"reservation={reservation} finalVersion={final.Version} " +
             $"reservedIntents=1 offlineIntents=0 elapsedMs={elapsed.ElapsedMilliseconds}");
     }

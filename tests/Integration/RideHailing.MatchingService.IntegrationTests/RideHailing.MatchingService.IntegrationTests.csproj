@@ -26,17 +26,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- B-W11 REL-01 hosts the real Driver endpoints on Kestrel so Matching
+    <!-- B-REL-01 hosts the real Driver endpoints on Kestrel so Matching
          crosses a real HTTP socket, not a transport stub. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Services\Matching\RideHailing.MatchingService\RideHailing.MatchingService.csproj" />
-    <!-- Test-only: W07 component proofs drive a REAL DriverRepository; W11
+    <!-- Test-only: component proofs drive a REAL DriverRepository;
          REL-01 additionally hosts the real Driver Kestrel endpoints so the
          reserve crosses a real HTTP socket. Production Matching code never
-         references DriverService (seam-only rule, 05B §11.3). -->
+         references DriverService (seam-only rule, Doc 02 §11.3). -->
     <ProjectReference Include="..\..\..\src\Services\Driver\RideHailing.DriverService\RideHailing.DriverService.csproj" />
   </ItemGroup>
 

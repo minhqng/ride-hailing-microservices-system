@@ -101,7 +101,8 @@ public class RabbitBackboneTests(RabbitBackboneFixture fixture) : IClassFixture<
         count.Parameters.AddWithValue("id", message.MessageId);
         Assert.Equal(1L, (long)(await count.ExecuteScalarAsync())!);
         await channel.BasicAckAsync(redelivery.DeliveryTag, false);
-        // W9 must make a real business consumer's redelivery harmless; this test intentionally does not reapply it.
+        // A real business consumer's redelivery must be harmless; this test
+        // intentionally does not reapply it.
     }
 
     [Fact]

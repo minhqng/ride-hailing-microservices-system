@@ -1,39 +1,20 @@
 name: ci
 on:
+  # Only main is a long-lived branch. Feature and integration branches are
+  # validated through pull_request, so a push trigger list would only add
+  # duplicate runs for branches that are already covered.
   push:
-    branches: [main, 'MemC-*-Distributed']
-  # Run for every pull request, not only a hard-coded list of stacked bases.
-  # A new stacked branch must never silently skip CI just because its base was
-  # not added to a YAML allow-list.
+    branches: [main]
   pull_request:
   workflow_dispatch:
 jobs:
-  fault-campaign:
-    if: github.event_name == 'pull_request' && github.head_ref == 'integration/team-w11-final'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.100
-      - run: bash scripts/fault/team-fault-campaign.sh
-      - if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fault-campaign-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            evidence/team/fault-campaign/outputs/
-            evidence/member-b/w11-fault-proofs/raw/
   hygiene:
     name: hygiene
     runs-on: ubuntu-latest
     env:
       GITHUB_EVENT_BEFORE: ${{ github.event.before }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - run: scripts/test/hygiene-check.sh --self-test
@@ -43,15 +24,14 @@ jobs:
     name: build-test
     runs-on: ubuntu-latest
     env:
-      B12_AUDIT_OUTPUT_DIR: ${{ github.workspace }}/TestResults/b12-audit
+      INVARIANT_AUDIT_OUTPUT_DIR: ${{ github.workspace }}/TestResults/invariant-audit
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.100
       - run: dotnet restore RideHailing.Distributed.slnx
-      - run: python3 -m unittest discover -s scripts/perf/tests -p 'test_*.py'
-      - run: python3 -m compileall -q scripts/perf scripts/evidence scripts/fault
+      - run: python3 -m compileall -q scripts/evidence scripts/security scripts/test
       - run: dotnet build RideHailing.Distributed.slnx -c Release --no-restore
       - run: python3 -m unittest discover -s scripts/test -p 'test_assert_trx.py'
       - run: dotnet test RideHailing.Distributed.slnx -c Release --no-build --logger trx --results-directory TestResults
@@ -62,7 +42,7 @@ jobs:
           --allowed-skip RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState
           --required-suites-file scripts/test/required-suites.txt
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tests-${{ github.run_id }}-${{ github.run_attempt }}
           path: TestResults
@@ -81,7 +61,7 @@ jobs:
       NOTIFICATION_DB_PASSWORD: ci-release-notification-pw
       RABBITMQ_PASSWORD: ci-release-rabbitmq-pw
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: docker compose config --quiet
       - run: python3 scripts/security/init-local-auth.py
       - run: docker compose -f compose.yaml -f deploy/compose/compose.release.yaml config --quiet
@@ -121,15 +101,15 @@ jobs:
       COMPOSE_PROJECT_NAME: ride-ci-${{ github.run_id }}-${{ github.run_attempt }}
       TRIP_MESSAGING_ENABLED: 'true'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.100
       - run: python3 scripts/security/init-local-auth.py
       - run: docker compose --profile obs up -d --build
       - run: python3 scripts/test/platform-smoke.py
       - run: python3 scripts/test/security-gate.py --identity-tests
-      - run: dotnet build scripts/test/w10-g3-harness/RideHailing.W10Harness.csproj -c Release
+      - run: dotnet build scripts/test/core-lifecycle-harness/RideHailing.CoreLifecycleHarness.csproj -c Release
       - run: python3 scripts/test/core-runtime-gate.py
       - run: python3 scripts/evidence/runtime-observations.py --output plans/reports/runtime-observations.json
       - run: python3 scripts/test/payment-smoke.py
@@ -137,14 +117,14 @@ jobs:
       - if: always()
         run: docker compose --profile obs logs --no-color > platform-smoke.log
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: platform-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             platform-smoke.log
             plans/reports/security-gate.json
             plans/reports/identity-gate.log
-            plans/reports/core-runtime-gate.json
+            TestResults/core-runtime-gate.json
             plans/reports/runtime-observations.json
             TestResults/identity-gate/
       - if: always()
@@ -156,8 +136,8 @@ jobs:
     env:
       COMPOSE_PROJECT_NAME: ride-release-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.100
       - run: dotnet tool restore
@@ -171,7 +151,7 @@ jobs:
             --min-passed 1 --min-files 1 --max-skipped 0 \
             --require-suite ridehailing.paymentservice.integrationtests:1
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: release-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

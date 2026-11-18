@@ -1,4 +1,4 @@
-// MatchingFailed current-round fencing (A-W05-04, DSI-016).
+// MatchingFailed current-round fencing.
 //
 // Only the current round's failure is terminal for the Trip. A stale round
 // never regresses an advanced Trip, and a Trip holding a current assignment
@@ -72,7 +72,7 @@ public sealed class TripMatchingFailedTests
     {
         // Dual condition: the Trip holds an assignment AND the incoming
         // failure is from a superseded generation. Generation validity
-        // (DSI-016) precedes same-generation conflict (DSI-008), mirroring
+        //  precedes same-generation conflict, mirroring
         // ApplyDriverReserved: a stale generation cannot fail the Trip.
         var trip = Trip.Reconstitute(
             TripTestBuilders.TripId,

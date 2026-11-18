@@ -1,13 +1,12 @@
-// W07 atomic dispatch-reconcile fence, re-scoped for the W12 L1 rule: an
-// UNKNOWN attempt (or IN_FLIGHT with a durable dispatch fence) is NEVER
-// dispatched; it is reconciled against Driver authority first.
+// Atomic dispatch-reconcile fence: an UNKNOWN attempt (or IN_FLIGHT with a
+// durable dispatch fence) is NEVER dispatched; it is reconciled against Driver
+// authority first.
 //
-// The historical race (a cached negative conclusion racing a newly
-// authorized dispatch of the SAME ambiguous attempt) required replaying an
-// attempt that may already have committed. That replay is now structurally
-// prevented. These tests prove the replacement invariants with REAL
-// PostgreSQL on both sides (matching_db attempt/round rows, driver_db
-// reservation truth):
+// The historical race (a cached negative conclusion racing a newly authorized
+// dispatch of the SAME ambiguous attempt) required replaying an attempt that
+// may already have committed. That replay is now structurally prevented. These
+// tests prove the replacement invariants with REAL PostgreSQL on both sides
+// (matching_db attempt/round rows, driver_db reservation truth):
 //   1. concurrent workers on an UNKNOWN attempt issue zero version reads and
 //      zero reserve sends, and atomically converge on one conclusive result;
 //   2. a terminal attempt denies late execution before any Driver call, while

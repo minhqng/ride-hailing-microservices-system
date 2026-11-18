@@ -1,4 +1,4 @@
-// Hardening: chk_drivers_coherence (DSI-002 at the persistence boundary).
+// Hardening: chk_drivers_coherence (at the persistence boundary).
 // Proves every legal state inserts and every incoherent combination is rejected
 // with 23514, independent of the domain guards. Also proves the 002 pre-flight
 // fails LOUD (clear message) on a dirty 001 dataset instead of an obscure abort.

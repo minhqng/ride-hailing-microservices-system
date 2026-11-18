@@ -1,10 +1,9 @@
-// B-W08 broker consumption options (05B §17). Queue names default to the
-// frozen catalog (RideTopology: matching.ride-requested.q,
-// matching.driver-projection.q); operator may override via configuration but
-// never per request. Numeric policy is bounded operational tuning (Doc 02
-// §20.3), validated at startup. This is interim B-owned glue shaped to match
-// the frozen platform contracts; it converges onto C's consumer base when
-// that lands (same exchanges/queues/envelope/ACK discipline).
+// Broker consumption options. Queue names default to the frozen catalog
+// (RideTopology: matching.ride-requested.q, matching.driver-projection.q); the
+// operator may override via configuration but never per request. Numeric
+// policy is bounded operational tuning, validated at startup. This interim
+// glue converges onto the shared consumer base when that lands (same
+// exchanges/queues/envelope/ACK discipline).
 namespace RideHailing.MatchingService.Application.Messaging;
 
 public sealed class RabbitMqOptions

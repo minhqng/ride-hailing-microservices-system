@@ -1,4 +1,4 @@
-"""W3 HTTP + real PostgreSQL assertions; use a disposable Compose project."""
+"""HTTP + real PostgreSQL assertions; use a disposable Compose project."""
 import json
 import subprocess
 import time
@@ -83,7 +83,7 @@ for result, body, status in saved:
     assert request("GET", f'/simulator/operations/{result["id"]}') == (200, result)
 print("PASS: 18 type/mode cases, DB assertions, 14 invalid/missing-field requests with no row writes, and persistence after restart. Same-key replay and conflicting payload rejection verified, including service restart.")
 
-# W7: independent provider truth survives process restart; caller uncertainty is reconciled.
+# Independent provider truth survives process restart; caller uncertainty is reconciled.
 for result, body, status in saved:
     if body["mode"] == "TimeoutAfterEffect":
         assert sql("SELECT count(*) FROM provider_effects WHERE effect_id = 'sim-" + uuid.UUID(result["id"]).hex + "'") == "1"

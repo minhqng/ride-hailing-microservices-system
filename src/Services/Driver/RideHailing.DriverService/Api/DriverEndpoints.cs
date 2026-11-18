@@ -1,4 +1,4 @@
-// B-W03-08: FUN-02 minimal API. Maps DomainException codes to HTTP (chốt ②).
+// Minimal API. Maps DomainException codes to HTTP.
 // Domain never knows HTTP. Invalid* -> 400, conflicts/stale -> 409.
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -55,16 +55,16 @@ public static class DriverEndpoints
         app.MapGet("/drivers/{id:guid}", async (Guid id, DriverRepository repo) =>
         {
             var driver = await repo.LoadAsync(id);
-            // L2: structured absence. Matching's version read may conclude
+            // Structured absence. Matching's version read may conclude
             // "no such driver" only from this body, never from a bare 404.
             return driver is null
                 ? Results.NotFound(new { code = DriverErrors.DriverNotFound, message = "Driver not found." })
                 : Results.Ok(ToDto(driver));
         });
 
-        // B-W07-04 Race-B closure: version-fenced online/offline. The blind
+        // Version-fenced online/offline. The blind
         // LoadAsync + SaveAsync shape could overwrite a newer RESERVED row
-        // with stale state (lost reservation, DSI-003); the guarded
+        // with stale state (lost reservation); the guarded
         // TryGoOnline/TryGoOffline row-lock transaction is the only writer now.
         app.MapPost("/drivers/{id:guid}/online", async (
             Guid id,
@@ -129,7 +129,7 @@ public static class DriverEndpoints
             }
         });
 
-        // B-W07-01/02: exact-token release (DSI-004/033, R-06). Exact token on
+        // Exact-token release. Exact token on
         // a live reservation frees (200); coherent AVAILABLE is an idempotent
         // cleanup no-op (200); a live foreign reservation conflicts (409) and
         // is never freed. Cancellation is never caught; dependency failure
@@ -164,8 +164,8 @@ public static class DriverEndpoints
             }
         });
 
-        // B-W07-07: read-only reservation truth for reconciliation
-        // (Doc 02 §12.6). Always 200 with the canonical outcome value
+        // Read-only reservation truth for reconciliation
+        // Always 200 with the canonical outcome value
         // (NOT_FOUND included); only transport failure is 503, which the
         // caller treats as stay-UNKNOWN. Cancellation is never caught.
         app.MapGet("/internal/drivers/{id:guid}/reservations/{reservationId:guid}", async (
@@ -198,7 +198,7 @@ public static class DriverEndpoints
             }
         });
 
-        // B-W06-01: OCC reserve. Sync authority decision (Doc 00 §5.3, 02 §2.2-2.3):
+        // OCC reserve. Sync authority decision:
         // the guarded Driver DB write inside TryReserveAsync is the
         // linearization point. 200 carries the canonical reservation on both
         // win and same-reservation replay; conflicts are 409 domain branches,
@@ -224,7 +224,7 @@ public static class DriverEndpoints
             if (req.MatchingRound is < 1)
             {
                 // Corrupt provenance is rejected, never silently dropped: an
-                // event generation is load-bearing for Trip's gate (Doc 02 §21.3).
+                // event generation is load-bearing for Trip's gate.
                 return Results.BadRequest(new
                 {
                     code = DriverErrors.InvalidRequest,
@@ -237,9 +237,9 @@ public static class DriverEndpoints
                 var result = await repo.TryReserveAsync(
                     id, req.TripId, req.ReservationId, req.ExpectedVersion, req.MatchingRound, ct);
 
-                // B-W11-01: after the authoritative row + Outbox intent have
+                // After the authoritative row + Outbox intent have
                 // committed, a Testing-only barrier can suppress the response
-                // so REL-01/REL-02 exercise genuine transport uncertainty.
+                // so the client observes genuine transport uncertainty.
                 // Production resolves a disabled no-op.
                 if (result.Outcome == ReserveOutcome.Won)
                 {
@@ -328,10 +328,10 @@ public static class DriverEndpoints
     public sealed record CreateDriverRequest(Guid? DriverId, Guid UserId, Guid? VehicleId);
 
     /// <summary>
-    /// B-W06-01 reserve body. matchingRound is the caller's matching
-    /// generation for this reservation identity; it is tolerated as absent
-    /// (deploy skew / historical callers) and recorded only when supplied, so
-    /// a W08-era caller still completes while a W08-hardened caller gives
+    /// Reserve body: matchingRound is the caller's matching generation for
+    /// this reservation identity. It is tolerated as absent (deploy skew /
+    /// historical callers) and recorded only when supplied, so an older caller
+    /// still completes while a hardened caller gives
     /// DriverReservedV1 its generation. Corrupt (non-positive) values are
     /// rejected, never normalized.
     /// </summary>

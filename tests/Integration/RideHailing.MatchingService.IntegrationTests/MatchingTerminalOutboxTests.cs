@@ -1,4 +1,4 @@
-// B-W09-03/04/08: NO_DRIVER terminal + durable MatchingFailedV1 Outbox proof
+// NO_DRIVER terminal + durable MatchingFailedV1 Outbox proof
 // on REAL PostgreSQL. Every terminal write is one transaction: the round row
 // and its publication intent commit together or not at all. The guards below
 // are the durable oracle — UNKNOWN/IN_FLIGHT/READY/RESERVED, cancellation,

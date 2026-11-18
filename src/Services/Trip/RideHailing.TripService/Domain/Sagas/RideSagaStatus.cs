@@ -1,4 +1,4 @@
-// RideSaga status vocabulary (Doc 05A §18, Doc 02 §14.2).
+// RideSaga status vocabulary.
 //
 // The status is the saga-level workflow position, deliberately separate from
 // the current step: COMPENSATING says the workflow is undoing pre-pivot
@@ -14,7 +14,7 @@ public enum RideSagaStatus
     /// <summary>
     /// Pre-pivot undo in progress (release/void/cancel-round obligations).
     /// Entered on terminal authorization failure or cancellation racing an
-    /// in-flight authorization (Doc 02 §14.5).
+    /// in-flight authorization.
     /// </summary>
     Compensating = 1,
 
@@ -25,7 +25,7 @@ public enum RideSagaStatus
     Compensated = 3,
 
     /// <summary>
-    /// Visible manual-resolution state (DSI-028/DSL-005): the ride itself is
+    /// Visible manual-resolution state: the ride itself is
     /// never regressed; a human or policy resolves the pending obligation.
     /// </summary>
     RequiresReview = 4,
@@ -54,7 +54,7 @@ public static class RideSagaStatusRules
         _ => throw new InvalidOperationException($"Unknown persisted RideSagaStatus '{value}'."),
     };
 
-    /// <summary>Saga-level terminal statuses (DSL-005 resolution states).</summary>
+    /// <summary>Saga-level terminal statuses (resolution states).</summary>
     public static bool IsTerminal(this RideSagaStatus status) =>
         status is RideSagaStatus.Completed or RideSagaStatus.Compensated;
 }

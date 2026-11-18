@@ -1,6 +1,6 @@
-// B-W05-02/03: matching policy is CONFIGURATION-owned (radii, bounds,
-// freshness windows), never hard-coded business truth (Doc 01 §9.1: exact
-// radius/budget values are configuration). Frozen W5 baseline = defaults.
+// Matching policy is configuration-owned (radii, bounds, freshness windows),
+// never hard-coded business truth: the exact radius/budget values are
+// configuration, and the baseline defaults are the frozen values.
 namespace RideHailing.MatchingService.Domain.Matching;
 
 public sealed class MatchingPolicy
@@ -24,7 +24,7 @@ public sealed class MatchingPolicy
 
     /// <summary>
     /// Freshness penalty weight: score += ageSeconds * value. 0 = pure distance.
-    /// "Freshness penalty if used" (05B §14.2): the mechanism exists, default off.
+    /// "Freshness penalty if used": the mechanism exists, default off.
     /// </summary>
     public double FreshnessWeightKmPerSecond { get; set; } = 0.0;
 
@@ -34,8 +34,8 @@ public sealed class MatchingPolicy
     public string RankingConfigVersion { get; set; } = DefaultRankingConfigVersion;
 
     /// <summary>
-    /// Progressive search stages (DSI-021). Empty keeps the frozen W5
-    /// single-stage behavior (S0 only, using SearchRadiusKm/MaxCandidates).
+    /// Progressive search stages. Empty keeps the frozen single-stage
+    /// behavior (S0 only, using SearchRadiusKm/MaxCandidates).
     /// </summary>
     public List<MatchingStagePolicy> Stages { get; set; } = [];
 

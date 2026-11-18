@@ -1,4 +1,4 @@
-// B-W12-02: MeterListener proof over the REAL Matching attempt ledger,
+// MeterListener proof over the REAL Matching attempt ledger,
 // terminalizer and orchestrator. Transport uncertainty is injected at the
 // IDriverClient seam; every durable row, terminal result and Outbox intent
 // remains production code.
@@ -185,7 +185,7 @@ public sealed class MatchingMetricsTests
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             Orchestrator(stub, metrics).ExecuteRoundAsync(
-                Guid.NewGuid(), 0, [Guid.NewGuid()], "w12-invalid-round"));
+                Guid.NewGuid(), 0, [Guid.NewGuid()], "invalid-round"));
 
         Assert.Equal(1, capture.Counter("matching.round.total", "outcome=error"));
         Assert.Single(capture.DoubleHistogram("matching.round.duration"));

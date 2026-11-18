@@ -1,4 +1,4 @@
-// B-W06-01: frozen HTTP contract for the OCC reserve endpoint.
+// Frozen HTTP contract for the OCC reserve endpoint.
 // Pure mapping (outcome -> IResult), directly unit-tested without an HTTP
 // server: status codes, stable machine codes, and leakage discipline are
 // proven in DriverReserveResultsTests instead of by review alone.
@@ -18,7 +18,7 @@ public static class DriverReserveResults
             code = result.ConflictCode,
             message = result.ConflictMessage,
         }),
-        // L2: absence carries domain provenance. A bare 404 could be a
+        // Absence carries domain provenance. A bare 404 could be a
         // proxy/route failure and must never prove that no remote effect
         // exists; the stable code distinguishes the authoritative branch.
         ReserveOutcome.DriverNotFound => Results.NotFound(new

@@ -1,7 +1,7 @@
 // Trip domain operation outcome: explicit success/failure without thrown
 // exceptions for normal conflicts and without any external Result library.
 //
-// Outcome taxonomy (Doc 01 §15.2):
+// Outcome taxonomy:
 //   APPLIED            Success with IsReplay=false; exactly one committed
 //                      transition (State and/or round advanced, Version + 1).
 //   IDEMPOTENT_REPLAY  Success with IsReplay=true; the same legal fact was

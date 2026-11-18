@@ -1,4 +1,4 @@
-// Trip optimistic-concurrency conflict (A-W03-07).
+// Trip optimistic-concurrency conflict.
 //
 // Translates raw EF DbUpdateConcurrencyException into a Trip-specific
 // persistence signal. Carries the conflicting Trip identity and, when

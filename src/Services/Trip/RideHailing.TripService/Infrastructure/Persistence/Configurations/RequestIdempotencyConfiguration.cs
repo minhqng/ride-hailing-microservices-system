@@ -1,4 +1,4 @@
-// Request-idempotency EF mapping (A-W04-02).
+// Request-idempotency EF mapping.
 //
 // Smallest schema: composite primary key (scope, key) named
 // PK_request_idempotency satisfies UNIQUE(scope,key) with no extra surrogate

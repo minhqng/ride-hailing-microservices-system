@@ -1,13 +1,13 @@
-// A-W06-07 Driver–Trip agreement fixture (cross-member, test-only).
+// Driver–Trip agreement fixture (test-only).
 //
 // Production services never query each other's databases; this fixture is the
-// explicitly sanctioned test seam that inspects both owned databases to prove
-// DSI-030 agreement: after the Driver authority commits reservation R, the
-// Trip may record reference R — and only R — as its current assignment.
+// sanctioned test seam that inspects both databases to prove the agreement
+// rule: after the Driver authority commits reservation R, the Trip may record
+// reference R — and only R — as its current assignment.
 //
 // Stable identities (tripId, driverId, reservationId, matchingRound) flow
 // from the real Driver reserve path into the real Trip intake; no transport
-// behavior is invented (W08 owns the broker wiring).
+// behavior is invented, the fixture owns the broker wiring.
 extern alias DriverSvc;
 
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +68,7 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// W9 production-shaped Driver repository: Driver and its Outbox intent
+    /// Production-shaped Driver repository: Driver and its Outbox intent
     /// share one transaction, so the cross-service agreement fixture also
     /// exercises the real atomic write path.
     /// </summary>
@@ -214,8 +214,8 @@ public sealed class TripDriverAgreementTests : IAsyncLifetime
         Assert.Equal(intent.ReservationId, held.ReservationId);
         // Fault/restart window: the durable cleanup intent is recovered through
         // a new context while Driver is still protected by the old reservation.
-        // W9: use the real guarded release so the Driver row and its Outbox
-        // intent commit atomically (never a test-only unrecorded state change).
+        // Use the real guarded release so the Driver row and its Outbox intent
+        // commit atomically (never a test-only unrecorded state change).
         Assert.Equal(DriverPersistence.DriverMutationOutcome.Applied,
             (await driverRepo.TryReleaseAsync(
                 driverId, intent.TripId, intent.ReservationId!.Value)).Outcome);

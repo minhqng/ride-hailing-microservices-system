@@ -1,4 +1,4 @@
-// A-W05-02/03 proofs: assignedDriverId/reservationId/matchingRound ownership.
+// Proofs: assignedDriverId/reservationId/matchingRound ownership.
 // The Trip accepts only the current round as its assignment, replays the
 // exact current assignment without effect, rejects stale generations, and
 // rejects conflicting identities — all without partial mutation.
@@ -54,7 +54,7 @@ public sealed class TripReservationFencingTests
     public void ApplyDriverReserved_ExactCurrentAssignmentAfterAdvance_IsHarmlessReplay(TripState state)
     {
         // A redelivered reservation fact for the still-current assignment is
-        // already true: replay, never a second assignment (DSI-008).
+        // already true: replay, never a second assignment.
         var trip = TripTestBuilders.AtState(state);
         var version = trip.Version;
 
@@ -187,8 +187,8 @@ public sealed class TripReservationFencingTests
     public void ApplyDriverReserved_StaleRoundWithAssignmentContradiction_ReportsStaleFirst()
     {
         // Dual condition: the Trip holds an assignment AND the incoming fact
-        // is from a superseded generation. Generation validity (DSI-016)
-        // precedes same-generation conflict (DSI-008): a stale generation
+        // is from a superseded generation. Generation validity
+        // precedes same-generation conflict: a stale generation
         // cannot overwrite current state no matter what else holds.
         var trip = Trip.Reconstitute(
             TripTestBuilders.TripId,

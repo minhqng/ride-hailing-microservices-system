@@ -1,5 +1,5 @@
 // CreateRide request identity: Rider-scoped idempotency namespace plus the
-// semantic request fingerprint (A-W04-02, A-W04-03).
+// semantic request fingerprint.
 //
 // SCOPE: "trip:create:<rider-guid-D>" (48 chars, within the 64-char column).
 // Same Rider + key share a namespace; different Riders with the same client
@@ -32,7 +32,7 @@ namespace RideHailing.TripService.Application.Trips.CreateRide;
 /// </summary>
 public static class CreateRideRequestFingerprint
 {
-    /// <summary>Maximum accepted Idempotency-Key length (W4 mechanical rule).</summary>
+    /// <summary>Maximum accepted Idempotency-Key length (mechanical rule).</summary>
     public const int MaxKeyLength = 128;
 
     /// <summary>Maximum persisted scope length.</summary>

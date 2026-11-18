@@ -1,4 +1,4 @@
-// B-W11-06/07 (REL-12/13): staleness through the REAL DriverProjectionHandler
+// Staleness through the REAL DriverProjectionHandler
 // and REAL Redis projection function, not a pure comparator. Each test uses a
 // unique Driver id and cleans its hash, GEO member and receipt keys.
 using System.Text.Json;
@@ -25,7 +25,7 @@ public sealed class DriverProjectionStalenessHandlerTests
 
     private static MessageEnvelope<JsonElement> Envelope(string type, object payload) =>
         MessageEnvelope<JsonElement>.Create(
-            type, "w11-REL12/13", JsonSerializer.SerializeToElement(payload));
+            type, "REL12/13", JsonSerializer.SerializeToElement(payload));
 
     private static Task<HandlerOutcome> DeliverAsync(
         DriverProjectionHandler handler, string route, MessageEnvelope<JsonElement> envelope) =>
@@ -71,7 +71,7 @@ public sealed class DriverProjectionStalenessHandlerTests
         var location = Envelope("DriverLocationAcceptedV1", new
         {
             driverId = driver, longitude = 106.6, latitude = 10.8,
-            sessionId = "w11-s", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
+            sessionId = "session-1", sequenceNo = 1, capturedAt = DateTimeOffset.UtcNow,
         });
         var reserved10 = Envelope("DriverReservedV1", new
         {
@@ -109,7 +109,7 @@ public sealed class DriverProjectionStalenessHandlerTests
             Assert.Equal("10", await HashAsync(driver, "driverAggregateVersion"));
 
             _output.WriteLine(
-                $"W11 REL-12 driver={driver} appliedVersion=10 staleVersion=9 " +
+                $"REL-12 driver={driver} appliedVersion=10 staleVersion=9 " +
                 $"finalStatus=RESERVED finalVersion=10 geo=absent " +
                 $"staleOutcome={staleOutcome.State} elapsedMs={elapsed.ElapsedMilliseconds}");
         }
@@ -205,7 +205,7 @@ public sealed class DriverProjectionStalenessHandlerTests
             Assert.Equal(SectionOutcome.Stale, staleOutcome.Location);
 
             _output.WriteLine(
-                $"W11 REL-13 driver={driver} authoritativeSeq=20 staleSeq=19 " +
+                $"REL-13 driver={driver} authoritativeSeq=20 staleSeq=19 " +
                 $"foreignSession=rejected sameSeqNewer=applied sameSeqOlder=stale " +
                 $"duplicate=converged lat=10.85 staleOutcome={staleOutcome.Location} " +
                 $"elapsedMs={elapsed.ElapsedMilliseconds}");

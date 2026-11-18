@@ -1,4 +1,4 @@
-// B-W05 policy validation: invalid deployment policy must fail at startup,
+// Policy validation: invalid deployment policy must fail at startup,
 // never leak into per-request behavior as silent mis-ranking.
 // Pure predicate (unit-tested) + ValidateOnStart wiring in Program.cs.
 namespace RideHailing.MatchingService.Domain.Matching;

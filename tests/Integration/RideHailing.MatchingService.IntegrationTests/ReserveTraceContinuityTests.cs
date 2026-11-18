@@ -1,4 +1,4 @@
-// B-W12-04: span-chain proof across a REAL Kestrel/HTTP boundary and the
+// Span-chain proof across a REAL Kestrel/HTTP boundary and the
 // REAL Driver transaction. The ActivityListener is the only test double;
 // every span below is produced by production code.
 using System.Collections.Concurrent;
@@ -32,7 +32,7 @@ namespace RideHailing.MatchingService.IntegrationTests;
 public sealed class ReserveTraceContinuityTests
 {
     private const string FaultName = DriverFaultPointNames.AfterReserveCommitBeforeResponse;
-    private static readonly ActivitySource WorkflowSource = new("W12.Test.Workflow");
+    private static readonly ActivitySource WorkflowSource = new("Reserve.Test.Workflow");
 
     private readonly MatchingPostgresDatabase _matching;
     private readonly DriverTestDatabase _drivers;
@@ -61,10 +61,10 @@ public sealed class ReserveTraceContinuityTests
         var orchestrator = Orchestrator(http);
         var trip = Guid.NewGuid();
 
-        using var root = WorkflowSource.StartActivity("w12.workflow")
+        using var root = WorkflowSource.StartActivity("workflow")
             ?? throw new InvalidOperationException("Workflow activity was not sampled.");
         var result = await orchestrator.ExecuteRoundAsync(
-            trip, 1, [driver.DriverId], $"w12-trace:{trip:N}");
+            trip, 1, [driver.DriverId], $"trace:{trip:N}");
 
         // A location request exercises the privacy assertion on a payload that
         // actually carries raw coordinates and a device session.
@@ -72,7 +72,7 @@ public sealed class ReserveTraceContinuityTests
             $"drivers/{driver.DriverId:N}/location",
             new
             {
-                deviceSessionId = "w12-trace-location",
+                deviceSessionId = "trace-location",
                 sequenceNo = 1,
                 capturedAt = DateTimeOffset.UtcNow.AddMinutes(-1),
                 latitude = 10.8,
@@ -83,7 +83,7 @@ public sealed class ReserveTraceContinuityTests
 
         Assert.Equal(RoundOutcome.Reserved, result.Outcome);
         var traceId = root.TraceId;
-        var workflow = SingleSpan(capture, traceId, "w12.workflow");
+        var workflow = SingleSpan(capture, traceId, "workflow");
         var round = SingleSpan(capture, traceId, "matching.round.execute");
         Assert.Equal(workflow.SpanId, round.ParentSpanId);
         var attempt = SingleSpan(capture, traceId, "matching.attempt.reserve");
@@ -139,10 +139,10 @@ public sealed class ReserveTraceContinuityTests
         var reconciler = Orchestrator(reconcileHttp);
         var trip = Guid.NewGuid();
 
-        using var root = WorkflowSource.StartActivity("w12.workflow")
+        using var root = WorkflowSource.StartActivity("workflow")
             ?? throw new InvalidOperationException("Workflow activity was not sampled.");
         var roundTask = orchestrator.ExecuteRoundAsync(
-            trip, 1, [driver.DriverId], $"w12-trace-rel01:{trip:N}");
+            trip, 1, [driver.DriverId], $"trace-rel01:{trip:N}");
         await faults.WaitForReachedAsync(TimeSpan.FromSeconds(10));
         var result = await roundTask.WaitAsync(TimeSpan.FromSeconds(15));
         root.Stop();
@@ -173,11 +173,11 @@ public sealed class ReserveTraceContinuityTests
         Assert.Equal(MatchingAttemptStates.Unknown, persisted.State);
         var reservationId = persisted.ReservationId;
 
-        // Resume the round trace through a REAL captured workflow span. W12
-        // does not persist traceparent in the ledger; production callers must
+        // Resume the round trace through a REAL captured workflow span. The
+        // ledger does not persist traceparent, so production callers must
         // supply a workflow/consumer span (documented limitation).
         using var reconcileRoot = WorkflowSource.StartActivity(
-            "w12.workflow.reconcile",
+            "workflow.reconcile",
             ActivityKind.Internal,
             new ActivityContext(traceId, round.SpanId, ActivityTraceFlags.Recorded))
             ?? throw new InvalidOperationException("Reconcile workflow activity was not sampled.");
@@ -186,7 +186,7 @@ public sealed class ReserveTraceContinuityTests
 
         Assert.Equal(AttemptOutcome.Reserved, resolved.Outcome);
         Assert.Equal(reservationId, resolved.ReservationId);
-        var reconcileWorkflow = SingleSpan(capture, traceId, "w12.workflow.reconcile");
+        var reconcileWorkflow = SingleSpan(capture, traceId, "workflow.reconcile");
         Assert.Equal(round.SpanId, reconcileWorkflow.ParentSpanId);
         var reconcileSpan = SingleSpan(capture, traceId, "matching.attempt.reconcile");
         Assert.Equal(reconcileRoot.SpanId, reconcileSpan.ParentSpanId);
@@ -224,7 +224,7 @@ public sealed class ReserveTraceContinuityTests
         using var http = new HttpClient { BaseAddress = new Uri(address + "/") };
         var repository = _drivers.CreateRepository();
 
-        using var root = WorkflowSource.StartActivity("w12.workflow")
+        using var root = WorkflowSource.StartActivity("workflow")
             ?? throw new InvalidOperationException("Workflow activity was not sampled.");
         var reserve = await http.PostAsJsonAsync($"drivers/{driver.DriverId:N}/reserve", new
         {
@@ -290,7 +290,7 @@ public sealed class ReserveTraceContinuityTests
         var builder = WebApplication.CreateBuilder();
         builder.Logging.SetMinimumLevel(LogLevel.Warning);
         builder.WebHost.UseUrls("http://127.0.0.1:0");
-        builder.AddRideTelemetry("driver-service-w12-test");
+        builder.AddRideTelemetry("driver-service-test");
         builder.AddDriverTelemetry();
 
         var outbox = new NpgsqlOutboxStore(_drivers.DataSource);
@@ -336,7 +336,7 @@ public sealed class ReserveTraceContinuityTests
                 Assert.DoesNotContain("Bearer", tag.Value, StringComparison.OrdinalIgnoreCase);
                 Assert.DoesNotContain("106.6", tag.Value, StringComparison.Ordinal);
                 Assert.DoesNotContain("106.7", tag.Value, StringComparison.Ordinal);
-                Assert.DoesNotContain("w12-trace-location", tag.Value, StringComparison.Ordinal);
+                Assert.DoesNotContain("trace-location", tag.Value, StringComparison.Ordinal);
             }
         }
     }
@@ -363,7 +363,7 @@ public sealed class ReserveTraceContinuityTests
                     source.Name is "RideHailing.MatchingService"
                         or "RideHailing.DriverService"
                         or "System.Net.Http"
-                        or "W12.Test.Workflow"
+                        or "Reserve.Test.Workflow"
                     || source.Name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal),
                 Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
                     ActivitySamplingResult.AllData,

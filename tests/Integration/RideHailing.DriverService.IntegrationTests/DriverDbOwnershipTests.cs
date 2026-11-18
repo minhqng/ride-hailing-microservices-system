@@ -1,4 +1,4 @@
-// B-W02-09 (config-shape half): asserts Driver tests are POINTED at driver_db
+// Asserts Driver tests are POINTED at driver_db
 // and never at another service DB. This proves connection-string scoping only;
 // PostgreSQL-level denial is proven by Platform DbIsolationTests, not here.
 namespace RideHailing.DriverService.IntegrationTests;

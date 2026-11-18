@@ -1,9 +1,9 @@
-// B-W06-05/06/07/08/09: CON-01 contention proof on REAL PostgreSQL
-// (Doc 03 §8, DSI-001/005). N independent contenders race one AVAILABLE
-// driver through a barrier; final Driver DB state is the oracle (never HTTP
-// counts): exactly one current reservation, winner among contenders, version
-// advanced exactly once, N-1 domain conflicts, zero system errors.
-// Per-contender timings are recorded as first E01 data (observation only).
+// Contention proof on REAL PostgreSQL.
+// N independent contenders race one AVAILABLE driver through a barrier; final
+// Driver DB state is the oracle (never HTTP counts): exactly one current
+// reservation, winner among contenders, version advanced exactly once, N-1
+// domain conflicts, zero system errors. Per-contender timings are recorded as
+// observation data only.
 using System.Diagnostics;
 using Npgsql;
 using RideHailing.DriverService.Domain.Drivers;
@@ -126,7 +126,7 @@ public class DriverReserveConcurrencyTests
             _out.WriteLine($"SYSTEM_ERROR contender={e.Index} {e.Error}");
         }
 
-        // Oracle on authoritative final state (Doc 03 §1.2): exactly one
+        // Oracle on authoritative final state: exactly one
         // current reservation, winner among contenders, single version step.
         Assert.Empty(systemErrors);
         Assert.Single(won);
@@ -197,8 +197,8 @@ public class DriverReserveConcurrencyTests
             }
         })));
 
-        // Same logical effect retried: every caller observes canonical success
-        // (DSR-002), but the database holds exactly one effect (DSI-005).
+        // Same logical effect retried: every caller observes canonical success,
+        // but the database holds exactly one effect.
         Assert.All(attempts, a => Assert.True(
             a.Outcome is ReserveOutcome.Won or ReserveOutcome.Replayed,
             $"unexpected {a.Outcome} ({a.ConflictCode})"));

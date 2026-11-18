@@ -1,8 +1,8 @@
-// B-REC-01 production-path proofs: a real RideRequestedV1 broker delivery
-// must cause durable progress and an authoritative Driver reservation through
-// the real Matching host (consumer + hosted worker), not a testing endpoint.
-// These tests fail against the pre-repair code because no execution trigger
-// existed: the round stayed PROCESSING with zero attempts forever.
+// Production-path proofs: a real RideRequestedV1 broker delivery must cause
+// durable progress and an authoritative Driver reservation through the real
+// Matching host (consumer + hosted worker), not a testing endpoint. These tests
+// fail against code without an execution trigger: the round would stay
+// PROCESSING with zero attempts forever.
 using System.Text.Json;
 using RideHailing.DriverService.Infrastructure.Faults;
 using Xunit.Abstractions;
@@ -79,7 +79,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
         Assert.Equal(1L, await DriverReservedOutboxCountAsync(d1.DriverId));
 
         Output.WriteLine(
-            $"B-REC-01 normal: trip={trip} driver={d1.DriverId} " +
+            $"normal: trip={trip} driver={d1.DriverId} " +
             $"reservation={attempt.ReservationId} inputMessageId={messageId} status=RESERVED");
     }
 
@@ -150,7 +150,9 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
         var finalAttempt = Assert.Single(finalAttempts, a => a.DriverId == d1.DriverId);
         Assert.Equal("RESERVED", finalAttempt.State);
         Assert.Equal(reservationId, finalAttempt.ReservationId);
-        Assert.Equal("READY", Assert.Single(finalAttempts, a => a.DriverId == d2.DriverId).State);
+        // The round has a winner, so D2 can never be dispatched. Its durable
+        // identity is closed (NOT_SELECTED) instead of remaining ambiguous.
+        Assert.Equal("CANCELLED", Assert.Single(finalAttempts, a => a.DriverId == d2.DriverId).State);
         Assert.Equal(reservationId, finalRound.SelectedReservationId);
         Assert.Equal(d1.DriverId, finalRound.SelectedDriverId);
         Assert.Equal("AVAILABLE", (await LoadDriverAsync(d2.DriverId))!.Status);
@@ -158,7 +160,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
         Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
         Output.WriteLine(
-            $"B-REC-01 response-loss: trip={trip} R={reservationId} " +
+            $"response-loss: trip={trip} R={reservationId} " +
             "D2 untouched, same-R automatic reconcile");
     }
 
@@ -222,7 +224,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
             var finalRound = (await LoadRoundAsync(trip, 1))!;
             var finalAttempts = await LoadAttemptsAsync(trip, 1);
             var finalAttempt = Assert.Single(finalAttempts, a => a.DriverId == d1.DriverId);
-            Assert.Equal("READY", Assert.Single(finalAttempts, a => a.DriverId == d2.DriverId).State);
+            Assert.Equal("CANCELLED", Assert.Single(finalAttempts, a => a.DriverId == d2.DriverId).State);
             Assert.Equal(before.ReservationId, finalAttempt.ReservationId);
             Assert.Equal(before.ReservationId, finalRound.SelectedReservationId);
             Assert.Equal(d1.DriverId, finalRound.SelectedDriverId);
@@ -231,7 +233,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
             Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
             Output.WriteLine(
-                $"B-REC-01 restart: trip={trip} R={before.ReservationId} " +
+                $"restart: trip={trip} R={before.ReservationId} " +
                 "killed after ACK, fresh process recovered same identity");
         }
         finally
@@ -271,7 +273,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
         Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
         Output.WriteLine(
-            $"B-REC-01 concurrent: trip={trip} R={attempt.ReservationId} one durable winner");
+            $"concurrent: trip={trip} R={attempt.ReservationId} one durable winner");
     }
 
     [Fact]
@@ -323,7 +325,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
         Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
         Output.WriteLine(
-            $"B-REC-01 outage: trip={trip} stayed PROCESSING while Redis was down, " +
+            $"outage: trip={trip} stayed PROCESSING while Redis was down, " +
             $"then reserved R={attempt.ReservationId}");
     }
 
@@ -376,7 +378,9 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
             var round = (await LoadRoundAsync(trip, 1))!;
             var finalAttempts = await LoadAttemptsAsync(trip, 1);
             var attempt = Assert.Single(finalAttempts, a => a.DriverId == d1.DriverId);
-            Assert.Equal("READY", Assert.Single(finalAttempts, a => a.DriverId == d2.DriverId).State);
+            // The authoritative reservation won; the un-dispatched candidate
+            // is closed so the terminal round carries no unresolved attempt.
+            Assert.Equal("CANCELLED", Assert.Single(finalAttempts, a => a.DriverId == d2.DriverId).State);
             Assert.True(round.CancelRequested);
             Assert.Equal("RESERVED", attempt.State);
             Assert.Equal(d1.DriverId, round.SelectedDriverId);
@@ -385,7 +389,7 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
             Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
             Output.WriteLine(
-                $"B-REC-01 cancel+unknown: trip={trip} R={attempt.ReservationId} " +
+                $"cancel+unknown: trip={trip} R={attempt.ReservationId} " +
                 "no D2, reservation remains authoritative");
         }
         finally
@@ -427,6 +431,6 @@ public sealed class ProductionMatchingWorkflowTests : ProductionMatchingTestBase
         Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
         Output.WriteLine(
-            $"B-REC-01 cancel-first: trip={trip} tombstone applied atomically at intake");
+            $"cancel-first: trip={trip} tombstone applied atomically at intake");
     }
 }

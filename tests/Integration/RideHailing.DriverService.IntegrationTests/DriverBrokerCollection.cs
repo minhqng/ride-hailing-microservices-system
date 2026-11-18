@@ -1,4 +1,4 @@
-// B-W08: broker component proof collection (real PG + real RabbitMQ).
+// Broker component proof collection (real PG + real RabbitMQ).
 namespace RideHailing.DriverService.IntegrationTests;
 
 [CollectionDefinition(DriverBrokerCollection.Name)]

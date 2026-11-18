@@ -1,4 +1,4 @@
--- W9 durable consumer dedup schema. The marker row is inserted inside the
+-- Durable consumer dedup schema. The marker row is inserted inside the
 -- owning service's local transaction, immediately before the business effect.
 -- A rollback removes both; a duplicate delivery finds the committed marker and
 -- applies no second effect.

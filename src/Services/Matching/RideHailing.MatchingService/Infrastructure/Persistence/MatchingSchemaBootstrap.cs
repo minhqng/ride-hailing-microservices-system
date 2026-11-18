@@ -3,7 +3,7 @@ using Npgsql;
 namespace RideHailing.MatchingService.Infrastructure.Persistence;
 
 /// <summary>
-/// AUD-10: one migration execution across replicas. The baseline is applied
+/// One migration execution across replicas. The baseline is applied
 /// inside a transaction guarded by a stable session-independent advisory key;
 /// PostgreSQL serializes concurrent starts and transactional DDL rolls back
 /// on a crash. Keys: Payment 754301, Driver 754302, Matching 754303.

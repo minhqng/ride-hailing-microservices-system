@@ -14,18 +14,35 @@ public sealed class RedisDatabase : IAsyncLifetime
     static RedisDatabase()
     {
         // Ryuk cannot start inside the SDK container; cleanup is explicit.
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        // An explicit TESTCONTAINERS_RYUK_DISABLED value always wins.
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private RedisContainer? _container;
     private ConnectionMultiplexer? _mux;
+    private bool _isolated;
 
     public string ConnectionString { get; private set; } = "";
 
+    // A throwaway instance for tests that mutate server-global state (for
+    // example FUNCTION FLUSH). It never reuses REDIS_TEST_CONNECTION: wiping a
+    // user-provided Redis would destroy unrelated data, so isolation requires
+    // its own disposable container.
+    public static async Task<RedisDatabase> CreateIsolatedAsync()
+    {
+        var isolated = new RedisDatabase { _isolated = true };
+        await isolated.InitializeAsync();
+        return isolated;
+    }
+
     public async Task InitializeAsync()
     {
-        var env = Environment.GetEnvironmentVariable("REDIS_TEST_CONNECTION")
-            ?? Environment.GetEnvironmentVariable("Redis__ConnectionString");
+        var env = _isolated
+            ? null
+            : Environment.GetEnvironmentVariable("REDIS_TEST_CONNECTION")
+                ?? Environment.GetEnvironmentVariable("Redis__ConnectionString");
 
         if (!string.IsNullOrWhiteSpace(env))
         {

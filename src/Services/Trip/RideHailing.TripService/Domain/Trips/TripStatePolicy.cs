@@ -1,4 +1,4 @@
-// DSI-013 one-active-Trip-per-Rider policy (Doc 01 §6.4).
+// One-active-Trip-per-Rider policy.
 //
 // Single domain definition of the active-state set for Rider booking: exactly
 // CREATED, MATCHING, DRIVER_RESERVED, DRIVER_ACCEPTED, READY_TO_START and
@@ -10,13 +10,13 @@
 namespace RideHailing.TripService.Domain.Trips;
 
 /// <summary>
-/// DSI-013 booking-activity classification: which Trip states count as an
+/// Booking-activity classification: which Trip states count as an
 /// active Trip holding the Rider's single-booking slot.
 /// </summary>
 public static class TripStatePolicy
 {
     /// <summary>
-    /// States that occupy the Rider's one-active-Trip slot (DSI-013).
+    /// States that occupy the Rider's one-active-Trip slot.
     /// Exactly six: CREATED, MATCHING, DRIVER_RESERVED, DRIVER_ACCEPTED,
     /// READY_TO_START, IN_PROGRESS.
     /// </summary>

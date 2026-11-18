@@ -48,7 +48,7 @@ public sealed class PaymentMessageProcessor(
                 PaymentSimulatorMode.Success,
                 (connection, transaction, ct) => processedMessages.TryMarkAsync(
                     connection, transaction, ConsumerScope, envelope.MessageId, envelope.MessageType,
-                    time.GetUtcNow(), handlerVersion: "w10-v1", aggregateId: command.TripId.ToString("D"), token: ct),
+                    time.GetUtcNow(), handlerVersion: "payment-v1", aggregateId: command.TripId.ToString("D"), token: ct),
                 async (connection, transaction, operation, ct) =>
                 {
                     var outcome = command.ToOutcome(operation);
@@ -98,7 +98,7 @@ public sealed class PaymentMessageProcessor(
     private static PaymentCommand DeserializeCommand(MessageEnvelope<JsonElement> envelope)
     {
         // The envelope is the sole authority for operation identity. A payload
-        // may omit it (Trip's frozen W10 producer) or echo it, but never
+        // may omit it (Trip's frozen producer) or echo it, but never
         // override it.
         var operationKey = envelope.OperationKey;
         if (string.IsNullOrWhiteSpace(operationKey))

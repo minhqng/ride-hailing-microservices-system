@@ -3,7 +3,7 @@ using RideHailing.MatchingService.Infrastructure.Persistence;
 
 namespace RideHailing.MatchingService.IntegrationTests;
 
-/// <summary>AUD-10: concurrent replica startup applies one serialized baseline.</summary>
+/// <summary>Concurrent replica startup applies one serialized baseline.</summary>
 [Collection(MatchingPostgresCollection.Name)]
 public sealed class MatchingMigrationConcurrencyTests(MatchingPostgresDatabase db)
 {

@@ -1,5 +1,5 @@
-// A-W05-01/02 proofs: StartMatching opens the first matching round and the
-// current-round model rejects anything that is not the single W5 round.
+// StartMatching proofs: StartMatching opens the first matching round and the
+// current-round model rejects anything that is not the single open round.
 
 using RideHailing.TripService.Domain.Trips;
 
@@ -46,8 +46,8 @@ public sealed class TripStartMatchingTests
     [Fact]
     public void StartMatching_OnLaterRoundMatching_IsRejected()
     {
-        // W5 owns no rematch operation: a round beyond 1 cannot be opened
-        // from here. Future workflow will own the guarded rematch edge.
+        // There is no rematch operation here: a round beyond 1 cannot be
+        // opened. Future workflow will own the guarded rematch edge.
         var trip = TripTestBuilders.AtState(TripState.Matching, withAssignment: false, currentRound: 2);
         var version = trip.Version;
 

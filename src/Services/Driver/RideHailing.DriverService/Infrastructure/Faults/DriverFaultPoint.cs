@@ -1,7 +1,6 @@
-// B-W11-01: B-owned deterministic fault seam. The shared C platform
-// (PR #41) is not on main and its Driver hook predates the W9 Outbox; this
-// adapter keeps the frozen fault-point name and a matching HitAsync shape so
-// it can delegate to the shared IFaultPoint when that contract lands.
+// Deterministic fault seam for focused tests. The adapter keeps the frozen
+// fault-point name and a matching HitAsync shape so it can delegate to the
+// shared IFaultPoint when that contract lands.
 //
 // Safety: enabled only under the explicit Testing environment, only for
 // known names, never via an HTTP activation endpoint, and every hold is

@@ -1,6 +1,6 @@
-// DSI-021 production proofs: a real broker delivery must traverse S0 -> S1 ->
-// S2 with a durable, ordered attempt ledger, and terminalize only after the
-// final stage is conclusively exhausted.
+// Production proofs: a real broker delivery must traverse S0 -> S1 -> S2 with
+// a durable, ordered attempt ledger, and terminalize only after the final stage
+// is conclusively exhausted.
 using System.Text.Json;
 using RideHailing.DriverService.Infrastructure.Faults;
 using RideHailing.MatchingService.Application.Matching;
@@ -88,7 +88,7 @@ public sealed class ProductionMatchingStageTests : ProductionMatchingTestBase
         Assert.Equal(0L, await MatchingFailedCountAsync(trip));
 
         Output.WriteLine(
-            $"DSI-021 progression: trip={trip} ordinals=0,1,2 stages=S0,S1,S2 " +
+            $"Stage progression: trip={trip} ordinals=0,1,2 stages=S0,S1,S2 " +
             $"R={round.SelectedReservationId} winner={d3.DriverId}");
     }
 
@@ -145,7 +145,7 @@ public sealed class ProductionMatchingStageTests : ProductionMatchingTestBase
         Assert.Equal("NO_DRIVER", (await LoadRoundAsync(trip, 1))!.Status);
 
         Output.WriteLine(
-            $"DSI-021 exhaustion: trip={trip} stages=S0,S1,S2 all REJECTED, one terminal intent");
+            $"Stage exhaustion: trip={trip} stages=S0,S1,S2 all REJECTED, one terminal intent");
     }
 
     [Fact]

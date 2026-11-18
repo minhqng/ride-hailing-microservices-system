@@ -1,6 +1,0 @@
-{
-  "sourceCommit": "18f0fc161ddc3588b076c69d31e04d985bc74f84",
-  "status": "HARNESS_INVALID",
-  "cause": "The ordinary cancellation actor used docker compose start payment, which also brought the lost primary broker dependency back. Core assertions passed but the required post-work 2-of-3 observation failed closed.",
-  "correction": "ed113e4 uses up --no-deps --no-build payment; the full primary-loss rehearsal is rerun from a fresh dataset."
-}

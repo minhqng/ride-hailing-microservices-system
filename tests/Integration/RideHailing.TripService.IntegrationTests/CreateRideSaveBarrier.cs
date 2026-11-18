@@ -1,4 +1,4 @@
-// Deterministic CreateRide race synchronizer (W4, TEST-ONLY).
+// Deterministic CreateRide race synchronizer (TEST-ONLY).
 //
 // Coordinates two independent TripDbContext instances so both competing
 // handlers complete their idempotency/active-Trip pre-reads and local

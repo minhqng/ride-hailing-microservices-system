@@ -1,9 +1,9 @@
-// RideSaga EF mapping (A-W10-01, Doc 05A §4.3/§18.3).
+// RideSaga EF mapping.
 //
 // One authoritative current saga per Trip: UNIQUE(trip_id). Status/step
 // persist as canonical text; the storage CHECK constraints mirror the domain
 // transition guards as a persisted-state backstop, including the frozen
-// per-trip payment operation-key lineage (DSI-034) that the shared
+// per-trip payment operation-key lineage that the shared
 // ride_sagas lineage CHECK enforces: a key, when present, must equal
 // trip_id::text || ':<kind>:v1'. StepVersion is the application-managed
 // optimistic-concurrency token (mirrors trips.version).
@@ -30,7 +30,7 @@ internal sealed class RideSagaConfiguration : IEntityTypeConfiguration<RideSaga>
             t.HasCheckConstraint(
                 "CK_ride_sagas_step_version_positive",
                 "step_version >= 1");
-            // Frozen operation-key lineage (Doc 05A §18.4): one stable logical
+            // Frozen operation-key lineage: one stable logical
             // identity per Payment operation, bound to the owning trip row.
             t.HasCheckConstraint(
                 "CK_ride_sagas_operation_lineage",
@@ -55,7 +55,7 @@ internal sealed class RideSagaConfiguration : IEntityTypeConfiguration<RideSaga>
             .ValueGeneratedNever()
             .IsRequired();
 
-        // One authoritative current saga per Trip (A-W10-01).
+        // One authoritative current saga per Trip.
         builder.Property(e => e.TripId)
             .HasColumnName("trip_id")
             .IsRequired();
@@ -118,7 +118,7 @@ internal sealed class RideSagaConfiguration : IEntityTypeConfiguration<RideSaga>
             .HasColumnName("updated_at")
             .IsRequired();
 
-        // Saga restart (Doc 02 §14.7) scans non-terminal saga rows.
+        // Saga restart scans non-terminal saga rows.
         builder.HasIndex(e => e.Status)
             .HasDatabaseName("ix_ride_sagas_status");
     }

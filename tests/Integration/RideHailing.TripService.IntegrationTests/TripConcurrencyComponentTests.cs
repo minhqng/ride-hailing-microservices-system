@@ -1,4 +1,4 @@
-// Two-writer optimistic-concurrency proof (A-W03-07) on real PostgreSQL.
+// Two-writer optimistic-concurrency proof on real PostgreSQL.
 //
 // Deterministic stale-write fencing: two independent DbContexts load the same
 // MATCHING row before either save, each applies a different legal transition,

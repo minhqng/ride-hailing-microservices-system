@@ -1,12 +1,13 @@
-// Driver-reservation system intake (A-W05-03, A-W06 replay fencing).
+// Driver-reservation system intake (replay fencing).
 //
 // Applies an authoritative-shaped Driver reservation result to the Trip's
 // assignment reference. Trip never decides reservation success: the caller
 // supplies the Driver authority's fact (trip, driver, reservation, round)
 // and the aggregate accepts it only when it is the current, legal,
-// assignment-free generation. Production wiring (envelope, dedup, broker,
-// Driver authority call path) belongs to W8+; this skeleton intake is
-// exercised by component/system tests with authoritative-shaped fixtures.
+// assignment-free generation. The broker consumer, envelope identity and
+// dedup receipts are registered by AddTripMessaging; this handler stays
+// transport-free and is also exercised directly by component tests with
+// authoritative-shaped fixtures.
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -63,7 +64,7 @@ public sealed class RecordDriverReservationHandler
             return TripLifecycleResult.Fail(trip, outcome);
         }
 
-        // Same authoritative reservation replay performs no mutation (DSI-008):
+        // Same authoritative reservation replay performs no mutation:
         // skip the write so Version/UpdatedAt stay untouched and a losing
         // concurrent writer can never turn a replay into an overwrite.
         if (!outcome.IsReplay)

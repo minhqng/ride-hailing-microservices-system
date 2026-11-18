@@ -1,7 +1,7 @@
-// Shared helpers for B-REC-01 production-path proofs. Every test in this
-// group uses the REAL Matching process, REAL PostgreSQL/Redis/RabbitMQ and
-// REAL Driver Kestrel endpoints. Oracles are authoritative rows and remote
-// effects, never handler return codes alone.
+// Shared helpers for the production-path proofs. Every test in this group uses
+// the REAL Matching process, REAL PostgreSQL/Redis/RabbitMQ and REAL Driver
+// Kestrel endpoints. Oracles are authoritative rows and remote effects, never
+// handler return codes alone.
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;

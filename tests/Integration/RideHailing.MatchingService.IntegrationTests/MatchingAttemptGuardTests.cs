@@ -1,6 +1,6 @@
-// Hardening: attempt-ledger guards (Doc 01 §8.3, §26).
-// Proves the legal attempt vocabulary and the uniqueness defenses behind
-// DSI-015/017/018: UNIQUE(input_message_id) stops duplicate round creation,
+// Hardening: attempt-ledger guards.
+// Proves the legal attempt vocabulary and the uniqueness defenses:
+// UNIQUE(input_message_id) stops duplicate round creation and
 // UNIQUE(reservation_id) keeps one identity per logical attempt.
 using Npgsql;
 

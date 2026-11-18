@@ -1,4 +1,4 @@
-// B-W09-03/05: apply C's canonical embedded Outbox DDL to the
+// Apply the shared embedded Outbox DDL to the
 // Matching-owned database. There is deliberately no local copy of the table
 // definition: NpgsqlOutboxStore.EnsureSchemaAsync is the single schema
 // source, so Matching cannot drift from the shared relay/dedup contract.

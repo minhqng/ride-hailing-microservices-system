@@ -1,10 +1,10 @@
-// B-W05-05/06/07/08: round coordinator — the deterministic pipeline.
+// Round coordinator — the deterministic pipeline.
 // load-or-create round → frozen-sequence replay if decided → discover →
 // eligibility filter → rank → persist snapshot + READY attempt ledger →
 // ordered result.
-// Authority model: Redis is a hint (re-validated here), Driver reserve (W6)
+// Authority model: Redis is a hint (re-validated here), Driver reserve
 // is the only assignment authority. This slice never reserves, never sets
-// terminal round states (NO_DRIVER needs W9 Outbox): empty candidates yield
+// terminal round states (NO_DRIVER needs Outbox): empty candidates yield
 // an empty PROCESSING round. Redis failure degrades (empty + Degraded),
 // never fabricated candidates.
 using System.Diagnostics;
@@ -95,9 +95,9 @@ public sealed class MatchingRoundService
             .ToHashSet();
         if (blocked.Count > 0)
         {
-            // DSI-017 at the ledger: an unresolved attempt exists, so no new
+            // At the ledger: an unresolved attempt exists, so no new
             // candidate may be offered for this round until it reconciles.
-            // W5 never creates such rows itself; this guards foreign/W6 rows.
+            // This service never creates such rows; the guard covers foreign ones.
             throw new InvalidOperationException(
                 "Matching round has unresolved attempts; reconcile before requesting new candidates.");
         }
@@ -117,13 +117,13 @@ public sealed class MatchingRoundService
                 .ToList();
             if (stageStored.Count > 0)
             {
-                // Frozen-sequence replay (Doc 02 §12.7): the round's logical
+                // Frozen-sequence replay: the round's logical
                 // candidate order and attempt identities were decided by the
                 // first compute. Redelivery replays them verbatim — Redis is
                 // a hint re-checked only by the reserve/reconcile path against
                 // Driver authority, never by minting a replacement sequence
                 // here. Conclusively REJECTED drivers are advanced past
-                // (§12.5); anything else stays put even if the Redis hint no
+                // ; anything else stays put even if the Redis hint no
                 // longer lists it, so no READY identity is ever orphaned from
                 // its snapshot. No discovery runs, nothing is stored.
                 var replay = stageStored
@@ -368,8 +368,8 @@ public sealed class MatchingRoundService
         var existing = await _repo.LoadRoundAsync(request.TripId, request.MatchingRound, ct);
         if (existing is not null)
         {
-            // W5 owns PROCESSING rounds only: terminal states and cancellation
-            // belong to reserve/cancel flows (W6+). Recomputing onto them would
+            // This layer owns PROCESSING rounds only: terminal states and cancellation
+            // belong to reserve/cancel flows. Recomputing onto them would
             // silently advance a settled round — fail loud instead.
             if (!string.Equals(existing.Status, "PROCESSING", StringComparison.Ordinal))
             {
@@ -396,7 +396,7 @@ public sealed class MatchingRoundService
 
         try
         {
-            // W5 internal/demo seam (not the W8 broker path): no envelope
+            // Internal/demo seam (not the broker path): no envelope
             // exists here, so a locally generated placeholder is stored as
             // TEXT. It is distinct from the real broker envelope.MessageId
             // and never overwrites an existing round's saved identity: PK

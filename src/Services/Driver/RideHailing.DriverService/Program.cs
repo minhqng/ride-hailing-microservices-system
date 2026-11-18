@@ -1,5 +1,5 @@
-// Driver service (Owner B). W3: FSM + location ingress, Npgsql raw, no Redis/Matching yet.
-// W9: authoritative Driver events use C's shared transactional Outbox and relay.
+// Driver service: state FSM + location ingress, Npgsql raw, no Redis yet.
+// Authoritative Driver events use the shared transactional Outbox and relay.
 using Microsoft.AspNetCore.RateLimiting;
 using Npgsql;
 using RabbitMQ.Client;
@@ -93,7 +93,7 @@ app.UseAuthorization();
 app.UseDriverAccessGuard();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "Live", service = "driver-service" }));
-app.MapRideReadiness();
+app.MapRideReadiness(requiresOwnedDatabase: true);
 app.MapGet("/info", (IHostEnvironment env) =>
     Results.Ok(new { serviceName = "driver-service", environment = env.EnvironmentName }));
 
@@ -107,12 +107,12 @@ if (app.Environment.IsEnvironment("Testing") && faultPoint.Enabled)
     var controlToken = Environment.GetEnvironmentVariable(DriverFaultPoint.ControlTokenVariable)!;
     DriverFaultEndpoints.Map(app, faultPoint, controlToken);
     app.Logger.LogWarning(
-        "B-W11 fault control endpoints enabled for the explicit Testing environment.");
+        "Driver fault control endpoints enabled for the explicit Testing environment.");
 }
 
 // Idempotent baseline + canonical shared Outbox schema. Both are applied
 // before the host starts serving. If PostgreSQL is down the process still
-// boots (same W2 behaviour), but every authoritative write fails closed
+// boots (same behaviour), but every authoritative write fails closed
 // because the state row and its required Outbox intent share one transaction.
 try
 {

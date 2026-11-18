@@ -1,7 +1,7 @@
-// Table-driven legal-transition suite: every deterministic W5 domain edge
-// that commits. Replay, stale, conflict and illegal representatives live in
-// the dedicated fencing/matrix suites; this suite proves each applied edge
-// commits the expected state, assignment, round, timestamp and Version delta.
+// Table-driven legal-transition suite: every deterministic domain edge that
+// commits. Replay, stale, conflict and illegal representatives live in the
+// dedicated fencing/matrix suites; this suite proves each applied edge commits
+// the expected state, assignment, round, timestamp and Version delta.
 
 using RideHailing.TripService.Domain.Trips;
 

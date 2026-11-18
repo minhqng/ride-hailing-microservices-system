@@ -97,7 +97,7 @@ public sealed partial class DriverRepository
         }
         await tx.CommitAsync(ct);
 
-        // B-W12-01: the broker compensation path uses the same fencing rules
+        // The broker compensation path uses the same fencing rules
         // as HTTP release. Count only a committed fenced stale rejection (no
         // mutation); idempotent receipts and non-fencing refusals are excluded.
         if (envelope.MessageType == DriverCommand.Release

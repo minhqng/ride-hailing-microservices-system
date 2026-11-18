@@ -13,8 +13,8 @@
     <PackageReference Include="Npgsql" />
     <PackageReference Include="StackExchange.Redis" />
     <PackageReference Include="RabbitMQ.Client" />
-    <!-- B-owned HTTP client instrumentation on the existing OTel pipeline. -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" VersionOverride="1.17.0" />
+    <!-- Matching HTTP client instrumentation on the existing OTel pipeline. -->
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
 
   <ItemGroup>

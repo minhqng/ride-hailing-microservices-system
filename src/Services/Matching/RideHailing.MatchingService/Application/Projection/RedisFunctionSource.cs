@@ -1,4 +1,4 @@
-// B-W04-04: loads the single-source Lua function (dev source tree or published output).
+// Loads the single-source Lua function (dev source tree or published output).
 namespace RideHailing.MatchingService.Application.Projection;
 
 public static class RedisFunctionSource

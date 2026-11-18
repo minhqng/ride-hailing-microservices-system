@@ -1,7 +1,7 @@
-// B-REC-01 production proof host: launches the REAL Matching service process
-// (actual Program registration, broker consumers, hosted worker, Kestrel) on
-// a private loopback port against the shared test PostgreSQL/Redis/RabbitMQ.
-// A process kill is therefore a real process kill, not an in-memory shortcut.
+// Production proof host: launches the REAL Matching service process (actual
+// Program registration, broker consumers, hosted worker, Kestrel) on a private
+// loopback port against the shared test PostgreSQL/Redis/RabbitMQ. A process
+// kill is therefore a real process kill, not an in-memory shortcut.
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;

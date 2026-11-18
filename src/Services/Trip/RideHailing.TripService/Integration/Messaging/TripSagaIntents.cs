@@ -1,16 +1,16 @@
-// Trip saga Outbox intents (A-W10-02/04/05/06/07).
+// Trip saga Outbox intents.
 //
-// One builder per committed saga obligation, following the W9
-// TripOutboxIntents contract: a deterministic messageId derived from the
+// One builder per committed saga obligation, following the TripOutboxIntents
+// contract: a deterministic messageId derived from the
 // exact business identity (never a fresh Guid per attempt), the payload
 // serialized from committed values, and the frozen operationKey/sagaId
-// lineage on the envelope (Doc 05A §18.4, DSI-034).
+// lineage on the envelope.
 //
 // Message identities are stable per LOGICAL step, so the outbox primary key
 // is a second fence against a duplicate logical payment effect: a retry or a
 // racing duplicate that re-enqueues the same step hits the existing row and
-// is reconciled by the W9 same-obligation discovery path instead of creating
-// a second command.
+// is reconciled by same-obligation discovery instead of creating a second
+// command.
 
 using RideHailing.Messaging.Contracts;
 using RideHailing.Messaging.Outbox;
@@ -90,7 +90,7 @@ public static class TripSagaIntents
     }
 
     /// <summary>
-    /// CapturePaymentV1 for the completion→capture saga step (DSI-027: only
+    /// CapturePaymentV1 for the completion→capture saga step (only
     /// after the Trip reached COMPLETED). Same SaveChanges as the COMPLETED
     /// transition and the saga's CAPTURE_PENDING step.
     /// </summary>
@@ -101,7 +101,7 @@ public static class TripSagaIntents
         if (trip.State != TripState.Completed)
         {
             throw new InvalidOperationException(
-                $"CapturePayment requires a COMPLETED Trip but Trip {trip.TripId:D} is {trip.State.ToCanonicalName()} (DSI-027).");
+                $"CapturePayment requires a COMPLETED Trip but Trip {trip.TripId:D} is {trip.State.ToCanonicalName()}.");
         }
 
         RequireSagaLineage(trip, saga, RideSagaStep.CapturePending, nameof(CapturePayment));
@@ -170,9 +170,9 @@ public static class TripSagaIntents
     }
 
     /// <summary>
-    /// MarkDriverTripStartedV1 for the Trip-side start step: Driver (B) owns
-    /// the authoritative RESERVED→ON_TRIP transition; this durable command
-    /// carries the exact fenced identity Trip started under.
+    /// MarkDriverTripStartedV1 for the Trip-side start step: the Driver service
+    /// owns the authoritative RESERVED→ON_TRIP transition; this durable
+    /// command carries the exact fenced identity Trip started under.
     /// </summary>
     public static OutboxMessage MarkDriverTripStarted(Trip trip, DateTimeOffset occurredAt)
     {
@@ -205,8 +205,8 @@ public static class TripSagaIntents
     }
 
     /// <summary>
-    /// MarkDriverTripCompletedV1 for the Trip-side completion step: Driver
-    /// (B) owns the authoritative ON_TRIP→AVAILABLE transition.
+    /// MarkDriverTripCompletedV1 for the Trip-side completion step: the Driver
+    /// service owns the authoritative ON_TRIP→AVAILABLE transition.
     /// </summary>
     public static OutboxMessage MarkDriverTripCompleted(Trip trip, DateTimeOffset occurredAt)
     {

@@ -1,4 +1,4 @@
-// Durable-state observer for saga.active (A-W12-02).
+// Durable-state observer for saga.active.
 //
 // WHY A BACKGROUND REFRESHER. The canonical saga_active{step} gauge must
 // represent CURRENT durable workflow backlog, not in-memory call counting:

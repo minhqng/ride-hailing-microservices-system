@@ -1,12 +1,12 @@
-// DS03 Driver Reject policy (Doc 01 §40.1): MATCH_FAILED carries a durable,
+// Driver Reject policy: MATCH_FAILED carries a durable,
 // bounded reason so a Driver rejection is never relabeled as "no Driver
 // available" or as a Rider cancellation.
 
 namespace RideHailing.TripService.Domain.Trips;
 
 /// <summary>
-/// Why a Trip reached MATCH_FAILED. Historical rows created before the DS03
-/// amendment may carry no reason and are never backfilled by guesswork.
+/// Why a Trip reached MATCH_FAILED. Historical rows created before the reason
+/// was recorded may carry no reason and are never backfilled by guesswork.
 /// </summary>
 public enum TripFailureReason
 {

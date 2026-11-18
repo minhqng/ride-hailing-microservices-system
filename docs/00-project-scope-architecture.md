@@ -5,7 +5,7 @@
 > **Course:** Distributed Systems  
 > **Topic:** **DS03 — Ride-hailing Microservices System simulating Grab/Uber**  
 > **Type:** Project Charter + Architecture Baseline + Distributed-Systems Theory / Internal RFC  
-> **Status:** **PROPOSED FREEZE v2.0 — REVIEW CANDIDATE**  
+> **Status:** Frozen architecture baseline  
 > **Baseline date:** **2026-09-26**  
 > **Team:** 3 members  
 > **Planning horizon:** 16 weeks  
@@ -14,8 +14,6 @@
 > `01-domain-correctness-contract.md` → domain vocabulary, state machines, invariants, legal outcomes  
 > `02-distributed-workflow-engineering.md` → messages, Outbox, Saga, retry, dedup, delivery/recovery semantics  
 > `03-verification-experiments-demo.md` → tests, fault campaigns, experiments, evidence, demo/defense  
-> `04-team-execution-plan.md` → team timeline, ownership, gates  
-> `05A/05B/05C` → individual chronological playbooks  
 > **Executable source of truth:** source code, migrations, OpenAPI/message contracts, broker configuration, Compose files, CI and executable tests win over prose for exact implementation patch/config details after an approved freeze.  
 > **Change policy:** changing a service boundary, data owner, authoritative state, persistence technology, broker, delivery claim, synchronous/asynchronous boundary, P0/P1 scope or failure model requires an architecture-change PR and an update to this document before or together with code.
 
@@ -3395,10 +3393,6 @@ COURSE SPECIFICATION
 02 Distributed execution / messaging / recovery
         ↓
 03 Verification / experiments / evidence
-        ↓
-04 Team execution
-        ↓
-05A / 05B / 05C individual execution
 ```
 
 Lower documents cannot silently override higher contracts.
@@ -3617,23 +3611,23 @@ Before promoting this file to **ACCEPTED/FROZEN**:
 
 # 26. DS03 functional-closure traceability (2026-11-05 amendment)
 
-> **Status:** post-W16 closure amendment. The business story in §3.1 is
+> **Status:** functional-closure amendment. The business story in §3.1 is
 > unchanged; this section records how the two remaining DS03 statements are
 > now implemented and verified without expanding the architecture.
 
 | DS03 statement / claim | Canonical contract | Implementation | Verification |
 | --- | --- | --- | --- |
-| Drivers accept trips | Doc 01 §6.5, Doc 05A §18 | `POST /trips/{id}/accept` (existing) | FUN-06 + release-smoke Scenario B |
-| Drivers reject trips | Doc 01 §40, Doc 05A §37 | `POST /trips/{id}/reject`; `MATCH_FAILED/failure_reason=DRIVER_REJECTED`; exact release + matching cancellation | FUN-06B, R1–R20, release-smoke Scenario A/D |
+| Drivers accept trips | Doc 01 §6.5 | `POST /trips/{id}/accept` (existing) | FUN-06 + release-smoke Scenario B |
+| Drivers reject trips | Doc 01 §40 | `POST /trips/{id}/reject`; `MATCH_FAILED/failure_reason=DRIVER_REJECTED`; exact release + matching cancellation | FUN-06B, R1–R20, release-smoke Scenario A/D |
 | One Driver cannot hold two active reservations | DSI-001, DSI-004, DSI-033 | Driver PostgreSQL reservation authority + exact-token release | existing CON/REL suites + reject release tests |
-| Rider receives notifications | Doc 01 §40.2, Doc 02 §43, Doc 05C §48 | `NotificationRequestedV1` → `notifications` inbox → `GET /notifications/me` | FUN-13, N1–N3/N5–N7, release-smoke Scenario B |
-| Driver receives notifications | Doc 01 §40.2, Doc 02 §43, Doc 05C §48 | `NotificationRequestedV1` from Driver Outbox → inbox API | FUN-14, N4/N7/N9–N10, release-smoke Scenario B |
+| Rider receives notifications | Doc 01 §40.2, Doc 02 §43 | `NotificationRequestedV1` → `notifications` inbox → `GET /notifications/me` | FUN-13, N1–N3/N5–N7, release-smoke Scenario B |
+| Driver receives notifications | Doc 01 §40.2, Doc 02 §43 | `NotificationRequestedV1` from Driver Outbox → inbox API | FUN-14, N4/N7/N9–N10, release-smoke Scenario B |
 | Notification dedup | DSI-029, DSL-007 | `(source_message_id, recipient_user_id, notification_type)` + deterministic notification id | N12–N15, release-smoke Scenario C |
 | Notification failure is non-blocking | DSI-029, DSL-007 | asynchronous worker, independent `notification_db`, ACK-after-commit, bounded retry/DLQ | FUN-15, N16–N18, release-smoke Scenario C |
 | REST flow | Doc 00 §3.1 | Gateway + JWT-authenticated Trip/Notification HTTP | release-smoke Scenarios A/B |
 | RabbitMQ flow | Doc 02 §6/§43 | Outbox → `ride.events`/`ride.commands` → consumers | topology-smoke + release-smoke message identities |
-| Saga / compensation | Doc 01 §6, Doc 05A §18 | unchanged W10 Saga; reject occurs before authorization and starts no Saga | R20, release-smoke Scenario A |
+| Saga / compensation | Doc 01 §6 | persisted Saga; reject occurs before authorization and starts no Saga | R20, release-smoke Scenario A |
 
-The original W01–W16 statements remain historical and are not rewritten. A
+The original contract statements remain historical and are not rewritten. A
 `VERIFIED` status in this table requires the evidence bundle described in
-Doc 03 §42.3. No release tag is created by this amendment.
+Doc 03 §42.3.

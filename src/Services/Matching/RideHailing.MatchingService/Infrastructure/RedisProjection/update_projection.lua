@@ -1,13 +1,13 @@
 #!lua name=driverprojection
--- B-W04-04: single atomic projection function (05B section 5, 01 section 21.2).
+-- Single atomic projection function: status/version guard, session freshness guard and GEO recompute.
 -- One invocation applies AT MOST one state section and/or one location section.
 -- Empty-string arg = section absent (caller sends state-only or location-only updates
 -- via separate DTOs; a state event can never smuggle a stale location).
 --
 -- Frozen W4 policies:
---   state:    apply iff version > projected version (DSI-007). No current -> accept.
+--   state:    apply iff version > projected version. No current -> accept.
 --   location: no current -> accept; same session -> seq-first, capturedAt tie-break
---             (DSI-006); DIFFERENT session -> 'stale-session' reject. Redis cannot
+--             ; DIFFERENT session -> 'stale-session' reject. Redis cannot
 --             order opaque sessionIds, and Docs 00-04 define no session-transition
 --             authority, so W4 never auto-accepts a foreign session. Legitimate
 --             session rotation needs a future Driver-owned current-session signal.

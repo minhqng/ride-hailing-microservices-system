@@ -1,8 +1,8 @@
-// B-W05 pipeline proofs on REAL PG + REAL Redis (no fake-green).
-// Seeds the W4 projection via the real updater (the same contract the W8
-// consumer will use), then proves round persistence, stable identities,
-// eligibility, determinism, boundedness, degraded behavior and metrics.
-// Uses the shared PG collection + a private Redis container per class.
+// Pipeline proofs on REAL PostgreSQL + REAL Redis. Seeds the projection via
+// the real updater (the same contract the broker consumer uses), then proves
+// round persistence, stable identities, eligibility, determinism, boundedness,
+// degraded behavior and metrics. Uses the shared PG collection and a private
+// Redis container per class.
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Text.Json;
@@ -21,7 +21,9 @@ public sealed class MatchingPipelineTests : IAsyncLifetime
 {
     static MatchingPipelineTests()
     {
-        Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
+        Environment.SetEnvironmentVariable(
+            "TESTCONTAINERS_RYUK_DISABLED",
+            Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED") ?? "true");
     }
 
     private static readonly DateTimeOffset Now = new(2026, 10, 6, 12, 0, 0, TimeSpan.Zero);
@@ -181,7 +183,7 @@ public sealed class MatchingPipelineTests : IAsyncLifetime
     [Fact]
     public async Task Stale_Reserved_And_Far_Candidates_Filtered()
     {
-        // GEO holds AVAILABLE drivers only (W4 projection): RESERVED never
+        // GEO holds AVAILABLE drivers only (projection): RESERVED never
         // reaches discovery, stale-location is filtered by eligibility.
         var trip = Guid.NewGuid();
         var fresh = Guid.NewGuid();
@@ -363,8 +365,8 @@ public sealed class MatchingPipelineTests : IAsyncLifetime
     [Fact]
     public async Task Unresolved_Attempt_Blocks_New_Candidates()
     {
-        // DSI-017 at the ledger: a foreign/unresolved attempt means no new
-        // candidate may be offered until it reconciles (W6 owns reconcile).
+        // At the ledger: a foreign/unresolved attempt means no new candidate
+        // may be offered until it reconciles (reconcile owns that step).
         var trip = Guid.NewGuid();
         var d1 = Guid.NewGuid();
         var t = Now.AddMinutes(-1);

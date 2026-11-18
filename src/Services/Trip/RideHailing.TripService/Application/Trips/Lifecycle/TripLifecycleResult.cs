@@ -1,7 +1,8 @@
-// Shared W5 lifecycle intake result (A-W05 application coordination).
+// Shared lifecycle intake result (application coordination).
 //
-// Every W5 handler follows one shape: load the Trip, derive caller/context
-// identity, call exactly one aggregate operation, persist the authoritative
+// Every lifecycle handler follows one shape: load the Trip, derive
+// caller/context identity, call exactly one aggregate operation, persist the
+// authoritative
 // result, map the domain outcome. Handlers never duplicate FSM logic and
 // never mutate assignment fields directly. Optimistic-concurrency conflicts
 // (Version token) propagate as TripConcurrencyConflictException: the losing
@@ -13,7 +14,7 @@ using RideHailing.TripService.Domain.Trips;
 namespace RideHailing.TripService.Application.Trips.Lifecycle;
 
 /// <summary>
-/// Data-only result of one W5 lifecycle intake. Carries the Trip's current
+/// Data-only result of one lifecycle intake. Carries the Trip's current
 /// business truth after handling so transport mapping and tests assert
 /// persisted state, never status codes alone.
 /// </summary>
@@ -27,7 +28,7 @@ public sealed record TripLifecycleResult
 
     /// <summary>
     /// True when no owned Trip exists for the supplied identity. Never
-    /// disclosed as a distinct owner-mismatch (SEC-03): missing and
+    /// disclosed as a distinct owner-mismatch: missing and
     /// not-owned share this outcome.
     /// </summary>
     public bool IsNotFound { get; private init; }

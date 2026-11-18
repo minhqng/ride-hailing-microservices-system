@@ -1,4 +1,4 @@
-// DS03 notification inbox acceptance over real PostgreSQL and a real host:
+// Notification inbox acceptance over real PostgreSQL and a real host:
 // recipient isolation, durable dedup, replay, migration and content safety.
 // Critical cases use the production store/host; no in-memory substitute is
 // accepted for the guarantees these tests assert.
