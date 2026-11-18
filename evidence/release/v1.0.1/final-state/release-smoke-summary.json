@@ -1,0 +1,241 @@
+{
+  "kind": "supporting-local-release-smoke",
+  "runDate": "2026-11-18",
+  "project": "ride-release-v101",
+  "status": "PASS",
+  "reportedSource": {
+    "commit": "b8467c971cc7eb8efffeacf4c762b80638607da7",
+    "tree": "7851fd467c8a5a95dfdd7c2d18ba696e8fd07555"
+  },
+  "note": "Local Production-overlay run on the verified source tree; authoritative for this tagged checkout.",
+  "checks": [
+    {
+      "id": "RELEASE-SECRETS-must be set for the release overlay",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-SECRETS-AUTH_",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-RENDER",
+      "status": "PASS"
+    },
+    {
+      "id": "PRODUCTION-ENVIRONMENT",
+      "status": "PASS"
+    },
+    {
+      "id": "MESSAGING-ENABLED",
+      "status": "PASS"
+    },
+    {
+      "id": "PRODUCTION-RECONCILIATION",
+      "status": "PASS"
+    },
+    {
+      "id": "NO-PRODUCTION-SIMULATOR",
+      "status": "PASS"
+    },
+    {
+      "id": "RELEASE-SERVICES-READY",
+      "status": "PASS"
+    },
+    {
+      "id": "GATEWAY-AUTH",
+      "status": "PASS"
+    },
+    {
+      "id": "UNAUTHENTICATED-REJECTED",
+      "status": "PASS"
+    },
+    {
+      "id": "PUBLIC-DRIVER-LIFECYCLE",
+      "status": "PASS"
+    },
+    {
+      "id": "COMPLETED-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "RECIPIENT-INBOXES",
+      "status": "PASS"
+    },
+    {
+      "id": "CANCELLED-VOID-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "DRIVER-REJECT-JOURNEY",
+      "status": "PASS"
+    },
+    {
+      "id": "NOTIFICATION-OUTAGE-ISOLATION",
+      "status": "PASS"
+    },
+    {
+      "id": "REJECT-CRASH-REPLAY",
+      "status": "PASS"
+    },
+    {
+      "id": "AUTHORITY-AUDIT",
+      "status": "PASS"
+    },
+    {
+      "id": "TEARDOWN-ISOLATED",
+      "status": "PASS"
+    }
+  ],
+  "checkCount": 19,
+  "migration": {
+    "api": "dotnet ef database update",
+    "applied": 11
+  },
+  "topology": {
+    "exchanges": 12,
+    "queues": 19
+  },
+  "journeys": {
+    "completed": {
+      "trip": "92c111b9-5a59-4092-bede-641038be2d00",
+      "reservation": "e9fd800a-231b-49cf-b556-3fed6b4785d0",
+      "state": "COMPLETED",
+      "payment": 2,
+      "proof": {
+        "trip": {
+          "trip_id": "92c111b9-5a59-4092-bede-641038be2d00",
+          "rider_id": "7d4c3706-3da1-4f34-a129-0c866f35d4ee",
+          "state": "DRIVER_RESERVED",
+          "created_at": "2026-11-18T03:11:19.786463+00:00",
+          "version": 2,
+          "assigned_driver_id": "3fcc167d-c9e6-4925-a964-03695ee4d245",
+          "matching_round": 1,
+          "reservation_id": "e9fd800a-231b-49cf-b556-3fed6b4785d0",
+          "dropoff_latitude": 10.78,
+          "dropoff_longitude": 106.71,
+          "fare_amount": 15260.47,
+          "fare_created_at": "2026-11-18T03:11:19.786463+00:00",
+          "fare_currency": "VND",
+          "fare_policy_version": "p0-w4-v1",
+          "pickup_latitude": 10.7769,
+          "pickup_longitude": 106.7009,
+          "current_matching_round": 1,
+          "updated_at": "2026-11-18T03:11:21.053899+00:00",
+          "failure_reason": null
+        },
+        "driver": {
+          "driver_id": "3fcc167d-c9e6-4925-a964-03695ee4d245",
+          "user_id": "4eb79a7d-d185-4ef3-b5b7-6ec44a1821b4",
+          "status": "RESERVED",
+          "version": 3,
+          "reserved_trip_id": "92c111b9-5a59-4092-bede-641038be2d00",
+          "reservation_id": "e9fd800a-231b-49cf-b556-3fed6b4785d0",
+          "active_trip_id": null,
+          "vehicle_id": null,
+          "created_at": "2026-11-18T03:11:17.993005+00:00",
+          "updated_at": "2026-11-18T03:11:20.685348+00:00",
+          "reserved_round": 1
+        },
+        "round": {
+          "trip_id": "92c111b9-5a59-4092-bede-641038be2d00",
+          "matching_round": 1,
+          "input_message_id": "trip:92c111b95a594092bede641038be2d00:ride-requested:1",
+          "status": "RESERVED",
+          "current_stage": "S0",
+          "cancel_requested": false,
+          "ranking_config_version": "v1",
+          "candidate_snapshot_hash": "b488b833f7b0877f9825550b2d6957afcb24b1a38d6ba0441fd07788004e4c06",
+          "selected_driver_id": "3fcc167d-c9e6-4925-a964-03695ee4d245",
+          "selected_reservation_id": "e9fd800a-231b-49cf-b556-3fed6b4785d0",
+          "result_message_id": null,
+          "created_at": "2026-11-18T03:11:20.37846+00:00",
+          "updated_at": "2026-11-18T03:11:20.701619+00:00",
+          "candidate_count": 1,
+          "next_attempt_ordinal": 1,
+          "candidate_snapshot_json": [
+            {
+              "score": 0.0001,
+              "stage": "S0",
+              "ordinal": 0,
+              "version": 2,
+              "driverId": "3fcc167d-c9e6-4925-a964-03695ee4d245",
+              "capturedAt": "2026-11-18T03:11:18+00:00",
+              "distanceKm": 0.0001,
+              "reservationId": "e9fd800a-231b-49cf-b556-3fed6b4785d0"
+            }
+          ],
+          "pickup_longitude": 106.7009,
+          "pickup_latitude": 10.7769,
+          "auto_execute": true,
+          "work_checked_at": "2026-11-18T03:11:20.708179+00:00",
+          "work_error_code": null,
+          "stage_evaluated": "S0",
+          "intake_traceparent": "00-25550f7d70d3853c85eac2b7dab70fa9-a28275c120d5b7e3-01"
+        },
+        "attempt": {
+          "trip_id": "92c111b9-5a59-4092-bede-641038be2d00",
+          "matching_round": 1,
+          "ordinal": 0,
+          "driver_id": "3fcc167d-c9e6-4925-a964-03695ee4d245",
+          "reservation_id": "e9fd800a-231b-49cf-b556-3fed6b4785d0",
+          "state": "RESERVED",
+          "last_error_code": null,
+          "created_at": "2026-11-18T03:11:20.549689+00:00",
+          "updated_at": "2026-11-18T03:11:20.697199+00:00",
+          "max_dispatched_version": 2,
+          "stage": "S0",
+          "last_checked_at": null
+        },
+        "riderId": "7d4c3706-3da1-4f34-a129-0c866f35d4ee"
+      },
+      "notifications": 4
+    },
+    "cancelled": {
+      "trip": "1d73eb02-d67c-4961-8c18-8b721ebdf2e9",
+      "reservation": "5601b090-5b0e-4dee-b615-206b42ce30a5",
+      "state": "CANCELLED",
+      "compensation": "VOID",
+      "payment": 2
+    },
+    "rejected": {
+      "trip": "28617e01-523d-4050-b977-4e3541c4bc63",
+      "reservation": "dcc6a6d1-b13d-479c-ae04-3130a3a81911",
+      "state": "MATCH_FAILED",
+      "reason": "DRIVER_REJECTED",
+      "replacementTrip": "5aeb80e7-9cc9-4fbd-ac7b-0606071f5108",
+      "notifications": 5
+    }
+  },
+  "scenarios": {
+    "A-driver-reject": {
+      "trip": "28617e01-523d-4050-b977-4e3541c4bc63",
+      "state": "MATCH_FAILED",
+      "releaseCompleted": true
+    },
+    "C-notification-outage": {
+      "trip": "322e83fd-573c-4aad-925c-a506afac6cf4",
+      "tripState": "COMPLETED",
+      "notifications": 4
+    },
+    "D-reject-crash-replay": {
+      "trip": "2ef7affd-6d60-49bb-bfdd-78961f5e194f",
+      "replayed": true,
+      "releaseIntents": 1
+    }
+  },
+  "authority": {
+    "trips": 6,
+    "drivers": 1,
+    "rounds": 6,
+    "payments": 6,
+    "effects": 6,
+    "notifications": 25
+  },
+  "teardown": {
+    "sentinelPreserved": true,
+    "projectContainers": 0
+  },
+  "limitations": [
+    "Payment decline is exercised by the real Payment integration suite in the release-smoke CI job; the Production overlay intentionally exposes no simulator control route to force a remote decline."
+  ]
+}

@@ -70,7 +70,7 @@ summary:
 
 - Full .NET regression: **1,344 passed, 0 failed, 1 documented opt-in skip**
   across 13 executable suites; TRX gate PASS.
-- Production overlay smoke: **{{SMOKE_CHECKS}} checks PASS**, including external
+- Production overlay smoke: **19/19 checks PASS**, including external
   migrations, a completed ride, cancellation/void, driver rejection,
   notification-outage isolation and reject-commit crash replay.
 - Live demo run on a clean development stack: Part C 13 steps plus D.1–D.8,

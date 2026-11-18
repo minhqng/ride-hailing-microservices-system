@@ -1,0 +1,75 @@
+{
+  "kind": "live-demo-run",
+  "runDate": "2026-11-18",
+  "runId": "1794969950796",
+  "composeProject": "ride-demo",
+  "source": "verified v1.0.1 source tree; rebuilt with --build after the matching and cancellation-cleanup fixes",
+  "command": "docker compose down -v; OBS_PROMETHEUS_PORT=19090 docker compose --profile obs up -d --build; then execute the Part C and D.1-D.12 commands in docs/demo.md sequentially",
+  "exit": 0,
+  "scenarios": {
+    "PartC": {
+      "steps": 13,
+      "status": "PASS",
+      "note": "role isolation, Redis projection, idempotent create, matching, accept, saga authorization, start/complete/capture, notifications, four authorities and outbox all read back"
+    },
+    "D.1": {
+      "status": "PASS",
+      "availableDrivers": 1,
+      "winner": "db6993bd-4dbb-4654-b0cb-b66e896a8b1e",
+      "loserState": "MATCH_FAILED / NO_DRIVER_AVAILABLE",
+      "openCleanup": "0",
+      "cleanupKinds": [
+        "CancelMatching",
+        "ReleaseReservation"
+      ]
+    },
+    "D.2": {
+      "status": "PASS",
+      "sameTripId": true
+    },
+    "D.3": {
+      "status": "PASS",
+      "note": "RabbitMQ stopped; outbox stayed PENDING with published_at null; PUBLISHED after restore"
+    },
+    "D.4": {
+      "status": "PASS",
+      "note": "TimeoutAfterEffect produced UNKNOWN, then reconcile created exactly one durable provider effect"
+    },
+    "D.5": {
+      "status": "PASS",
+      "note": "reject -> MATCH_FAILED / DRIVER_REJECTED, exact release and matching cancellation completed, driver AVAILABLE"
+    },
+    "D.6": {
+      "status": "PASS",
+      "note": "notification worker stopped during a full ride; queued inbox entries delivered exactly once after restart"
+    },
+    "D.7": {
+      "status": "PASS",
+      "note": "SIGKILL of trip process; /health/ready recovered; outbox drained; post-crash ride completed"
+    },
+    "D.8": {
+      "status": "PASS",
+      "note": "Prometheus active scrape targets healthy"
+    },
+    "D.11": {
+      "status": "PASS",
+      "note": "cancel during authorization with Payment stopped -> saga COMPENSATED, AUTHORIZE SUCCEEDED + VOID SUCCEEDED with equal amount, NO CAPTURE, all three cleanup obligations confirmed"
+    },
+    "D.12": {
+      "status": "PASS",
+      "trip": "278c0483-d46a-48f7-aa9d-ae1c6df32b80",
+      "note": "pre-seeded DECLINE -> CANCELLED, exact ReleaseDriverReservationV1, AUTHORIZE DECLINED, all three cleanup obligations confirmed, driver AVAILABLE"
+    },
+    "multiCandidateProbe": {
+      "status": "PASS",
+      "note": "two available drivers: one RESERVED attempt and one CANCELLED (NOT_SELECTED) attempt; CancelMatching confirmed"
+    }
+  },
+  "finalInvariants": {
+    "cleanupPending": 0,
+    "nonPublishedOutbox": 0,
+    "reservedRoundsWithUnresolvedAttempt": 0,
+    "duplicateNotifications": 0
+  },
+  "evidenceNote": "Curated from the live run log; raw execution output is local and not committed. Every assertion was read from the owning database, Redis or Prometheus."
+}

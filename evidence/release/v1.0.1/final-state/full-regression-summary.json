@@ -1,0 +1,99 @@
+{
+  "sourceCommit": "b8467c971cc7eb8efffeacf4c762b80638607da7",
+  "sourceTree": "7851fd467c8a5a95dfdd7c2d18ba696e8fd07555",
+  "runDate": "2026-11-18",
+  "environment": "openSUSE Tumbleweed (Linux 7.3.4), Docker 29.9.2 / Compose 5.7.1, pinned .NET 10 SDK container, PostgreSQL 18.6, RabbitMQ 4.3.6, Redis 8.10.2",
+  "command": "bash scripts/test/quick.sh",
+  "suites": {
+    "RideHailing.IdentityService.IntegrationTests": {
+      "passed": 0,
+      "failed": 0,
+      "skipped": 1,
+      "total": 1
+    },
+    "RideHailing.NotificationWorker.UnitTests": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "total": 13
+    },
+    "RideHailing.MatchingService.UnitTests": {
+      "passed": 115,
+      "failed": 0,
+      "skipped": 0,
+      "total": 115
+    },
+    "RideHailing.DriverService.UnitTests": {
+      "passed": 132,
+      "failed": 0,
+      "skipped": 0,
+      "total": 132
+    },
+    "RideHailing.TripService.UnitTests": {
+      "passed": 327,
+      "failed": 0,
+      "skipped": 0,
+      "total": 327
+    },
+    "RideHailing.PaymentService.UnitTests": {
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0,
+      "total": 38
+    },
+    "RideHailing.NotificationService.IntegrationTests": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "total": 16
+    },
+    "RideHailing.InvariantAudit.Tests": {
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "total": 20
+    },
+    "RideHailing.PaymentService.IntegrationTests": {
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0,
+      "total": 37
+    },
+    "RideHailing.DriverService.IntegrationTests": {
+      "passed": 120,
+      "failed": 0,
+      "skipped": 0,
+      "total": 120
+    },
+    "RideHailing.Platform.IntegrationTests": {
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "total": 76
+    },
+    "RideHailing.MatchingService.IntegrationTests": {
+      "passed": 204,
+      "failed": 0,
+      "skipped": 0,
+      "total": 204
+    },
+    "RideHailing.TripService.IntegrationTests": {
+      "passed": 246,
+      "failed": 0,
+      "skipped": 0,
+      "total": 246
+    }
+  },
+  "totals": {
+    "passed": 1344,
+    "failed": 0,
+    "skipped": 1,
+    "executedSuites": 13
+  },
+  "knownSkip": "RideHailing.IdentityService.IntegrationTests.AuthNegativeTests.RejectedRequestsDoNotMutateAuthoritativeState",
+  "trxGate": "PASS: TRX files=13 (executed suites=13), notexecuted=1, passed=1344, suite files=13",
+  "build": {
+    "errors": 0,
+    "warnings": 0
+  }
+}

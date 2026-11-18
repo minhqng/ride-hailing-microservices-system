@@ -71,7 +71,7 @@ removed. No warning category is suppressed anywhere in the solution.
 
 | Gate | Result |
 |---|---|
-| Secret scan (`scripts/security/scan-secrets.py`) | PASS — 1334 tracked paths, no high-confidence secret |
+| Secret scan (`scripts/security/scan-secrets.py`) | PASS — 576 tracked paths, no high-confidence secret |
 | Hygiene self-test (`scripts/test/hygiene-check.sh --self-test`) | PASS — 24 pattern verdicts |
 | Source-anchor fixtures (`verify-source-anchor.test.sh`) | PASS — 12 fixture cases |
 | Compose render, development files | PASS (`docker compose config --quiet`) |
