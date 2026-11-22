@@ -4,7 +4,6 @@ Executable negative-test suite for authentication/authorization on real
 business APIs. The seven cases run against an owner-supplied fixture and assert
 that rejected requests leave authoritative state unchanged.
 
-Spec: `../../../docs/03-verification-experiments-demo.md` SEC-01–04.
 Test: `AuthNegativeTests.cs` in this directory.
 
 ## Status

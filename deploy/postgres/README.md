@@ -5,9 +5,9 @@ roles on a fresh volume. It does not run on an existing volume.
 
 ## Production
 
-Trip owns EF migrations and applies them through the external
-`dotnet ef database update` step documented in `docs/release.md`;
-the release overlay sets `TripDatabase__AutoMigrate=false`.
+Trip owns EF migrations and applies them externally before service startup;
+the release overlay sets `TripDatabase__AutoMigrate=false` so a production
+process never mutates its schema implicitly.
 
 Payment, Driver and Matching apply idempotent startup DDL inside a transaction
 guarded by a stable PostgreSQL advisory key, so concurrent replicas serialize

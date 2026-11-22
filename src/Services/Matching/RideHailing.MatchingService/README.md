@@ -7,8 +7,6 @@ database; a reservation becomes authoritative only when Driver commits it.
 - Database: `matching_db` (role `matching_app`), PostgreSQL through Npgsql.
 - Depends on: `ConnectionStrings__Postgres`, `Redis__ConnectionString`,
   `RabbitMq__Host`, `Services__DriverBaseUrl`.
-- Contracts: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md)
-  and [workflow contract](../../../../docs/02-distributed-workflow-engineering.md).
 
 ## Intake and execution
 

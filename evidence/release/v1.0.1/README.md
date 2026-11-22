@@ -50,7 +50,7 @@ python3 scripts/test/release-smoke.py
 python3 scripts/security/scan-secrets.py
 ```
 
-For the live demo, follow [docs/demo.md](../../docs/demo.md) from a clean stack:
+For the live demo, follow [docs/demo.md](../../../docs/demo.md) from a clean stack:
 
 ```bash
 COMPOSE_PROJECT_NAME=ride-demo docker compose --profile obs down -v

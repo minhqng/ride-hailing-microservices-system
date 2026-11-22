@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repository PR hygiene guard: deterministic changed-path check (AGENTS.md).
+# Repository PR hygiene guard: deterministic changed-path check.
 #
 # Rejects build output, test dumps, local logs, IDE state, credential files,
 # agent planning journals and raw/un-curated execution output from the set of
@@ -68,8 +68,8 @@ self_test() {
     "accept|evidence/release/v1.0.0/metrics/pending-age.md"
     "accept|src/Services/Trip/RideHailing.TripService/Migrations/20261025031423_TripOutbox.cs"
     "accept|tests/Integration/RideHailing.TripService.IntegrationTests/TripSagaTests.cs"
-    "accept|docs/03-verification-experiments-demo.md"
-    "accept|AGENTS.md"
+    "accept|evidence/release/v1.0.1/README.md"
+    "accept|README.md"
     "accept|scripts/test/hygiene-check.sh"
   )
   local fail=0 verdict reason path case_entry
@@ -113,6 +113,17 @@ BASE="${BASE:-origin/main}"
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
+# A force-push replaces the old tip, so the recorded before-SHA can be absent
+# from the runner's checkout even with fetch-depth: 0. Fetching an unreachable
+# old tip can be slow or unavailable, so fall back to the pushed commit's
+# parent. This checks the final commit whose tree is being delivered; a
+# multi-commit force-push should fetch the exact base and re-run.
+if ! git rev-parse --verify --quiet "${BASE}^{commit}" >/dev/null 2>&1 &&
+   [[ "${GITHUB_ACTIONS:-}" == "true" && "$BASE" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "hygiene-check: base '${BASE}' is not in the checkout; checking the pushed commit against HEAD^." >&2
+  BASE="HEAD^"
+fi
+
 if ! git rev-parse --verify --quiet "${BASE}^{commit}" >/dev/null 2>&1; then
   if (( ALLOW_MISSING_BASE )); then
     echo "hygiene-check: base '${BASE}' is not resolvable; skipping by explicit --allow-missing-base (first push)." >&2
@@ -139,7 +150,7 @@ for path in "${CHANGED[@]}"; do
 done
 
 if (( fail )); then
-  echo "hygiene-check: remove the rejected paths, or curate their durable content per AGENTS.md / docs/03 §25." >&2
+  echo "hygiene-check: remove rejected paths or curate their durable content into a versioned artifact." >&2
   exit 1
 fi
 

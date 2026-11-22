@@ -6,8 +6,6 @@ service may grant or release it.
 
 - Database: `driver_db` (role `driver_app`), PostgreSQL through Npgsql.
 - Depends on: `ConnectionStrings__Postgres`, `RabbitMq__Host`.
-- Contracts: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md)
-  and [workflow contract](../../../../docs/02-distributed-workflow-engineering.md).
 
 ## Authority and state machine
 

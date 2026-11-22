@@ -6,8 +6,6 @@ integration, but its operation ledger is durable and transactionally correct.
 
 - Database: `payment_db` (role `payment_app`), PostgreSQL.
 - Depends on: `ConnectionStrings__Postgres`, `RabbitMq__Host`.
-- Contracts: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md)
-  and [workflow contract](../../../../docs/02-distributed-workflow-engineering.md).
 
 ## Operation authority
 

@@ -5,9 +5,9 @@
 # negative cases run in the platform-smoke Identity gate, so the solution run
 # requires presence only.
 #
-# Per-assembly minima are roughly 90% of the recorded v1.0.0 release counts
-# (docs/verification.md §1). They catch a suite that silently stops discovering
-# tests without turning every added/renamed test into a gate edit.
+# Per-assembly minima are roughly 90% of the recorded v1.0.0 release counts.
+# They catch a suite that silently stops discovering tests without turning
+# every added or renamed test into a gate edit.
 ridehailing.invariantaudit.tests:18
 ridehailing.driverservice.unittests:118
 ridehailing.driverservice.integrationtests:108

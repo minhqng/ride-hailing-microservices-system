@@ -81,8 +81,8 @@
   },
   "evidenceFiles": {
     "evidence/release/v1.0.1/README.md": {
-      "sha256": "96ea541bbaa30b94129b3789f3c8ca9679bd1b159d64f85c6fcb1b51eaed1f61",
-      "bytes": 3374
+      "sha256": "4389673f0fcd6675807031c84e4fc0d755ca9acdcf2a7731ec055d1e440b0758",
+      "bytes": 3377
     },
     "evidence/release/v1.0.1/final-state/demo-run-summary.json": {
       "sha256": "1ce9fe992aee0b822ec800d1035c878c444f225824ee61153b517ce4bd921511",

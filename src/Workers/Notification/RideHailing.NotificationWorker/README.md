@@ -6,7 +6,6 @@ Driver or Payment truth; an outage delays delivery but cannot block a ride.
 - Database: `notification_db` (role `notification_app`).
 - Depends on: `ConnectionStrings__Postgres`, `RabbitMq__Hosts` (or
   `RabbitMq__Host`), `Auth__PublicKeyBase64` (shared JWT validation key).
-- Contract: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md).
 
 ## Delivery model
 

@@ -21,4 +21,4 @@ see [IMAGES.md](IMAGES.md) for the table and update procedure.
 Use an isolated project (`COMPOSE_PROJECT_NAME=ride-release-<unique>`) and run
 `python3 scripts/test/release-smoke.py` for the executable procedure, which
 also covers external EF migrations, readiness, real journeys, authority reads
-and isolated teardown. See `docs/release.md` for the operator steps.
+and isolated teardown.

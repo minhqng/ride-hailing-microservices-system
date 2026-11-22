@@ -38,4 +38,6 @@ Business queues use confirmed at-least-once delivery with dead-lettering to the
 durable quarantine once broker delivery failures exceed 20. Health requires a
 successful import; do not remove the broker volume when upgrading.
 
-See [runtime and upgrade instructions](../../docs/messaging-runtime.md#broker-delivery-limit-and-quarantine).
+Before changing queue arguments on an existing environment, drain or migrate
+the affected queues explicitly; RabbitMQ does not allow incompatible durable
+queue declarations in place.

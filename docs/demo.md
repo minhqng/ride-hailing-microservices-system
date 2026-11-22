@@ -1,14 +1,48 @@
 # DS03 — Runbook trình diễn và bảo vệ đồ án
 
 Tài liệu này là **runbook duy nhất** dùng để trình diễn và bảo vệ hệ thống
-ride-hailing microservices trước hội đồng. Mọi lệnh trong đây đã được chạy thật
-trên một bản triển khai sạch của chính mã nguồn này; không có lệnh nào là "viết
-cho đẹp" mà chưa kiểm chứng.
+ride-hailing microservices trước hội đồng. Các kịch bản nền đã được ghi nhận
+trong evidence của `v1.0.1`; mọi thay đổi đối với lệnh, assertion hoặc thời lượng
+trong runbook phải được rehearsal lại trên đúng commit trước buổi bảo vệ.
 
 Nguyên tắc xuyên suốt: **không diễn lại bằng dữ liệu giả**. Mỗi bước đều chỉ ra
 trạng thái thật trong PostgreSQL của service sở hữu, trong Redis projection hoặc
 trong RabbitMQ. Nếu một bước không chứng minh được bằng trạng thái thật thì bước
 đó không được đưa vào bài trình diễn.
+
+## Luồng trình diễn chuẩn — showcase toàn bộ hệ thống
+
+Phiên chuẩn dành **10 phút cho phần trình bày và demo**, sau đó giữ 5 phút cho
+hỏi đáp. Tuyến live chỉ chạy Phần B rút gọn và C.1–C.13; Phần D là bằng chứng
+dự phòng để mở đúng tình huống hội đồng hỏi. Đường chạy bắt buộc là:
+
+| Mốc | Nội dung trực tiếp | Thành phần được chứng minh |
+|---|---|---|
+| 0:00–1:30 | Kiến trúc, readiness và sáu database riêng | Gateway, 6 service/worker, PostgreSQL |
+| 1:30–3:00 | Đăng nhập, kiểm tra role; Driver online và cập nhật vị trí | Identity, JWT, Driver, Redis GEO |
+| 3:00–7:30 | Tạo chuyến, matching, accept, start, complete và capture | Trip, Matching, Driver, Payment, RabbitMQ, Outbox/Saga |
+| 7:30–8:30 | Đọc inbox Rider/Driver | Notification, recipient isolation |
+| 8:30–9:30 | Đối soát trạng thái cuối và mở đúng trace | PostgreSQL authorities, OpenTelemetry, Jaeger |
+| 9:30–10:00 | Kết luận hoặc dùng làm thời gian dự phòng | Toàn hệ thống |
+
+### Bản đồ phủ toàn hệ thống
+
+| Thành phần | Bước bắt buộc | Điều cần nói |
+|---|---|---|
+| Gateway | B.1, C.2 | Một cửa vào, chuyển JWT và áp dụng policy ở biên |
+| Identity | C.2 | Cấp JWT RSA; Rider gọi route Driver nhận 403 |
+| Driver | C.3, C.6–C.7 | PostgreSQL là thẩm quyền giữ chỗ; Redis không quyết định |
+| Trip | C.4–C.13 | Sở hữu vòng đời chuyến, Saga và Transactional Outbox |
+| Matching | C.5 | Xếp hạng ứng viên nhưng phải xin Driver giữ chỗ |
+| Payment | C.8, C.10 | Authorize/capture theo `operationKey`; D.4 dành cho Q&A |
+| Notification | C.12 | Projection bất đồng bộ, tách biệt theo người nhận |
+| Hạ tầng | C.1, C.3, C.5, D.8 | PostgreSQL, Redis, RabbitMQ và trace đều có bằng chứng thật |
+
+Nếu thời gian bị cắt, vẫn phải giữ C.1–C.13 ở dạng rút gọn. Có thể bỏ thao tác
+UI RabbitMQ/Grafana và chỉ mở Jaeger ở cuối; không được bỏ trạng thái cuối C.13
+vì đó là bằng chứng các service đã hội tụ. D.1 (concurrency), D.4 (Payment
+`UNKNOWN`) và các kịch bản D khác chỉ chạy khi hội đồng yêu cầu hoặc cho thêm
+thời gian.
 
 ---
 
@@ -18,10 +52,14 @@ trong RabbitMQ. Nếu một bước không chứng minh được bằng trạng 
 
 | Phần | Nội dung | Thời lượng |
 |---|---|---|
-| Mở đầu | Kiến trúc và phân chia service | 2–3 phút |
-| Trình diễn chính | Một chuyến đi hoàn chỉnh, quan sát từng tầng | 7–10 phút |
-| Trình diễn mở rộng | Concurrency, idempotency, outage, compensation | 5–8 phút mỗi kịch bản |
-| Hỏi đáp | Câu hỏi kỹ thuật của hội đồng | 5–10 phút |
+| Mở đầu | Kiến trúc, ranh giới thẩm quyền và readiness | 1 phút 30 giây |
+| Trình diễn chính | Một chuyến hoàn chỉnh qua toàn bộ service | 7 phút |
+| Đối soát và kết luận | Trace, trạng thái cuối và thông điệp chính | 1 phút |
+| Dự phòng | Độ trễ bất đồng bộ hoặc chuyển màn hình | 30 giây |
+| Hỏi đáp | Mở kịch bản Phần D theo câu hỏi hội đồng | 5 phút |
+
+Mốc cứng: phần nói và demo kết thúc ở phút 10. Không chạy Phần D nối tiếp chỉ
+để “cho đủ”; chúng là kho bằng chứng cho hỏi đáp.
 
 Toàn bộ phần A (chuẩn bị) **phải xong trước khi đồng hồ trình diễn bắt đầu**.
 
@@ -36,6 +74,69 @@ Toàn bộ phần A (chuẩn bị) **phải xong trước khi đồng hồ trìn
 - RAM khuyến nghị: ≥ 8 GB cho stack development; nhiều hơn nếu bật profile
   `obs` cùng lúc.
 
+Mở **một Bash session riêng** tại root repository và chạy toàn bộ các block Bash
+trong runbook theo đúng thứ tự trong session đó. Không chạy từng block bằng các
+shell tách biệt, vì biến, hàm và recovery trap phải được giữ xuyên suốt:
+
+```bash
+set -Eeuo pipefail
+
+# Fault-injection scenario gán tên service vào biến này trước khi stop.
+# Mọi exit, kể cả Ctrl+C/TERM, sẽ cố khởi động lại service rồi giữ nguyên exit code.
+DEMO_RECOVERY_SERVICE=""
+DEMO_SESSION_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+wait_demo_service_ready() {
+  local service="$1" i
+  for i in $(seq 1 40); do
+    case "$service" in
+      rabbitmq)
+        docker compose exec -T rabbitmq sh /etc/rabbitmq/ride-health-ready.sh >/dev/null 2>&1 && return 0 ;;
+      payment)
+        curl -fsS http://localhost:8105/health/ready >/dev/null 2>&1 && return 0 ;;
+      notification)
+        curl -fsS http://localhost:8106/health/ready >/dev/null 2>&1 && return 0 ;;
+      trip)
+        curl -fsS http://localhost:8103/health/ready >/dev/null 2>&1 && return 0 ;;
+      *)
+        docker compose ps --status running --services | grep -Fxq "$service" && return 0 ;;
+    esac
+    sleep 1
+  done
+  echo "Service $service chưa ready sau recovery" >&2
+  return 1
+}
+restore_demo_service() {
+  local rc=$?
+  if [ -n "${DEMO_RECOVERY_SERVICE:-}" ]; then
+    echo "Khôi phục service sau khi scenario kết thúc: $DEMO_RECOVERY_SERVICE" >&2
+    docker compose start "$DEMO_RECOVERY_SERVICE" >/dev/null 2>&1 || true
+    wait_demo_service_ready "$DEMO_RECOVERY_SERVICE" || true
+  fi
+  return "$rc"
+}
+require_demo_session() {
+  [ -n "${DEMO_SESSION_ID:-}" ] || { echo "Thiếu DEMO_SESSION_ID" >&2; return 1; }
+  trap -p EXIT | grep -q 'restore_demo_service' || {
+    echo "Recovery trap không còn trong shell hiện tại" >&2; return 1;
+  }
+}
+abort_demo_on_error() {
+  local rc=$?
+  echo "Dừng runbook vì lệnh trước thất bại (exit=$rc)." >&2
+  exit "$rc"
+}
+trap restore_demo_service EXIT
+trap abort_demo_on_error ERR
+trap 'exit 130' INT
+trap 'exit 143' TERM
+```
+
+`set -Eeuo pipefail` làm lỗi `curl`, SQL hoặc pipeline dừng cả scenario thay vì
+tiếp tục bằng dữ liệu rỗng. Các HTTP status dự kiến như `403` và `503` được lấy
+bằng `curl` không có `-f`, rồi phân loại tường minh trong assertion tương ứng.
+Trước mỗi fault injection, `require_demo_session` xác nhận người vận hành vẫn ở
+đúng shell và `EXIT` trap chưa bị mất.
+
 ### A.3. Danh tính mã nguồn
 
 Ghi lại chính xác revision đang trình diễn để mọi quan sát quy được về một cây
@@ -47,19 +148,17 @@ git rev-parse HEAD^{tree}
 git describe --tags --always
 ```
 
-Nếu trình diễn từ tag phát hành:
-
-```bash
-git fetch --tags
-git checkout v1.0.1
-```
+Bản runbook này đi với commit cuối trên `main`. Không checkout tag `v1.0.1` sau
+khi đã mở bản này: tag đó có runbook riêng và không chứa các guard mới.
 
 ### A.4. Biến môi trường
 
 Không bao giờ commit `.env`. Tạo từ template:
 
 ```bash
-cp .env.example .env
+if [ ! -f .env ]; then
+  cp .env.example .env
+fi
 python3 scripts/security/init-local-auth.py
 ```
 
@@ -88,21 +187,18 @@ phát `RideRequestedV1`, Matching không bao giờ chạy, và chuyến đi sẽ
 
 ### A.5. Tạo dữ liệu trình diễn an toàn
 
-Luôn dùng **một Compose project riêng** để không đụng vào volume của người khác:
+Luôn tạo **một Compose project mới** cho đúng lần chạy hiện tại để không đụng vào
+volume của người khác hoặc tái sử dụng project rehearsal:
 
 ```bash
-export COMPOSE_PROJECT_NAME=ride-demo
+export COMPOSE_PROJECT_NAME="ride-defense-$(date -u +%Y%m%d-%H%M%S)"
+echo "COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME"
 ```
 
 Tên Rider/Driver trong runbook này đều có hậu tố ngẫu nhiên nên chạy lại nhiều
-lần không bị trùng. Không cần xoá dữ liệu cũ; nếu muốn bắt đầu lại hoàn toàn:
-
-```bash
-docker compose down -v      # chỉ xoá volume của $COMPOSE_PROJECT_NAME
-```
-
-> Cảnh báo: `down -v` xoá dữ liệu. Chỉ chạy khi biến `COMPOSE_PROJECT_NAME`
-> trỏ đúng project dùng một lần cho buổi demo.
+lần không bị trùng. Không xoá volume trong buổi rehearsal hoặc bảo vệ. Khi cần
+một môi trường sạch, tạo một Compose project mới có tên riêng thay vì dùng
+`down -v` trên project đang tồn tại.
 
 ### A.6. Khởi động và dừng
 
@@ -117,10 +213,10 @@ Dừng nhưng giữ dữ liệu:
 docker compose stop
 ```
 
-Dừng và xoá sạch:
+Dừng và gỡ container/network nhưng giữ volume dữ liệu:
 
 ```bash
-docker compose down -v
+docker compose down
 ```
 
 ### A.7. Kiểm tra readiness của hạ tầng
@@ -151,10 +247,15 @@ chứng cho việc không có database dùng chung.
 Kiểm tra riêng messaging của Trip (chỉ healthy khi đã nối được RabbitMQ):
 
 ```bash
+docker compose exec -T rabbitmq rabbitmq-diagnostics -q check_port_connectivity --timeout 5
 curl -fsS http://localhost:8103/health/ready
 ```
 
-Kỳ vọng có thêm `"trip-messaging":"Healthy"`.
+Kỳ vọng RabbitMQ báo kết nối được các listener, trong đó có AMQP `5672`, và
+Trip có thêm `"trip-messaging":"Healthy"`. Healthcheck của RabbitMQ dùng cùng
+phép kiểm tra listener này, nên `depends_on: condition: service_healthy` không
+khởi động Payment trong khoảng trống giữa lúc Erlang node đã phản hồi `ping`
+và lúc AMQP thực sự nhận kết nối.
 
 ### A.8. Chuẩn bị màn hình
 
@@ -198,8 +299,12 @@ runbook, không đọc lại output lệnh.
 - [ ] `curl -fsS http://localhost:8103/health/ready` có `trip-messaging`
 - [ ] RabbitMQ UI mở được, thấy danh sách queue
 - [ ] Jaeger và Grafana mở được
-- [ ] Đã chạy thử một chuyến hoàn chỉnh và xoá dữ liệu thử
-- [ ] Terminal đã `export COMPOSE_PROJECT_NAME=ride-demo`
+- [ ] Đã chạy thử trên một Compose project dùng riêng; tạo project mới cho buổi
+  bảo vệ thay vì xoá volume của project rehearsal
+- [ ] Terminal đang dùng tên `COMPOSE_PROJECT_NAME` mới, đã ghi lại trong
+  transcript và chưa từng dùng cho rehearsal trước đó
+- [ ] `require_demo_session` chạy thành công trong chính terminal sẽ dùng để
+  thao tác; không mở shell mới giữa các block
 - [ ] Không có `.env` hoặc khoá riêng tư hiện trên màn hình
 
 ---
@@ -236,7 +341,7 @@ flowchart LR
 
 | Thành phần | Trách nhiệm | Trạng thái do ai sở hữu | Cổng |
 |---|---|---|---|
-| **Gateway** | Định tuyến, chuyển JWT, giới hạn request ở biên | Không sở hữu trạng thái nghiệp vụ | 8080 |
+| **Gateway** | Định tuyến và bảo vệ các route phía client; rate limiting nằm tại service tương ứng | Không sở hữu trạng thái nghiệp vụ | 8080 |
 | **Identity** | Người dùng, vai trò, JWT ký RSA, service grant | `identity_db` | 8101 |
 | **Driver** | Hồ sơ tài xế, trạng thái, vị trí, **thẩm quyền giữ chỗ độc quyền** | `driver_db` (PostgreSQL OCC) | 8102 |
 | **Trip** | Vòng đời chuyến đi, snapshot giá cước, Saga bền vững, Outbox | `trip_db` | 8103 |
@@ -346,9 +451,11 @@ RIDER_TOKEN=$(curl -fsS -X POST "$API/auth/login" -H 'Content-Type: application/
 Kiểm tra vai trò được thực thi thật — Rider gọi endpoint của Driver phải bị chặn:
 
 ```bash
-curl -sS -o /dev/null -w 'Rider gọi endpoint Driver: HTTP %{http_code}\n' \
+ROLE_HTTP=$(curl -sS -o /dev/null -w '%{http_code}' \
   -X POST "$API/drivers" -H "Authorization: Bearer $RIDER_TOKEN" \
-  -H 'Content-Type: application/json' -d "{\"userId\":\"$DRIVER_USER\"}"
+  -H 'Content-Type: application/json' -d "{\"userId\":\"$DRIVER_USER\"}")
+[ "$ROLE_HTTP" = "403" ] || { echo "Rider gọi endpoint Driver nhận HTTP $ROLE_HTTP, cần 403" >&2; exit 1; }
+echo "Rider gọi endpoint Driver: HTTP $ROLE_HTTP"
 ```
 
 Kỳ vọng: `HTTP 403`.
@@ -424,13 +531,18 @@ là điều kiện để client có thể retry an toàn khi mạng chập chờ
 ### Bước 5 — Matching chọn tài xế
 
 ```bash
+ST=""
 for i in $(seq 1 25); do
   ST=$(curl -fsS "$API/trips/$TRIP_ID" -H "Authorization: Bearer $RIDER_TOKEN" \
     | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
   echo "  lần $i: $ST"
-  [ "$ST" != "CREATED" ] && [ "$ST" != "MATCHING" ] && break
-  sleep 1
+  case "$ST" in
+    DRIVER_RESERVED) break ;;
+    CREATED|MATCHING) sleep 1 ;;
+    *) echo "Matching kết thúc ngoài dự kiến: $ST" >&2; exit 1 ;;
+  esac
 done
+[ "$ST" = "DRIVER_RESERVED" ] || { echo "Timeout chờ DRIVER_RESERVED" >&2; exit 1; }
 ```
 
 Kỳ vọng: `CREATED` → `MATCHING` → `DRIVER_RESERVED` (thường trong 3–5 giây).
@@ -461,7 +573,21 @@ Kỳ vọng: `status = RESERVED`, `reserved_trip_id` đúng bằng `$TRIP_ID`,
 So sánh với projection:
 
 ```bash
-docker compose exec -T redis redis-cli HGETALL "driver:projection:$(echo $DRIVER_ID | tr -d '-')"
+PG_VERSION=$(docker compose exec -T postgres psql -U postgres -d driver_db -tAc \
+  "select version from drivers where driver_id='$DRIVER_ID';")
+REDIS_KEY="driver:projection:$(echo "$DRIVER_ID" | tr -d '-')"
+REDIS_STATUS=""; REDIS_VERSION=""
+for i in $(seq 1 20); do
+  REDIS_STATUS=$(docker compose exec -T redis redis-cli --raw HGET "$REDIS_KEY" derivedStatus)
+  REDIS_VERSION=$(docker compose exec -T redis redis-cli --raw HGET "$REDIS_KEY" driverAggregateVersion)
+  [ "$REDIS_STATUS" = "RESERVED" ] && [ "$REDIS_VERSION" = "$PG_VERSION" ] && break
+  sleep 1
+done
+[ "$REDIS_STATUS" = "RESERVED" ] && [ "$REDIS_VERSION" = "$PG_VERSION" ] || {
+  echo "Redis projection chưa hội tụ: status=$REDIS_STATUS version=$REDIS_VERSION pg=$PG_VERSION" >&2
+  exit 1
+}
+docker compose exec -T redis redis-cli HGETALL "$REDIS_KEY"
 ```
 
 Kỳ vọng: `derivedStatus = RESERVED` và `driverAggregateVersion` **bằng đúng**
@@ -471,8 +597,8 @@ Kỳ vọng: `derivedStatus = RESERVED` và `driverAggregateVersion` **bằng đ
 Driver là thẩm quyền: nó ghi chính xác chuyến nào đang giữ tài xế này. Redis chỉ
 phản chiếu lại. Nếu hai nguồn lệch nhau, PostgreSQL thắng."
 
-**Khái niệm:** thẩm quyền so với projection, linearization point, optimistic
-concurrency control.
+**Khái niệm:** thẩm quyền so với projection, linearization point, row-level
+locking kết hợp kiểm tra version.
 
 ### Bước 7 — Tài xế chấp nhận
 
@@ -486,10 +612,24 @@ curl -fsS -X POST "$API/trips/$TRIP_ID/accept" -H "Authorization: Bearer $DRIVER
 
 Kỳ vọng: `{"state":"DRIVER_ACCEPTED","replayed":false}`.
 
-Chuyến đi chuyển sang `READY_TO_START`:
+Chờ Payment authorize và Saga cho phép bắt đầu; không gọi `/start` chỉ vì
+request accept đã thành công:
 
 ```bash
-curl -fsS "$API/trips/$TRIP_ID" -H "Authorization: Bearer $RIDER_TOKEN"
+TRIP_STATUS=""; SAGA_STEP=""
+for i in $(seq 1 30); do
+  TRIP_STATUS=$(curl -fsS "$API/trips/$TRIP_ID" -H "Authorization: Bearer $RIDER_TOKEN" \
+    | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  SAGA_STEP=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select current_step from ride_sagas where trip_id='$TRIP_ID';")
+  echo "  trip=$TRIP_STATUS saga=$SAGA_STEP"
+  [ "$TRIP_STATUS" = "READY_TO_START" ] && [ "$SAGA_STEP" = "AUTHORIZED" ] && break
+  case "$TRIP_STATUS" in CANCELLED|MATCH_FAILED) exit 1 ;; esac
+  sleep 1
+done
+[ "$TRIP_STATUS" = "READY_TO_START" ] && [ "$SAGA_STEP" = "AUTHORIZED" ] || {
+  echo "Timeout chờ READY_TO_START/AUTHORIZED" >&2; exit 1;
+}
 ```
 
 **Script thuyết trình:** "Accept phải kèm đúng `reservationId`. Nếu chuyến đã bị
@@ -548,6 +688,20 @@ thúc.
 ### Bước 10 — Payment capture hoàn tất
 
 ```bash
+SAGA_STATUS=""; SAGA_STEP=""; PAYMENT_OK=""
+for i in $(seq 1 30); do
+  SAGA_ROW=$(docker compose exec -T postgres psql -U postgres -d trip_db -tA -F '|' \
+    -c "select status, current_step from ride_sagas where trip_id='$TRIP_ID';")
+  IFS='|' read -r SAGA_STATUS SAGA_STEP <<< "$SAGA_ROW"
+  PAYMENT_OK=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+    "select count(*) from payment_operations where trip_id='$TRIP_ID' and operation_type in ('AUTHORIZE','CAPTURE') and state='SUCCEEDED';")
+  [ "$SAGA_STATUS" = "COMPLETED" ] && [ "$SAGA_STEP" = "CAPTURED" ] && [ "$PAYMENT_OK" = "2" ] && break
+  sleep 1
+done
+[ "$SAGA_STATUS" = "COMPLETED" ] && [ "$SAGA_STEP" = "CAPTURED" ] && [ "$PAYMENT_OK" = "2" ] || {
+  echo "Timeout chờ CAPTURED: saga=$SAGA_STATUS/$SAGA_STEP payment_ok=$PAYMENT_OK" >&2
+  exit 1
+}
 docker compose exec -T postgres psql -U postgres -d payment_db \
   -c "select operation_key, operation_type, state from payment_operations where trip_id='$TRIP_ID' order by created_at;"
 ```
@@ -562,33 +716,62 @@ docker compose exec -T postgres psql -U postgres -d trip_db \
 Kỳ vọng: `status = COMPLETED`, `current_step = CAPTURED`.
 
 **Script thuyết trình:** "Saga kết thúc ở CAPTURED. Bước uỷ quyền và bước capture
-là hai thao tác riêng biệt, mỗi thao tác có `operationKey` riêng, nên không thể
-capture hai lần."
+là hai thao tác riêng biệt; trong provider mô phỏng, `operationKey` ổn định làm
+cho lệnh capture phát lại vẫn quy về cùng một hiệu ứng nghiệp vụ."
 
 ### Bước 11 — Tài xế trở lại trạng thái sẵn sàng
 
 ```bash
-curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN"
+DRIVER_JSON=""; DRIVER_STATUS=""
+for i in $(seq 1 20); do
+  DRIVER_JSON=$(curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN")
+  DRIVER_STATUS=$(echo "$DRIVER_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  [ "$DRIVER_STATUS" = "AVAILABLE" ] && break
+  sleep 1
+done
+[ "$DRIVER_STATUS" = "AVAILABLE" ] || { echo "Timeout chờ Driver AVAILABLE" >&2; exit 1; }
+echo "$DRIVER_JSON" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+assert d["status"]=="AVAILABLE"
+assert d.get("reservedTripId") is None
+assert d.get("reservationId") is None
+assert d.get("activeTripId") is None
+print(json.dumps(d, indent=2))
+'
 ```
 
 Kỳ vọng: `"status":"AVAILABLE"`, `"reservedTripId":null`,
 `"reservationId":null`, `"activeTripId":null`.
 
-**Script thuyết trình:** "Giữ chỗ được giải phóng đúng một lần. `version` tăng
-lên, chứng tỏ mỗi thay đổi trạng thái đều đi qua kiểm soát đồng thời."
+**Script thuyết trình:** "Dù command có thể được giao lại, hiệu ứng giải phóng
+theo reservation chỉ xảy ra một lần. `version` tăng cho thấy thay đổi trạng thái
+đã đi qua kiểm soát đồng thời."
 
 ### Bước 12 — Rider và Driver nhận thông báo riêng
 
 ```bash
-curl -fsS "$API/notifications/me" -H "Authorization: Bearer $RIDER_TOKEN"
+RIDER_TYPES=""; DRIVER_TYPES=""
+for i in $(seq 1 30); do
+  RIDER_TYPES=$(curl -fsS "$API/notifications/me" -H "Authorization: Bearer $RIDER_TOKEN" \
+    | python3 -c 'import json,sys; tid=sys.argv[1].lower(); print(",".join(sorted(x["notificationType"] for x in json.load(sys.stdin) if x["tripId"].lower()==tid)))' "$TRIP_ID")
+  DRIVER_TYPES=$(curl -fsS "$API/notifications/me" -H "Authorization: Bearer $DRIVER_TOKEN" \
+    | python3 -c 'import json,sys; tid=sys.argv[1].lower(); print(",".join(sorted(x["notificationType"] for x in json.load(sys.stdin) if x["tripId"].lower()==tid)))' "$TRIP_ID")
+  [ "$RIDER_TYPES" = "RIDER_DRIVER_ASSIGNED,RIDER_RIDE_REQUESTED,RIDER_TRIP_COMPLETED" ] \
+    && [ "$DRIVER_TYPES" = "DRIVER_TRIP_ASSIGNED" ] && break
+  sleep 1
+done
+[ "$RIDER_TYPES" = "RIDER_DRIVER_ASSIGNED,RIDER_RIDE_REQUESTED,RIDER_TRIP_COMPLETED" ] \
+  && [ "$DRIVER_TYPES" = "DRIVER_TRIP_ASSIGNED" ] || {
+    echo "Notification chưa hội tụ: rider=$RIDER_TYPES driver=$DRIVER_TYPES" >&2
+    exit 1
+  }
+echo "rider=$RIDER_TYPES"
+echo "driver=$DRIVER_TYPES"
 ```
 
 Kỳ vọng (đã chạy thật): 3 thông báo —
 `RIDER_RIDE_REQUESTED`, `RIDER_DRIVER_ASSIGNED`, `RIDER_TRIP_COMPLETED`.
-
-```bash
-curl -fsS "$API/notifications/me" -H "Authorization: Bearer $DRIVER_TOKEN"
-```
 
 Kỳ vọng: 1 thông báo — `DRIVER_TRIP_ASSIGNED`.
 
@@ -598,26 +781,29 @@ Driver."
 
 **Khái niệm:** cô lập dữ liệu theo chủ sở hữu, projection bất đồng bộ.
 
-### Bước 13 — Bốn nguồn trạng thái đồng ý với nhau
+### Bước 13 — Đối soát trạng thái cuối giữa bốn nguồn
 
 Đây là bước kết luận của phần trình diễn chính:
 
 ```bash
-# Trip
-docker compose exec -T postgres psql -U postgres -d trip_db \
-  -c "select state from trips where trip_id='$TRIP_ID';"
+TRIP_FINAL=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select state from trips where trip_id='$TRIP_ID';")
+DRIVER_FINAL=$(docker compose exec -T postgres psql -U postgres -d driver_db -tAc \
+  "select status || '|' || coalesce(reserved_trip_id::text,'') from drivers where driver_id='$DRIVER_ID';")
+MATCHING_FINAL=$(docker compose exec -T postgres psql -U postgres -d matching_db -tAc \
+  "select status || '|' || coalesce(selected_driver_id::text,'') from matching_rounds where trip_id='$TRIP_ID' order by matching_round desc limit 1;")
+PAYMENT_FINAL=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+  "select string_agg(operation_type || ':' || state, ',' order by case operation_type when 'AUTHORIZE' then 1 when 'CAPTURE' then 2 else 3 end) from payment_operations where trip_id='$TRIP_ID';")
 
-# Driver
-docker compose exec -T postgres psql -U postgres -d driver_db \
-  -c "select status, reserved_trip_id from drivers where driver_id='$DRIVER_ID';"
-
-# Matching
-docker compose exec -T postgres psql -U postgres -d matching_db \
-  -c "select matching_round, status, selected_driver_id from matching_rounds where trip_id='$TRIP_ID';"
-
-# Payment
-docker compose exec -T postgres psql -U postgres -d payment_db \
-  -c "select operation_type, state from payment_operations where trip_id='$TRIP_ID';"
+[ "$TRIP_FINAL" = "COMPLETED" ] \
+  && [ "$DRIVER_FINAL" = "AVAILABLE|" ] \
+  && [ "$MATCHING_FINAL" = "RESERVED|$DRIVER_ID" ] \
+  && [ "$PAYMENT_FINAL" = "AUTHORIZE:SUCCEEDED,CAPTURE:SUCCEEDED" ] || {
+    echo "C.13 mismatch: trip=$TRIP_FINAL driver=$DRIVER_FINAL matching=$MATCHING_FINAL payment=$PAYMENT_FINAL" >&2
+    exit 1
+  }
+printf 'trip=%s\ndriver=%s\nmatching=%s\npayment=%s\n' \
+  "$TRIP_FINAL" "$DRIVER_FINAL" "$MATCHING_FINAL" "$PAYMENT_FINAL"
 ```
 
 Kỳ vọng:
@@ -633,27 +819,119 @@ Kiểm tra Outbox đã phát hết:
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d trip_db \
-  -c "select message_type, status from outbox_messages where aggregate_id='$TRIP_ID' order by occurred_at;"
+  -c "select message_type, status, attempt_count from outbox_messages where aggregate_id='$TRIP_ID' order by occurred_at;"
+OUTBOX_OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select count(*) from outbox_messages where aggregate_id='$TRIP_ID' and status <> 'PUBLISHED';")
+OUTBOX_MISSING=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select coalesce(string_agg(required_type, ',' order by required_type),'') from (values ('RideRequestedV1'),('AuthorizePaymentV1'),('CapturePaymentV1'),('MarkDriverTripStartedV1'),('MarkDriverTripCompletedV1'),('NotificationRequestedV1')) required(required_type) where not exists (select 1 from outbox_messages o where o.aggregate_id='$TRIP_ID' and o.message_type=required.required_type);")
+[ "$OUTBOX_OPEN" = "0" ] && [ -z "$OUTBOX_MISSING" ] || {
+  echo "C.13 Outbox sai: open=$OUTBOX_OPEN missing=$OUTBOX_MISSING" >&2; exit 1;
+}
+echo "outbox_open=$OUTBOX_OPEN required_types_missing=${OUTBOX_MISSING:-none}"
 ```
 
-Kỳ vọng: tất cả `PUBLISHED`, `attempt_count = 0`.
+Kỳ vọng: đủ sáu loại intent bắt buộc của happy path và tất cả `PUBLISHED`.
+`attempt_count` chỉ là dữ liệu chẩn đoán; nó có thể lớn hơn 0 nếu relay từng
+retry rồi hội tụ thành công.
 
 **Script thuyết trình:** "Bốn service, bốn database, không có transaction chung.
-Vậy mà cuối cùng cả bốn đều đồng ý về cùng một chuyến đi. Đó là eventual
-consistency có kiểm soát — không phải trùng hợp."
+Snapshot cuối cho thấy trạng thái của bốn authority tương thích với cùng một
+chuyến đi. Đó là kết quả hội tụ có kiểm soát, không phải một transaction chung."
 
-**Khái niệm:** eventual consistency, tính nhất quán cuối cùng có bảo đảm, kiểm
-toán bất biến.
+**Khái niệm:** eventual consistency và đối soát snapshot trạng thái cuối. Các
+truy vấn này không thay thế kiểm thử invariant xuyên toàn bộ lịch sử chuyển
+trạng thái.
 
 ---
 
 ## Phần D — Trình diễn mở rộng
 
-Mỗi kịch bản dưới đây đã được chạy thật trên stack sạch.
+Evidence `v1.0.1` ghi nhận các kịch bản gốc đã chạy trên stack sạch. Sau mỗi
+thay đổi guard hoặc assertion trong runbook, phải rehearsal lại đúng kịch bản
+trước khi đưa vào phần live. Chỉ chạy từng kịch bản một và hoàn tất phần dọn
+dẹp của nó trước khi chuyển sang kịch bản tiếp theo.
+
+Các scenario dùng Driver gọi hai hàm sau. Hàm đầu làm mới vị trí bằng **đúng
+location session hiện tại** và sequence tăng dần; không tự tạo session mới vì
+projection cố ý từ chối session lạ bằng `stale-session`. Hàm thứ hai kiểm tra
+đồng thời authority PostgreSQL/API, projection Redis và độ mới của vị trí.
+Matching dùng cửa sổ freshness 5 phút; runbook chặn ở 4 phút để còn biên an
+toàn khi thao tác:
+
+```bash
+refresh_driver_location() {
+  local label="$1" redis_key session sequence next_sequence captured_at projected_sequence
+  redis_key="driver:projection:$(echo "$DRIVER_ID" | tr -d '-')"
+  session=$(docker compose exec -T redis redis-cli --raw HGET "$redis_key" locationSessionId)
+  sequence=$(docker compose exec -T redis redis-cli --raw HGET "$redis_key" sequenceNo)
+  [ -n "$session" ] && echo "$sequence" | grep -Eq '^[0-9]+$' || {
+    echo "$label: projection thiếu location session/sequence" >&2
+    return 1
+  }
+  next_sequence=$((sequence + 1))
+  captured_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  curl -fsS -X POST "$API/drivers/$DRIVER_ID/location" \
+    -H "Authorization: Bearer $DRIVER_TOKEN" -H 'Content-Type: application/json' \
+    -d "{\"deviceSessionId\":\"$session\",\"sequenceNo\":$next_sequence,\"capturedAt\":\"$captured_at\",\"latitude\":10.7769,\"longitude\":106.7009}" >/dev/null
+  projected_sequence=""
+  for i in $(seq 1 20); do
+    projected_sequence=$(docker compose exec -T redis redis-cli --raw HGET "$redis_key" sequenceNo)
+    [ "$projected_sequence" = "$next_sequence" ] && break
+    sleep 1
+  done
+  [ "$projected_sequence" = "$next_sequence" ] || {
+    echo "$label: location projection chưa nhận sequence=$next_sequence" >&2
+    return 1
+  }
+}
+
+assert_driver_ready() {
+  local label="$1" api_json pg_version redis_key redis_status redis_version redis_captured
+  api_json=$(curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN")
+  echo "$api_json" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+assert d["status"]=="AVAILABLE"
+assert d.get("reservedTripId") is None
+assert d.get("reservationId") is None
+assert d.get("activeTripId") is None
+'
+  pg_version=$(docker compose exec -T postgres psql -U postgres -d driver_db -tAc \
+    "select version from drivers where driver_id='$DRIVER_ID' and status='AVAILABLE' and reserved_trip_id is null and reservation_id is null and active_trip_id is null;")
+  [ -n "$pg_version" ] || { echo "$label: Driver authority không AVAILABLE/sạch" >&2; return 1; }
+  redis_key="driver:projection:$(echo "$DRIVER_ID" | tr -d '-')"
+  redis_status=""; redis_version=""; redis_captured=""
+  for i in $(seq 1 20); do
+    redis_status=$(docker compose exec -T redis redis-cli --raw HGET "$redis_key" derivedStatus)
+    redis_version=$(docker compose exec -T redis redis-cli --raw HGET "$redis_key" driverAggregateVersion)
+    [ "$redis_status" = "AVAILABLE" ] && [ "$redis_version" = "$pg_version" ] && break
+    sleep 1
+  done
+  [ "$redis_status" = "AVAILABLE" ] && [ "$redis_version" = "$pg_version" ] || {
+    echo "$label: projection chưa sẵn sàng status=$redis_status redisVersion=$redis_version pgVersion=$pg_version" >&2
+    return 1
+  }
+  redis_captured=$(docker compose exec -T redis redis-cli --raw HGET "$redis_key" capturedAt)
+  python3 - "$label" "$redis_captured" <<'PY'
+from datetime import datetime, timezone
+import sys
+
+label, raw = sys.argv[1], sys.argv[2]
+try:
+    captured = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+except ValueError:
+    raise SystemExit(f"{label}: capturedAt không hợp lệ: {raw!r}")
+age = (datetime.now(timezone.utc) - captured).total_seconds()
+if age < 0 or age > 240:
+    raise SystemExit(f"{label}: vị trí không còn fresh, age={age:.1f}s")
+PY
+}
+```
 
 ### D.1. Concurrency — hai Rider tranh một tài xế
 
-**Mục tiêu:** chứng minh không bao giờ có hai chuyến cùng giữ một tài xế.
+**Mục tiêu:** trong failure model của phép thử, chứng minh hai request cạnh tranh
+không làm hai chuyến cùng giữ một tài xế.
 
 **Điều kiện:** đúng **một** tài xế `AVAILABLE` trong toàn hệ thống. Phần C kết
 thúc với tài xế `$DRIVER_ID` đã trở lại `AVAILABLE`, nên kịch bản dùng lại chính
@@ -661,22 +939,20 @@ tài xế đó. Không tạo thêm tài xế thứ hai: khi có hai người cù
 hai chuyến đều có thể thắng, và phép thử mất đi tính tranh chấp.
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d driver_db \
-  -c "select count(*) as available_drivers from drivers where status='AVAILABLE';"
+refresh_driver_location "D.1"
+assert_driver_ready "D.1"
+AVAILABLE_DRIVERS=$(docker compose exec -T postgres psql -U postgres -d driver_db -tAc \
+  "select count(*) from drivers where status='AVAILABLE';")
+echo "available_drivers=$AVAILABLE_DRIVERS"
+[ "$AVAILABLE_DRIVERS" = "1" ] || {
+  echo "D.1 yêu cầu chính xác một Driver AVAILABLE" >&2; exit 1;
+}
 ```
 
 Kỳ vọng: `available_drivers = 1`. Nếu lớn hơn 1, đưa các tài xế thừa về
 `OFFLINE` trước khi tiếp tục — đây là điều kiện của phép thử, không phải mẹo.
-
-Làm mới vị trí của tài xế đó (projection Redis có hạn dùng, nên tài xế thật gửi
-GPS định kỳ):
-
-```bash
-curl -fsS -X POST "$API/drivers/$DRIVER_ID/location" -H "Authorization: Bearer $DRIVER_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d "{\"deviceSessionId\":\"cs$RUN\",\"sequenceNo\":1,\"capturedAt\":\"$NOW\",\"latitude\":10.7769,\"longitude\":106.7009}" >/dev/null
-sleep 3
-```
+Lời gọi `refresh_driver_location` ở đầu scenario phải hội tụ trước khi tạo hai
+chuyến; không đổi sang một `deviceSessionId` mới.
 
 Hai Rider cùng tạo chuyến:
 
@@ -697,16 +973,56 @@ mk() { curl -fsS -X POST "$API/trips" -H "Authorization: Bearer $1" \
   -d '{"pickup":{"latitude":10.7769,"longitude":106.7009},"dropoff":{"latitude":10.78,"longitude":106.71}}' \
   | python3 -c 'import json,sys;print(json.load(sys.stdin)["tripId"])'; }
 
-T1=$(mk "$R1"); T2=$(mk "$R2")
-sleep 10
+GATE=$(mktemp)
+rm -f "$GATE" "/tmp/t1-$RUN" "/tmp/t2-$RUN"
+(while [ ! -e "$GATE" ]; do sleep 0.01; done; mk "$R1") > "/tmp/t1-$RUN" & P1=$!
+(while [ ! -e "$GATE" ]; do sleep 0.01; done; mk "$R2") > "/tmp/t2-$RUN" & P2=$!
+touch "$GATE"
+WAIT_DEADLINE=$((SECONDS + 20))
+while kill -0 "$P1" 2>/dev/null || kill -0 "$P2" 2>/dev/null; do
+  if [ "$SECONDS" -ge "$WAIT_DEADLINE" ]; then
+    kill "$P1" "$P2" 2>/dev/null || true
+    wait "$P1" 2>/dev/null || true
+    wait "$P2" 2>/dev/null || true
+    rm -f "$GATE"
+    echo "Timeout 20s khi chờ hai request cạnh tranh" >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+RC=0
+wait "$P1" || RC=$?
+wait "$P2" || RC=$?
+rm -f "$GATE"
+[ "$RC" = "0" ] || { echo "Một request tạo chuyến thất bại" >&2; exit 1; }
+T1=$(cat "/tmp/t1-$RUN"); T2=$(cat "/tmp/t2-$RUN")
+
+S1=""; S2=""
+for i in $(seq 1 35); do
+  S1=$(curl -fsS "$API/trips/$T1" -H "Authorization: Bearer $R1" \
+    | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  S2=$(curl -fsS "$API/trips/$T2" -H "Authorization: Bearer $R2" \
+    | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  case "$S1/$S2" in
+    DRIVER_RESERVED/MATCH_FAILED|MATCH_FAILED/DRIVER_RESERVED) break ;;
+  esac
+  sleep 1
+done
+case "$S1/$S2" in
+  DRIVER_RESERVED/MATCH_FAILED|MATCH_FAILED/DRIVER_RESERVED) ;;
+  *) echo "Kết quả concurrency ngoài dự kiến: T1=$S1 T2=$S2" >&2; exit 1 ;;
+esac
+if [ "$S1" = "MATCH_FAILED" ]; then LOSER=$T1; LOSER_TOKEN=$R1; else LOSER=$T2; LOSER_TOKEN=$R2; fi
+LOSER_REASON=$(curl -fsS "$API/trips/$LOSER" -H "Authorization: Bearer $LOSER_TOKEN" \
+  | python3 -c 'import json,sys;print(json.load(sys.stdin)["failureReason"])')
+[ "$LOSER_REASON" = "NO_DRIVER_AVAILABLE" ] || {
+  echo "Lý do thất bại ngoài dự kiến: $LOSER_REASON" >&2; exit 1;
+}
+printf 'T1=%s %s\nT2=%s %s\n' "$T1" "$S1" "$T2" "$S2"
 ```
 
-**Kết quả thật đã quan sát:**
-
-| Chuyến | Trạng thái |
-|---|---|
-| `$T1` | `DRIVER_RESERVED` |
-| `$T2` | `MATCH_FAILED`, `failure_reason = NO_DRIVER_AVAILABLE` |
+Kỳ vọng: chính xác một chuyến `DRIVER_RESERVED`; chuyến còn lại `MATCH_FAILED`
+với `failureReason = NO_DRIVER_AVAILABLE`. Không giả định `$T1` hay `$T2` thắng.
 
 Tài xế giữ đúng một chuyến:
 
@@ -721,7 +1037,7 @@ Vòng matching cũng ghi nhận kết quả khác nhau:
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d matching_db \
-  -c "select trip_id, matching_round, status, selected_driver_id is not null as picked from matching_rounds order by created_at desc limit 2;"
+  -c "select trip_id, matching_round, status, selected_driver_id is not null as picked from matching_rounds where trip_id in ('$T1','$T2') order by trip_id;"
 ```
 
 Kỳ vọng: một vòng `RESERVED` (`picked = t`), một vòng `NO_DRIVER`
@@ -733,6 +1049,11 @@ hẳn với `NO_DRIVER_AVAILABLE`, nên Rider biết ngay phải làm gì."
 
 **Khái niệm:** tranh chấp, optimistic concurrency control, linearization point,
 kết quả cuối cùng (terminal result).
+
+Phép thử này chứng minh **không double-booking đầu cuối** dưới hai yêu cầu phát
+gần đồng thời. Barrier ở client không tự chứng minh hai transaction cùng chờ
+một row lock; muốn chứng minh lock contention bên trong database phải dùng log
+hoặc integration test có fault barrier tại Driver Repository.
 
 **Dọn dẹp:** huỷ chuyến thắng nếu muốn giải phóng tài xế. Chuyến thắng là chuyến
 đang được tài xế giữ, không phải lúc nào cũng là `$T1`:
@@ -747,10 +1068,18 @@ curl -fsS -X POST "$API/trips/$WINNER/cancel" -H "Authorization: Bearer $WIN_RID
 for i in $(seq 1 30); do
   OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
     "select count(*) from trip_cleanup_intents where trip_id='$WINNER' and completed_at is null;")
-  [ "$OPEN" = "0" ] && break
+  TOTAL=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select count(*) from trip_cleanup_intents where trip_id='$WINNER';")
+  [ "$OPEN" = "0" ] && [ "$TOTAL" = "2" ] && break
   sleep 1
 done
-echo "open_cleanup=$OPEN"
+KINDS=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select string_agg(kind, ',' order by kind) from trip_cleanup_intents where trip_id='$WINNER' and completed_at is not null;")
+[ "$OPEN" = "0" ] && [ "$TOTAL" = "2" ] \
+  && [ "$KINDS" = "CancelMatching,ReleaseReservation" ] || {
+    echo "Cleanup sai: open=$OPEN total=$TOTAL kinds=$KINDS" >&2; exit 1;
+  }
+echo "open_cleanup=$OPEN total_cleanup=$TOTAL kinds=$KINDS"
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select kind, completed_at is not null as da_xong from trip_cleanup_intents where trip_id='$WINNER' order by kind;"
 ```
@@ -798,44 +1127,176 @@ kết nối và retry, hệ thống không tạo chuyến thứ hai."
 **Khái niệm:** idempotency, deduplication, at-least-once delivery với hiệu ứng
 effectively-once.
 
+Dọn chuyến của D.2 để không giữ Driver cho kịch bản sau:
+
+```bash
+IDEM_STATE=""
+for i in $(seq 1 30); do
+  IDEM_STATE=$(curl -fsS "$API/trips/$IDEM_TRIP" -H "Authorization: Bearer $R1" \
+    | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  case "$IDEM_STATE" in DRIVER_RESERVED|MATCH_FAILED) break ;; esac
+  sleep 1
+done
+if [ "$IDEM_STATE" = "DRIVER_RESERVED" ]; then
+  curl -fsS -X POST "$API/trips/$IDEM_TRIP/cancel" -H "Authorization: Bearer $R1" \
+    -H 'Content-Type: application/json' -d '{}' >/dev/null
+  for i in $(seq 1 30); do
+    OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+      "select count(*) from trip_cleanup_intents where trip_id='$IDEM_TRIP' and completed_at is null;")
+    [ "$OPEN" = "0" ] && break
+    sleep 1
+  done
+  [ "$OPEN" = "0" ] || { echo "D.2 cleanup chưa hoàn tất" >&2; exit 1; }
+elif [ "$IDEM_STATE" != "MATCH_FAILED" ]; then
+  echo "D.2 kết thúc ngoài dự kiến: $IDEM_STATE" >&2; exit 1
+fi
+```
+
 ### D.3. Transactional Outbox — commit trước, phát sau
 
-**Mục tiêu:** chứng minh ý định phát message được lưu **cùng transaction** với
-thay đổi nghiệp vụ.
+**Mục tiêu:** chứng minh transition `CREATED → MATCHING` và intent
+`RideRequestedV1` được lưu atomically; relay phát message sau transaction đó.
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select message_type, status, attempt_count, published_at is not null as da_phat from outbox_messages order by occurred_at desc limit 8;"
 ```
 
-Kỳ vọng: mọi dòng `PUBLISHED`, `attempt_count = 0`.
+Kỳ vọng: mọi dòng đã hội tụ về `PUBLISHED`; `attempt_count` được hiển thị để
+chẩn đoán, không bắt buộc bằng 0 sau một lần phục hồi.
 
-Chứng minh Outbox là bền vững khi broker chết — dừng RabbitMQ rồi tạo chuyến:
+Chuẩn bị một Rider riêng để phép thử không phụ thuộc active trip của D.1/D.2:
 
 ```bash
+curl -fsS -X POST "$API/auth/register" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"obr$RUN\",\"password\":\"demo-password-1\",\"role\":\"Rider\"}" >/dev/null
+OUTBOX_TOKEN=$(curl -fsS -X POST "$API/auth/login" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"obr$RUN\",\"password\":\"demo-password-1\"}" \
+  | python3 -c 'import json,sys;print(json.load(sys.stdin)["access_token"])')
+```
+
+Chứng minh Outbox bền vững khi broker chết — dừng RabbitMQ rồi tạo chuyến:
+
+> Đây là phép thử runtime: endpoint tạo chuyến phải vẫn nhận request khi broker
+> tắt. Nếu readiness policy của bản build chặn write trong trạng thái này, lệnh
+> kiểm tra HTTP ngay bên dưới sẽ fail thay vì biến giả định thành kết luận.
+
+```bash
+type require_demo_session >/dev/null 2>&1 && require_demo_session || {
+  echo "D.3 phải chạy trong Bash session đã cài recovery trap" >&2; exit 1;
+}
+DEMO_RECOVERY_SERVICE="rabbitmq"
 docker compose stop rabbitmq
 ```
 
-Tạo một chuyến mới (sẽ không match được vì broker chết), rồi xem Outbox:
+Tạo chuyến mới và đọc chính xác intent của chuyến đó:
 
 ```bash
+D3_KEY=$(python3 -c 'import uuid;print(uuid.uuid4())')
+D3_BODY='{"pickup":{"latitude":10.7769,"longitude":106.7009},"dropoff":{"latitude":10.78,"longitude":106.71}}'
+OUTBOX_HTTP=$(curl -sS -o /tmp/outbox-trip.json -w '%{http_code}' -X POST "$API/trips" \
+  -H "Authorization: Bearer $OUTBOX_TOKEN" -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $D3_KEY" -d "$D3_BODY")
+OUTBOX_TRIP=$(python3 -c 'import json;print(json.load(open("/tmp/outbox-trip.json")).get("tripId", ""))')
+D3_CREATE_PATH=""
+case "$OUTBOX_HTTP" in
+  201)
+    [ -n "$OUTBOX_TRIP" ] || { echo "HTTP 201 nhưng thiếu tripId" >&2; exit 1; }
+    D3_CREATE_PATH="fresh-201"
+    ;;
+  503)
+    D3_CODE=$(python3 -c 'import json;print(json.load(open("/tmp/outbox-trip.json")).get("code", ""))')
+    [ "$D3_CODE" = "MATCHING_INTENT_PENDING" ] && [ -n "$OUTBOX_TRIP" ] || {
+      echo "HTTP 503 không đúng MATCHING_INTENT_PENDING/tripId" >&2
+      python3 -m json.tool /tmp/outbox-trip.json >&2 || true
+      exit 1
+    }
+    TRIP_COMMIT_STATE=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+      "select state from trips where trip_id='$OUTBOX_TRIP';")
+    INTENT_COUNT=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+      "select count(*) from outbox_messages where aggregate_id='$OUTBOX_TRIP' and message_type='RideRequestedV1';")
+    [ -n "$TRIP_COMMIT_STATE" ] || { echo "503 có tripId nhưng không thấy Trip đã commit" >&2; exit 1; }
+    echo "503 diagnostic: trip=$OUTBOX_TRIP state=$TRIP_COMMIT_STATE rideRequestedIntents=$INTENT_COUNT" >&2
+
+    # Phục hồi local intent bằng đúng key/body; broker vẫn tắt nên thành công
+    # vẫn phải tạo một Outbox row PENDING, không dựa vào publish tức thời.
+    RETRY_HTTP=$(curl -sS -o /tmp/outbox-trip-retry.json -w '%{http_code}' -X POST "$API/trips" \
+      -H "Authorization: Bearer $OUTBOX_TOKEN" -H 'Content-Type: application/json' \
+      -H "Idempotency-Key: $D3_KEY" -d "$D3_BODY")
+    RETRY_TRIP=$(python3 -c 'import json;print(json.load(open("/tmp/outbox-trip-retry.json")).get("tripId", ""))')
+    [ "$RETRY_HTTP" = "200" ] && [ "$RETRY_TRIP" = "$OUTBOX_TRIP" ] || {
+      echo "Retry cùng key/body không phục hồi intent: HTTP $RETRY_HTTP trip=$RETRY_TRIP" >&2
+      exit 1
+    }
+    D3_CREATE_PATH="recovered-after-503"
+    ;;
+  *)
+    echo "Create khi broker tắt trả HTTP ngoài dự kiến: $OUTBOX_HTTP" >&2
+    python3 -m json.tool /tmp/outbox-trip.json >&2 || true
+    exit 1
+    ;;
+esac
+echo "create_path=$D3_CREATE_PATH trip=$OUTBOX_TRIP"
+OUTBOX_MESSAGE=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select message_id from outbox_messages where aggregate_id='$OUTBOX_TRIP' and message_type='RideRequestedV1';")
+[ -n "$OUTBOX_MESSAGE" ] || { echo "Không tìm thấy RideRequestedV1" >&2; exit 1; }
 docker compose exec -T postgres psql -U postgres -d trip_db \
-  -c "select message_type, status, attempt_count from outbox_messages order by occurred_at desc limit 5;"
+  -c "select message_id, message_type, status, attempt_count, published_at from outbox_messages where message_id='$OUTBOX_MESSAGE';"
+OUTBOX_STATUS=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select status from outbox_messages where message_id='$OUTBOX_MESSAGE';")
+[ "$OUTBOX_STATUS" = "PENDING" ] || { echo "Kỳ vọng PENDING, nhận $OUTBOX_STATUS" >&2; exit 1; }
 ```
 
-Kỳ vọng: dòng mới ở trạng thái `PENDING` — nghiệp vụ đã commit, message chưa
-phát. Đây chính là điểm mấu chốt.
+Kỳ vọng thông thường: `create_path=fresh-201` và dòng mới ở trạng thái `PENDING`
+— nghiệp vụ cùng intent đã commit, message chưa phát. Nếu API trả đúng
+`503/MATCHING_INTENT_PENDING`, script không kết luận Trip thất bại: nó đọc
+`tripId`, xác nhận row đã commit, báo số intent, rồi retry **cùng key/body** để
+phục hồi intent trước khi tiếp tục. Trường hợp đó được ghi riêng thành
+`create_path=recovered-after-503` trong transcript.
 
 Bật lại broker và quan sát message được phát với **cùng `message_id`**:
 
 ```bash
 docker compose start rabbitmq
-sleep 20
+wait_demo_service_ready rabbitmq || { echo "RabbitMQ chưa ready sau restart" >&2; exit 1; }
+for i in $(seq 1 40); do
+  OUTBOX_STATUS=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select status from outbox_messages where message_id='$OUTBOX_MESSAGE';")
+  [ "$OUTBOX_STATUS" = "PUBLISHED" ] && break
+  sleep 1
+done
+[ "$OUTBOX_STATUS" = "PUBLISHED" ] || { echo "Timeout chờ Outbox publish" >&2; exit 1; }
 docker compose exec -T postgres psql -U postgres -d trip_db \
-  -c "select message_type, status, attempt_count from outbox_messages order by occurred_at desc limit 5;"
+  -c "select message_id, message_type, status, attempt_count, published_at from outbox_messages where message_id='$OUTBOX_MESSAGE';"
 ```
 
 Kỳ vọng: chuyển sang `PUBLISHED`.
+
+Dọn chuyến D.3 nếu nó đã giữ Driver sau khi broker phục hồi:
+
+```bash
+OUTBOX_TRIP_STATE=""
+for i in $(seq 1 30); do
+  OUTBOX_TRIP_STATE=$(curl -fsS "$API/trips/$OUTBOX_TRIP" -H "Authorization: Bearer $OUTBOX_TOKEN" \
+    | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  case "$OUTBOX_TRIP_STATE" in DRIVER_RESERVED|MATCH_FAILED) break ;; esac
+  sleep 1
+done
+if [ "$OUTBOX_TRIP_STATE" = "DRIVER_RESERVED" ]; then
+  curl -fsS -X POST "$API/trips/$OUTBOX_TRIP/cancel" -H "Authorization: Bearer $OUTBOX_TOKEN" \
+    -H 'Content-Type: application/json' -d '{}' >/dev/null
+  for i in $(seq 1 30); do
+    OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+      "select count(*) from trip_cleanup_intents where trip_id='$OUTBOX_TRIP' and completed_at is null;")
+    [ "$OPEN" = "0" ] && break
+    sleep 1
+  done
+  [ "$OPEN" = "0" ] || { echo "D.3 cleanup chưa hoàn tất" >&2; exit 1; }
+elif [ "$OUTBOX_TRIP_STATE" != "MATCH_FAILED" ]; then
+  echo "D.3 kết thúc ngoài dự kiến: $OUTBOX_TRIP_STATE" >&2; exit 1
+fi
+DEMO_RECOVERY_SERVICE=""
+```
 
 **Script thuyết trình:** "Nếu hệ thống phát message trước rồi mới commit, một cú
 crash ở giữa sẽ làm mất message. Outbox đảo ngược lại: ghi ý định vào cùng
@@ -859,9 +1320,16 @@ nhận hiệu ứng nhưng phản hồi bị mất:
 PTRIP=$(python3 -c 'import uuid;print(uuid.uuid4())')
 PKEY="$PTRIP:authorize:v1"
 
-curl -sS -o /tmp/unknown.json -w 'HTTP %{http_code}\n' \
+UNKNOWN_HTTP=$(curl -sS -o /tmp/unknown.json -w '%{http_code}' \
   -X POST "http://localhost:8105/simulator/operations" -H 'Content-Type: application/json' \
-  -d "{\"operationKey\":\"$PKEY\",\"tripId\":\"$PTRIP\",\"type\":\"Authorize\",\"amountMinor\":15260,\"currency\":\"VND\",\"mode\":\"TimeoutAfterEffect\"}"
+  -d "{\"operationKey\":\"$PKEY\",\"tripId\":\"$PTRIP\",\"type\":\"Authorize\",\"amountMinor\":15260,\"currency\":\"VND\",\"mode\":\"TimeoutAfterEffect\"}")
+[ "$UNKNOWN_HTTP" = "504" ] || { echo "TimeoutAfterEffect trả HTTP $UNKNOWN_HTTP, cần 504" >&2; exit 1; }
+python3 -c '
+import json
+d=json.load(open("/tmp/unknown.json"))
+assert d["state"]=="Unknown"
+assert d["resultCode"]=="PROVIDER_RESPONSE_LOST"
+'
 ```
 
 Kỳ vọng: `HTTP 504`, và body có `"state":"Unknown"`,
@@ -871,9 +1339,17 @@ Kỳ vọng: `HTTP 504`, và body có `"state":"Unknown"`,
 
 ```bash
 OPID=$(python3 -c 'import json;print(json.load(open("/tmp/unknown.json"))["id"])')
-curl -sS -X POST "http://localhost:8105/simulator/operations/$OPID/reconcile" \
-  -o /tmp/reconciled.json -w 'HTTP %{http_code}\n'
-python3 -m json.tool /tmp/reconciled.json
+RECONCILE_HTTP=$(curl -sS -X POST "http://localhost:8105/simulator/operations/$OPID/reconcile" \
+  -o /tmp/reconciled.json -w '%{http_code}')
+[ "$RECONCILE_HTTP" = "200" ] || { echo "Reconcile trả HTTP $RECONCILE_HTTP, cần 200" >&2; exit 1; }
+python3 -c '
+import json
+d=json.load(open("/tmp/reconciled.json"))
+assert d["state"]=="Succeeded"
+assert d["providerEffectOccurred"] is True
+assert d["resultCode"]=="APPROVED"
+print(json.dumps(d, indent=2))
+'
 ```
 
 Kỳ vọng: `"state":"Succeeded"`, `"providerEffectOccurred":true`,
@@ -882,8 +1358,10 @@ Kỳ vọng: `"state":"Succeeded"`, `"providerEffectOccurred":true`,
 Chứng minh **chỉ một** hiệu ứng provider tồn tại:
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d payment_db \
-  -c "select count(*) as so_hieu_ung from provider_effects where operation_key='$PKEY';"
+PROVIDER_EFFECTS=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+  "select count(*) from provider_effects where operation_key='$PKEY';")
+[ "$PROVIDER_EFFECTS" = "1" ] || { echo "Có $PROVIDER_EFFECTS provider effects, cần đúng 1" >&2; exit 1; }
+echo "so_hieu_ung=$PROVIDER_EFFECTS"
 ```
 
 Kỳ vọng: `so_hieu_ung = 1`.
@@ -903,6 +1381,8 @@ Tạo một chuyến mới (chuyến ở Phần C đã `COMPLETED`, không còn 
 chối):
 
 ```bash
+refresh_driver_location "D.5"
+assert_driver_ready "D.5"
 RT=$(curl -fsS -X POST "$API/trips" -H "Authorization: Bearer $RIDER_TOKEN" \
   -H 'Content-Type: application/json' -H "Idempotency-Key: $(python3 -c 'import uuid;print(uuid.uuid4())')" \
   -d '{"pickup":{"latitude":10.7769,"longitude":106.7009},"dropoff":{"latitude":10.78,"longitude":106.71}}' \
@@ -912,8 +1392,10 @@ for i in $(seq 1 25); do
   ST=$(curl -fsS "$API/trips/$RT" -H "Authorization: Bearer $RIDER_TOKEN" \
     | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
   [ "$ST" = "DRIVER_RESERVED" ] && break
+  case "$ST" in MATCH_FAILED|CANCELLED) exit 1 ;; esac
   sleep 1
 done
+[ "$ST" = "DRIVER_RESERVED" ] || { echo "D.5 timeout chờ DRIVER_RESERVED" >&2; exit 1; }
 RRES=$(curl -fsS "$API/trips/$RT" -H "Authorization: Bearer $RIDER_TOKEN" \
   | python3 -c 'import json,sys;print(json.load(sys.stdin)["reservationId"])')
 
@@ -926,6 +1408,24 @@ Kỳ vọng: `{"state":"MATCH_FAILED","failureReason":"DRIVER_REJECTED","cleanup
 Kiểm tra nghĩa vụ dọn dẹp đã hoàn tất:
 
 ```bash
+for i in $(seq 1 30); do
+  OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select count(*) from trip_cleanup_intents where trip_id='$RT' and completed_at is null;")
+  TOTAL=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select count(*) from trip_cleanup_intents where trip_id='$RT';")
+  [ "$OPEN" = "0" ] && [ "$TOTAL" = "2" ] && break
+  sleep 1
+done
+KINDS=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select string_agg(kind, ',' order by kind) from trip_cleanup_intents where trip_id='$RT' and completed_at is not null;")
+RELEASE_RES=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select reservation_id from trip_cleanup_intents where trip_id='$RT' and kind='ReleaseReservation';")
+[ "$OPEN" = "0" ] && [ "$TOTAL" = "2" ] \
+  && [ "$KINDS" = "CancelMatching,ReleaseReservation" ] \
+  && [ "$RELEASE_RES" = "$RRES" ] || {
+    echo "D.5 cleanup sai: open=$OPEN total=$TOTAL kinds=$KINDS reservation=$RELEASE_RES" >&2
+    exit 1
+  }
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select kind, key, reservation_id, completed_at is not null as da_xong from trip_cleanup_intents where trip_id='$RT';"
 ```
@@ -936,7 +1436,21 @@ Kỳ vọng: hai dòng — `CancelMatching` và `ReleaseReservation`, cả hai
 Tài xế trở lại sẵn sàng:
 
 ```bash
-curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN"
+for i in $(seq 1 20); do
+  DRIVER_JSON=$(curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN")
+  DRIVER_STATUS=$(echo "$DRIVER_JSON" | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
+  [ "$DRIVER_STATUS" = "AVAILABLE" ] && break
+  sleep 1
+done
+[ "$DRIVER_STATUS" = "AVAILABLE" ] || { echo "D.5 timeout chờ Driver AVAILABLE" >&2; exit 1; }
+echo "$DRIVER_JSON" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+assert d["status"]=="AVAILABLE"
+assert d.get("reservedTripId") is None
+assert d.get("reservationId") is None
+print(json.dumps(d, indent=2))
+'
 ```
 
 Kỳ vọng: `AVAILABLE`, không còn `reservedTripId`.
@@ -953,6 +1467,12 @@ xác.
 **Mục tiêu:** dịch vụ thông báo chết không được làm hỏng chuyến đi.
 
 ```bash
+refresh_driver_location "D.6"
+assert_driver_ready "D.6"
+type require_demo_session >/dev/null 2>&1 && require_demo_session || {
+  echo "D.6 phải chạy trong Bash session đã cài recovery trap" >&2; exit 1;
+}
+DEMO_RECOVERY_SERVICE="notification"
 docker compose stop notification
 ```
 
@@ -968,8 +1488,10 @@ for i in $(seq 1 25); do
   ST=$(curl -fsS "$API/trips/$NT" -H "Authorization: Bearer $RIDER_TOKEN" \
     | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
   [ "$ST" = "DRIVER_RESERVED" ] && break
+  case "$ST" in MATCH_FAILED|CANCELLED) exit 1 ;; esac
   sleep 1
 done
+[ "$ST" = "DRIVER_RESERVED" ] || { echo "D.6 timeout chờ DRIVER_RESERVED" >&2; exit 1; }
 NRES=$(curl -fsS "$API/trips/$NT" -H "Authorization: Bearer $RIDER_TOKEN" \
   | python3 -c 'import json,sys;print(json.load(sys.stdin)["reservationId"])')
 curl -fsS -X POST "$API/trips/$NT/accept" -H "Authorization: Bearer $DRIVER_TOKEN" \
@@ -978,8 +1500,10 @@ for i in $(seq 1 25); do
   ST=$(curl -fsS "$API/trips/$NT" -H "Authorization: Bearer $RIDER_TOKEN" \
     | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
   [ "$ST" = "READY_TO_START" ] && break
+  case "$ST" in MATCH_FAILED|CANCELLED) exit 1 ;; esac
   sleep 1
 done
+[ "$ST" = "READY_TO_START" ] || { echo "D.6 timeout chờ READY_TO_START" >&2; exit 1; }
 curl -fsS -X POST "$API/trips/$NT/start" -H "Authorization: Bearer $DRIVER_TOKEN" \
   -H 'Content-Type: application/json' -d "{\"driverId\":\"$DRIVER_ID\",\"reservationId\":\"$NRES\"}" >/dev/null
 curl -fsS -X POST "$API/trips/$NT/complete" -H "Authorization: Bearer $DRIVER_TOKEN" \
@@ -991,6 +1515,7 @@ for i in $(seq 1 40); do
   sleep 1
 done
 echo "trip=$ST"
+[ "$ST" = "COMPLETED" ] || { echo "D.6 timeout chờ COMPLETED" >&2; exit 1; }
 ```
 
 Kỳ vọng: chuyến vẫn `COMPLETED` bình thường.
@@ -998,8 +1523,12 @@ Kỳ vọng: chuyến vẫn `COMPLETED` bình thường.
 Kiểm tra chưa có thông báo nào:
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d notification_db \
-  -c "select count(*) from notifications where trip_id='$NT';"
+NOTIFICATION_BEFORE=$(docker compose exec -T postgres psql -U postgres -d notification_db -tAc \
+  "select count(*) from notifications where trip_id='$NT';")
+[ "$NOTIFICATION_BEFORE" = "0" ] || {
+  echo "D.6 có $NOTIFICATION_BEFORE notification khi service vẫn tắt" >&2; exit 1;
+}
+echo "notification_before_restart=$NOTIFICATION_BEFORE"
 ```
 
 Kỳ vọng: `0`.
@@ -1008,7 +1537,25 @@ Bật lại và chờ phục hồi:
 
 ```bash
 docker compose start notification
-sleep 15
+for i in $(seq 1 40); do
+  curl -fsS http://localhost:8106/health/ready >/dev/null 2>&1 && break
+  sleep 1
+done
+curl -fsS http://localhost:8106/health/ready >/dev/null || {
+  echo "Notification chưa ready" >&2; exit 1;
+}
+for i in $(seq 1 40); do
+  NOTIFICATION_COUNT=$(docker compose exec -T postgres psql -U postgres -d notification_db -tAc \
+    "select count(*) from notifications where trip_id='$NT';")
+  [ "$NOTIFICATION_COUNT" = "4" ] && break
+  sleep 1
+done
+TYPES=$(docker compose exec -T postgres psql -U postgres -d notification_db -tAc \
+  "select string_agg(notification_type, ',' order by notification_type) from notifications where trip_id='$NT';")
+[ "$NOTIFICATION_COUNT" = "4" ] \
+  && [ "$TYPES" = "DRIVER_TRIP_ASSIGNED,RIDER_DRIVER_ASSIGNED,RIDER_RIDE_REQUESTED,RIDER_TRIP_COMPLETED" ] || {
+    echo "D.6 notification sai: count=$NOTIFICATION_COUNT types=$TYPES" >&2; exit 1;
+  }
 docker compose exec -T postgres psql -U postgres -d notification_db \
   -c "select notification_type, recipient_user_id from notifications where trip_id='$NT' order by created_at;"
 ```
@@ -1020,11 +1567,16 @@ Kỳ vọng (đã chạy thật): 4 thông báo —
 Kiểm tra **không có bản trùng**:
 
 ```bash
-docker compose exec -T postgres psql -U postgres -d notification_db \
-  -c "select notification_type, count(*) from notifications where trip_id='$NT' group by 1 having count(*) > 1;"
+DUPLICATE_NOTIFICATIONS=$(docker compose exec -T postgres psql -U postgres -d notification_db -tAc \
+  "select count(*) from (select 1 from notifications where trip_id='$NT' group by source_message_id,recipient_user_id,notification_type having count(*) > 1) d;")
+[ "$DUPLICATE_NOTIFICATIONS" = "0" ] || {
+  echo "D.6 có $DUPLICATE_NOTIFICATIONS business key thông báo bị trùng" >&2; exit 1;
+}
+echo "duplicate_business_keys=$DUPLICATE_NOTIFICATIONS"
+DEMO_RECOVERY_SERVICE=""
 ```
 
-Kỳ vọng: **0 dòng**.
+Kỳ vọng: `duplicate_business_keys=0`.
 
 **Script thuyết trình:** "Notification chết, chuyến đi vẫn xong. Khi nó sống lại,
 nó tự đọc lại các message còn tồn và bù đủ thông báo — không thiếu, không trùng."
@@ -1034,9 +1586,15 @@ outage.
 
 ### D.7. Crash và phục hồi
 
-**Mục tiêu:** trạng thái sống sót qua cái chết của process.
+**Mục tiêu:** chứng minh process Trip có thể restart và đọc lại trạng thái bền
+vững đã commit. Kịch bản này không tự chứng minh replay một Outbox item đang
+dang dở; replay khi broker outage được kiểm tra riêng ở D.3.
 
 ```bash
+type require_demo_session >/dev/null 2>&1 && require_demo_session || {
+  echo "D.7 phải chạy trong Bash session đã cài recovery trap" >&2; exit 1;
+}
+DEMO_RECOVERY_SERVICE="trip"
 docker compose kill -s SIGKILL trip
 sleep 2
 docker compose ps trip
@@ -1047,34 +1605,75 @@ phải stop bình thường.
 
 ```bash
 docker compose start trip
-sleep 15
-curl -fsS http://localhost:8103/health/ready
+for i in $(seq 1 40); do
+  curl -fsS http://localhost:8103/health/ready >/dev/null 2>&1 && break
+  sleep 1
+done
+curl -fsS http://localhost:8103/health/ready || {
+  echo "Trip chưa ready sau restart" >&2; exit 1;
+}
+DEMO_RECOVERY_SERVICE=""
 ```
 
 Kỳ vọng: `"trip-messaging":"Healthy"`.
 
-Outbox còn nguyên:
+Đối chiếu Outbox sau restart:
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select status, count(*) from outbox_messages group by 1;"
 ```
 
-Kỳ vọng: toàn bộ `PUBLISHED`, không mất dòng nào.
+Kỳ vọng: các dòng đã `PUBLISHED` trước crash vẫn còn. Không suy ra khả năng
+replay pending chỉ từ snapshot này.
 
 Sau đó chạy lại một chuyến hoàn chỉnh để chứng minh hệ thống làm việc bình
 thường trở lại.
 
-**Script thuyết trình:** "Process chết không mang theo trạng thái, vì trạng thái
-nằm trong PostgreSQL và Outbox. Khởi động lại là nó đọc lại đúng những gì đã
-commit."
+**Script thuyết trình:** "Process chết nhưng trạng thái đã commit vẫn nằm trong
+PostgreSQL. Khởi động lại, Trip đọc lại trạng thái đó và tiếp tục phục vụ. D.3
+mới là kịch bản chứng minh intent `PENDING` được relay phát lại."
 
 **Khái niệm:** crash recovery, trạng thái bền vững, phục hồi từ durable state
 chứ không từ bộ nhớ.
 
 ### D.8. Quan sát — trace và metric
 
-Jaeger: mở <http://localhost:16686>, chọn service `trip`, tìm theo `traceId`.
+Lấy trace context gắn với đúng chuyến đã demo, rồi xác nhận Jaeger có đủ service
+trong chuỗi **create → matching → reserve**. Các thao tác accept/start/complete là
+HTTP request mới nên không được gộp giả tạo vào trace ban đầu này:
+
+```bash
+TRACEPARENT=$(docker compose exec -T postgres psql -U postgres -d matching_db -tAc \
+  "select intake_traceparent from matching_rounds where trip_id='$TRIP_ID' order by matching_round desc limit 1;")
+TRACE_ID=$(echo "$TRACEPARENT" | cut -d- -f2)
+echo "trace_id=$TRACE_ID"
+echo "$TRACE_ID" | grep -Eq '^[0-9a-f]{32}$' || { echo "Trace ID không hợp lệ" >&2; exit 1; }
+curl -fsS "http://localhost:16686/api/traces/$TRACE_ID" -o /tmp/trace.json
+python3 -c '
+import json
+traces=json.load(open("/tmp/trace.json"))["data"]
+assert traces, "Jaeger không có trace"
+coverage={}
+operations={}
+for trace in traces:
+    processes=trace.get("processes", {})
+    for span in trace.get("spans", []):
+        service=processes.get(span.get("processID"), {}).get("serviceName", "<unknown>")
+        coverage[service]=coverage.get(service, 0)+1
+        operations.setdefault(service, set()).add(span.get("operationName", "<unnamed>"))
+expected={"gateway-service","trip-service","matching-service","driver-service"}
+missing=expected-coverage.keys()
+assert not missing, f"trace thiếu service: {sorted(missing)}; observed={sorted(coverage)}"
+for service in sorted(coverage):
+    print(service, "spans=", coverage[service], "operations=", sorted(operations[service]))
+'
+```
+
+Mở <http://localhost:16686>, chọn service `trip-service` và tìm theo `$TRACE_ID`
+để trình chiếu chuỗi span. Kỳ vọng assertion thấy tối thiểu `gateway-service`,
+`trip-service`, `matching-service`, `driver-service`; output liệt kê cả số span
+và operation thực tế của từng service.
 
 Prometheus (qua cổng đã cấu hình):
 
@@ -1084,8 +1683,12 @@ curl -sS "http://127.0.0.1:19090/api/v1/targets?state=active" \
 python3 -c "
 import json
 d=json.load(open('/tmp/targets.json'))
-for t in d['data']['activeTargets']:
-    print(' ', t['labels'].get('job'), '->', t['health'])
+targets={t['labels'].get('job'):t['health'] for t in d['data']['activeTargets']}
+expected={'application-otel','prometheus','rabbitmq','rabbitmq-detailed'}
+missing=expected-targets.keys()
+bad={k:targets.get(k) for k in expected if targets.get(k)!='up'}
+assert not missing and not bad, f'missing={missing}, unhealthy={bad}'
+for job in sorted(expected): print(' ', job, '->', targets[job])
 "
 ```
 
@@ -1116,15 +1719,23 @@ hợp lệ, **không** chứng minh HA đa máy hay đa vùng.
 
 Không được nói "hệ thống chịu được mất N node" nếu chưa đo đúng N node thật.
 
-### D.11. Huỷ trong lúc authorize — VOID, không phải CAPTURE
+### D.11. Huỷ khi Payment unavailable — đối soát trước khi bù trừ
 
-**Mục tiêu:** chứng minh compensation chạy được cả khi kết quả authorize chưa
-biết, và tiền đã giữ được giải phóng bằng `VOID` chứ không bị capture.
+**Mục tiêu:** chứng minh compensation chạy được khi Payment consumer unavailable
+và Trip chưa nhận được kết quả authorize.
+Chỉ yêu cầu `VOID` nếu đối soát chứng minh provider đã tạo hiệu ứng authorize;
+không bao giờ được `CAPTURE` một chuyến đã huỷ.
 
 **Điều kiện:** tài xế duy nhất vẫn `AVAILABLE`; Payment bị dừng để authorize
 không thể hoàn tất.
 
 ```bash
+refresh_driver_location "D.11"
+assert_driver_ready "D.11"
+type require_demo_session >/dev/null 2>&1 && require_demo_session || {
+  echo "D.11 phải chạy trong Bash session đã cài recovery trap" >&2; exit 1;
+}
+DEMO_RECOVERY_SERVICE="payment"
 docker compose stop payment
 ```
 
@@ -1141,8 +1752,10 @@ for i in $(seq 1 25); do
   ST=$(curl -fsS "$API/trips/$VT" -H "Authorization: Bearer $RIDER_TOKEN" \
     | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
   [ "$ST" = "DRIVER_RESERVED" ] && break
+  case "$ST" in MATCH_FAILED|CANCELLED) exit 1 ;; esac
   sleep 1
 done
+[ "$ST" = "DRIVER_RESERVED" ] || { echo "D.11 timeout chờ DRIVER_RESERVED" >&2; exit 1; }
 VT_RES=$(curl -fsS "$API/trips/$VT" -H "Authorization: Bearer $RIDER_TOKEN" \
   | python3 -c 'import json,sys;print(json.load(sys.stdin)["reservationId"])')
 
@@ -1169,6 +1782,9 @@ for i in $(seq 1 40); do
   curl -fsS http://localhost:8105/health/ready >/dev/null 2>&1 && break
   sleep 2
 done
+curl -fsS http://localhost:8105/health/ready >/dev/null || {
+  echo "Payment chưa ready sau restart" >&2; exit 1;
+}
 for i in $(seq 1 60); do
   SAGA=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
     "select status from ride_sagas where trip_id='$VT';")
@@ -1176,33 +1792,72 @@ for i in $(seq 1 60); do
   sleep 1
 done
 echo "saga=$SAGA"
+[ "$SAGA" = "COMPENSATED" ] || {
+  echo "D.11 không hội tụ COMPENSATED: $SAGA" >&2; exit 1;
+}
 ```
 
-Kiểm tra Payment đã `VOID` đúng khoản đã giữ:
+Kiểm tra Payment theo hiệu ứng có thẩm quyền, không giả định trước nhánh kết quả:
 
 ```bash
 docker compose exec -T postgres psql -U postgres -d payment_db \
   -c "select operation_key, operation_type, state, amount_minor from payment_operations where trip_id='$VT' order by created_at;"
+AUTH_EFFECT=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+  "select count(*) from provider_effects where operation_key='$VT:authorize:v1';")
+VOID_OK=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+  "select count(*) from payment_operations where trip_id='$VT' and operation_type='VOID' and state='SUCCEEDED';")
+CAPTURE_COUNT=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+  "select count(*) from payment_operations where trip_id='$VT' and operation_type='CAPTURE';")
+[ "$CAPTURE_COUNT" = "0" ] || { echo "Chuyến đã huỷ nhưng có CAPTURE" >&2; exit 1; }
+if [ "$AUTH_EFFECT" = "1" ]; then
+  [ "$VOID_OK" = "1" ] || { echo "Authorize có effect nhưng VOID chưa thành công" >&2; exit 1; }
+elif [ "$AUTH_EFFECT" = "0" ]; then
+  [ "$VOID_OK" = "0" ] || { echo "Không có authorize effect nhưng lại có VOID" >&2; exit 1; }
+else
+  echo "Sai invariant: authorize có $AUTH_EFFECT provider effects" >&2; exit 1
+fi
+echo "authorize_effect=$AUTH_EFFECT void_succeeded=$VOID_OK capture_count=$CAPTURE_COUNT"
 ```
 
-Kỳ vọng: hai dòng — `AUTHORIZE` và `VOID`, cùng `amount_minor`, cùng
-`SUCCEEDED`; **không có** `CAPTURE`.
+Kỳ vọng: luôn không có `CAPTURE`. Nếu `authorize_effect = 1` thì có đúng một
+`VOID SUCCEEDED`; nếu effect chưa từng tồn tại thì không tạo `VOID` giả.
 
 Kiểm tra nghĩa vụ dọn dẹp và tài xế:
 
 ```bash
+for i in $(seq 1 30); do
+  CLEANUP_OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select count(*) from trip_cleanup_intents where trip_id='$VT' and completed_at is null;")
+  CLEANUP_TOTAL=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select count(*) from trip_cleanup_intents where trip_id='$VT';")
+  [ "$CLEANUP_OPEN" = "0" ] && [ "$CLEANUP_TOTAL" = "3" ] && break
+  sleep 1
+done
+CLEANUP_KINDS=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select string_agg(kind, ',' order by kind) from trip_cleanup_intents where trip_id='$VT' and completed_at is not null;")
+[ "$CLEANUP_OPEN" = "0" ] && [ "$CLEANUP_TOTAL" = "3" ] \
+  && [ "$CLEANUP_KINDS" = "CancelMatching,ReconcilePayment,ReleaseReservation" ] || {
+    echo "D.11 cleanup sai: open=$CLEANUP_OPEN total=$CLEANUP_TOTAL kinds=$CLEANUP_KINDS" >&2
+    exit 1
+  }
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select kind, completed_at is not null as da_xong from trip_cleanup_intents where trip_id='$VT' order by kind;"
-curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN"
+DRIVER_JSON=$(curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN")
+echo "$DRIVER_JSON" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+assert d["status"]=="AVAILABLE" and d["reservedTripId"] is None and d["reservationId"] is None
+'
+DEMO_RECOVERY_SERVICE=""
 ```
 
 Kỳ vọng: `CancelMatching`, `ReconcilePayment`, `ReleaseReservation` đều
 `da_xong = t`; tài xế `AVAILABLE`, không còn `reservedTripId`.
 
-**Script thuyết trình:** "Payment chết đúng lúc Saga đang authorize. Trip không
-đoán là thất bại: nó huỷ chuyến và để compensation tự đối soát. Khi Payment
-sống lại, nó thấy authorize đã thành công nên phát `VOID` — không bao giờ
-capture một chuyến đã huỷ."
+**Script thuyết trình:** "Payment consumer không sẵn sàng khi Saga cần authorize.
+Trip không đoán là thất bại: nó huỷ chuyến và để compensation đối soát. Nếu
+provider đã tạo hiệu ứng thì hệ thống `VOID`; nếu chưa có hiệu ứng thì không bịa
+ra một `VOID`. Cả hai nhánh đều không capture chuyến đã huỷ."
 
 **Khái niệm:** compensation khi kết quả chưa biết, `VOID` so với `CAPTURE`,
 nghĩa vụ dọn dẹp bền vững.
@@ -1215,6 +1870,8 @@ giải phóng **đúng** reservation đã giữ, không để tài xế treo.
 **Điều kiện:** tài xế duy nhất vẫn `AVAILABLE`; simulator chỉ mở ở Development.
 
 ```bash
+refresh_driver_location "D.12"
+assert_driver_ready "D.12"
 DT_ID=$(curl -fsS -X POST "$API/trips" -H "Authorization: Bearer $RIDER_TOKEN" \
   -H 'Content-Type: application/json' -H "Idempotency-Key: $(python3 -c 'import uuid;print(uuid.uuid4())')" \
   -d '{"pickup":{"latitude":10.7769,"longitude":106.7009},"dropoff":{"latitude":10.78,"longitude":106.71}}' \
@@ -1224,8 +1881,10 @@ for i in $(seq 1 25); do
   ST=$(curl -fsS "$API/trips/$DT_ID" -H "Authorization: Bearer $RIDER_TOKEN" \
     | python3 -c 'import json,sys;print(json.load(sys.stdin)["status"])')
   [ "$ST" = "DRIVER_RESERVED" ] && break
+  case "$ST" in MATCH_FAILED|CANCELLED) exit 1 ;; esac
   sleep 1
 done
+[ "$ST" = "DRIVER_RESERVED" ] || { echo "D.12 timeout chờ DRIVER_RESERVED" >&2; exit 1; }
 DT_RES=$(curl -fsS "$API/trips/$DT_ID" -H "Authorization: Bearer $RIDER_TOKEN" \
   | python3 -c 'import json,sys;print(json.load(sys.stdin)["reservationId"])')
 ```
@@ -1241,8 +1900,17 @@ CUR=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
 AMT=$(python3 -c "from decimal import Decimal,ROUND_HALF_EVEN;print(int(Decimal('$FARE').quantize(Decimal('1'),rounding=ROUND_HALF_EVEN)))")
 echo "fare=$FARE currency=$CUR amountMinor=$AMT"
 
-curl -sS -X POST "http://localhost:8105/simulator/operations" -H 'Content-Type: application/json' \
-  -d "{\"operationKey\":\"$DT_ID:authorize:v1\",\"tripId\":\"$DT_ID\",\"type\":\"Authorize\",\"amountMinor\":$AMT,\"currency\":\"$CUR\",\"mode\":\"Decline\"}"
+DECLINE_HTTP=$(curl -sS -o /tmp/decline.json -w '%{http_code}' -X POST \
+  "http://localhost:8105/simulator/operations" -H 'Content-Type: application/json' \
+  -d "{\"operationKey\":\"$DT_ID:authorize:v1\",\"tripId\":\"$DT_ID\",\"type\":\"Authorize\",\"amountMinor\":$AMT,\"currency\":\"$CUR\",\"mode\":\"Decline\"}")
+[ "$DECLINE_HTTP" = "200" ] || { echo "Pre-seed decline HTTP $DECLINE_HTTP" >&2; exit 1; }
+python3 -c '
+import json
+d=json.load(open("/tmp/decline.json"))
+assert d["state"]=="Declined"
+assert d["providerEffectOccurred"] is False
+assert d["resultCode"]=="DECLINED"
+'
 ```
 
 Kỳ vọng: `"state":"Declined"`, `"providerEffectOccurred":false`,
@@ -1265,6 +1933,7 @@ for i in $(seq 1 40); do
   sleep 1
 done
 echo "trip=$ST"
+[ "$ST" = "CANCELLED" ] || { echo "D.12 timeout chờ CANCELLED" >&2; exit 1; }
 ```
 
 Kiểm tra Payment và release intent mang **đúng** reservation. Chờ các nghĩa vụ
@@ -1274,17 +1943,40 @@ dọn dẹp hoàn tất (release và matching đi qua RabbitMQ, nên có độ t
 for i in $(seq 1 30); do
   OPEN=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
     "select count(*) from trip_cleanup_intents where trip_id='$DT_ID' and completed_at is null;")
-  [ "$OPEN" = "0" ] && break
+  TOTAL=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+    "select count(*) from trip_cleanup_intents where trip_id='$DT_ID';")
+  [ "$OPEN" = "0" ] && [ "$TOTAL" = "3" ] && break
   sleep 1
 done
-echo "open_cleanup=$OPEN"
+KINDS=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select string_agg(kind, ',' order by kind) from trip_cleanup_intents where trip_id='$DT_ID' and completed_at is not null;")
+PAYMENT_DECLINED=$(docker compose exec -T postgres psql -U postgres -d payment_db -tAc \
+  "select count(*) from payment_operations where trip_id='$DT_ID' and operation_type='AUTHORIZE' and state='DECLINED' and result_code='DECLINED';")
+RELEASE_IDENTITY=$(docker compose exec -T postgres psql -U postgres -d trip_db -tAc \
+  "select (payload_json->>'driverId') || '|' || (payload_json->>'reservationId') from outbox_messages where aggregate_id='$DT_ID' and message_type='ReleaseDriverReservationV1';")
+[ "$OPEN" = "0" ] && [ "$TOTAL" = "3" ] \
+  && [ "$KINDS" = "CancelMatching,ReconcilePayment,ReleaseReservation" ] \
+  && [ "$PAYMENT_DECLINED" = "1" ] \
+  && [ "$RELEASE_IDENTITY" = "$DRIVER_ID|$DT_RES" ] || {
+    echo "D.12 assertion fail: open=$OPEN total=$TOTAL kinds=$KINDS payment=$PAYMENT_DECLINED release=$RELEASE_IDENTITY" >&2
+    exit 1
+  }
+echo "open_cleanup=$OPEN total_cleanup=$TOTAL kinds=$KINDS"
 docker compose exec -T postgres psql -U postgres -d payment_db \
   -c "select operation_type, state, result_code from payment_operations where trip_id='$DT_ID';"
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select payload_json->>'driverId' as driver_id, payload_json->>'reservationId' as reservation_id from outbox_messages where aggregate_id='$DT_ID' and message_type='ReleaseDriverReservationV1';"
 docker compose exec -T postgres psql -U postgres -d trip_db \
   -c "select kind, completed_at is not null as da_xong from trip_cleanup_intents where trip_id='$DT_ID' order by kind;"
-curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN"
+DRIVER_JSON=$(curl -fsS "$API/drivers/$DRIVER_ID" -H "Authorization: Bearer $DRIVER_TOKEN")
+echo "$DRIVER_JSON" | python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+assert d["status"]=="AVAILABLE"
+assert d.get("reservedTripId") is None
+assert d.get("reservationId") is None
+print(json.dumps(d, indent=2))
+'
 ```
 
 Kỳ vọng: `AUTHORIZE` ở trạng thái `DECLINED`; `ReleaseDriverReservationV1`
@@ -1331,23 +2023,25 @@ tài nguyên chính xác.
   transaction ACID bình thường. Xuyên service thì không có transaction chung,
   nên phải dùng Saga và Outbox."
 - **Eventual consistency:** "Không phải 'cuối cùng rồi cũng xong một cách may
-  mắn'. Là có bảo đảm: mọi nghĩa vụ đều được ghi bền vững và có cơ chế phát lại
-  cho tới khi hoàn tất."
+  mắn'. Trong failure model đã nêu, nghĩa vụ được ghi bền vững và có cơ chế phát
+  lại; lỗi không tự phục hồi vẫn phải được quan sát và can thiệp."
 - **Linearization point:** "Điểm mà tại đó thao tác trở thành sự thật. Với giữ
   chỗ tài xế, đó là lúc PostgreSQL của Driver commit — không phải lúc Redis được
   cập nhật."
-- **Optimistic concurrency control:** "Không khoá trước. Đọc `version`, ghi kèm
-  điều kiện `version` chưa đổi. Ai commit trước thắng, người sau nhận conflict."
+- **Kiểm soát đồng thời của Driver:** "Repository khoá row bằng `FOR UPDATE`
+  trong transaction ngắn, rồi kiểm tra `version` trên dữ liệu mới nhất. Một
+  reservation commit trước; contender còn lại nhận kết quả xung đột."
 - **Projection dẫn xuất so với thẩm quyền:** "Redis đề cử, PostgreSQL quyết
   định. Redis sai thì hệ thống vẫn đúng, chỉ chậm hơn."
-- **At-least-once:** "Message có thể tới hai lần. Đó là bản chất của hệ thống
-  nhắn tin. Cái ta bảo đảm là hiệu ứng nghiệp vụ chỉ xảy ra một lần, nhờ
-  idempotency."
+- **At-least-once:** "Message có thể tới hai lần. Trong phạm vi cùng business key
+  và storage bền vững, idempotency làm các lần giao lại quy về một hiệu ứng
+  nghiệp vụ."
 - **Publisher confirm so với consumer ACK:** "Confirm là broker xác nhận đã nhận
   message. ACK là consumer xác nhận đã xử lý xong. Hai việc khác nhau, ở hai
   thời điểm khác nhau."
 - **Transactional Outbox:** "Ghi ý định phát message vào cùng transaction với
-  thay đổi nghiệp vụ. Không thể có chuyện nghiệp vụ đã đổi mà message biến mất."
+  thay đổi nghiệp vụ. Khi database authority còn bền vững, transition và intent
+  cùng commit hoặc cùng rollback."
 - **Saga và compensation:** "Saga là chuỗi bước có bù trừ. Compensation không
   phải rollback — dữ liệu đã commit rồi, phải bù bằng hành động ngược lại."
 - **UNKNOWN so với FAILED:** "FAILED là biết chắc đã thất bại. UNKNOWN là không
@@ -1384,14 +2078,18 @@ không hoàn tất được chuyến. Với messaging, Trip commit rồi phát i
 sống lại thì xử lý tiếp. Nó cũng cho phép nhiều consumer và chịu tải tốt hơn.
 
 **3. Nếu RabbitMQ chết ngay sau khi Trip commit thì sao?**
-Không mất gì. Ý định phát message đã nằm trong bảng `outbox_messages` cùng
-transaction với thay đổi nghiệp vụ, ở trạng thái `PENDING`. Relay sẽ phát lại khi
-broker sống lại, với **cùng `message_id`**. Xem Phần D.3.
+Trong failure model PostgreSQL còn bền vững và broker quay lại, intent không bị
+mất: nó nằm trong `outbox_messages` cùng transaction với transition nghiệp vụ,
+ở trạng thái `PENDING`. Relay phát lại với **cùng `message_id`**. Nếu chính
+storage authority bị mất ngoài giả định durability thì runbook không tuyên bố
+khôi phục được. Xem Phần D.3.
 
 **4. Hai Rider có thể nhận cùng một tài xế không?**
-Không. Driver dùng optimistic concurrency trên cột `version`; chỉ một lệnh giữ
-chỗ commit được. Đã chứng minh ở Phần D.1: một chuyến `DRIVER_RESERVED`, chuyến
-kia `MATCH_FAILED`/`NO_DRIVER_AVAILABLE`.
+Trong ranh giới Driver authority, một row được khoá bằng `FOR UPDATE` và kiểm tra
+`version`, nên chỉ một reservation commit được. D.1 chứng minh không
+double-booking đầu cuối: một chuyến `DRIVER_RESERVED`, chuyến kia
+`MATCH_FAILED`/`NO_DRIVER_AVAILABLE`; integration test mới đặt barrier chính
+xác tại repository để chứng minh contention bên trong.
 
 **5. Nếu Redis bị cũ (stale) thì sao?**
 Redis chỉ đề cử ứng viên. Driver mới là nơi quyết định. Nếu Redis đề cử một tài
@@ -1406,12 +2104,14 @@ chậm hơn, không phải sai.
 **7. Nếu consumer crash sau khi commit database nhưng trước khi ACK?**
 Broker sẽ redeliver. Consumer thấy `message_id` đã có trong bảng
 `processed_messages` (ghi trong cùng transaction với hiệu ứng), nên bỏ qua và
-ACK. Không có hiệu ứng thứ hai.
+ACK. Điều này ngăn hiệu ứng thứ hai trong phạm vi cùng `message_id`, consumer
+scope và storage bền vững.
 
 **8. Nếu Payment đã thành công nhưng phản hồi bị mất?**
 Payment ghi `UNKNOWN`, không ghi `FAILED`. Worker đối soát gọi lại provider bằng
 cùng `operationKey`; nếu provider đã có hiệu ứng thì trả về hiệu ứng đó. Đã
-chứng minh ở Phần D.4: đúng một dòng `provider_effects`.
+chứng minh trong simulator ở Phần D.4: đúng một dòng `provider_effects`. Đây
+không phải claim về cổng thanh toán thật.
 
 **9. Vì sao không dùng transaction phân tán (2PC)?**
 2PC cần coordinator và khoá tài nguyên xuyên service, làm giảm khả dụng và tạo
@@ -1440,13 +2140,15 @@ Không. Quorum cần đa số node còn sống mới ghi được. Mất quá n�
 **14. Làm sao biết test là thật?**
 Test chạy trên PostgreSQL và RabbitMQ thật qua Testcontainers, không mock tầng
 lưu trữ. Cổng TRX kiểm tra số lượng test thực thi được, không chỉ "build xanh".
-Các kịch bản trong runbook này được chạy tay trên stack thật và trạng thái cuối
-được đọc trực tiếp từ database của từng service.
+Evidence `v1.0.1` ghi lại các kịch bản release đã chạy trên stack thật và trạng
+thái cuối đọc từ database sở hữu. Mọi guard/assertion mới trong runbook phải có
+rehearsal transcript riêng trước khi được gọi là runtime PASS.
 
 **15. Thí nghiệm hiệu năng đo tính đúng đắn thế nào?**
 Sau mỗi lần chạy tải, bộ kiểm toán đọc database sở hữu để xác nhận bất biến:
 không có hai chuyến cùng giữ một tài xế, không có hiệu ứng thanh toán mồ côi,
-Outbox đã rỗng. Throughput không được tính là thành công nếu bất biến bị vi phạm.
+Outbox không còn item chưa `PUBLISHED`. Throughput không được tính là thành công
+nếu bất biến bị vi phạm.
 
 **16. Giới hạn đã biết của đồ án?**
 Payment là provider mô phỏng, không nối cổng thanh toán thật. Thông báo là hộp
@@ -1461,9 +2163,10 @@ quyền rõ ràng** (mỗi dữ liệu có đúng một chủ), **tính nguyên 
 service commit riêng), **danh tính ổn định** (message id và operation key tất
 định), và **phục hồi có giới hạn** (Outbox, reconciler, retry có kiểm soát).
 
-Kết quả là: hai Rider không thể nhận cùng một tài xế; một chuyến không thể bị
-tính tiền hai lần; một service chết không làm mất giao dịch đã commit; và khi
-mọi thứ ổn định lại, bốn service đều đồng ý về cùng một sự thật.
+Trong failure model đã kiểm thử và với các storage authority còn bền vững: hai
+Rider không cùng giữ một tài xế; cùng `operationKey` không tạo hai provider
+effect trong simulator; process restart không xoá giao dịch đã commit; và sau
+khi các dependency phục hồi, các authority hội tụ về trạng thái tương thích.
 
 ---
 
@@ -1478,22 +2181,30 @@ done
 # 2. Database riêng biệt
 docker compose exec -T postgres psql -U postgres -c "\l" | grep _db
 
-# 3. Outbox không còn tồn đọng
+# 3. Outbox của chuyến chính không còn tồn đọng
 docker compose exec -T postgres psql -U postgres -d trip_db \
-  -c "select status, count(*) from outbox_messages group by status;"
+  -c "select count(*) from outbox_messages where aggregate_id='$TRIP_ID' and status <> 'PUBLISHED';"
 
-# 4. Không có tài xế nào giữ hai chuyến
+# 4. Driver row không vi phạm coherence
 docker compose exec -T postgres psql -U postgres -d driver_db \
-  -c "select count(*) from drivers where status='RESERVED' and reserved_trip_id is null;"
+  -c "select count(*) from drivers where (status='RESERVED') <> (reserved_trip_id is not null and reservation_id is not null);"
 
-# 5. Không có thông báo trùng
+# 5. Không có một Driver được gán cho hai chuyến đang hoạt động
+docker compose exec -T postgres psql -U postgres -d trip_db \
+  -c "select assigned_driver_id, count(*) from trips where state in ('DRIVER_RESERVED','DRIVER_ACCEPTED','READY_TO_START','IN_PROGRESS') and assigned_driver_id is not null group by assigned_driver_id having count(*) > 1;"
+
+# 6. Không có thông báo trùng theo đúng business key
 docker compose exec -T postgres psql -U postgres -d notification_db \
-  -c "select notification_type, trip_id, count(*) from notifications group by 1,2 having count(*) > 1;"
+  -c "select source_message_id, recipient_user_id, notification_type, count(*) from notifications group by 1,2,3 having count(*) > 1;"
 
-# 6. Không có hiệu ứng thanh toán mồ côi
+# 7. Không có cleanup tồn đọng cho chuyến chính
+docker compose exec -T postgres psql -U postgres -d trip_db \
+  -c "select count(*) from trip_cleanup_intents where trip_id='$TRIP_ID' and completed_at is null;"
+
+# 8. Không có hiệu ứng thanh toán mồ côi
 docker compose exec -T postgres psql -U postgres -d payment_db \
   -c "select count(*) from provider_effects e where not exists (select 1 from payment_operations o where o.operation_key = e.operation_key);"
 ```
 
-Kỳ vọng: (1) tất cả `Ready`; (2) đủ sáu database; (3) chỉ `PUBLISHED`;
-(4) `0`; (5) không dòng nào; (6) `0`.
+Kỳ vọng: (1) tất cả `Ready`; (2) đủ sáu database; (3), (4), (7), (8) trả `0`;
+(5), (6) không trả dòng nào.

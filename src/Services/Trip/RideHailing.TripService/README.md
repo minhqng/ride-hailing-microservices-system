@@ -7,8 +7,6 @@ fare snapshot, the current Driver assignment reference, the persisted
 - Database: `trip_db` (role `trip_app`), PostgreSQL through EF Core.
 - Depends on: `ConnectionStrings__Postgres`, `RabbitMq__Host`,
   `Services__DriverBaseUrl`, `Services__MatchingBaseUrl`.
-- Contracts: [domain invariant contract](../../../../docs/01-domain-correctness-contract.md)
-  and [workflow contract](../../../../docs/02-distributed-workflow-engineering.md).
 
 ## Authority and state machine
 
